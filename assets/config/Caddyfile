@@ -46,6 +46,10 @@
 		authenticate * with myportal
 	}
 
+	route /xauth* {
+		authenticate * with myportal
+	}
+
 	route /app {
 		authorize with mypolicy
 		file_server {

@@ -16,13 +16,14 @@ all: info
 	@mkdir -p ../xcaddy-$(PLUGIN_NAME) && cd ../xcaddy-$(PLUGIN_NAME) && \
 		xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/caddy \
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR)
-	@#--with github.com/greenpau/aaasf@v1.0.0=/home/greenpau/dev/go/src/github.com/greenpau/aaasf
+	@#--with github.com/greenpau/aaasf@v1.0.2=/home/greenpau/dev/go/src/github.com/greenpau/aaasf
 	@#bin/caddy run -config assets/config/Caddyfile
 	@for f in `find ./assets -type f -name 'Caddyfile'`; do bin/caddy fmt -overwrite $$f; done
 
 info:
 	@echo "DEBUG: Version: $(PLUGIN_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
 	@echo "DEBUG: Build on $(BUILD_DATE) by $(BUILD_USER)"
+
 
 linter:
 	@echo "DEBUG: running lint checks"
@@ -109,3 +110,4 @@ logo:
 
 license:
 	@for f in `find ./ -type f -name '*.go'`; do versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath=$$f; done
+	@assets/scripts/generate_downloads.sh

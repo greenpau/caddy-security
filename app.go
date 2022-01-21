@@ -19,8 +19,6 @@ import (
 	"github.com/greenpau/aaasf"
 	"github.com/greenpau/aaasf/pkg/authn"
 	"github.com/greenpau/aaasf/pkg/authz"
-	"github.com/greenpau/caddy-security/pkg/authentication"
-	"github.com/greenpau/caddy-security/pkg/authorization"
 	"go.uber.org/zap"
 )
 
@@ -35,8 +33,6 @@ var (
 
 func init() {
 	caddy.RegisterModule(App{})
-	caddy.RegisterModule(authentication.Middleware{})
-	caddy.RegisterModule(authorization.Middleware{})
 }
 
 // App implements security manager.
@@ -71,7 +67,16 @@ func (app *App) Provision(ctx caddy.Context) error {
 		portal, err := authn.NewPortal(cfg, app.logger)
 		if err != nil {
 			app.logger.Error(
-				"failed provisioning app instance",
+				"failed initializing auth portal",
+				zap.String("app", app.Name),
+				zap.String("portal_name", cfg.Name),
+				zap.Error(err),
+			)
+			return err
+		}
+		if err := portal.Register(); err != nil {
+			app.logger.Error(
+				"failed registering auth portal",
 				zap.String("app", app.Name),
 				zap.String("portal_name", cfg.Name),
 				zap.Error(err),
@@ -85,7 +90,16 @@ func (app *App) Provision(ctx caddy.Context) error {
 		gatekeeper, err := authz.NewGatekeeper(cfg, app.logger)
 		if err != nil {
 			app.logger.Error(
-				"failed provisioning app instance",
+				"failed initializing gatekeeper",
+				zap.String("app", app.Name),
+				zap.String("gatekeeper_name", cfg.Name),
+				zap.Error(err),
+			)
+			return err
+		}
+		if err := gatekeeper.Register(); err != nil {
+			app.logger.Error(
+				"failed registering gatekeeper",
 				zap.String("app", app.Name),
 				zap.String("gatekeeper_name", cfg.Name),
 				zap.Error(err),

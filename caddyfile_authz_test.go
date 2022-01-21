@@ -725,7 +725,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 			if tc.shouldErr {
 				t.Fatalf("unexpected success, want: %v", tc.err)
 			}
-			t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
+			// t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
 
 			got := unpack(t, string(app.(httpcaddyfile.App).Value))
 			want := unpack(t, tc.want)
