@@ -45,7 +45,10 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 			want: `{
               "config": {
                 "authz_policy_configs": [
-                  {
+				  {
+                    "auth_url_path": "/auth",
+                    "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
                     "access_list_rules": [
@@ -54,6 +57,17 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                           "match roles authp/admin authp/user"
                         ],
                         "action": "allow log debug"
+                      }
+                    ],
+					"crypto_key_configs": [
+                      {
+                        "id": "0",
+                        "usage": "verify",
+                        "token_name": "access_token",
+                        "source": "config",
+                        "algorithm": "hmac",
+                        "token_lifetime": 900,
+                        "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
                       }
                     ]
                   }
@@ -88,12 +102,27 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                   {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
+                    "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
+                    "name": "mypolicy",
+                    "auth_url_path": "/auth",
                     "access_list_rules": [
                       {
                         "conditions": [
                           "match roles authp/admin authp/user"
                         ],
                         "action": "allow log debug"
+                      }
+                    ],
+                    "crypto_key_configs": [
+                      {
+                        "id": "0",
+                        "usage": "verify",
+                        "token_name": "access_token",
+                        "source": "config",
+                        "algorithm": "hmac",
+                        "token_lifetime": 900,
+                        "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
                       }
                     ],
                     "disable_auth_redirect": true,
@@ -105,7 +134,22 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                     "validate_method_path": true,
                     "validate_access_list_path_claim": true,
                     "validate_source_address": true,
-					"auth_redirect_query_param": "return_path_url"
+					"auth_redirect_query_param": "return_path_url",
+                    "identity_provider_config": {
+                      "context": "default",
+                      "basic_auth": {
+                        "enabled": true,
+                        "realms": {
+                          "local": true
+                        }
+                      },
+                      "api_key_auth": {
+                        "enabled": true,
+                        "realms": {
+                          "local": true
+                        }
+                      }
+                    }
                   }
                 ]
               }
@@ -142,6 +186,9 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                   {
                     "name": "mypolicy2",
                     "auth_url_path": "/auth",
+			        "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
+                    "redirect_with_javascript": true,
                     "access_list_rules": [
                       {
                         "comment": "comment allow users",
@@ -156,6 +203,17 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                           "always match role any"
                         ],
                         "action": "deny log warn"
+                      }
+                    ],
+                    "crypto_key_configs": [
+                      {
+                        "id": "0",
+                        "usage": "verify",
+                        "token_name": "access_token",
+                        "source": "config",
+                        "algorithm": "hmac",
+                        "token_lifetime": 900,
+                        "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
                       }
                     ],
 					"strip_token_enabled": true,
@@ -195,6 +253,9 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                 "authz_policy_configs": [
                   {
                     "name": "mypolicy",
+					"auth_url_path": "/auth",
+                    "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
                     "access_list_rules": [
                       {
                         "conditions": ["match roles authp/admin authp/user"],
@@ -240,6 +301,9 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                 "authz_policy_configs": [
                   {
                     "name": "mypolicy",
+                    "auth_url_path": "/auth",
+                    "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
                     "access_list_rules": [
                       {
                         "conditions": ["match roles authp/admin authp/user"],
@@ -725,12 +789,12 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 			if tc.shouldErr {
 				t.Fatalf("unexpected success, want: %v", tc.err)
 			}
-			// t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
 
 			got := unpack(t, string(app.(httpcaddyfile.App).Value))
 			want := unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {
+				t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
 				t.Errorf("parseCaddyfileAuthorization() mismatch (-want +got):\n%s", diff)
 			}
 		})
