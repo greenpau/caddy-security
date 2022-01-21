@@ -48,7 +48,7 @@ type App struct {
 // CaddyModule returns the Caddy module information.
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  caddy.ModuleID(appName),
+		ID:  caddy.ModuleID("security"),
 		New: func() caddy.Module { return new(App) },
 	}
 }

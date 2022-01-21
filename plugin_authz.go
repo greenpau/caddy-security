@@ -45,7 +45,7 @@ type AuthzMiddleware struct {
 // CaddyModule returns the Caddy module information.
 func (AuthzMiddleware) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.authentication.providers." + authzPluginName,
+		ID:  "http.authentication.providers.authorizer",
 		New: func() caddy.Module { return new(AuthzMiddleware) },
 	}
 }
