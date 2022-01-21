@@ -1,0 +1,59 @@
+{
+	debug
+	local_certs
+	http_port 8080
+	https_port 8443
+
+	security {
+		credentials email smtp.contoso.com {
+			address smtp.contoso.com:993
+			protocol smtp
+			username foo
+			password bar
+		}
+
+		authentication portal myportal {
+			crypto default token lifetime 3600
+			crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
+			backend local assets/config/users.json local
+			ui {
+				links {
+					"My Website" "/app" icon "las la-star"
+					"My Identity" "/auth/whoami" icon "las la-user"
+				}
+			}
+			transform user {
+				match origin local
+				action add role authp/user
+				ui link "Portal Settings" /auth/settings icon "las la-cog"
+			}
+		}
+
+		authorization policy mypolicy {
+			set auth url /auth/
+			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
+			allow roles authp/admin authp/user
+		}
+	}
+}
+
+127.0.0.1, localhost {
+	route /version* {
+		respond * "1.0.0" 200
+	}
+
+	route /auth* {
+		authenticate * with myportal
+	}
+
+	route /app {
+		authorize with mypolicy
+		file_server {
+			root ./assets/config
+		}
+	}
+
+	route {
+		redir https://{hostport}/auth 302
+	}
+}

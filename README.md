@@ -3,13 +3,14 @@
 <a href="https://github.com/greenpau/caddy-security/actions/" target="_blank"><img src="https://github.com/greenpau/caddy-security/workflows/build/badge.svg?branch=main"></a>
 <a href="https://pkg.go.dev/github.com/greenpau/caddy-security" target="_blank"><img src="https://img.shields.io/badge/godoc-reference-blue.svg"></a>
 <a href="https://caddy.community" target="_blank"><img src="https://img.shields.io/badge/community-forum-ff69b4.svg"></a>
-<a href="https://caddyserver.com/docs/modules/git" target="_blank"><img src="https://img.shields.io/badge/caddydocs-git-green.svg"></a>
+<a href="https://caddyserver.com/docs/modules/security" target="_blank"><img src="https://img.shields.io/badge/caddydocs-security-green.svg"></a>
 
 Security App and Plugin for [Caddy v2](https://github.com/caddyserver/caddy).
 
 Please see other plugins:
 * [caddy-trace](https://github.com/greenpau/caddy-trace)
 * [caddy-systemd](https://github.com/greenpau/caddy-systemd)
+* [caddy-git](https://github.com/greenpau/caddy-git)
 
 <!-- begin-markdown-toc -->
 ## Table of Contents
@@ -26,11 +27,14 @@ authorization security policy and credentials. The **plugin**
 enforces the security policy on endpoints with `authorize` keyword
 and serves authentication portal with `authenticate` keyword.
 
+The app and plugin use Authentication, Authorization, and
+Accounting (AAA) Security Functions (SF) from
+[github.com/greenpau/aaasf](https://github.com/greenpau/aaasf).
+
 ## Getting Started
 
 The configuration happens in Caddy's 
 [**global options block**](https://caddyserver.com/docs/caddyfile/options).
-
 
 ### Credentials
 
@@ -97,10 +101,9 @@ The following configuration adds authorization functionality and handlers.
   }
 }
 
-
 www.myfiosgateway.com {
-    authorize with mypolicy
-	root * {env.HOME}/public_html
-	file_server
+  authorize with mypolicy
+  root * {env.HOME}/public_html
+  file_server
 }
 ```

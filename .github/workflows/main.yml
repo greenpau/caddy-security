@@ -1,0 +1,71 @@
+---
+name: build
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  core:
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        platform: [ubuntu-latest]
+    name: Build
+    runs-on: ${{ matrix.platform }}
+    env:
+      GOBIN: /home/runner/.local/bin
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+      id: go
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    - name: Amend Environment Path
+      run: |
+        mkdir -p /home/runner/.local/bin
+        echo "/home/runner/.local/bin" >> $GITHUB_PATH
+    - name: Setup Environment
+      run: |
+        mkdir -p .coverage
+        echo "*** Current Directory ***"
+        pwd
+        echo "*** Environment Variables ***"
+        env | sort
+        echo "*** Executable Path ***"
+        echo "$PATH" | tr ':' '\n'
+        echo "*** Workspace Files ***"
+        find .
+        which make
+    - name: Install prerequisites
+      run: |
+        sudo apt-get --assume-yes install make
+        sudo apt-get --assume-yes install libnss3-tools
+        sudo apt-get update
+    - name: Install Go modules
+      run: |
+        make dep
+        go mod tidy
+        go mod verify
+        go mod download
+    - name: Validate prerequisites
+      run: |
+        echo "*** Local binaries ***"
+        find /home/runner/.local/bin
+    - name: Run tests
+      run: |
+        make test || true
+        make test
+    - name: Generate coverage report
+      run: make coverage
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v1
+      with:
+        name: Test Coverage Report
+        path: .coverage/coverage.html
