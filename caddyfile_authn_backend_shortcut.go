@@ -61,8 +61,7 @@ func parseCaddyfileAuthPortalBackendShortcuts(h *caddyfile.Dispenser, repl *cadd
 		m["provider"] = "github"
 		m["client_id"] = v[1]
 		m["client_secret"] = v[2]
-		m["scopes"] = []string{"user"}
-
+		m["scopes"] = []string{"read:user"}
 	case "facebook":
 		if len(v) != 3 {
 			return errors.ErrMalformedDirective.WithArgs(ckp, v)
