@@ -31,7 +31,7 @@ for OS_ID in "${!_TARGET_OS[@]}"; do
   OS_NAME=${_TARGET_OS[$OS_ID]};
   for ARCH_ID in "${!_TARGET_ARCH[@]}"; do
     ARCH_NAME=${_TARGET_ARCH[$ARCH_ID]};
-    HREF="https://caddyserver.com/api/download?os=${OS_NAME}&arch=${ARCH_NAME}&p=${P1}%40${V1}&p=${P2}%40${V2}&p=${P3}%40${V3}";
+    HREF="https://caddyserver.com/api/download?os=${OS_NAME}&arch=${ARCH_NAME}&p=${P1}%40${V1}&p=${P2}%40${V2}";
     HREF_LINK="* <a href=\"${HREF}\" target=\"_blank\">${OS_NAME}/${ARCH_NAME}</a>";
     sed -i ''"${DLOAD_LINE}"' i '"${HREF_LINK}"'' README.md
   done
