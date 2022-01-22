@@ -24,6 +24,9 @@ jobs:
         language: [ 'go' ]
 
     steps:
+    - name: Install dependencies
+      run: |
+        make dep
     - name: Checkout repository
       uses: actions/checkout@v2
     - name: Initialize CodeQL
