@@ -67,12 +67,13 @@ Accounting (AAA) Security Functions (SF) from
 
 ## Getting Started
 
-The configuration happens in Caddy's 
+The configuration happens in `Caddyfile`'s 
 [**global options block**](https://caddyserver.com/docs/caddyfile/options).
 
 * **Setting Up Local Authentication**: [Video](https://www.youtube.com/watch?v=k8tbbffMGZk)
   and [Config Gist](https://gist.github.com/greenpau/dbfadd3c9fee21dbb0a0d3902a8d0ec0)
 * **Login with App Authenticator and Yubico U2F**: [Video](https://youtu.be/poOkq_jb1B0)
+* **Customizing Caddy Auth Portal UI**: [Video](https://www.youtube.com/watch?v=20XOn-RBIX0&t=0s)
 
 Download Caddy with the plugins enabled:
 * <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.1&p=github.com%2Fgreenpau%2Fcaddy-trace%40&p=%40" target="_blank">windows/amd64</a>
