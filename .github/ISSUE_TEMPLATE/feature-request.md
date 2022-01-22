@@ -2,7 +2,7 @@
 name: Feature Request
 about: You understand that some functionality/feature is not available and you want it added.
 title: 'feature: CHANGE_ME'
-labels: 'need triage'
+labels: ['need triage', 'feature']
 assignees: 'greenpau'
 
 ---
@@ -16,8 +16,8 @@ CHANGE_ME
 Add Caddyfile directive:
 
 ```
-git {
-  repo foo {
+{
+  security {
     <directive> <args>
   }
 }
