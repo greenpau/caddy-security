@@ -17,10 +17,10 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/aaasf"
-	"github.com/greenpau/aaasf/pkg/credentials"
-	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/caddy-security/pkg/util"
+	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 const (
@@ -38,7 +38,7 @@ const (
 //     password <password>
 //   }
 //
-func parseCaddyfileCredentials(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *aaasf.Config) error {
+func parseCaddyfileCredentials(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	args := util.FindReplaceAll(repl, d.RemainingArgs())
 	if len(args) != 2 {
 		return d.ArgErr()

@@ -17,14 +17,14 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/aaasf"
-	"github.com/greenpau/aaasf/pkg/authn"
-	"github.com/greenpau/aaasf/pkg/authn/cookie"
-	"github.com/greenpau/aaasf/pkg/authn/registration"
-	"github.com/greenpau/aaasf/pkg/authn/ui"
-	"github.com/greenpau/aaasf/pkg/authz/options"
-	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/caddy-security/pkg/util"
+	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/authz/options"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"strings"
 )
 
@@ -104,7 +104,7 @@ const (
 //     validate source address
 //   }
 //
-func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *aaasf.Config) error {
+func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	// rootDirective is config key prefix.
 	var rootDirective string
 	args := util.FindReplaceAll(repl, d.RemainingArgs())

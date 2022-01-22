@@ -52,13 +52,13 @@ Second, fork the following repositories in Github into to your own Github
 handle, e.g. `anonymous`:
 
 * `https://github.com/greenpau/caddy-security` => `https://github.com/anonymous/caddy-security`
-* `https://github.com/greenpau/aaasf` => `https://github.com/anonymous/aaasf`
+* `https://github.com/greenpau/go-authcrunch` => `https://github.com/anonymous/go-authcrunch`
 
 Provided you are in `tmpdev` directory, clone the forked repositories:
 
 ```bash
 git clone git@github.com:anonymous/caddy-security.git
-git clone git@github.com:anonymous/aaasf.git
+git clone git@github.com:anonymous/go-authcrunch.git
 ```
 
 Next, browse to `caddy-security` and run the following `make` command to install
@@ -81,10 +81,10 @@ module github.com/greenpau/caddy-security
 go 1.16
 
 require (
-    github.com/greenpau/aaasf v1.0.4
+    github.com/greenpau/go-authcrunch v1.0.5
 )
 
-replace github.com/greenpau/aaasf v1.0.4 => /home/greenpau/dev/go/src/github.com/greenpau/aaasf
+replace github.com/greenpau/go-authcrunch v1.0.5 => /home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
 ```
 
 Then, modify `Makefile` such that that replacement passes to `xcaddy` builder:
@@ -93,7 +93,7 @@ Then, modify `Makefile` such that that replacement passes to `xcaddy` builder:
         @mkdir -p ../xcaddy-$(PLUGIN_NAME) && cd ../xcaddy-$(PLUGIN_NAME) && \
                 xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/caddy \
                 --with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
-                --with github.com/greenpau/aaasf@v1.0.4=/home/greenpau/dev/go/src/github.com/greenpau/aaasf
+                --with github.com/greenpau/go-authcrunch@v1.0.5=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
 ```
 
 Once all the necessary packages are installed, you should be ready to compile

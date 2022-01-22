@@ -63,7 +63,7 @@ and serves authentication portal with `authenticate` keyword.
 
 The app and plugin use Authentication, Authorization, and
 Accounting (AAA) Security Functions (SF) from
-[github.com/greenpau/aaasf](https://github.com/greenpau/aaasf).
+[github.com/greenpau/authcrunch](https://github.com/greenpau/go-authcrunch).
 
 ## Getting Started
 

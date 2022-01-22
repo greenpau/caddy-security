@@ -21,7 +21,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	// "github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/greenpau/aaasf"
+	"github.com/greenpau/go-authcrunch"
 	//	"strconv"
 	//	"strings"
 )
@@ -43,7 +43,7 @@ func init() {
 func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
 	repl := caddy.NewReplacer()
 	app := new(App)
-	app.Config = aaasf.NewConfig()
+	app.Config = authcrunch.NewConfig()
 
 	if !d.Next() {
 		return nil, d.ArgErr()

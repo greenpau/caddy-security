@@ -16,9 +16,9 @@ package security
 
 import (
 	"github.com/caddyserver/caddy/v2"
-	"github.com/greenpau/aaasf"
-	"github.com/greenpau/aaasf/pkg/authn"
-	"github.com/greenpau/aaasf/pkg/authz"
+	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"go.uber.org/zap"
 )
 
@@ -37,9 +37,8 @@ func init() {
 
 // App implements security manager.
 type App struct {
-	Name   string        `json:"-"`
-	Config *aaasf.Config `json:"config,omitempty"`
-	// server *aaasf.Server
+	Name        string             `json:"-"`
+	Config      *authcrunch.Config `json:"config,omitempty"`
 	logger      *zap.Logger
 	portals     []*authn.Portal
 	gatekeepers []*authz.Gatekeeper

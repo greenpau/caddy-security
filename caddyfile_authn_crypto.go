@@ -17,9 +17,9 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/aaasf/pkg/authn"
-	"github.com/greenpau/aaasf/pkg/errors"
-	cfgutil "github.com/greenpau/aaasf/pkg/util/cfg"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 func parseCaddyfileAuthPortalCrypto(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string, args []string) error {

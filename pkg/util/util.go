@@ -17,7 +17,7 @@ package util
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/greenpau/aaasf/pkg/util/cfg"
+	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"github.com/satori/go.uuid"
 	"net/http"
 )

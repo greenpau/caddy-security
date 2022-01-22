@@ -17,10 +17,10 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/aaasf"
-	"github.com/greenpau/aaasf/pkg/authz"
-	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/caddy-security/pkg/util"
+	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 //   authorization portal <name> {
 //   }
 //
-func parseCaddyfileAuthorization(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *aaasf.Config) error {
+func parseCaddyfileAuthorization(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	var rootDirective string
 	args := util.FindReplaceAll(repl, d.RemainingArgs())
 	if len(args) != 2 {
