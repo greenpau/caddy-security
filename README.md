@@ -76,8 +76,8 @@ The configuration happens in `Caddyfile`'s
 * **Customizing Caddy Auth Portal UI**: [Video](https://www.youtube.com/watch?v=20XOn-RBIX0&t=0s)
 
 Download Caddy with the plugins enabled:
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.2&p=github.com%2Fgreenpau%2Fcaddy-trace%40" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.2&p=github.com%2Fgreenpau%2Fcaddy-trace%40" target="_blank">linux/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.3&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.3&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
 
 ### Credentials
 
