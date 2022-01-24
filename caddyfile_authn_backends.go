@@ -17,9 +17,9 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"strconv"
 	"strings"
 )
@@ -53,7 +53,17 @@ func parseCaddyfileAuthPortalBackends(h *caddyfile.Dispenser, repl *caddy.Replac
 			case "disabled":
 				backendDisabled = true
 				break
-			case "username", "password", "search_base_dn", "search_group_filter", "path", "realm":
+			case "username":
+				if !h.NextArg() {
+					return backendValueErr(h, backendName, backendArg)
+				}
+				cfg["bind_username"] = util.FindReplace(repl, h.Val())
+			case "password":
+				if !h.NextArg() {
+					return backendValueErr(h, backendName, backendArg)
+				}
+				cfg["bind_password"] = util.FindReplace(repl, h.Val())
+			case "search_base_dn", "search_group_filter", "path", "realm":
 				if !h.NextArg() {
 					return backendValueErr(h, backendName, backendArg)
 				}

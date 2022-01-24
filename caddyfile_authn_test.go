@@ -180,6 +180,8 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 						  "name": "ldap_backend",
 						  "method": "ldap",
 						  "realm": "contoso.com",
+                          "bind_password": "P@ssW0rd123",
+                          "bind_username": "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM",
 						  "search_base_dn": "DC=CONTOSO,DC=COM",
 						  "search_user_filter": "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))",
      		              "servers": [
@@ -229,6 +231,8 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                             "member_of": "uniqueMember",
                             "email": "mail"
                           },
+                          "bind_password": "password",
+                          "bind_username": "cn=read-only-admin,dc=example,dc=com",
                           "search_base_dn": "DC=EXAMPLE,DC=COM",
                           "search_user_filter": "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))",
                           "groups": [
