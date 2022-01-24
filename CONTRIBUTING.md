@@ -20,12 +20,12 @@ accept the CLA in the following way.
 For Individual CLA:
 1. Review the Individual CLA provided in `assets/cla/individual_cla.md`
 2. Consent to the CLA by adding your name and email address to
-  the `assets/cla/individual_consent.yaml` file.
+  the `assets/cla/consent.yaml` file.
 
 For Corporate CLA:
 1. Review the Corporate CLA provided in `assets/cla/corporate_cla.md`
-2. Consent to the CLA by adding your name and email address to
-  the `assets/cla/corporate_consent.yaml` file.
+2. Consent to the CLA by adding your name and email address, and business
+  name to the `assets/cla/consent.yaml` file.
 
 ## Pull Request Checklist
 
