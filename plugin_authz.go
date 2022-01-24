@@ -17,15 +17,17 @@ package security
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/caddyauth"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/caddy-security/pkg/util"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
 const (
@@ -97,30 +99,49 @@ func (m *AuthzMiddleware) Validate() error {
 // Authenticate authorizes access based on the presense and content of
 // authorization token.
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
-	rr := requests.NewAuthorizationRequest()
-	rr.ID = util.GetRequestID(r)
-	if err := m.Authorizer.Authenticate(w, r, rr); err != nil {
-		return caddyauth.User{}, false, errors.ErrAuthorizationFailed
+	ar := requests.NewAuthorizationRequest()
+	ar.ID = util.GetRequestID(r)
+	if err := m.Authorizer.Authenticate(w, r, ar); err != nil {
+		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
+			getAuthorizationDetails(r, ar), err,
+		)
 	}
 
-	if rr.Response.User == nil {
-		return caddyauth.User{}, false, errors.ErrAuthorizationFailed
+	if ar.Response.User == nil {
+		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
+			getAuthorizationDetails(r, ar), "user data not found",
+		)
 	}
 
 	u := caddyauth.User{
 		Metadata: map[string]string{
-			"roles": rr.Response.User["roles"].(string),
+			"roles": ar.Response.User["roles"].(string),
 		},
 	}
-	if v, exists := rr.Response.User["id"]; exists {
+	if v, exists := ar.Response.User["id"]; exists {
 		u.ID = v.(string)
 	}
 	for _, k := range []string{"claim_id", "sub", "email", "name"} {
-		if v, exists := rr.Response.User[k]; exists {
+		if v, exists := ar.Response.User[k]; exists {
 			u.Metadata[k] = v.(string)
 		}
 	}
-	return u, rr.Response.Authorized, nil
+	return u, ar.Response.Authorized, nil
+}
+
+func getAuthorizationDetails(r *http.Request, ar *requests.AuthorizationRequest) string {
+	var details []string
+	details = append(details, fmt.Sprintf("src_ip=%s", addrutil.GetSourceAddress(r)))
+	details = append(details, fmt.Sprintf("src_conn_ip=%s", addrutil.GetSourceConnAddress(r)))
+	if ar.Response.User != nil {
+		for k, v := range ar.Response.User {
+			switch k {
+			case "email", "sub", "name", "jti":
+				details = append(details, fmt.Sprintf("%s=%s", k, v.(string)))
+			}
+		}
+	}
+	return strings.Join(details, ", ")
 }
 
 // Interface guards
