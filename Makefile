@@ -92,7 +92,8 @@ release:
 	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && false )
 	@versioned -patch
 	@echo "Patched version"
-	@git add VERSION
+	@assets/scripts/generate_downloads.sh
+	@git add VERSION README.md
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
