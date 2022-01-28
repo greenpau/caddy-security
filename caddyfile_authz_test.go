@@ -175,7 +175,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                 }
                 acl rule {
                   comment default deny
-                  always match role any
+                  match any
                   deny log warn
                 }
               }
@@ -200,7 +200,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                       {
                         "comment": "comment default deny",
                         "conditions": [
-                          "always match role any"
+                          "match any"
                         ],
                         "action": "deny log warn"
                       }
@@ -270,7 +270,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                         "action": "allow log debug"
                       },
                       {
-                        "conditions": ["always match origin any"],
+                        "conditions": ["field origin exists"],
                         "action": "allow log debug"
                       },
                       {
@@ -310,7 +310,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                         "action": "allow stop log info"
                       },
                       {
-                        "conditions": ["always match iss any"],
+                        "conditions": ["match any"],
                         "action": "deny"
                       }
                     ]

@@ -55,7 +55,7 @@ func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, repl *caddy.Replacer
 			return h.Errf("%s directive %q is too long", rootDirective, strings.Join(args, " "))
 		}
 		rule := &acl.RuleConfiguration{
-			Conditions: []string{"always match iss any"},
+			Conditions: []string{"match any"},
 		}
 		switch args[1] {
 		case "allow", "deny":

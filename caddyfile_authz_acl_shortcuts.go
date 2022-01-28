@@ -61,7 +61,7 @@ func parseCaddyfileAuthorizationACLShortcuts(h *caddyfile.Dispenser, repl *caddy
 		}
 	}
 	if matchAlways {
-		rule.Conditions = append(rule.Conditions, cfgutil.EncodeArgs(append([]string{"always", "match"}, cond...)))
+		rule.Conditions = append(rule.Conditions, cfgutil.EncodeArgs([]string{"field", cond[0], "exists"}))
 	} else {
 		rule.Conditions = append(rule.Conditions, cfgutil.EncodeArgs(append([]string{"match"}, cond...)))
 	}

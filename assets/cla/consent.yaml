@@ -1,9 +1,12 @@
-# Corporate CLA Consent
+# By adding your name, email, and company below, you I hereby consent to the
+# Corporate CLA Consent provided in assets/cla/corporate_cla.md.
 #
 #- name: John Smith
 #  email: foo@bar.com
 #  company: Contoso Inc.
 #
-# Individual CLA Consent
+# By adding your name and email below, you I hereby consent to the Individual
+# CLA provided in assets/cla/individual_cla.md.
+#
 #- name: John Smith
 #  email: foo@bar.com
