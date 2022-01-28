@@ -18,18 +18,21 @@ import (
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-func parseCaddyfileAuthPortalBackendShortcuts(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, ckp string, v []string) error {
+func parseCaddyfileAuthPortalBackendShortcuts(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, ckp string, args []string) error {
+	v := util.FindReplaceAll(repl, args)
 	if len(v) == 0 {
 		return errors.ErrConfigDirectiveShort.WithArgs(ckp, v)
 	}
 	if v[len(v)-1] == "disabled" {
 		return nil
 	}
+
 	m := make(map[string]interface{})
 	switch v[0] {
 	case "local":
