@@ -31,42 +31,34 @@ const (
 //
 // Syntax:
 //
-//   credentials email <label> {
-//     address <uri>
-//     protocol <smtp|pop3|imap>
+//   credentials <label> {
 //     username <username>
 //     password <password>
+//     domain <name>
 //   }
 //
 func parseCaddyfileCredentials(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	args := util.FindReplaceAll(repl, d.RemainingArgs())
-	if len(args) != 2 {
+	if len(args) != 1 {
 		return d.ArgErr()
 	}
-	switch args[0] {
-	case "email":
-		c := &credentials.SMTP{Name: args[1]}
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			k := d.Val()
-			v := util.FindReplaceAll(repl, d.RemainingArgs())
-			switch k {
-			case "address":
-				c.Address = v[0]
-			case "protocol":
-				c.Protocol = v[0]
-			case "username":
-				c.Username = v[0]
-			case "password":
-				c.Password = v[0]
-			default:
-				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
-			}
+	c := &credentials.Generic{Name: args[0]}
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		k := d.Val()
+		v := util.FindReplaceAll(repl, d.RemainingArgs())
+		switch k {
+		case "domain":
+			c.Domain = v[0]
+		case "username":
+			c.Username = v[0]
+		case "password":
+			c.Password = v[0]
+		default:
+			return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
 		}
-		if err := cfg.AddCredential(c); err != nil {
-			return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], args[1]}, err)
-		}
-	default:
-		return errors.ErrMalformedDirective.WithArgs(credPrefix, args)
+	}
+	if err := cfg.AddCredential(c); err != nil {
+		return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0]}, err)
 	}
 	return nil
 }

@@ -40,6 +40,7 @@ Please see other plugins:
 * [Overview](#overview)
 * [Getting Started](#getting-started)
   * [Credentials](#credentials)
+  * [Messaging](#messaging)
   * [Authentication](#authentication)
   * [Authorization](#authorization)
 * [User Interface](#user-interface)
@@ -82,16 +83,32 @@ Download Caddy with the plugins enabled:
 ### Credentials
 
 The following configuration adds SMTP credentials to security app.
-Subsequently, the app and plugin will be able to use the credentials.
+Subsequently, the app and plugin will be able to use the credentials
+in its messaging configuration.
 
 ```
 {
   security {
-    credentials email smtp.outlook.com {
-      address outlook.office365.com:993
-      protocol smtp
+    credentials smtp.outlook.com {
       username {env.SMTP_USERNAME}
       password {env.SMTP_PASSWORD}
+    }
+  }
+}
+```
+
+### Messaging
+
+The following configuration sets up email messaging provider. It will use
+the previously configured `smtp.outlook.com` credentials.
+
+```
+{
+  security {
+    messaging email provider smtp.outlook.com {
+      address outlook.office365.com:25
+      protocol smtp
+      credentials smtp.outlook.com
     }
   }
 }

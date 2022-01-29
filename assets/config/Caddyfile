@@ -5,11 +5,10 @@
 	https_port 8443
 
 	security {
-		credentials email smtp.contoso.com {
-			address smtp.contoso.com:993
-			protocol smtp
+		credentials smtp.contoso.com {
 			username foo
 			password bar
+			domain contoso.com
 		}
 
 		authentication portal myportal {

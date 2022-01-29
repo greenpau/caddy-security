@@ -37,9 +37,7 @@ func TestParseCaddyfileAppConfig(t *testing.T) {
 			name: "test email credentials",
 			d: caddyfile.NewTestDispenser(`
             security {
-			  credentials email smtp.contoso.com {
-			    address smtp.contoso.com:993
-				protocol smtp
+			  credentials smtp.contoso.com {
 				username foo
 				password bar
 			  }
@@ -47,13 +45,11 @@ func TestParseCaddyfileAppConfig(t *testing.T) {
 			want: `{
 			  "config": {
 			    "credentials": {
-				  "email": [
+				  "generic": [
 				    {
-				      "address":  "smtp.contoso.com:993",
 					  "name":     "smtp.contoso.com",
 					  "username": "foo",
-					  "password": "bar",
-					  "protocol": "smtp"
+					  "password": "bar"
 					}
 				  ]
 				}

@@ -24,7 +24,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-func TestParseCaddyfileCredentials(t *testing.T) {
+func TestParseCaddyfileMessaging(t *testing.T) {
 	testcases := []struct {
 		name      string
 		d         *caddyfile.Dispenser
@@ -33,106 +33,77 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 		err       error
 	}{
 		{
-			name: "test valid smtp credentials",
+			name: "test valid email provider with credentials",
 			d: caddyfile.NewTestDispenser(`
             security {
-			  credentials smtp.contoso.com {
-			    username foo
-                password bar
+			  credentials root@localhost {
+			    username root
+                password foobar
 			  }
-            }`),
-			want: `{
-			  "config": {
-			    "credentials": {
-				  "generic": [
-				    {
-					  "name":     "smtp.contoso.com",
-					  "username": "foo",
-					  "password": "bar"
-					}
-				  ]
-				}
-			  }
-			}`,
-		},
-		{
-			name: "test valid smtp credentials with optional domain",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              credentials smtp.contoso.com {
-                username foo
-                password bar
-                domain contoso.com
-              }
+
+			  messaging email provider local_smtp_server {
+			    address localhost:25
+				protocol smtp
+				credentials root@localhost
+				sender root@localhost "Auth Portal"
+				template password_recovery path/to/password_recovery.tmpl
+				template registration_confirmation path/to/registration_confirmation.tmpl
+				template registration_verdict path/to/registration_verdict.tmpl
+				template mfa_otp path/to/mfa_otp.tmpl
             }`),
 			want: `{
               "config": {
                 "credentials": {
                   "generic": [
                     {
-                      "name":     "smtp.contoso.com",
-                      "username": "foo",
-                      "password": "bar",
-                      "domain":   "contoso.com"
+                      "name": "root@localhost",
+                      "username": "root",
+                      "password": "foobar"
+                    }
+                  ]
+                },
+                "messaging": {
+                  "email_providers": [
+                    {
+                      "name": "provider",
+                      "address": "localhost:25",
+                      "protocol": "smtp",
+                      "credentials": "root@localhost",
+                      "sender_email": "root@localhost",
+                      "sender_name": "Auth Portal",
+                      "templates": {
+                        "mfa_otp": "path/to/mfa_otp.tmpl",
+                        "password_recovery": "path/to/password_recovery.tmpl",
+                        "registration_confirmation": "path/to/registration_confirmation.tmpl",
+                        "registration_verdict": "path/to/registration_verdict.tmpl"
+                      }
                     }
                   ]
                 }
               }
-            }`,
+			}`,
 		},
 		{
-			name: "test malformed credentials definition",
+			name: "test malformed email provider definition",
 			d: caddyfile.NewTestDispenser(`
             security {
-              credentials smtp.contoso.com foo {
-				username foo
-				password bar
+              messaging email provider local_smtp_server foo {
+				address localhost:25
               }
             }`),
 			shouldErr: true,
 			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after 'foo'", tf, 3),
 		},
 		{
-			name: "test unsupported credentials keyword",
+			name: "test malformed non-email provider definition",
 			d: caddyfile.NewTestDispenser(`
             security {
-              credentials smtp.contoso.com {
-                foo bar
+              messaging bar provider local_smtp_server {
+                address localhost:25
               }
             }`),
 			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{credPrefix, "smtp.contoso.com", "foo"},
-				[]string{"bar"},
-			),
-		},
-		{
-			name: "test smtp credentials without username",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              credentials smtp.contoso.com {
-                password bar
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{credPrefix, "smtp.contoso.com"},
-				errors.ErrCredKeyValueEmpty.WithArgs("username"),
-			),
-		},
-		{
-			name: "test smtp credentials without password",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              credentials smtp.contoso.com {
-                username foo
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{credPrefix, "smtp.contoso.com"},
-				errors.ErrCredKeyValueEmpty.WithArgs("password"),
-			),
+			err:       errors.ErrMalformedDirective.WithArgs(msgPrefix, []string{"bar", "provider", "local_smtp_server"}),
 		},
 	}
 	for _, tc := range testcases {
@@ -154,7 +125,8 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 			want := unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {
-				t.Errorf("parseCaddyfileCredentials() mismatch (-want +got):\n%s", diff)
+				t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
+				t.Errorf("parseCaddyfileMessaging() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
