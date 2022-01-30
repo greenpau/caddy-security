@@ -17,6 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"strings"
 )
@@ -29,7 +30,7 @@ func parseCaddyfileAuthPortalRegistration(h *caddyfile.Dispenser, repl *caddy.Re
 			if !h.NextArg() {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
 			}
-			portal.UserRegistrationConfig.Title = h.Val()
+			portal.UserRegistrationConfig.Title = util.FindReplace(repl, h.Val())
 		case "disabled":
 			if !h.NextArg() {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
@@ -41,12 +42,12 @@ func parseCaddyfileAuthPortalRegistration(h *caddyfile.Dispenser, repl *caddy.Re
 			if !h.NextArg() {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
 			}
-			portal.UserRegistrationConfig.Code = h.Val()
+			portal.UserRegistrationConfig.Code = util.FindReplace(repl, h.Val())
 		case "dropbox":
 			if !h.NextArg() {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
 			}
-			portal.UserRegistrationConfig.Dropbox = h.Val()
+			portal.UserRegistrationConfig.Dropbox = util.FindReplace(repl, h.Val())
 		case "require":
 			args := strings.Join(h.RemainingArgs(), " ")
 			args = strings.TrimSpace(args)
