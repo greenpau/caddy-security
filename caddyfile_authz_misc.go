@@ -33,6 +33,18 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 			p.RedirectWithJavascript = true
 		case v == "strip token":
 			p.StripTokenEnabled = true
+		case strings.HasPrefix(v, "login hint"):
+			remainingArguments := strings.TrimPrefix(v, "login hint ")
+			switch {
+			case strings.HasPrefix(remainingArguments, "with"):
+				remainingArguments = strings.TrimPrefix(remainingArguments, "with ")
+				validationArguments := strings.Split(remainingArguments, " ")
+				p.LoginHintValidators = validationArguments
+				break
+			default:
+				p.LoginHintValidators = []string{"email", "phone", "alphanumeric"}
+				break
+			}
 		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
 		default:

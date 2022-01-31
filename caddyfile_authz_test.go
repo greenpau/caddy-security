@@ -320,6 +320,50 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`,
 		},
 		{
+			name: "test valid authorization policy with enabled login hint",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              authorization policy mypolicy {
+                enable login hint
+              }
+            }`),
+			want: `{
+              "config": {
+                "authz_policy_configs": [
+                  {
+                    "name": "mypolicy",
+                    "auth_url_path": "/auth",
+                    "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
+					"login_hint_validators": ["email", "phone", "alphanumeric"]
+                  }
+                ]
+              }
+            }`,
+		},
+		{
+			name: "test valid authorization policy with enabled login hint with validators",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              authorization policy mypolicy {
+                enable login hint with email phone
+              }
+            }`),
+			want: `{
+              "config": {
+                "authz_policy_configs": [
+                  {
+                    "name": "mypolicy",
+                    "auth_url_path": "/auth",
+                    "auth_redirect_query_param": "redirect_url",
+                    "auth_redirect_status_code": 302,
+					"login_hint_validators": ["email", "phone"]
+                  }
+                ]
+              }
+            }`,
+		},
+		{
 			name: "test malformed authorization policy definition",
 			d: caddyfile.NewTestDispenser(`
             security {
