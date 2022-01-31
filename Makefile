@@ -84,6 +84,7 @@ dep:
 	@go get -u github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 	@go get -u github.com/greenpau/versioned/cmd/versioned@latest
 	@go get -u github.com/kyoh86/richgo
+	@echo "DEBUG: completed $@"
 
 release:
 	@echo "Making release"
