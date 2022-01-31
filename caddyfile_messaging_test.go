@@ -65,7 +65,7 @@ func TestParseCaddyfileMessaging(t *testing.T) {
                 "messaging": {
                   "email_providers": [
                     {
-                      "name": "provider",
+                      "name": "local_smtp_server",
                       "address": "localhost:25",
                       "protocol": "smtp",
                       "credentials": "root@localhost",

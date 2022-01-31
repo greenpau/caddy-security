@@ -40,6 +40,7 @@ const (
 //     template registration_confirmation <path>
 //     template registration_verdict <path>
 //     template mfa_otp <path>
+//     bcc <email_address_1> <email_address2>
 //   }
 //
 func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
@@ -53,7 +54,7 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 
 	switch args[0] {
 	case "email":
-		c := &messaging.EmailProvider{Name: args[1]}
+		c := &messaging.EmailProvider{Name: args[2]}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
 			v := util.FindReplaceAll(repl, d.RemainingArgs())
@@ -77,6 +78,12 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 					c.Templates = make(map[string]string)
 				}
 				c.Templates[v[0]] = v[1]
+			case "passwordless":
+				c.Passwordless = true
+			case "bcc":
+				for _, r := range v {
+					c.BlindCarbonCopy = append(c.BlindCarbonCopy, r)
+				}
 			default:
 				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
 			}

@@ -61,6 +61,15 @@ func parseCaddyfileAuthPortalRegistration(h *caddyfile.Dispenser, repl *caddy.Re
 			default:
 				return h.Errf("%s directive %q is unsupported", rootDirective, args)
 			}
+		case "email":
+			args := util.FindReplaceAll(repl, h.RemainingArgs())
+			if len(args) != 2 {
+				return h.Errf("%s directive %q invalid number of args", rootDirective, args)
+			}
+			if args[0] != "provider" {
+				return h.Errf("%s directive must be followed by provider keyword", rootDirective)
+			}
+			portal.UserRegistrationConfig.EmailProvider = args[1]
 		default:
 			return h.Errf("unsupported subdirective for %s: %s", rootDirective, subDirective)
 		}
