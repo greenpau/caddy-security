@@ -75,6 +75,7 @@ The configuration happens in `Caddyfile`'s
   and [Config Gist](https://gist.github.com/greenpau/dbfadd3c9fee21dbb0a0d3902a8d0ec0)
 * **Login with App Authenticator and Yubico U2F**: [Video](https://youtu.be/poOkq_jb1B0)
 * **Customizing Caddy Auth Portal UI**: [Video](https://www.youtube.com/watch?v=20XOn-RBIX0&t=0s)
+* **Caddy Authorize: Authorizing HTTP Requests**: [Video](https://www.youtube.com/watch?v=Mxbjfv47YiQ&t=1s&vq=hd1080)
 
 Download Caddy with the plugins enabled:
 * <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.12&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
