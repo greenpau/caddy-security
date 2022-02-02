@@ -74,6 +74,15 @@ func (app *App) Provision(ctx caddy.Context) error {
 			)
 			return err
 		}
+
+		if app.Config.Credentials != nil {
+			portal.SetCredentials(app.Config.Credentials)
+		}
+
+		if app.Config.Messaging != nil {
+			portal.SetMessaging(app.Config.Messaging)
+		}
+
 		if err := portal.Register(); err != nil {
 			app.logger.Error(
 				"failed registering auth portal",

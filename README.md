@@ -89,7 +89,7 @@ in its messaging configuration.
 ```
 {
   security {
-    credentials smtp.outlook.com {
+    credentials root@localhost {
       username {env.SMTP_USERNAME}
       password {env.SMTP_PASSWORD}
     }
@@ -100,15 +100,49 @@ in its messaging configuration.
 ### Messaging
 
 The following configuration sets up email messaging provider. It will use
-the previously configured `smtp.outlook.com` credentials.
+the previously configured `root@localhost` credentials.
 
 ```
 {
   security {
-    messaging email provider smtp.outlook.com {
-      address outlook.office365.com:25
+    messaging email provider localhost-smtp-server {
+      address 127.0.0.1:1025
       protocol smtp
-      credentials smtp.outlook.com
+      credentials root@localhost
+      sender root@localhost "My Auth Portal"
+      bcc greenpau@localhost
+    }
+  }
+}
+```
+
+It can also be "passwordless":
+
+```
+{
+  security {
+    messaging email provider localhost-smtp-server {
+      address 127.0.0.1:1025
+      protocol smtp
+      passwordless
+      sender root@localhost "My Auth Portal"
+      bcc greenpau@localhost
+    }
+  }
+}
+```
+
+It may support TLS:
+
+```
+{
+  security {
+    messaging email provider localhost-smtp-server {
+      address 127.0.0.1:1025
+      protocol smtps
+      passwordless
+      sender root@localhost "My Auth Portal"
+      bcc greenpau@localhost
     }
   }
 }
