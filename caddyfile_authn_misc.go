@@ -29,6 +29,11 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, 
 		switch v {
 		case "source ip tracking":
 			portal.TokenGrantorOptions.EnableSourceAddress = true
+		case "admin api":
+			if portal.API == nil {
+				portal.API = &authn.APIConfig{}
+				portal.API.Enabled = true
+			}
 		default:
 			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
 		}

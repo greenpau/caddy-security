@@ -15,42 +15,95 @@
 package security
 
 import (
+	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"strconv"
 	"strings"
 )
 
 func parseCaddyfileAuthPortalCookie(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string, args []string) error {
-	if len(args) != 2 {
+	switch {
+	case len(args) == 2:
+		if err := updateAuthPortalCookieConfig(portal, "default", args[0], args[1]); err != nil {
+			return h.Errf("%s %s directive erred: %v", rootDirective, strings.Join(args, " "), err)
+		}
+
+	case len(args) == 3:
+		if err := updateAuthPortalCookieConfig(portal, args[0], args[1], args[2]); err != nil {
+			return h.Errf("%s %s directive erred: %v", rootDirective, strings.Join(args, " "), err)
+		}
+	default:
 		return h.Errf("%s %s directive is invalid", rootDirective, strings.Join(args, " "))
 	}
-	switch args[0] {
+	return nil
+}
+
+func updateAuthPortalCookieConfig(portal *authn.PortalConfig, domain, k, v string) error {
+	var defaultDomain bool
+	if domain == "default" {
+		defaultDomain = true
+	}
+
+	if defaultDomain && (k == "domain") {
+		domain = v
+		defaultDomain = false
+	}
+
+	if !defaultDomain {
+		if portal.CookieConfig.Domains == nil {
+			portal.CookieConfig.Domains = make(map[string]*cookie.DomainConfig)
+		}
+		if _, exists := portal.CookieConfig.Domains[domain]; !exists {
+			portal.CookieConfig.Domains[domain] = &cookie.DomainConfig{
+				Domain: domain,
+			}
+		}
+		portal.CookieConfig.Domains[domain].Seq = len(portal.CookieConfig.Domains)
+	}
+
+	switch k {
 	case "domain":
-		portal.CookieConfig.Domain = args[1]
 	case "path":
-		portal.CookieConfig.Path = args[1]
+		if defaultDomain {
+			portal.CookieConfig.Path = v
+		} else {
+			portal.CookieConfig.Domains[domain].Path = v
+		}
 	case "lifetime":
-		lifetime, err := strconv.Atoi(args[1])
+		lifetime, err := strconv.Atoi(v)
 		if err != nil {
-			return h.Errf("%s %s value %q conversion failed: %v", rootDirective, args[0], args[1], err)
+			return fmt.Errorf("value %q conversion failed: %v", v, err)
 		}
 		if lifetime < 1 {
-			return h.Errf("%s %s value must be greater than zero", rootDirective, args[0])
+			return fmt.Errorf("%s value must be greater than zero", k)
 		}
-		portal.CookieConfig.Lifetime = lifetime
+		if defaultDomain {
+			portal.CookieConfig.Lifetime = lifetime
+		} else {
+			portal.CookieConfig.Domains[domain].Lifetime = lifetime
+		}
 	case "samesite":
-		portal.CookieConfig.SameSite = args[1]
-	case "insecure":
-		enabled, err := cfgutil.ParseBoolArg(args[1])
-		if err != nil {
-			return h.Errf("%s %s directive value of %q is invalid: %v", rootDirective, args[0], args[1], err)
+		if defaultDomain {
+			portal.CookieConfig.SameSite = v
+		} else {
+			portal.CookieConfig.Domains[domain].SameSite = v
 		}
-		portal.CookieConfig.Insecure = enabled
+	case "insecure":
+		enabled, err := cfgutil.ParseBoolArg(v)
+		if err != nil {
+			return fmt.Errorf("%s value of %q is invalid: %v", k, v, err)
+		}
+		if defaultDomain {
+			portal.CookieConfig.Insecure = enabled
+		} else {
+			portal.CookieConfig.Domains[domain].Insecure = enabled
+		}
 	default:
-		return h.Errf("%s %s directive is unsupported", rootDirective, strings.Join(args, " "))
+		return fmt.Errorf("unsupported %q directive", k)
 	}
 	return nil
 }

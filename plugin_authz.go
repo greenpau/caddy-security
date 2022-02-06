@@ -107,6 +107,10 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 		)
 	}
 
+	if ar.Response.Bypassed {
+		return caddyauth.User{}, ar.Response.Bypassed, nil
+	}
+
 	if ar.Response.User == nil {
 		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
 			getAuthorizationDetails(r, ar), "user data not found",

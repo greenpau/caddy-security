@@ -164,7 +164,12 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                       }
                     ],
                     "cookie_config": {
-                      "domain": "contoso.com"
+					  "domains": {
+					    "contoso.com": {
+						  "seq":   1,
+						  "domain": "contoso.com"
+						}
+					  }
                     },
                     "backend_configs": [
                       {

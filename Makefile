@@ -15,9 +15,9 @@ all: info
 	@rm -rf ../xcaddy-$(PLUGIN_NAME)/*
 	@mkdir -p ../xcaddy-$(PLUGIN_NAME) && cd ../xcaddy-$(PLUGIN_NAME) && \
 		xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/caddy \
-		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR)
-	@#--with github.com/greenpau/go-authcrunch@v1.0.13=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
-	@#--with github.com/greenpau/caddy-trace@v1.1.8=/home/greenpau/dev/go/src/github.com/greenpau/caddy-trace
+		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
+		--with github.com/greenpau/caddy-trace@v1.1.8
+	@#--with github.com/greenpau/go-authcrunch@v1.0.14=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
 	@#bin/caddy run -config assets/config/Caddyfile
 	@for f in `find ./assets -type f -name 'Caddyfile'`; do bin/caddy fmt -overwrite $$f; done
 

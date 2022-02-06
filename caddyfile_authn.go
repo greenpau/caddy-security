@@ -102,6 +102,9 @@ const (
 //     }
 //
 //     validate source address
+//
+//     enable source ip tracking
+//     enable admin api
 //   }
 //
 func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
