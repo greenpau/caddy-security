@@ -1,0 +1,24 @@
+{
+  "version": "1.0.14",
+  "policy": {
+    "password": {
+      "keep_versions": 10,
+      "min_length": 8,
+      "max_length": 128,
+      "require_uppercase": false,
+      "require_lowercase": false,
+      "require_number": false,
+      "require_non_alpha_numeric": false,
+      "block_reuse": false,
+      "block_password_change": false
+    },
+    "user": {
+      "min_length": 3,
+      "max_length": 50,
+      "allow_non_alpha_numeric": false,
+      "allow_uppercase": false
+    }
+  },
+  "revision": 1,
+  "last_modified": "2022-02-11T02:28:16.795785781Z"
+}

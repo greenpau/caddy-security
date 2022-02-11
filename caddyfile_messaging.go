@@ -38,6 +38,7 @@ const (
 //     sender <email_address> [name]
 //     template password_recovery <path>
 //     template registration_confirmation <path>
+//     template registration_ready <path>
 //     template registration_verdict <path>
 //     template mfa_otp <path>
 //     bcc <email_address_1> <email_address2>

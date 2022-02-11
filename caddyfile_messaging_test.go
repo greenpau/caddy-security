@@ -48,6 +48,7 @@ func TestParseCaddyfileMessaging(t *testing.T) {
 				sender root@localhost "Auth Portal"
 				template password_recovery path/to/password_recovery.tmpl
 				template registration_confirmation path/to/registration_confirmation.tmpl
+				template registration_ready path/to/registration_ready.tmpl
 				template registration_verdict path/to/registration_verdict.tmpl
 				template mfa_otp path/to/mfa_otp.tmpl
             }`),
@@ -75,7 +76,8 @@ func TestParseCaddyfileMessaging(t *testing.T) {
                         "mfa_otp": "path/to/mfa_otp.tmpl",
                         "password_recovery": "path/to/password_recovery.tmpl",
                         "registration_confirmation": "path/to/registration_confirmation.tmpl",
-                        "registration_verdict": "path/to/registration_verdict.tmpl"
+                        "registration_ready": "path/to/registration_ready.tmpl",
+						"registration_verdict": "path/to/registration_verdict.tmpl"
                       }
                     }
                   ]

@@ -99,6 +99,7 @@ const (
 //       dropbox <file/path/to/registration/dir/>
 //       require accept terms
 //       require domain mx
+//       admin email <email_address> [<email_address_N>]
 //     }
 //
 //     validate source address
