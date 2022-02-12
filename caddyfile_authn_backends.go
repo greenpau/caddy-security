@@ -73,6 +73,12 @@ func parseCaddyfileAuthPortalBackends(h *caddyfile.Dispenser, repl *caddy.Replac
 					return backendValueErr(h, backendName, backendArg)
 				}
 				cfg["search_user_filter"] = util.FindReplace(repl, h.Val())
+
+			case "required_token_fields":
+				if !h.NextArg() {
+					return backendValueErr(h, backendName, backendArg)
+				}
+				cfg[backendArg] = util.FindReplaceAll(repl, h.RemainingArgs())
 			case "attributes":
 				attrMap := make(map[string]interface{})
 				for attrNesting := h.Nesting(); h.NextBlock(attrNesting); {
