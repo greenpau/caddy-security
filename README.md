@@ -78,8 +78,8 @@ The configuration happens in `Caddyfile`'s
 * **Caddy Authorize: Authorizing HTTP Requests**: [Video](https://www.youtube.com/watch?v=Mxbjfv47YiQ&t=1s&vq=hd1080)
 
 Download Caddy with the plugins enabled:
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.15&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.15&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.16&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.0.16&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
 
 ### Credentials
 
