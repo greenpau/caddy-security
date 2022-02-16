@@ -145,7 +145,7 @@ func parseCaddyfileAuthPortalBackends(h *caddyfile.Dispenser, repl *caddy.Replac
 				}
 				acsURLs = append(acsURLs, h.Val())
 				cfg["acs_urls"] = acsURLs
-			case "scopes", "user_group_filters", "user_org_filters":
+			case "scopes", "user_group_filters", "user_org_filters", "response_type":
 				if _, exists := cfg[backendArg]; exists {
 					values := cfg[backendArg].([]string)
 					values = append(values, h.RemainingArgs()...)
@@ -167,6 +167,7 @@ func parseCaddyfileAuthPortalBackends(h *caddyfile.Dispenser, repl *caddy.Replac
 				case "key_verification":
 				case "pass_grant_type":
 				case "response_type":
+				case "scope":
 				case "nonce":
 				default:
 					return backendPropErr(h, backendName, backendArg, backendVal, "is unsupported")
@@ -176,6 +177,7 @@ func parseCaddyfileAuthPortalBackends(h *caddyfile.Dispenser, repl *caddy.Replac
 				backendVal := strings.Join(h.RemainingArgs(), "_")
 				switch backendVal {
 				case "accept_header":
+				case "js_callback":
 				default:
 					return backendPropErr(h, backendName, backendArg, backendVal, "is unsupported")
 				}
