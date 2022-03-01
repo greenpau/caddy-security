@@ -133,6 +133,17 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                     server_id default
                     scopes openid email profile groups
                   }
+                  oidc_backend {
+                    method oauth2
+                    realm oidc
+                    provider generic
+                    client_id 42246c62-c07a-43b4-9b32-976e517fd2a9
+                    client_secret d09511fd-8945-47fe-b78c-3dd2d1708184
+                    scopes openid
+                    base_auth_url https://auth.example.com/
+                    metadata_url https://auth.example.com/.well-known/openid-configuration
+                    callback_url /custom-callback
+                  }
                 }
               }
             }`),
@@ -283,6 +294,20 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                           "client_secret": "b3aJC5E59hU18YKC7Yca3994F4qFhWiAo_ZojanF",
                           "server_id": "default",
 						  "scopes": ["openid", "email", "profile", "groups"]
+                        }
+                      },
+                      {
+                        "oauth2": {
+                          "name": "oidc_backend",
+                          "method": "oauth2",
+                          "realm": "oidc",
+                          "provider": "generic",
+                          "client_id": "42246c62-c07a-43b4-9b32-976e517fd2a9",
+                          "client_secret": "d09511fd-8945-47fe-b78c-3dd2d1708184",
+                          "scopes": ["openid"],
+                          "base_auth_url": "https://auth.example.com/",
+                          "metadata_url": "https://auth.example.com/.well-known/openid-configuration",
+                          "callback_url": "/custom-callback"
                         }
                       }
                     ],

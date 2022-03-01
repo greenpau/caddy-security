@@ -57,6 +57,7 @@ const (
 //       disable metadata_discovery
 //       authorization_url <authorization_url>
 //       disable key_verification
+//       callback_url <callback_url>
 //     }
 //
 //     backend gitlab {
