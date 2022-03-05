@@ -59,7 +59,6 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 			p.ValidateSourceAddress = true
 		case v == "bearer header":
 			p.ValidateBearerHeader = true
-
 		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
 		default:

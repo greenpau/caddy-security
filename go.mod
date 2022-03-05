@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/caddyserver/caddy/v2 v2.4.6
 	github.com/google/go-cmp v0.5.7
-	github.com/greenpau/go-authcrunch v1.0.17
+	github.com/greenpau/go-authcrunch v1.0.18
 	github.com/satori/go.uuid v1.2.0
 	go.uber.org/zap v1.20.0
 )

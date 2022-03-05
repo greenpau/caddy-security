@@ -45,35 +45,39 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 		p := &authz.PolicyConfig{Name: args[1]}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
-			v := util.FindReplaceAll(repl, d.RemainingArgs())
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
 			case "crypto":
+				v := util.FindReplaceAll(repl, d.RemainingArgs())
 				if err := parseCaddyfileAuthorizationCrypto(d, repl, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "acl":
+				v := util.FindReplaceAll(repl, d.RemainingArgs())
 				if err := parseCaddyfileAuthorizationACL(d, repl, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "allow", "deny":
+				v := util.FindReplaceAll(repl, d.RemainingArgs())
 				if err := parseCaddyfileAuthorizationACLShortcuts(d, repl, p, rootDirective, k, v); err != nil {
 					return err
 				}
 			case "bypass":
+				v := util.FindReplaceAll(repl, d.RemainingArgs())
 				if err := parseCaddyfileAuthorizationBypass(d, repl, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "enable", "disable", "validate", "set", "with":
-				if err := parseCaddyfileAuthorizationMisc(d, repl, p, rootDirective, k, v); err != nil {
+				if err := parseCaddyfileAuthorizationMisc(d, repl, p, rootDirective, k, d.RemainingArgs()); err != nil {
 					return err
 				}
 			case "inject":
+				v := util.FindReplaceAll(repl, d.RemainingArgs())
 				if err := parseCaddyfileAuthorizationHeaderInjection(d, repl, p, rootDirective, v); err != nil {
 					return err
 				}
 			default:
-				return errors.ErrMalformedDirective.WithArgs(rootDirective, v)
+				return errors.ErrMalformedDirective.WithArgs(rootDirective, d.RemainingArgs())
 			}
 		}
 		if err := cfg.AddAuthorizationPolicy(p); err != nil {
