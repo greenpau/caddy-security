@@ -91,8 +91,8 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                 validate path acl
                 validate source address
                 validate bearer header
-                with basic auth
-                with api key auth
+                with basic auth context default
+                with api key auth context default
                 allow roles authp/admin authp/user
               }
             }`),
