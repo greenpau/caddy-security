@@ -130,7 +130,7 @@ func parseCaddyfileAuthPortalBackends(h *caddyfile.Dispenser, repl *caddy.Replac
 			case "idp_metadata_location", "idp_sign_cert_location", "tenant_id", "idp_login_url",
 				"application_id", "application_name", "entity_id", "domain_name",
 				"client_id", "client_secret", "server_id", "base_auth_url", "metadata_url",
-				"identity_token_name", "authorization_url", "token_url":
+				"identity_token_name", "authorization_url", "token_url", "callback_url":
 				if !h.NextArg() {
 					return backendValueErr(h, backendName, backendArg)
 				}
