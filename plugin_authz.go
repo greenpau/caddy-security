@@ -41,7 +41,9 @@ func init() {
 // AuthzMiddleware authorizes access to endpoints based on
 // the presense and content of JWT token.
 type AuthzMiddleware struct {
-	Authorizer *authz.Authorizer `json:"authorizer,omitempty"`
+	RouteMatcher   string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
+	GatekeeperName string `json:"gatekeeper_name,omitempty" xml:"gatekeeper_name,omitempty" yaml:"gatekeeper_name,omitempty"`
+	gatekeeper     *authz.Gatekeeper
 }
 
 // CaddyModule returns the Caddy module information.
@@ -59,41 +61,46 @@ func (m *AuthzMiddleware) Provision(ctx caddy.Context) error {
 		return err
 	}
 
-	secApp := appModule.(*App)
-	if secApp == nil {
+	app := appModule.(*App)
+	if app == nil {
 		return fmt.Errorf("security app is nil")
 	}
-	if secApp.Config == nil {
+	if app.Config == nil {
 		return fmt.Errorf("security app config is nil")
 	}
 
-	var foundRef bool
-	for _, cfg := range secApp.Config.Policies {
-		if cfg.Name == m.Authorizer.GatekeeperName {
-			foundRef = true
-			break
-		}
+	gatekeeper, err := app.getGatekeeper(m.GatekeeperName)
+	if err != nil {
+		return fmt.Errorf("security app erred with %q authorization policy: %v", m.GatekeeperName, err)
 	}
-	if !foundRef {
-		return fmt.Errorf("security app has no %q authorization policy", m.Authorizer.GatekeeperName)
-	}
+	m.gatekeeper = gatekeeper
 
-	return m.Authorizer.Provision(ctx.Logger(m))
+	return nil
 }
 
 // UnmarshalCaddyfile unmarshals caddyfile.
 func (m *AuthzMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) (err error) {
-	a, err := parseAuthzPluginCaddyfile(httpcaddyfile.Helper{Dispenser: d})
+	cfg, err := parseAuthzPluginCaddyfile(httpcaddyfile.Helper{Dispenser: d})
 	if err != nil {
 		return err
 	}
-	m.Authorizer = a
+	m.RouteMatcher = cfg["path"]
+	m.GatekeeperName = cfg["gatekeeper_name"]
 	return nil
 }
 
 // Validate implements caddy.Validator.
 func (m *AuthzMiddleware) Validate() error {
-	return m.Authorizer.Validate()
+	if m.RouteMatcher == "" {
+		return fmt.Errorf("empty route matcher")
+	}
+	if m.GatekeeperName == "" {
+		return fmt.Errorf("empty gatekeeper name")
+	}
+	if m.gatekeeper == nil {
+		return fmt.Errorf("gatekeeper is nil")
+	}
+	return nil
 }
 
 // Authenticate authorizes access based on the presense and content of
@@ -101,7 +108,7 @@ func (m *AuthzMiddleware) Validate() error {
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
 	ar := requests.NewAuthorizationRequest()
 	ar.ID = util.GetRequestID(r)
-	if err := m.Authorizer.Authenticate(w, r, ar); err != nil {
+	if err := m.gatekeeper.Authenticate(w, r, ar); err != nil {
 		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
 			getAuthorizationDetails(r, ar), err,
 		)

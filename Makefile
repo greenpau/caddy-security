@@ -17,7 +17,7 @@ all: info
 		xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/caddy \
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-trace@v1.1.8
-	@#--with github.com/greenpau/go-authcrunch@v1.0.19=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
+	@#--with github.com/greenpau/go-authcrunch@v1.0.20=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
 	@#bin/caddy run -config assets/config/Caddyfile
 	@for f in `find ./assets -type f -name 'Caddyfile'`; do bin/caddy fmt -overwrite $$f; done
 
@@ -68,8 +68,10 @@ qtest: covdir
 	@echo "DEBUG: perform quick tests ..."
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestApp ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAppConfig ./*.go
+	@time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentity ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileCredentials ./*.go
-	@time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileMessaging ./*.go
+	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileMessaging ./*.go
+	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentit* ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthentication ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthorization ./*.go
 	@#go test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfile ./*.go

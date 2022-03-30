@@ -41,9 +41,18 @@ func TestParseCaddyfileAppConfig(t *testing.T) {
 				username foo
 				password bar
 			  }
+
+			  local identity store localdb {
+                realm local
+                path /tmp/localdb
+              }
+
+              authentication portal myportal {
+                enable identity store localdb
+              }
+
             }`),
 			want: `{
-			  "config": {
 			    "credentials": {
 				  "generic": [
 				    {
@@ -53,7 +62,6 @@ func TestParseCaddyfileAppConfig(t *testing.T) {
 					}
 				  ]
 				}
-			  }
 			}`,
 		},
 	}
@@ -73,7 +81,14 @@ func TestParseCaddyfileAppConfig(t *testing.T) {
 				t.Fatalf("unexpected success, want: %v", tc.err)
 			}
 
-			got := unpack(t, string(app.(httpcaddyfile.App).Value))
+			fullCfg := unpack(t, string(app.(httpcaddyfile.App).Value))
+			cfg := fullCfg["config"].(map[string]interface{})
+
+			got := make(map[string]interface{})
+			for _, k := range []string{"credentials"} {
+				got[k] = cfg[k].(map[string]interface{})
+			}
+
 			want := unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {

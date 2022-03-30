@@ -51,9 +51,18 @@ func TestParseCaddyfileMessaging(t *testing.T) {
 				template registration_ready path/to/registration_ready.tmpl
 				template registration_verdict path/to/registration_verdict.tmpl
 				template mfa_otp path/to/mfa_otp.tmpl
+			  }
+
+              local identity store localdb {
+                realm local
+                path /tmp/localdb
+              }
+
+              authentication portal myportal {
+                enable identity store localdb
+              }
             }`),
 			want: `{
-              "config": {
                 "credentials": {
                   "generic": [
                     {
@@ -82,7 +91,6 @@ func TestParseCaddyfileMessaging(t *testing.T) {
                     }
                   ]
                 }
-              }
 			}`,
 		},
 		{
@@ -123,7 +131,15 @@ func TestParseCaddyfileMessaging(t *testing.T) {
 			if tc.shouldErr {
 				t.Fatalf("unexpected success, want: %v", tc.err)
 			}
-			got := unpack(t, string(app.(httpcaddyfile.App).Value))
+
+			fullCfg := unpack(t, string(app.(httpcaddyfile.App).Value))
+			cfg := fullCfg["config"].(map[string]interface{})
+
+			got := make(map[string]interface{})
+			for _, k := range []string{"credentials", "messaging"} {
+				got[k] = cfg[k].(map[string]interface{})
+			}
+
 			want := unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {

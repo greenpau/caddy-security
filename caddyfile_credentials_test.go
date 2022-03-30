@@ -40,19 +40,24 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 			    username foo
                 password bar
 			  }
+
+              local identity store localdb {
+                realm local
+                path /tmp/localdb
+              }
+
+              authentication portal myportal {
+                enable identity store localdb
+              }
             }`),
 			want: `{
-			  "config": {
-			    "credentials": {
-				  "generic": [
-				    {
-					  "name":     "smtp.contoso.com",
-					  "username": "foo",
-					  "password": "bar"
-					}
-				  ]
+			  "generic": [
+				{
+				  "name":     "smtp.contoso.com",
+				  "username": "foo",
+				  "password": "bar"
 				}
-			  }
+			  ]
 			}`,
 		},
 		{
@@ -64,20 +69,25 @@ func TestParseCaddyfileCredentials(t *testing.T) {
                 password bar
                 domain contoso.com
               }
+
+              local identity store localdb {
+                realm local
+                path /tmp/localdb
+              }
+
+              authentication portal myportal {
+                enable identity store localdb
+              }
             }`),
 			want: `{
-              "config": {
-                "credentials": {
-                  "generic": [
-                    {
-                      "name":     "smtp.contoso.com",
-                      "username": "foo",
-                      "password": "bar",
-                      "domain":   "contoso.com"
-                    }
-                  ]
-                }
-              }
+			  "generic": [
+				{
+				  "name":     "smtp.contoso.com",
+				  "username": "foo",
+				  "password": "bar",
+				  "domain":   "contoso.com"
+				}
+			  ]
             }`,
 		},
 		{
@@ -150,7 +160,9 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 			if tc.shouldErr {
 				t.Fatalf("unexpected success, want: %v", tc.err)
 			}
-			got := unpack(t, string(app.(httpcaddyfile.App).Value))
+			fullCfg := unpack(t, string(app.(httpcaddyfile.App).Value))
+			cfg := fullCfg["config"].(map[string]interface{})
+			got := cfg["credentials"].(map[string]interface{})
 			want := unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {

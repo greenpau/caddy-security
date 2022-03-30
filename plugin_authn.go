@@ -22,9 +22,9 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/caddy-security/pkg/util"
 )
 
 const (
@@ -38,7 +38,9 @@ func init() {
 // AuthnMiddleware implements Form-Based, Basic, Local, LDAP,
 // OpenID Connect, OAuth 2.0, SAML Authentication.
 type AuthnMiddleware struct {
-	Authenticator *authn.Authenticator `json:"authenticator,omitempty"`
+	RouteMatcher string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
+	PortalName   string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
+	portal       *authn.Portal
 }
 
 // CaddyModule returns the Caddy module information.
@@ -56,48 +58,54 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 		return err
 	}
 
-	secApp := appModule.(*App)
-	if secApp == nil {
+	app := appModule.(*App)
+	if app == nil {
 		return fmt.Errorf("security app is nil")
 	}
-	if secApp.Config == nil {
+	if app.Config == nil {
 		return fmt.Errorf("security app config is nil")
 	}
 
-	var foundRef bool
-	for _, cfg := range secApp.Config.Portals {
-		if cfg.Name == m.Authenticator.PortalName {
-			foundRef = true
-			break
-		}
+	portal, err := app.getPortal(m.PortalName)
+	if err != nil {
+		return fmt.Errorf("security app erred with %q authentication portal: %v", m.PortalName, err)
 	}
-	if !foundRef {
-		return fmt.Errorf("security app has no %q authentication portal", m.Authenticator.PortalName)
-	}
+	m.portal = portal
 
-	return m.Authenticator.Provision(ctx.Logger(m))
+	return nil
 }
 
 // UnmarshalCaddyfile unmarshals a caddyfile.
 func (m *AuthnMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) (err error) {
-	a, err := parseAuthnPluginCaddyfile(httpcaddyfile.Helper{Dispenser: d})
+	cfg, err := parseAuthnPluginCaddyfile(httpcaddyfile.Helper{Dispenser: d})
 	if err != nil {
 		return err
 	}
-	m.Authenticator = a
+	m.RouteMatcher = cfg["path"]
+	m.PortalName = cfg["portal_name"]
 	return nil
 }
 
 // Validate implements caddy.Validator.
 func (m *AuthnMiddleware) Validate() error {
-	return m.Authenticator.Validate()
+	if m.RouteMatcher == "" {
+		return fmt.Errorf("empty route matcher")
+	}
+	if m.PortalName == "" {
+		return fmt.Errorf("empty portal name")
+	}
+	if m.portal == nil {
+		return fmt.Errorf("portal is nil")
+	}
+
+	return nil
 }
 
 // ServeHTTP serves authentication portal.
 func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
-	return m.Authenticator.ServeHTTP(r.Context(), w, r, rr)
+	return m.portal.ServeHTTP(r.Context(), w, r, rr)
 }
 
 // Interface guards

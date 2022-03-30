@@ -37,17 +37,15 @@ func init() {
 
 // App implements security manager.
 type App struct {
-	Name        string             `json:"-"`
-	Config      *authcrunch.Config `json:"config,omitempty"`
-	logger      *zap.Logger
-	portals     []*authn.Portal
-	gatekeepers []*authz.Gatekeeper
+	Name   string             `json:"-"`
+	Config *authcrunch.Config `json:"config,omitempty"`
+	server *authcrunch.Server
+	logger *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		// ID:  caddy.ModuleID("security"),
 		ID:  "security",
 		New: func() caddy.Module { return new(App) },
 	}
@@ -63,60 +61,15 @@ func (app *App) Provision(ctx caddy.Context) error {
 		zap.String("app", app.Name),
 	)
 
-	for _, cfg := range app.Config.Portals {
-		portal, err := authn.NewPortal(cfg, app.logger)
-		if err != nil {
-			app.logger.Error(
-				"failed initializing auth portal",
-				zap.String("app", app.Name),
-				zap.String("portal_name", cfg.Name),
-				zap.Error(err),
-			)
-			return err
-		}
-
-		if app.Config.Credentials != nil {
-			portal.SetCredentials(app.Config.Credentials)
-		}
-
-		if app.Config.Messaging != nil {
-			portal.SetMessaging(app.Config.Messaging)
-		}
-
-		if err := portal.Register(); err != nil {
-			app.logger.Error(
-				"failed registering auth portal",
-				zap.String("app", app.Name),
-				zap.String("portal_name", cfg.Name),
-				zap.Error(err),
-			)
-			return err
-		}
-		app.portals = append(app.portals, portal)
+	server, err := authcrunch.NewServer(app.Config, app.logger)
+	if err != nil {
+		app.logger.Error(
+			"failed provisioning app server instance",
+			zap.String("app", app.Name),
+			zap.Error(err),
+		)
 	}
-
-	for _, cfg := range app.Config.Policies {
-		gatekeeper, err := authz.NewGatekeeper(cfg, app.logger)
-		if err != nil {
-			app.logger.Error(
-				"failed initializing gatekeeper",
-				zap.String("app", app.Name),
-				zap.String("gatekeeper_name", cfg.Name),
-				zap.Error(err),
-			)
-			return err
-		}
-		if err := gatekeeper.Register(); err != nil {
-			app.logger.Error(
-				"failed registering gatekeeper",
-				zap.String("app", app.Name),
-				zap.String("gatekeeper_name", cfg.Name),
-				zap.Error(err),
-			)
-			return err
-		}
-		app.gatekeepers = append(app.gatekeepers, gatekeeper)
-	}
+	app.server = server
 
 	app.logger.Info(
 		"provisioned app instance",
@@ -128,56 +81,25 @@ func (app *App) Provision(ctx caddy.Context) error {
 // Start starts the App.
 func (app App) Start() error {
 	app.logger.Debug(
-		"starting app instance",
-		zap.String("app", app.Name),
-	)
-
-	/*
-		if msgs := app.manager.Start(); msgs != nil {
-			for _, msg := range msgs {
-				app.logger.Error(
-					"failed managing git repo",
-					zap.String("app", app.Name),
-					zap.String("repo", msg.Repository),
-					zap.Error(msg.Error),
-				)
-			}
-			return fmt.Errorf("git repo manager failed to start")
-		}
-	*/
-
-	app.logger.Debug(
 		"started app instance",
 		zap.String("app", app.Name),
 	)
-
 	return nil
 }
 
 // Stop stops the App.
 func (app App) Stop() error {
 	app.logger.Debug(
-		"stopping app instance",
-		zap.String("app", app.Name),
-	)
-
-	/*
-		if msgs := app.manager.Stop(); msgs != nil {
-			for _, msg := range msgs {
-				app.logger.Error(
-					"failed stoppint git repo manager",
-					zap.String("app", app.Name),
-					zap.String("repo", msg.Repository),
-					zap.Error(msg.Error),
-				)
-			}
-			return fmt.Errorf("git repo manager failed to stop properly")
-		}
-	*/
-
-	app.logger.Debug(
 		"stopped app instance",
 		zap.String("app", app.Name),
 	)
 	return nil
+}
+
+func (app *App) getPortal(s string) (*authn.Portal, error) {
+	return app.server.GetPortalByName(s)
+}
+
+func (app *App) getGatekeeper(s string) (*authz.Gatekeeper, error) {
+	return app.server.GetGatekeeperByName(s)
 }

@@ -26,14 +26,30 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, 
 	v = strings.TrimSpace(v)
 	switch k {
 	case "enable":
-		switch v {
-		case "source ip tracking":
+		switch {
+		case v == "source ip tracking":
 			portal.TokenGrantorOptions.EnableSourceAddress = true
-		case "admin api":
+		case v == "admin api":
 			if portal.API == nil {
 				portal.API = &authn.APIConfig{}
 				portal.API.Enabled = true
 			}
+		case strings.HasPrefix(v, "identity provider"):
+			if len(args) < 3 {
+				return h.Errf("malformed directive for %s: %s", rootDirective, v)
+			}
+			for _, providerName := range args[2:] {
+				portal.IdentityProviders = append(portal.IdentityProviders, providerName)
+			}
+			return nil
+		case strings.HasPrefix(v, "identity store"):
+			if len(args) < 3 {
+				return h.Errf("malformed directive for %s: %s", rootDirective, v)
+			}
+			for _, storeName := range args[2:] {
+				portal.IdentityStores = append(portal.IdentityStores, storeName)
+			}
+			return nil
 		default:
 			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
 		}

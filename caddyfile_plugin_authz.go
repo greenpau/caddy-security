@@ -20,7 +20,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/caddyauth"
-	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/caddy-security/pkg/util"
 )
 
@@ -29,14 +28,20 @@ func init() {
 }
 
 func getMiddlewareFromParseAuthzPluginCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	a, err := parseAuthzPluginCaddyfile(h)
+	m, err := parseAuthzPluginCaddyfile(h)
 	if err != nil {
 		return nil, err
 	}
 
 	return caddyauth.Authentication{
 		ProvidersRaw: caddy.ModuleMap{
-			authzPluginName: caddyconfig.JSON(AuthzMiddleware{Authorizer: a}, nil),
+			authzPluginName: caddyconfig.JSON(
+				AuthzMiddleware{
+					RouteMatcher:   m["path"],
+					GatekeeperName: m["gatekeeper_name"],
+				},
+				nil,
+			),
 		},
 	}, nil
 }
@@ -54,24 +59,25 @@ func getMiddlewareFromParseAuthzPluginCaddyfile(h httpcaddyfile.Helper) (caddyht
 //   authorize /* with mypolicy
 //   authorize /app* with mypolicy
 //
-func parseAuthzPluginCaddyfile(h httpcaddyfile.Helper) (*authz.Authorizer, error) {
+func parseAuthzPluginCaddyfile(h httpcaddyfile.Helper) (map[string]string, error) {
 	var i int
 	repl := caddy.NewReplacer()
 	args := util.FindReplaceAll(repl, h.RemainingArgs())
-	a := &authz.Authorizer{}
 	if args[0] != "authorize" {
 		return nil, h.Errf("directive should start with authorize: %s", args)
 	}
 
+	m := make(map[string]string)
+
 	switch len(args) {
 	case 3:
 		i = 1
-		a.Path = "*"
-		a.GatekeeperName = args[2]
+		m["path"] = "*"
+		m["gatekeeper_name"] = args[2]
 	case 4:
 		i = 2
-		a.Path = args[1]
-		a.GatekeeperName = args[3]
+		m["path"] = args[1]
+		m["gatekeeper_name"] = args[3]
 	default:
 		return nil, h.Errf("malformed directive: %s", args)
 	}
@@ -82,5 +88,5 @@ func parseAuthzPluginCaddyfile(h httpcaddyfile.Helper) (*authz.Authorizer, error
 	if args[i] != "with" {
 		return nil, h.Errf("directive must contain %q keyword: %s", "with", args)
 	}
-	return a, nil
+	return m, nil
 }

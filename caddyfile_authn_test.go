@@ -36,10 +36,10 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 			name: "test valid authentication portal config",
 			d: caddyfile.NewTestDispenser(`
             security {
+
 			  authentication portal myportal {
                 crypto default token lifetime 3600
                 crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
-                backend local assets/config/users.json local
 				cookie domain contoso.com
                 ui {
                   links {
@@ -61,255 +61,205 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                 }
 				enable source ip tracking
 				validate source address
+				enable identity provider contoso.com example.com
+				enable identity provider azure okta
+			  }
 
-                backends {
-                  ldap_backend {
-                    method ldap
-                    realm contoso.com
-                    servers {
-                      ldaps://ldaps.contoso.com ignore_cert_errors
-                    }
-                    attributes {
-                      name givenName
-                      surname sn
-                      username sAMAccountName
-                      member_of memberOf
-                      email mail
-                    }
-                    username "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM"
-                    password "P@ssW0rd123"
-                    search_base_dn "DC=CONTOSO,DC=COM"
-                    search_filter "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))"
-                    groups {
-                      "CN=Admins,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" admin
-                      "CN=Editors,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" editor
-                      "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" viewer
-                    }
+			  ldap identity store contoso.com {
+                realm contoso.com
+                servers {
+                  ldaps://ldaps.contoso.com ignore_cert_errors
+                }
+                attributes {
+                  name givenName
+                  surname sn
+                  username sAMAccountName
+                  member_of memberOf
+                    email mail
                   }
-                  ldap_backend2 {
-                    method ldap
-                    realm example.com
-                    servers {
-                      ldap://ldap.forumsys.com posix_groups
-                    }
-                    attributes {
-                      name cn
-                      surname foo
-                      username uid
-                      member_of uniqueMember
-                      email mail
-                    }
-                    username "cn=read-only-admin,dc=example,dc=com"
-                    password "password"
-                    search_base_dn "DC=EXAMPLE,DC=COM"
-                    search_filter "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))"
-                    groups {
-                      "ou=mathematicians,dc=example,dc=com" authp/admin
-                      "ou=scientists,dc=example,dc=com" authp/user
-                    }
-                  }
-                  azure_saml_backend {
-                    method saml
-                    provider azure
-                    realm azure
-                    idp_metadata_location assets/conf/saml/azure/idp/azure_ad_app_metadata.xml
-                    idp_sign_cert_location assets/conf/saml/azure/idp/azure_ad_app_signing_cert.pem
-                    tenant_id "1b9e886b-8ff2-4378-b6c8-6771259a5f51"
-                    application_id "623cae7c-e6b2-43c5-853c-2059c9b2cb58"
-                    application_name "My Gatekeeper"
-                    entity_id "urn:caddy:mygatekeeper"
-                    acs_url https://mygatekeeper/saml
-                    acs_url https://mygatekeeper.local/saml
-                    acs_url https://192.168.10.10:3443/saml
-                    acs_url https://localhost:3443/saml
-                  }
-                  okta_oauth2_backend {
-                    method oauth2
-                    realm okta
-                    provider okta
-                    domain_name dev-680653.okta.com
-                    client_id 0oa121qw81PJW0Tj34x7
-                    client_secret b3aJC5E59hU18YKC7Yca3994F4qFhWiAo_ZojanF
-                    server_id default
-                    scopes openid email profile groups
+                  username "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM"
+                  password "P@ssW0rd123"
+                  search_base_dn "DC=CONTOSO,DC=COM"
+                  search_filter "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))"
+                  groups {
+                    "CN=Admins,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" admin
+                    "CN=Editors,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" editor
+                    "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" viewer
                   }
                 }
+			  }
+
+			  ldap identity store example.com {
+                realm example.com
+                servers {
+                  ldap://ldap.forumsys.com posix_groups
+                }
+                attributes {
+                  name cn
+                  surname foo
+                  username uid
+                  member_of uniqueMember
+                  email mail
+                }
+                username "cn=read-only-admin,dc=example,dc=com"
+                password "password"
+                search_base_dn "DC=EXAMPLE,DC=COM"
+                search_filter "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))"
+                groups {
+                  "ou=mathematicians,dc=example,dc=com" authp/admin
+                  "ou=scientists,dc=example,dc=com" authp/user
+                }
+              }
+
+              saml identity provider azure {
+                method saml
+                provider azure
+                realm azure
+                idp_metadata_location assets/conf/saml/azure/idp/azure_ad_app_metadata.xml
+                idp_sign_cert_location assets/conf/saml/azure/idp/azure_ad_app_signing_cert.pem
+                tenant_id "1b9e886b-8ff2-4378-b6c8-6771259a5f51"
+                application_id "623cae7c-e6b2-43c5-853c-2059c9b2cb58"
+                application_name "My Gatekeeper"
+                entity_id "urn:caddy:mygatekeeper"
+                acs_url https://mygatekeeper/saml
+                acs_url https://mygatekeeper.local/saml
+                acs_url https://192.168.10.10:3443/saml
+                acs_url https://localhost:3443/saml
+              }
+
+              oauth identity provider okta {
+                realm okta
+                provider okta
+                domain_name dev-680653.okta.com
+                client_id 0oa121qw81PJW0Tj34x7
+                client_secret b3aJC5E59hU18YKC7Yca3994F4qFhWiAo_ZojanF
+                server_id default
+                scopes openid email profile groups
               }
             }`),
 			want: `{
-              "config": {
-                "auth_portal_configs": [
-                  {
-                    "name": "myportal",
-                    "ui": {
-                      "private_links": [
-                        {"link": "/app", "title": "My Website", "icon_name": "las la-star", "icon_enabled": true},
-                        {"link": "/auth/whoami", "title": "My Identity", "icon_name": "las la-user", "icon_enabled": true}
-                      ]
-                    },
-                    "user_registration_config": {
-					  "code": "NY2020",
-                      "dropbox": "assets/config/registrations.json",
-                      "require_accept_terms": true,
-                      "require_domain_mx": true,
-                      "title": "User Registration"
+			  "config": {
+				"authentication_portals": [
+				  {
+					"name": "myportal",
+					"ui": {
+					  "private_links": [
+						{
+						  "link": "/app",
+						  "title": "My Website",
+						  "icon_name": "las la-star",
+						  "icon_enabled": true
+						},
+						{
+						  "link": "/auth/whoami",
+						  "title": "My Identity",
+						  "icon_name": "las la-user",
+						  "icon_enabled": true
+						}
+					  ]
 					},
-                    "user_transformer_configs": [
-                      {
-                        "matchers": ["exact match origin local"],
-                        "actions": [
-                          "action add role authp/user",
-                          "ui link \"Portal Settings\" /auth/settings icon \"las la-cog\""
-                        ]
-                      }
-                    ],
-                    "cookie_config": {
+					"user_registration_config": {
+					  "title": "User Registration",
+					  "code": "NY2020",
+					  "dropbox": "assets/config/registrations.json",
+					  "require_accept_terms": true,
+					  "require_domain_mx": true
+					},
+					"user_transformer_configs": [
+					  {
+						"matchers": [
+						  "exact match origin local"
+						],
+						"actions": [
+						  "action add role authp/user",
+						  "ui link \"Portal Settings\" /auth/settings icon \"las la-cog\""
+						]
+					  }
+					],
+					"cookie_config": {
 					  "domains": {
-					    "contoso.com": {
-						  "seq":   1,
+						"contoso.com": {
+						  "seq": 1,
 						  "domain": "contoso.com"
 						}
 					  }
-                    },
-                    "backend_configs": [
-                      {
-                        "local": {
-                          "name": "local_backend_0",
-                          "method": "local",
-                          "realm": "local",
-                          "path": "assets/config/users.json"
-                        }
-                      },
-					  {
-						"ldap": {
-						  "name": "ldap_backend",
-						  "method": "ldap",
-						  "realm": "contoso.com",
-                          "bind_password": "P@ssW0rd123",
-                          "bind_username": "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM",
-						  "search_base_dn": "DC=CONTOSO,DC=COM",
-						  "search_user_filter": "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))",
-     		              "servers": [
-                            {
-							  "address":  "ldaps://ldaps.contoso.com",
-                              "ignore_cert_errors": true
-                            }
-                          ],
-						  "attributes": {
-						    "email": "mail",
-							"member_of": "memberOf",
-							"name": "givenName",
-							"username": "sAMAccountName",
-							"surname": "sn"
-						  },
-						  "groups": [
-	                        {
-							  "dn": "CN=Admins,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
-                              "roles": ["admin"]
-                            },
-                            {
-							  "dn": "CN=Editors,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
-                              "roles": ["editor"]
-                            },
-                            {
-							  "dn": "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
-                              "roles": ["viewer"]
-                            }
-						  ]
-						}
-					  },
-                      {
-                        "ldap": {
-                          "name": "ldap_backend2",
-                          "method": "ldap",
-                          "realm": "example.com",
-                          "servers": [
-                            {
-                              "address": "ldap://ldap.forumsys.com",
-                              "posix_groups": true
-                            }
-                          ],
-                          "attributes": {
-                            "name": "cn",
-                            "surname": "foo",
-                            "username": "uid",
-                            "member_of": "uniqueMember",
-                            "email": "mail"
-                          },
-                          "bind_password": "password",
-                          "bind_username": "cn=read-only-admin,dc=example,dc=com",
-                          "search_base_dn": "DC=EXAMPLE,DC=COM",
-                          "search_user_filter": "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))",
-                          "groups": [
-                            {
-                              "dn": "ou=mathematicians,dc=example,dc=com",
-                              "roles": ["authp/admin"]
-                            },
-                            {
-                              "dn": "ou=scientists,dc=example,dc=com",
-                              "roles": ["authp/user"]
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "saml": {
-                          "name": "azure_saml_backend",
-                          "method": "saml",
-                          "realm": "azure",
-                          "provider": "azure",
-                          "idp_metadata_location": "assets/conf/saml/azure/idp/azure_ad_app_metadata.xml",
-                          "idp_sign_cert_location": "assets/conf/saml/azure/idp/azure_ad_app_signing_cert.pem",
-                          "tenant_id": "1b9e886b-8ff2-4378-b6c8-6771259a5f51",
-                          "application_id": "623cae7c-e6b2-43c5-853c-2059c9b2cb58",
-                          "application_name": "My Gatekeeper",
-                          "entity_id": "urn:caddy:mygatekeeper",
-                          "acs_urls": [
-                            "https://mygatekeeper/saml",
-                            "https://mygatekeeper.local/saml",
-                            "https://192.168.10.10:3443/saml",
-                            "https://localhost:3443/saml"
-                          ]
-                        }
-                      },
-                      {
-                        "oauth2": {
-                          "name": "okta_oauth2_backend",
-                          "method": "oauth2",
-                          "realm": "okta",
-                          "provider": "okta",
-                          "domain_name": "dev-680653.okta.com",
-                          "client_id": "0oa121qw81PJW0Tj34x7",
-                          "client_secret": "b3aJC5E59hU18YKC7Yca3994F4qFhWiAo_ZojanF",
-                          "server_id": "default",
-						  "scopes": ["openid", "email", "profile", "groups"]
-                        }
-                      }
-                    ],
-                    "token_validator_options": {
+					},
+					"identity_providers": [
+					  "contoso.com",
+					  "example.com",
+					  "azure",
+					  "okta"
+					],
+					"token_validator_options": {
 					  "validate_source_address": true
 					},
-                    "crypto_key_configs": [
-                      {
-                        "id": "0",
-                        "usage": "sign-verify",
-                        "token_name": "access_token",
-                        "source": "config",
-                        "algorithm": "hmac",
-                        "token_lifetime": 3600,
-                        "token_secret": "01ee2688-36e4-47f9-8c06-d18483702520"
-                      }
-                    ],
-                    "crypto_key_store_config": {
-                      "token_lifetime": 3600
-                    },
-                    "token_grantor_options": {
+					"crypto_key_configs": [
+					  {
+						"id": "0",
+						"usage": "sign-verify",
+						"token_name": "access_token",
+						"source": "config",
+						"algorithm": "hmac",
+						"token_lifetime": 3600,
+						"token_secret": "01ee2688-36e4-47f9-8c06-d18483702520"
+					  }
+					],
+					"crypto_key_store_config": {
+					  "token_lifetime": 3600
+					},
+					"token_grantor_options": {
 					  "enable_source_address": true
 					}
-                  }
-                ]
-              }
-            }`,
+				  }
+				],
+				"identity_stores": [
+				  {
+					"name": "contoso.com",
+					"kind": "ldap",
+					"params": {
+					  "attributes": {
+						"email": "mail",
+						"member_of": "memberOf",
+						"name": "givenName",
+						"surname": "sn",
+						"username": "sAMAccountName"
+					  },
+					  "bind_password": "P@ssW0rd123",
+					  "bind_username": "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM",
+					  "groups": [
+						{
+						  "dn": "CN=Admins,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
+						  "roles": [
+							"admin"
+						  ]
+						},
+						{
+						  "dn": "CN=Editors,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
+						  "roles": [
+							"editor"
+						  ]
+						},
+						{
+						  "dn": "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
+						  "roles": [
+							"viewer"
+						  ]
+						}
+					  ],
+					  "realm": "contoso.com",
+					  "search_base_dn": "DC=CONTOSO,DC=COM",
+					  "search_user_filter": "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))",
+					  "servers": [
+						{
+						  "address": "ldaps://ldaps.contoso.com",
+						  "ignore_cert_errors": true
+						}
+					  ]
+					}
+				  }
+				]
+			  }
+			}`,
 		},
 		{
 			name: "test malformed authentication portal definition",
@@ -386,12 +336,12 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 			if tc.shouldErr {
 				t.Fatalf("unexpected success, want: %v", tc.err)
 			}
-			// t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
 
 			got := unpack(t, string(app.(httpcaddyfile.App).Value))
 			want := unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {
+				t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
 				t.Errorf("parseCaddyfileAuthentication() mismatch (-want +got):\n%s", diff)
 			}
 		})

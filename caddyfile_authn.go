@@ -15,6 +15,7 @@
 package security
 
 import (
+	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
@@ -37,41 +38,6 @@ const (
 // Syntax:
 //
 //   authentication portal <name> {
-//
-//     backend local <file/path/to/user/db> <realm/name>
-//     backend local {
-//       method <local>
-//       file <file_path>
-//       realm <name>
-//     }
-//
-//     backend oauth2_generic {
-//       method oauth2
-//       realm generic
-//       provider generic
-//       base_auth_url <base_url>
-//       metadata_url <metadata_url>
-//       client_id <client_id>
-//       client_secret <client_secret>
-//       scopes openid email profile
-//       disable metadata_discovery
-//       authorization_url <authorization_url>
-//       disable key_verification
-//     }
-//
-//     backend gitlab {
-//       method oauth2
-//       realm gitlab
-//       provider gitlab
-//       domain_name <domain>
-//       client_id <client_id>
-//       client_secret <client_secret>
-//       user_group_filters <regex_pattern>
-//     }
-//
-//     backend google <client_id> <client_secret>
-//     backend github <client_id> <client_secret>
-//     backend facebook <client_id> <client_secret>
 //
 //	   crypto key sign-verify <shared_secret>
 //
@@ -106,11 +72,14 @@ const (
 //
 //     enable source ip tracking
 //     enable admin api
+//     enable identity store <name>
+//     enable identity provider <name>
 //   }
 //
 func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	// rootDirective is config key prefix.
 	var rootDirective string
+	backendHelpURL := "https://github.com/greenpau/caddy-security/issues/83"
 	args := util.FindReplaceAll(repl, d.RemainingArgs())
 	if len(args) != 2 {
 		return d.ArgErr()
@@ -140,14 +109,8 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 				if err := parseCaddyfileAuthPortalCookie(d, repl, p, rootDirective, v); err != nil {
 					return err
 				}
-			case "backend":
-				if err := parseCaddyfileAuthPortalBackendShortcuts(d, repl, p, rootDirective, v); err != nil {
-					return err
-				}
-			case "backends":
-				if err := parseCaddyfileAuthPortalBackends(d, repl, p, rootDirective); err != nil {
-					return err
-				}
+			case "backend", "backends":
+				return fmt.Errorf("The backend directive is no longer supported. Please see %s for details", backendHelpURL)
 			case "ui":
 				if err := parseCaddyfileAuthPortalUI(d, repl, p, rootDirective); err != nil {
 					return err

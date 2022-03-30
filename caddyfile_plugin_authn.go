@@ -20,7 +20,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/caddy-security/pkg/util"
 )
 
@@ -29,20 +28,21 @@ func init() {
 }
 
 func getRouteFromParseAuthnPluginCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error) {
-	a, err := parseAuthnPluginCaddyfile(h)
+	m, err := parseAuthnPluginCaddyfile(h)
 	if err != nil {
 		return nil, err
 	}
 
 	pathMatcher := caddy.ModuleMap{
-		"path": h.JSON(caddyhttp.MatchPath{a.Path}),
+		"path": h.JSON(caddyhttp.MatchPath{m["path"]}),
 	}
 
 	route := caddyhttp.Route{
 		HandlersRaw: []json.RawMessage{
 			caddyconfig.JSONModuleObject(
 				&AuthnMiddleware{
-					Authenticator: a,
+					RouteMatcher: m["path"],
+					PortalName:   m["portal_name"],
 				},
 				"handler",
 				authnPluginName,
@@ -68,11 +68,12 @@ func getRouteFromParseAuthnPluginCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyf
 //   authenticate /* with myportal
 //   authenticate /auth* with myportal
 //
-func parseAuthnPluginCaddyfile(h httpcaddyfile.Helper) (*authn.Authenticator, error) {
+func parseAuthnPluginCaddyfile(h httpcaddyfile.Helper) (map[string]string, error) {
 	var i int
 	repl := caddy.NewReplacer()
 	args := util.FindReplaceAll(repl, h.RemainingArgs())
-	a := &authn.Authenticator{}
+	m := make(map[string]string)
+
 	if args[0] != "authenticate" {
 		return nil, h.Errf("directive should start with authenticate: %s", args)
 	}
@@ -80,12 +81,12 @@ func parseAuthnPluginCaddyfile(h httpcaddyfile.Helper) (*authn.Authenticator, er
 	switch len(args) {
 	case 3:
 		i = 1
-		a.Path = "*"
-		a.PortalName = args[2]
+		m["path"] = "*"
+		m["portal_name"] = args[2]
 	case 4:
 		i = 2
-		a.Path = args[1]
-		a.PortalName = args[3]
+		m["path"] = args[1]
+		m["portal_name"] = args[3]
 	default:
 		return nil, h.Errf("malformed directive: %s", args)
 	}
@@ -96,5 +97,5 @@ func parseAuthnPluginCaddyfile(h httpcaddyfile.Helper) (*authn.Authenticator, er
 	if args[i] != "with" {
 		return nil, h.Errf("directive must contain %q keyword: %s", "with", args)
 	}
-	return a, nil
+	return m, nil
 }

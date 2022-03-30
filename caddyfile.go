@@ -36,6 +36,8 @@ func init() {
 //
 //   security {
 //     credentials ...
+//     identity store <name>
+//     [saml|oauth] identity provider <name>
 //     authentication ...
 //     authorization ...
 //   }
@@ -58,6 +60,10 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 			}
 		case "messaging":
 			if err := parseCaddyfileMessaging(d, repl, app.Config); err != nil {
+				return nil, err
+			}
+		case "local", "ldap", "oauth", "saml":
+			if err := parseCaddyfileIdentity(d, repl, app.Config, tld); err != nil {
 				return nil, err
 			}
 		case "authentication":

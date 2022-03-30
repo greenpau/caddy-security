@@ -18,10 +18,15 @@
 			bcc greenpau@localhost
 		}
 
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+		}
+
 		authentication portal myportal {
 			crypto default token lifetime 3600
 			crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
-			backend local assets/config/users.json local
+			enable identity store localdb
 			ui {
 				links {
 					"My Website" "/app" icon "las la-star"

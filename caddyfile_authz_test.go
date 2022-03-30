@@ -44,7 +44,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
 				  {
                     "auth_url_path": "/auth",
                     "auth_redirect_query_param": "redirect_url",
@@ -98,7 +98,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
                   {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
@@ -182,7 +182,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
                   {
                     "name": "mypolicy2",
                     "auth_url_path": "/auth",
@@ -250,7 +250,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
                   {
                     "name": "mypolicy",
 					"auth_url_path": "/auth",
@@ -298,7 +298,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
                   {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
@@ -325,17 +325,26 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             security {
               authorization policy mypolicy {
                 enable login hint
+				allow roles authp/admin authp/user
               }
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
                   {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
-					"login_hint_validators": ["email", "phone", "alphanumeric"]
+					"login_hint_validators": ["email", "phone", "alphanumeric"],
+					"access_list_rules": [
+                      {
+                        "conditions": [
+                          "match roles authp/admin authp/user"
+                        ],
+                        "action": "allow log debug"
+                      }
+                    ]
                   }
                 ]
               }
@@ -347,17 +356,26 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             security {
               authorization policy mypolicy {
                 enable login hint with email phone
+				allow roles authp/admin authp/user
               }
             }`),
 			want: `{
               "config": {
-                "authz_policy_configs": [
+                "authorization_policies": [
                   {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
-					"login_hint_validators": ["email", "phone"]
+					"login_hint_validators": ["email", "phone"],
+                    "access_list_rules": [
+                      {
+                        "conditions": [
+                          "match roles authp/admin authp/user"
+                        ],
+                        "action": "allow log debug"
+                      }
+                    ]
                   }
                 ]
               }
