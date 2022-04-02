@@ -56,6 +56,8 @@ import (
 //   }
 //
 func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
+	var disabled bool
+
 	m := make(map[string]interface{})
 	if len(shortcuts) > 0 {
 		switch kind {
@@ -83,7 +85,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 		rd := mkcp("security."+kind+".identity.provider["+name+"]", k)
 		switch k {
 		case "disabled":
-			return nil
+			disabled = true
 		case "realm", "driver", "tenant_id",
 			// OAuth
 			"domain_name", "client_id", "client_secret", "server_id", "base_auth_url",
@@ -174,8 +176,12 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 		}
 	}
 
-	if err := cfg.AddIdentityProvider(name, kind, m); err != nil {
-		return err
+	if disabled {
+		cfg.AddDisabledIdentityProvider(name)
+	} else {
+		if err := cfg.AddIdentityProvider(name, kind, m); err != nil {
+			return err
+		}
 	}
 
 	return nil

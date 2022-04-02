@@ -91,67 +91,65 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                 validate path acl
                 validate source address
                 validate bearer header
-                with basic auth context default
-                with api key auth context default
+                with basic auth portal default realm local
+                with api key auth portal default realm local
                 allow roles authp/admin authp/user
               }
             }`),
 			want: `{
-              "config": {
-                "authorization_policies": [
-                  {
-                    "name": "mypolicy",
-                    "auth_url_path": "/auth",
-                    "auth_redirect_query_param": "redirect_url",
-                    "auth_redirect_status_code": 302,
-                    "name": "mypolicy",
-                    "auth_url_path": "/auth",
-                    "access_list_rules": [
-                      {
-                        "conditions": [
-                          "match roles authp/admin authp/user"
-                        ],
-                        "action": "allow log debug"
-                      }
-                    ],
-                    "crypto_key_configs": [
-                      {
-                        "id": "0",
-                        "usage": "verify",
-                        "token_name": "access_token",
-                        "source": "config",
-                        "algorithm": "hmac",
-                        "token_lifetime": 900,
-                        "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
-                      }
-                    ],
-                    "disable_auth_redirect": true,
-                    "disable_auth_redirect_query": true,
-                    "auth_redirect_status_code": 302,
-                    "allowed_token_sources": ["query"],
-                    "forbidden_url": "/forbidden",
-                    "validate_bearer_header": true,
-                    "validate_method_path": true,
-                    "validate_access_list_path_claim": true,
-                    "validate_source_address": true,
+			  "config": {
+				"authorization_policies": [
+				  {
+					"name": "mypolicy",
+					"auth_url_path": "/auth",
+					"disable_auth_redirect": true,
+					"disable_auth_redirect_query": true,
 					"auth_redirect_query_param": "return_path_url",
-                    "identity_provider_config": {
-                      "context": "default",
-                      "basic_auth": {
-                        "enabled": true,
-                        "realms": {
-                          "local": true
-                        }
-                      },
-                      "api_key_auth": {
-                        "enabled": true,
-                        "realms": {
-                          "local": true
-                        }
-                      }
-                    }
-                  }
-                ]
+					"auth_redirect_status_code": 302,
+					"access_list_rules": [
+					  {
+						"conditions": [
+						  "match roles authp/admin authp/user"
+						],
+						"action": "allow log debug"
+					  }
+					],
+					"crypto_key_configs": [
+					  {
+						"id": "0",
+						"usage": "verify",
+						"token_name": "access_token",
+						"source": "config",
+						"algorithm": "hmac",
+						"token_lifetime": 900,
+						"token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
+					  }
+					],
+					"auth_proxy_config": {
+					  "portal_name": "default",
+					  "basic_auth": {
+						"enabled": true,
+						"realms": {
+						  "local": true
+						}
+					  },
+					  "api_key_auth": {
+						"enabled": true,
+						"realms": {
+						  "local": true
+						}
+					  }
+					},
+					"allowed_token_sources": [
+					  "query"
+					],
+					"forbidden_url": "/forbidden",
+					"validate_bearer_header": true,
+					"validate_method_path": true,
+					"validate_access_list_path_claim": true,
+					"validate_source_address": true
+				  }
+				]
               }
             }`,
 		},

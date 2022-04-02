@@ -17,8 +17,8 @@ package util
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/google/uuid"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"github.com/satori/go.uuid"
 	"net/http"
 )
 
@@ -41,7 +41,7 @@ func GetRequestID(r *http.Request) string {
 	if rawRequestID == nil {
 		requestID := r.Header.Get("X-Request-Id")
 		if requestID == "" {
-			requestID = uuid.NewV4().String()
+			requestID = uuid.New().String()
 		}
 		caddyhttp.SetVar(r.Context(), "request_id", requestID)
 		return requestID

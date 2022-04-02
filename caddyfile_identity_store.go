@@ -34,9 +34,11 @@ import (
 //     type <local>
 //     file <file_path>
 //     realm <name>
+//     disabled
 //   }
 //
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
+	var disabled bool
 	m := make(map[string]interface{})
 
 	if len(shortcuts) > 0 {
@@ -58,7 +60,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 		rd := mkcp("security.identity.store["+name+"]", k)
 		switch k {
 		case "disabled":
-			return nil
+			disabled = true
 		case "realm",
 			// Local.
 			"path",
@@ -139,8 +141,13 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 			return errors.ErrMalformedDirective.WithArgs(rd, args)
 		}
 	}
-	if err := cfg.AddIdentityStore(name, kind, m); err != nil {
-		return err
+
+	if disabled {
+		cfg.AddDisabledIdentityStore(name)
+	} else {
+		if err := cfg.AddIdentityStore(name, kind, m); err != nil {
+			return err
+		}
 	}
 
 	return nil

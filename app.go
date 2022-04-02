@@ -68,6 +68,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 			zap.String("app", app.Name),
 			zap.Error(err),
 		)
+		return err
 	}
 	app.server = server
 
