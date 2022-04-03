@@ -38,7 +38,8 @@ import (
 //     scopes openid email profile
 //     disable metadata_discovery
 //     authorization_url <authorization_url>
-//     disable key_verification
+//     disable key verification
+//     disable email claim check
 //   }
 //
 //   oauth identity provider <name> {
@@ -132,7 +133,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 			v := strings.Join(args, "_")
 			switch v {
 			case "metadata_discovery", "key_verification", "pass_grant_type",
-				"response_type", "scope", "nonce":
+				"response_type", "scope", "nonce", "email_claim_check":
 				m[v+"_disabled"] = true
 			case "tls_verification":
 				m["tls_insecure_skip_verify"] = true
