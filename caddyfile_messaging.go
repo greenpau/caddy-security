@@ -44,6 +44,10 @@ const (
 //     bcc <email_address_1> <email_address2>
 //   }
 //
+//   messaging file provider <name> {
+//     rootdir <path>
+//   }
+//
 func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	args := util.FindReplaceAll(repl, d.RemainingArgs())
 	if len(args) != 3 {
@@ -55,7 +59,9 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 
 	switch args[0] {
 	case "email":
-		c := &messaging.EmailProvider{Name: args[2]}
+		c := &messaging.EmailProvider{
+			Name: args[2],
+		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
 			v := util.FindReplaceAll(repl, d.RemainingArgs())
@@ -90,6 +96,26 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 			}
 		}
 		if err := cfg.AddMessagingProvider(c); err != nil {
+			return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], args[1]}, err)
+		}
+	case "file":
+		p := &messaging.FileProvider{
+			Name: args[2],
+		}
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			k := d.Val()
+			v := util.FindReplaceAll(repl, d.RemainingArgs())
+			if len(v) != 1 {
+				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
+			}
+			switch k {
+			case "rootdir":
+				p.RootDir = v[0]
+			default:
+				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
+			}
+		}
+		if err := cfg.AddMessagingProvider(p); err != nil {
 			return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], args[1]}, err)
 		}
 	default:

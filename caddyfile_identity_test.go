@@ -68,7 +68,6 @@ func TestParseCaddyfileIdentity(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
-					"user_registration_config": {},
 					"cookie_config": {},
 					"identity_stores": [
 					  "localdb"

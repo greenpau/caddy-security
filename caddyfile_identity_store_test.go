@@ -47,7 +47,6 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
-					"user_registration_config": {},
 					"cookie_config": {},
 					"identity_stores": [
 					  "localdb"
@@ -105,7 +104,6 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
-					"user_registration_config": {},
 					"cookie_config": {},
 					"identity_stores": [
 					  "contoso.com"

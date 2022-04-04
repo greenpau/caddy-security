@@ -57,7 +57,6 @@ func TestParseCaddyfileIdentityProvider(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
-					"user_registration_config": {},
 					"cookie_config": {},
 					"identity_providers": [
 					  "authp"

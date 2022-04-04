@@ -23,6 +23,17 @@
 			path assets/config/users.json
 		}
 
+		user registration localdbRegistry {
+			dropbox assets/config/registrations.json
+			title "User Registration"
+			code "NY2020"
+			require accept terms
+			require domain mx
+			email provider localhost-smtp-server
+			admin email admin@localhost
+			identity store localdb
+		}
+
 		authentication portal myportal {
 			crypto default token lifetime 3600
 			crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
@@ -37,15 +48,6 @@
 				match origin local
 				action add role authp/user
 				ui link "Portal Settings" /auth/settings icon "las la-cog"
-			}
-			registration {
-				dropbox assets/config/registrations.json
-				title "User Registration"
-				code "NY2020"
-				require accept terms
-				require domain mx
-				email provider localhost-smtp-server
-				admin email root@localhost
 			}
 		}
 

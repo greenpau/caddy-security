@@ -22,7 +22,6 @@ import (
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
-	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -58,22 +57,13 @@ const (
 //     cookie samesite <lax|strict|none>
 //     cookie insecure <on|off>
 //
-//     registration {
-//       disabled <on|off>
-//       title "User Registration"
-//       code "NY2020"
-//       dropbox <file/path/to/registration/dir/>
-//       require accept terms
-//       require domain mx
-//       admin email <email_address> [<email_address_N>]
-//     }
-//
 //     validate source address
 //
 //     enable source ip tracking
 //     enable admin api
 //     enable identity store <name>
 //     enable identity provider <name>
+//     enable user registration <name>
 //   }
 //
 func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
@@ -91,10 +81,9 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 			UI: &ui.Parameters{
 				Templates: make(map[string]string),
 			},
-			UserRegistrationConfig: &registration.Config{},
-			CookieConfig:           &cookie.Config{},
-			TokenValidatorOptions:  &options.TokenValidatorOptions{},
-			TokenGrantorOptions:    &options.TokenGrantorOptions{},
+			CookieConfig:          &cookie.Config{},
+			TokenValidatorOptions: &options.TokenValidatorOptions{},
+			TokenGrantorOptions:   &options.TokenGrantorOptions{},
 		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
@@ -117,10 +106,6 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 				}
 			case "transform":
 				if err := parseCaddyfileAuthPortalTransform(d, repl, p, rootDirective, v); err != nil {
-					return err
-				}
-			case "registration":
-				if err := parseCaddyfileAuthPortalRegistration(d, repl, p, rootDirective); err != nil {
 					return err
 				}
 			case "enable", "validate":

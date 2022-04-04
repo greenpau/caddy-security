@@ -9,3 +9,5 @@ require (
 	github.com/greenpau/go-authcrunch v1.0.22
 	go.uber.org/zap v1.20.0
 )
+
+replace github.com/greenpau/go-authcrunch v1.0.22 => /home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch

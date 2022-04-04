@@ -52,13 +52,6 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                   action add role authp/user
                   ui link "Portal Settings" /auth/settings icon "las la-cog"
                 }
-				registration {
-                  title "User Registration"
-                  code "NY2020"
-                  dropbox assets/config/registrations.json
-                  require accept terms
-                  require domain mx
-                }
 				enable source ip tracking
 				validate source address
 				enable identity provider contoso.com example.com
@@ -157,13 +150,6 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 						  "icon_enabled": true
 						}
 					  ]
-					},
-					"user_registration_config": {
-					  "title": "User Registration",
-					  "code": "NY2020",
-					  "dropbox": "assets/config/registrations.json",
-					  "require_accept_terms": true,
-					  "require_domain_mx": true
 					},
 					"user_transformer_configs": [
 					  {
