@@ -10,3 +10,6 @@ sed -i 's/go-authcrunch v[0-9]\.[0-9]*\.[0-9]*/go-authcrunch v'"${ACV}"'/' CONTR
 sed -i 's/go-authcrunch@v[0-9]\.[0-9]*\.[0-9]*/go-authcrunch@v'"${ACV}"'/' CONTRIBUTING.md
 sed -i 's/go-authcrunch@v[0-9]\.[0-9]*\.[0-9]*/go-authcrunch@v'"${ACV}"'/' Makefile
 sed -i 's/go-authcrunch v[0-9]\.[0-9]*\.[0-9]*/go-authcrunch v'"${ACV}"'/' go.mod
+
+go mod tidy
+go mod verify
