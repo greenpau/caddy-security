@@ -97,7 +97,8 @@ release:
 	@versioned -patch
 	@echo "Patched version"
 	@assets/scripts/generate_downloads.sh
-	@git add VERSION README.md
+	@assets/scripts/update_docker_refs.sh
+	@git add VERSION README.md assets/docker/authp/Dockerfile
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
