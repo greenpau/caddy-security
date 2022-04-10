@@ -18,13 +18,6 @@ Please consider **sponsoring this project**!
 
 Please ask questions either here or via LinkedIn. I am happy to help you! @greenpau
 
----
-
-:warning: Please open an issue if you need help migrating configurations
-from `caddy-auth-portal` and `caddy-authorize` (aka `caddy-auth-jwt`).
-
----
-
 **Documentation**: [authp.github.io](https://authp.github.io)
 
 **Security Policy**: [SECURITY.md](SECURITY.md)
@@ -64,7 +57,7 @@ and serves authentication portal with `authenticate` keyword.
 
 The app and plugin use Authentication, Authorization, and
 Accounting (AAA) Security Functions (SF) from
-[github.com/greenpau/authcrunch](https://github.com/greenpau/go-authcrunch).
+[github.com/greenpau/go-authcrunch](https://github.com/greenpau/go-authcrunch).
 
 ## Getting Started
 
@@ -156,10 +149,16 @@ The following configuration adds authentication portal.
 ```
 {
   security {
+
+    local identity store localdb {
+      realm local
+      path {$HOME}/.local/caddy/users.json
+    }
+
     authentication portal myportal {
       crypto default token lifetime 3600
       crypto key sign-verify {env.JWT_SECRET}
-      backend local {env.HOME}/.local/caddy/users.json local
+      enable identity store localdb
       cookie domain myfiosgateway.com
       ui {
         links {
