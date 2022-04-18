@@ -40,6 +40,11 @@ import (
 //     authorization_url <authorization_url>
 //     disable key verification
 //     disable email claim check
+//     icon <text> <name> <css_class_name>
+//     enable accept header
+//     enable js callback
+//     extract <field1> <fieldN> from userinfo
+//     extract all from userinfo
 //   }
 //
 //   oauth identity provider <name> {
@@ -128,6 +133,20 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, err)
 			}
 			m[k] = i
+		case "icon":
+			switch len(args) {
+			case 1:
+				m["icon_text"] = args[0]
+			case 2:
+				m["icon_text"] = args[0]
+				m["icon_name"] = args[1]
+			case 3:
+				m["icon_text"] = args[0]
+				m["icon_name"] = args[1]
+				m["icon_color"] = args[2]
+			default:
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
+			}
 		case "disable":
 			// OAuth only.
 			v := strings.Join(args, "_")
@@ -150,6 +169,16 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
 			}
 			m[v+"_enabled"] = true
+		case "extract":
+			if len(args) < 3 {
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "too short")
+			}
+			switch {
+			case strings.HasSuffix(strings.Join(args, " "), "from userinfo"):
+				m["user_info_fields"] = args[:len(args)-2]
+			default:
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
+			}
 		case "required_token_fields":
 			// OAuth only.
 			if len(args) < 1 {
