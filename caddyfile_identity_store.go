@@ -23,18 +23,26 @@ import (
 	// "github.com/greenpau/go-authcrunch/pkg/authn"
 	// "github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	// "strconv"
-	// "strings"
+	"strings"
 )
 
 // parseCaddyfileIdentityStore parses identity store configuration.
 //
 // Syntax:
 //
-//   identity store <name> {
+//   <local|ldap> identity store <name> {
 //     type <local>
 //     file <file_path>
 //     realm <name>
 //     disabled
+//
+//     user <username> {
+//       name <full_name>
+//       email <address>
+//       password <plain_text_password> [overwrite]
+//       password bcrypt:<cost>:<hash> [overwrite]
+//       roles <role_name> [<role_name>]
+//     }
 //   }
 //
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
@@ -53,6 +61,8 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 			return d.Errf("unsupported %q shortcut for %q store type: %v", name, kind, shortcuts)
 		}
 	}
+
+	userMaps := []map[string]interface{}{}
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
@@ -122,6 +132,49 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 				serverMaps = append(serverMaps, serverMap)
 			}
 			m[k] = serverMaps
+		case "user":
+			if len(args) != 1 {
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "must contain single value")
+			}
+			userMap := make(map[string]interface{})
+			userMap["username"] = args[0]
+			for userNesting := d.Nesting(); d.NextBlock(userNesting); {
+				userPropName := d.Val()
+				userPropValue := d.RemainingArgs()
+				switch userPropName {
+				case "email":
+					if len(userPropValue) != 1 {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain single value")
+					}
+					userMap["email_address"] = userPropValue[0]
+				case "name":
+					if len(userPropValue) < 1 {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain one or more values")
+					}
+					userMap[userPropName] = strings.Join(userPropValue, " ")
+				case "password":
+					if len(userPropValue) < 1 || len(userPropValue) > 2 {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain one or two values")
+					}
+					userMap[userPropName] = userPropValue[0]
+					if len(userPropValue) > 1 {
+						switch userPropValue[1] {
+						case "overwrite":
+							userMap["password_overwrite_enabled"] = true
+						default:
+							return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" contains unsupported "+userPropValue[1])
+						}
+					}
+				case "roles":
+					if len(userPropValue) < 1 {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain one or more value")
+					}
+					userMap[userPropName] = userPropValue
+				default:
+					return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported prop "+userPropName)
+				}
+			}
+			userMaps = append(userMaps, userMap)
 		case "groups":
 			// LDAP only.
 			groupMaps := []map[string]interface{}{}
@@ -140,6 +193,10 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 		default:
 			return errors.ErrMalformedDirective.WithArgs(rd, args)
 		}
+	}
+
+	if len(userMaps) > 0 {
+		m["users"] = userMaps
 	}
 
 	if disabled {
