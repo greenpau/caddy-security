@@ -19,6 +19,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"strconv"
 	"strings"
@@ -42,7 +43,7 @@ import (
 //     disable email claim check
 //     region <name>
 //     user_pool_id <name>
-//     icon <text> <name> <css_class_name>
+//     icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
 //     enable accept header
 //     enable js callback
 //     extract <field1> <fieldN> from userinfo
@@ -137,19 +138,11 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 			}
 			m[k] = i
 		case "icon":
-			switch len(args) {
-			case 1:
-				m["icon_text"] = args[0]
-			case 2:
-				m["icon_text"] = args[0]
-				m["icon_name"] = args[1]
-			case 3:
-				m["icon_text"] = args[0]
-				m["icon_name"] = args[1]
-				m["icon_color"] = args[2]
-			default:
-				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
+			icon, err := icons.Parse(args)
+			if err != nil {
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, err)
 			}
+			m["login_icon"] = icon
 		case "disable":
 			// OAuth only.
 			v := strings.Join(args, "_")

@@ -61,13 +61,6 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
 			}
 			portal.UI.AutoRedirectURL = util.FindReplace(repl, h.Val())
-		case "password_recovery_enabled":
-			if !h.NextArg() {
-				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
-			}
-			if h.Val() == "yes" || h.Val() == "true" {
-				portal.UI.PasswordRecoveryEnabled = true
-			}
 		case "links":
 			for subNesting := h.Nesting(); h.NextBlock(subNesting); {
 				title := h.Val()

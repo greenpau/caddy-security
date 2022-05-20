@@ -20,9 +20,6 @@ import (
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	// "github.com/greenpau/go-authcrunch/pkg/authn"
-	// "github.com/greenpau/go-authcrunch/pkg/authn/backends"
-	// "strconv"
 	"strings"
 )
 
@@ -43,6 +40,12 @@ import (
 //       password bcrypt:<cost>:<hash> [overwrite]
 //       roles <role_name> [<role_name>]
 //     }
+//
+//     enable username recovery
+//     enable password recovery
+//     enable contact support
+//     support link <url>
+//     support email <email_address>
 //   }
 //
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
@@ -190,6 +193,27 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 				groupMaps = append(groupMaps, groupMap)
 			}
 			m[k] = groupMaps
+		case "enable":
+			v := strings.Join(args, "_")
+			switch v {
+			case "username_recovery":
+			case "password_recovery":
+			case "contact_support":
+			default:
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
+			}
+			m[v+"_enabled"] = true
+		case "support":
+			if len(args) != 2 {
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "must contain key-value pair")
+			}
+			switch args[0] {
+			case "link":
+			case "email":
+			default:
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported key-value pair")
+			}
+			m["support_"+args[0]] = args[1]
 		default:
 			return errors.ErrMalformedDirective.WithArgs(rd, args)
 		}

@@ -102,6 +102,15 @@ func updateAuthPortalCookieConfig(portal *authn.PortalConfig, domain, k, v strin
 		} else {
 			portal.CookieConfig.Domains[domain].Insecure = enabled
 		}
+	case "strip":
+		if v != "domain" {
+			return fmt.Errorf("stripping of %s is unsupported", v)
+		}
+		if defaultDomain {
+			portal.CookieConfig.StripDomainEnabled = true
+		} else {
+			portal.CookieConfig.Domains[domain].StripDomainEnabled = true
+		}
 	default:
 		return fmt.Errorf("unsupported %q directive", k)
 	}
