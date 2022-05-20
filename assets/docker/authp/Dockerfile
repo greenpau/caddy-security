@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.version=1.0.1
 LABEL maintainer="greenpau"
 
 RUN xcaddy build \
-    --with github.com/greenpau/caddy-security@v1.1.7 \
+    --with github.com/greenpau/caddy-security@v1.1.8 \
     --with github.com/greenpau/caddy-trace \
     --with github.com/caddy-dns/cloudflare
 
