@@ -6,7 +6,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.5.0
 	github.com/google/go-cmp v0.5.7
 	github.com/google/uuid v1.3.0
-	github.com/greenpau/go-authcrunch v1.0.29
+	github.com/greenpau/go-authcrunch v1.0.30
 	go.uber.org/zap v1.21.0
 )
 
