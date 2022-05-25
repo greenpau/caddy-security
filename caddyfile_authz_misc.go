@@ -33,6 +33,8 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 			p.RedirectWithJavascript = true
 		case v == "strip token":
 			p.StripTokenEnabled = true
+		case v == "additional scopes":
+			p.AdditionalScopes = true
 		case strings.HasPrefix(v, "login hint"):
 			remainingArguments := strings.TrimPrefix(v, "login hint ")
 			switch {
