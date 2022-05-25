@@ -166,6 +166,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 				enable js redirect
                 set auth url /auth
 				enable strip token
+				enable additional scopes
                 acl rule {
                   comment allow users
                   match role authp/user
@@ -215,6 +216,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                       }
                     ],
 					"strip_token_enabled": true,
+					"additional_scopes": true,
 					"user_identity_field": "id",
 					"pass_claims_with_headers": true,
 					"redirect_with_javascript": true,
