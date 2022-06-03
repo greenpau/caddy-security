@@ -540,8 +540,8 @@ github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2z
 github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
-github.com/greenpau/go-authcrunch v1.0.30 h1:V0uqCQIazlcs2gj9oK9/AzbAviuDSLuTXHUogPeWFtc=
-github.com/greenpau/go-authcrunch v1.0.30/go.mod h1:sM0j1ZDhZHoZnGk9G3bCfJvawdo1ZLMC1jq1EmOd0QQ=
+github.com/greenpau/go-authcrunch v1.0.32 h1:V6OJT3Tb+RttyX3W2vSI4Nzm2qzOYWwDZeKetzeTEK8=
+github.com/greenpau/go-authcrunch v1.0.32/go.mod h1:sM0j1ZDhZHoZnGk9G3bCfJvawdo1ZLMC1jq1EmOd0QQ=
 github.com/greenpau/versioned v1.0.27 h1:aFJ16tzsUkbc6WT7DRia60S0VrgWzBNuul3h0RXFKxM=
 github.com/greenpau/versioned v1.0.27/go.mod h1:rtFCvaWWNbMH4CJnje/xicgmrM63j++rUh5juSu0k/A=
 github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=

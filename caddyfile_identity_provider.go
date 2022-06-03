@@ -46,6 +46,7 @@ import (
 //     icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
 //     enable accept header
 //     enable js callback
+//     enable id_token cookie [<cookie_name>]
 //     extract <field1> <fieldN> from userinfo
 //     extract all from userinfo
 //   }
@@ -158,13 +159,17 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 		case "enable":
 			// OAuth only.
 			v := strings.Join(args, "_")
-			switch v {
-			case "accept_header":
-			case "js_callback":
+			switch {
+			case (v == "accept_header") || (v == "js_callback"):
+				m[v+"_enabled"] = true
+			case strings.HasPrefix(v, "id_token_cookie"):
+				m["identity_token_cookie_enabled"] = true
+				if !strings.HasSuffix(v, "id_token_cookie") {
+					m["identity_token_cookie_name"] = args[len(args)-1]
+				}
 			default:
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
 			}
-			m[v+"_enabled"] = true
 		case "extract":
 			if len(args) < 3 {
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "too short")
