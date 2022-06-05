@@ -56,6 +56,22 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 			default:
 				return h.Errf("%s directive %q is unsupported", rootDirective, args)
 			}
+		case "meta":
+			hargs := util.FindReplaceAll(repl, h.RemainingArgs())
+			args := strings.Join(hargs, " ")
+			args = strings.TrimSpace(args)
+			switch {
+			case strings.HasPrefix(args, "title"):
+				portal.UI.MetaAuthor = strings.ReplaceAll(args, "title ", "")
+			case strings.HasPrefix(args, "author"):
+				portal.UI.MetaAuthor = strings.ReplaceAll(args, "author ", "")
+			case strings.HasPrefix(args, "description"):
+				portal.UI.MetaDescription = strings.ReplaceAll(args, "description ", "")
+			case args == "":
+				return h.Errf("%s %s directive has no value", rootDirective, subDirective)
+			default:
+				return h.Errf("%s directive %q is unsupported", rootDirective, args)
+			}
 		case "auto_redirect_url":
 			if !h.NextArg() {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
