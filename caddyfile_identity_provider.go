@@ -47,6 +47,7 @@ import (
 //     enable accept header
 //     enable js callback
 //     enable id_token cookie [<cookie_name>]
+//     enable logout
 //     extract <field1> <fieldN> from userinfo
 //     extract all from userinfo
 //   }
@@ -160,7 +161,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 			// OAuth only.
 			v := strings.Join(args, "_")
 			switch {
-			case (v == "accept_header") || (v == "js_callback"):
+			case (v == "accept_header") || (v == "js_callback") || (v == "logout"):
 				m[v+"_enabled"] = true
 			case strings.HasPrefix(v, "id_token_cookie"):
 				m["identity_token_cookie_enabled"] = true
