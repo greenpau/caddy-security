@@ -46,6 +46,8 @@ import (
 //     enable contact support
 //     support link <url>
 //     support email <email_address>
+//
+//     fallback role <role_name> [<role_name>]
 //   }
 //
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
@@ -214,6 +216,16 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported key-value pair")
 			}
 			m["support_"+args[0]] = args[1]
+		case "fallback":
+			if len(args) < 2 {
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "too short")
+			}
+			switch args[0] {
+			case "role", "roles":
+				m["fallback_roles"] = args[2:]
+			default:
+				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported argument")
+			}
 		default:
 			return errors.ErrMalformedDirective.WithArgs(rd, args)
 		}
