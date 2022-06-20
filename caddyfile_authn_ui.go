@@ -164,6 +164,11 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 			if err := ui.StaticAssets.AddAsset(assetURI, assetContentType, assetPath); err != nil {
 				return h.Errf("auth backend %s subdirective %s failed: %s", rootDirective, subDirective, err)
 			}
+		case "disable":
+			args := util.FindReplaceAll(repl, h.RemainingArgs())
+			if err := portal.UI.DisablePage(args); err != nil {
+				return h.Errf("auth backend %s subdirective %s is malformed: %v", rootDirective, subDirective, err)
+			}
 		default:
 			return h.Errf("unsupported subdirective for %s: %s", rootDirective, subDirective)
 		}
