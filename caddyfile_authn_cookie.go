@@ -97,10 +97,12 @@ func updateAuthPortalCookieConfig(portal *authn.PortalConfig, domain, k, v strin
 		if err != nil {
 			return fmt.Errorf("%s value of %q is invalid: %v", k, v, err)
 		}
-		if defaultDomain {
-			portal.CookieConfig.Insecure = enabled
+		if len(portal.CookieConfig.Domains) > 0 {
+			for domainkey := range portal.CookieConfig.Domains {
+				portal.CookieConfig.Domains[domainkey].Insecure = enabled
+			}
 		} else {
-			portal.CookieConfig.Domains[domain].Insecure = enabled
+			portal.CookieConfig.Insecure = enabled
 		}
 	case "strip":
 		if v != "domain" {
