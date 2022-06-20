@@ -18,4 +18,6 @@ Please ask questions either here or via LinkedIn. I am happy to help you! @green
 
 **Documentation**: [authp.github.io](https://authp.github.io)
 
+**Configuration Examples**: [here](https://github.com/authp/authp.github.io/tree/main/assets/conf)
+
 **Security Policy**: [SECURITY.md](SECURITY.md)
