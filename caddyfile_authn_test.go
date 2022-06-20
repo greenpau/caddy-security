@@ -41,6 +41,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                 crypto default token lifetime 3600
                 crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
 				cookie domain contoso.com
+				cookie insecure on
                 ui {
                   links {
                     "My Website" "/app" icon "las la-star"
@@ -166,7 +167,8 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 					  "domains": {
 						"contoso.com": {
 						  "seq": 1,
-						  "domain": "contoso.com"
+						  "domain": "contoso.com",
+						  "insecure": true
 						}
 					  }
 					},
