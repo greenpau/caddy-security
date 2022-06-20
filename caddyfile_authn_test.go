@@ -170,7 +170,8 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 						  "domain": "contoso.com",
 						  "insecure": true
 						}
-					  }
+					  },
+					  "insecure": true
 					},
 					"identity_providers": [
 					  "contoso.com",

@@ -97,13 +97,10 @@ func updateAuthPortalCookieConfig(portal *authn.PortalConfig, domain, k, v strin
 		if err != nil {
 			return fmt.Errorf("%s value of %q is invalid: %v", k, v, err)
 		}
-		if len(portal.CookieConfig.Domains) > 0 {
-			for domainkey := range portal.CookieConfig.Domains {
-				portal.CookieConfig.Domains[domainkey].Insecure = enabled
-			}
-		} else {
-			portal.CookieConfig.Insecure = enabled
+		for domainkey := range portal.CookieConfig.Domains {
+			portal.CookieConfig.Domains[domainkey].Insecure = enabled
 		}
+		portal.CookieConfig.Insecure = enabled
 	case "strip":
 		if v != "domain" {
 			return fmt.Errorf("stripping of %s is unsupported", v)
