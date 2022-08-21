@@ -50,6 +50,13 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, 
 				portal.IdentityStores = append(portal.IdentityStores, storeName)
 			}
 			return nil
+		case strings.HasPrefix(v, "sso provider"):
+			if len(args) < 3 {
+				return h.Errf("malformed directive for %s: %s", rootDirective, v)
+			}
+			for _, providerName := range args[2:] {
+				portal.SingleSignOnProviders = append(portal.SingleSignOnProviders, providerName)
+			}
 		default:
 			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
 		}

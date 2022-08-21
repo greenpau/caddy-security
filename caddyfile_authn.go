@@ -63,6 +63,7 @@ const (
 //     enable admin api
 //     enable identity store <name>
 //     enable identity provider <name>
+//     enable sso provider <name>
 //     enable user registration <name>
 //   }
 //

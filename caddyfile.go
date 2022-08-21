@@ -37,6 +37,7 @@ func init() {
 //   security {
 //     credentials ...
 //     identity store <name>
+//     sso provider <name>
 //     [saml|oauth] identity provider <name>
 //     authentication ...
 //     authorization ...
@@ -76,6 +77,10 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 			}
 		case "authorization":
 			if err := parseCaddyfileAuthorization(d, repl, app.Config); err != nil {
+				return nil, err
+			}
+		case "sso":
+			if err := parseCaddyfileSingleSignOnProvider(d, repl, app.Config); err != nil {
 				return nil, err
 			}
 		default:
