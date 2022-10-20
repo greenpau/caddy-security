@@ -62,7 +62,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 			args = strings.TrimSpace(args)
 			switch {
 			case strings.HasPrefix(args, "title"):
-				portal.UI.MetaAuthor = strings.ReplaceAll(args, "title ", "")
+				portal.UI.MetaTitle = strings.ReplaceAll(args, "title ", "")
 			case strings.HasPrefix(args, "author"):
 				portal.UI.MetaAuthor = strings.ReplaceAll(args, "author ", "")
 			case strings.HasPrefix(args, "description"):
