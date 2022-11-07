@@ -1,5 +1,5 @@
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.16&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.16&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.16&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.10" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.16&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.10" target="_blank">linux/amd64</a>
 # caddy-security
 
 <a href="https://github.com/greenpau/caddy-security/actions/" target="_blank"><img src="https://github.com/greenpau/caddy-security/workflows/build/badge.svg?branch=main"></a>
@@ -14,7 +14,7 @@ Security App and Plugin for [Caddy v2](https://github.com/caddyserver/caddy). It
 
 Please show your **appreciation for this work** and :star: :star: :star:
 
-Please consider **sponsoring this project** via Github Sponsors or [Open Collective](https://opencollective.com/caddy-security)!
+Please consider **sponsoring this project** via Github Sponsors!
 
 Please ask questions either here or via LinkedIn. I am happy to help you! @greenpau
 
