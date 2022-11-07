@@ -7,7 +7,7 @@ LATEST_GIT_COMMIT:=$(shell git log --format="%H" -n 1 | head -1)
 BUILD_USER:=$(shell whoami)
 BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BUILD_DIR:=$(shell pwd)
-CADDY_VERSION="v2.5.2"
+CADDY_VERSION="v2.6.2"
 
 all: info
 	@mkdir -p bin/
@@ -16,10 +16,10 @@ all: info
 	@mkdir -p ../xcaddy-$(PLUGIN_NAME) && cd ../xcaddy-$(PLUGIN_NAME) && \
 		xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/caddy \
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
-		--with github.com/greenpau/caddy-trace@v1.1.10 \
-		--with github.com/greenpau/go-authcrunch@v1.0.36=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/caddy-trace@v1.1.10
+	@#--with github.com/greenpau/go-authcrunch@v1.0.37=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
 	@#bin/caddy run -config assets/config/Caddyfile
-	@for f in `find ./assets -type f -name 'Caddyfile'`; do bin/caddy fmt -overwrite $$f; done
+	@for f in `find ./assets -type f -name 'Caddyfile'`; do bin/caddy fmt --overwrite $$f; done
 
 info:
 	@echo "DEBUG: Version: $(PLUGIN_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
