@@ -1,3 +1,4 @@
+dist/**
 assets/config/users.json
 vendor/**
 bin/**

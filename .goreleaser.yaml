@@ -1,0 +1,41 @@
+project_name: authp
+builds:
+  - env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/authp
+    binary: ./bin/authp
+    flags:
+      - -trimpath
+      - -mod=readonly
+    asmflags:
+      - all=-trimpath={{.Env.GOPATH}}
+    gcflags:
+      - all=-trimpath={{.Env.GOPATH}}
+    ldflags: -s -w
+
+
+nfpms:
+  - id: authp
+    file_name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs?:'
+    - '^readme:'
+    - '^tests?:'
+    # - '^\w+\s+' # a hack to remove commit messages without colons thus don't correspond to a package
