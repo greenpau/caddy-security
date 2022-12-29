@@ -1,4 +1,15 @@
 project_name: authp
+
+release:
+  github:
+    owner: greenpau
+    name: caddy-security
+  draft: false
+  prerelease: auto
+
+checksum:
+  name_template: "{{.ProjectName}}_{{.Version}}_SHA256SUMS"
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -24,6 +35,7 @@ builds:
 
 nfpms:
   - id: authp
+    maintainer: "Paul Greenberg <greenpau@outlook.com>"
     file_name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
