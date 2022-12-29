@@ -3,6 +3,7 @@
 	local_certs
 	http_port 8080
 	https_port 8443
+	admin localhost:2999
 
 	security {
 		credentials root@localhost {
