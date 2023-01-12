@@ -20,6 +20,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+
 	// "github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/greenpau/go-authcrunch"
 	//	"strconv"
@@ -34,15 +35,15 @@ func init() {
 //
 // Syntax:
 //
-//   security {
-//     credentials ...
-//     identity store <name>
-//     sso provider <name>
-//     [saml|oauth] identity provider <name>
-//     authentication ...
-//     authorization ...
-//   }
-//
+//	security {
+//		secrets ...
+//		credentials ...
+//		identity store <name>
+//		sso provider <name>
+//		[saml|oauth] identity provider <name>
+//		authentication ...
+//		authorization ...
+//	}
 func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
 	repl := caddy.NewReplacer()
 	app := new(App)
@@ -81,6 +82,10 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 			}
 		case "sso":
 			if err := parseCaddyfileSingleSignOnProvider(d, repl, app.Config); err != nil {
+				return nil, err
+			}
+		case "secrets":
+			if err := parseCaddyfileSecrets(d, repl, app); err != nil {
 				return nil, err
 			}
 		default:

@@ -15,10 +15,14 @@
 package security
 
 import (
+	"context"
+	"encoding/json"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+
 	"go.uber.org/zap"
 )
 
@@ -35,10 +39,19 @@ func init() {
 	caddy.RegisterModule(App{})
 }
 
+type SecretsManager interface {
+	GetSecret(context.Context) (map[string]interface{}, error)
+	GetSecretByKey(context.Context, string) (interface{}, error)
+}
+
 // App implements security manager.
 type App struct {
 	Name   string             `json:"-"`
 	Config *authcrunch.Config `json:"config,omitempty"`
+
+	SecretsManagersRaw []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
+	secretsManagers    []SecretsManager
+
 	server *authcrunch.Server
 	logger *zap.Logger
 }
@@ -60,6 +73,20 @@ func (app *App) Provision(ctx caddy.Context) error {
 		"provisioning app instance",
 		zap.String("app", app.Name),
 	)
+
+	secretsManagerMods, err := ctx.LoadModule(app, "SecretsManagersRaw")
+	if err != nil {
+		app.logger.Error(
+			"app failed loading secrets manager plugins",
+			zap.String("app_name", app.Name),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	for _, mod := range secretsManagerMods.([]any) {
+		app.secretsManagers = append(app.secretsManagers, mod.(SecretsManager))
+	}
 
 	server, err := authcrunch.NewServer(app.Config, app.logger)
 	if err != nil {
