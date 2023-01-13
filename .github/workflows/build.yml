@@ -21,12 +21,12 @@ jobs:
       GOBIN: /home/runner/.local/bin
     steps:
     - name: Install Go
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
       id: go
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Amend Environment Path
       run: |
         mkdir -p /home/runner/.local/bin
@@ -65,7 +65,7 @@ jobs:
     - name: Generate coverage report
       run: make coverage
     - name: Upload coverage report
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: Test Coverage Report
         path: .coverage/coverage.html
