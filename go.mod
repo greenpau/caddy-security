@@ -7,7 +7,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/greenpau/caddy-trace v1.1.10
-	github.com/greenpau/go-authcrunch v1.0.38
+	github.com/greenpau/go-authcrunch v1.0.39
 	go.uber.org/zap v1.24.0
 )
 
@@ -31,7 +31,7 @@ require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/crewjam/httperr v0.2.0 // indirect
-	github.com/crewjam/saml v0.4.10 // indirect
+	github.com/crewjam/saml v0.4.11-0.20230112210550-cfc9c7538d2c // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/ristretto v0.0.4-0.20200906165740-41ebdbffecfd // indirect
