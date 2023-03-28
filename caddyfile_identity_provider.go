@@ -50,6 +50,7 @@ import (
 //     enable logout
 //     extract <field1> <fieldN> from userinfo
 //     extract all from userinfo
+//     user_info_roles_field_name role
 //   }
 //
 //   oauth identity provider <name> {
@@ -101,7 +102,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 			// OAuth
 			"domain_name", "client_id", "client_secret", "server_id", "base_auth_url",
 			"metadata_url", "identity_token_name", "authorization_url", "token_url",
-			"region", "user_pool_id",
+			"region", "user_pool_id", "user_info_roles_field_name",
 			// SAML
 			"idp_metadata_location", "idp_sign_cert_location", "idp_login_url",
 			"application_id", "application_name", "entity_id":
