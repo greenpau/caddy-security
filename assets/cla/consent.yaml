@@ -5,6 +5,13 @@
 #  email: foo@bar.com
 #  company: Contoso Inc.
 #
+- name: Thomas Ottenhus
+  email: ottenhus@uni-mainz.de
+  company: Johannes Gutenberg University Mainz
+- name: Moritz Schlarb
+  email: schlarbm@uni-mainz.de
+  company: Johannes Gutenberg University Mainz
+
 # By adding your name and email below, you I hereby consent to the Individual
 # CLA provided in assets/cla/individual_cla.md.
 #
