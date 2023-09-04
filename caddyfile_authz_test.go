@@ -390,7 +390,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after '%s'", tf, 3, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after '%s', import chain: ['']", tf, 3, "foo"),
 		},
 		{
 			name: "test unsupported authorization policy keyword",
@@ -416,7 +416,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.inject: %v", tf, 4, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.inject: %v, import chain: ['']", tf, 4, "foo"),
 		},
 		{
 			name: "test authorization policy header injection with too many args",
@@ -427,7 +427,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject directive %q is invalid", tf, 4, "header bar baz foo bar"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject directive %q is invalid, import chain: ['']", tf, 4, "header bar baz foo bar"),
 		},
 		{
 			name: "test authorization policy header injection with bad syntax",
@@ -438,7 +438,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject directive %q has invalid syntax", tf, 4, "header X-Picture foo picture"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject directive %q has invalid syntax, import chain: ['']", tf, 4, "header X-Picture foo picture"),
 		},
 		{
 			name: "test authorization policy injection without args",
@@ -449,7 +449,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject directive has no value", tf, 4),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject directive has no value, import chain: ['']", tf, 4),
 		},
 		{
 			name: "test authorization policy injection without empty args",
@@ -460,7 +460,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject %s erred: undefined field name", tf, 4, "header X-Picture from \" \""),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.inject %s erred: undefined field name, import chain: ['']", tf, 4, "header X-Picture from \" \""),
 		},
 		// Enable features.
 		{
@@ -472,7 +472,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.enable directive has no value", tf, 4),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.enable directive has no value, import chain: ['']", tf, 4),
 		},
 		{
 			name: "test authorization policy injection with unsupported directive",
@@ -483,7 +483,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.enable: %v", tf, 4, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.enable: %v, import chain: ['']", tf, 4, "foo"),
 		},
 		// Validate features.
 		{
@@ -495,7 +495,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.validate directive has no value", tf, 4),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.validate directive has no value, import chain: ['']", tf, 4),
 		},
 		{
 			name: "test authorization policy validate with unsupported directive",
@@ -506,7 +506,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.validate: %v", tf, 4, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.validate: %v, import chain: ['']", tf, 4, "foo"),
 		},
 		// Disabled features.
 		{
@@ -518,7 +518,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.disable directive has no value", tf, 4),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.disable directive has no value, import chain: ['']", tf, 4),
 		},
 		{
 			name: "test authorization policy disable with unsupported directive",
@@ -529,7 +529,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.disable: %v", tf, 4, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.disable: %v, import chain: ['']", tf, 4, "foo"),
 		},
 		// Configure features.
 		{
@@ -541,7 +541,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.set directive has no value", tf, 4),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.set directive has no value, import chain: ['']", tf, 4),
 		},
 		{
 			name: "test authorization policy set with unsupported directive",
@@ -552,7 +552,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.set: %v", tf, 4, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.set: %v, import chain: ['']", tf, 4, "foo"),
 		},
 		{
 			name: "test authorization policy set redirect status success",
@@ -563,7 +563,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.set %v directive contains invalid value", tf, 4, "redirect status 200"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.set %v directive contains invalid value, import chain: ['']", tf, 4, "redirect status 200"),
 		},
 		{
 			name: "test authorization policy set redirect status alphanumeric",
@@ -575,7 +575,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.set %v directive failed: %v",
+				"%s:%d - Error during parsing: security.authorization.policy.set %v directive failed: %v, import chain: ['']",
 				tf, 4, "redirect status foo", "strconv.Atoi: parsing \"foo\": invalid syntax"),
 		},
 		// With features.
@@ -588,7 +588,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.with directive has no value", tf, 4),
+			err:       fmt.Errorf("%s:%d - Error during parsing: security.authorization.policy.with directive has no value, import chain: ['']", tf, 4),
 		},
 		{
 			name: "test authorization policy with with unsupported directive",
@@ -599,7 +599,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.with: %v", tf, 4, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: unsupported directive for security.authorization.policy.with: %v, import chain: ['']", tf, 4, "foo"),
 		},
 		// Crypto errors.
 		{
@@ -612,7 +612,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: %v", tf, 4,
+				"%s:%d - Error during parsing: %v, import chain: ['']", tf, 4,
 				errors.ErrConfigDirectiveShort.WithArgs(
 					"security.authorization.policy.crypto",
 					[]string{"foo", "bar"},
@@ -629,7 +629,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: %v", tf, 4,
+				"%s:%d - Error during parsing: %v, import chain: ['']", tf, 4,
 				errors.ErrConfigDirectiveValueUnsupported.WithArgs(
 					"security.authorization.policy.crypto",
 					[]string{"foo", "bar", "baz"},
@@ -647,7 +647,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.bypass directive has no value",
+				"%s:%d - Error during parsing: security.authorization.policy.bypass directive has no value, import chain: ['']",
 				tf, 4,
 			),
 		},
@@ -661,7 +661,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.bypass %s is invalid",
+				"%s:%d - Error during parsing: security.authorization.policy.bypass %s is invalid, import chain: ['']",
 				tf, 4, "foo",
 			),
 		},
@@ -675,7 +675,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.bypass %s is invalid",
+				"%s:%d - Error during parsing: security.authorization.policy.bypass %s is invalid, import chain: ['']",
 				tf, 4, "foo bar baz",
 			),
 		},
@@ -689,7 +689,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.bypass %s erred: %v",
+				"%s:%d - Error during parsing: security.authorization.policy.bypass %s erred: %v, import chain: ['']",
 				tf, 4, "uri bar baz", "invalid \"bar\" bypass match type",
 			),
 		},
@@ -704,7 +704,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.acl directive has no value",
+				"%s:%d - Error during parsing: security.authorization.policy.acl directive has no value, import chain: ['']",
 				tf, 4,
 			),
 		},
@@ -718,7 +718,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.acl directive %q is too long",
+				"%s:%d - Error during parsing: security.authorization.policy.acl directive %q is too long, import chain: ['']",
 				tf, 4, "rule foo",
 			),
 		},
@@ -732,7 +732,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.acl directive %q is too long",
+				"%s:%d - Error during parsing: security.authorization.policy.acl directive %q is too long, import chain: ['']",
 				tf, 4, "default allow bar",
 			),
 		},
@@ -746,7 +746,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.acl directive %q must have either allow or deny",
+				"%s:%d - Error during parsing: security.authorization.policy.acl directive %q must have either allow or deny, import chain: ['']",
 				tf, 4, "default foo",
 			),
 		},
@@ -760,7 +760,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.acl directive value of %q is unsupported",
+				"%s:%d - Error during parsing: security.authorization.policy.acl directive value of %q is unsupported, import chain: ['']",
 				tf, 4, "foo",
 			),
 		},
@@ -776,7 +776,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.acl rule directive %v has no values",
+				"%s:%d - Error during parsing: security.authorization.policy.acl rule directive %v has no values, import chain: ['']",
 				tf, 5, "comment",
 			),
 		},
@@ -791,7 +791,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.allow directive has no value",
+				"%s:%d - Error during parsing: security.authorization.policy.allow directive has no value, import chain: ['']",
 				tf, 4,
 			),
 		},
@@ -805,7 +805,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.allow directive %q is too short",
+				"%s:%d - Error during parsing: security.authorization.policy.allow directive %q is too short, import chain: ['']",
 				tf, 4, "foo",
 			),
 		},
@@ -819,7 +819,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
             }`),
 			shouldErr: true,
 			err: fmt.Errorf(
-				"%s:%d - Error during parsing: security.authorization.policy.allow directive value of %q is unsupported",
+				"%s:%d - Error during parsing: security.authorization.policy.allow directive value of %q is unsupported, import chain: ['']",
 				tf, 4, "roles foo method get to /foo bar",
 			),
 		},

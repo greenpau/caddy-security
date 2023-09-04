@@ -100,7 +100,7 @@ func TestParseCaddyfileCredentials(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after 'foo'", tf, 3),
+			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after 'foo', import chain: ['']", tf, 3),
 		},
 		{
 			name: "test unsupported credentials keyword",

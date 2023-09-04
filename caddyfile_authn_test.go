@@ -259,7 +259,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after '%s'", tf, 3, "foo"),
+			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after '%s', import chain: ['']", tf, 3, "foo"),
 		},
 		{
 			name: "test unsupported authentication portal keyword",
