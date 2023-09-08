@@ -94,6 +94,77 @@ func TestParseCaddyfileIdentityProvider(t *testing.T) {
               }
             }`,
 		},
+		{
+			name: "test generic oauth identity provider with userinfo extract",
+			d: caddyfile.NewTestDispenser(`
+            security {
+			  oauth identity provider authp {
+				realm authp
+				driver generic
+				client_id foo
+				client_secret bar
+				base_auth_url https://localhost/oauth
+				response_type code
+				required_token_fields access_token
+				authorization_url https://localhost/oauth/authorize
+				token_url https://localhost/oauth/access_token
+				jwks key 87329db33bf testdata/oauth/87329db33bf_pub.pem
+				disable key verification
+				disable tls verification
+				user_info_roles_field_name myroles
+				extract all from userinfo
+			  }
+              authentication portal myportal {
+                enable identity provider authp
+              }
+            }`),
+			want: `{
+			  "config": {
+				"authentication_portals": [
+				  {
+					"name": "myportal",
+					"ui": {},
+					"cookie_config": {},
+					"identity_providers": [
+					  "authp"
+					],
+					"token_validator_options": {},
+					"token_grantor_options": {}
+				  }
+				],
+				"identity_providers": [
+				  {
+					"name": "authp",
+					"kind": "oauth",
+					"params": {
+					  "authorization_url": "https://localhost/oauth/authorize",
+					  "base_auth_url": "https://localhost/oauth",
+					  "client_id": "foo",
+					  "client_secret": "bar",
+					  "driver": "generic",
+					  "jwks_keys": {
+						"87329db33bf": "testdata/oauth/87329db33bf_pub.pem"
+					  },
+					  "key_verification_disabled": true,
+					  "realm": "authp",
+					  "required_token_fields": [
+						"access_token"
+					  ],
+					  "response_type": [
+						"code"
+					  ],
+					  "tls_insecure_skip_verify": true,
+					  "token_url": "https://localhost/oauth/access_token",
+					  "user_info_fields": [
+						"all"
+					  ],
+					  "user_info_roles_field_name": "myroles"
+					}
+				  }
+                ]
+              }
+            }`,
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
