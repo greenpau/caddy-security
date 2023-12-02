@@ -50,10 +50,12 @@ jobs:
         sudo apt-get update
     - name: Install Go modules
       run: |
+        make dep
+        git diff
+        cat go.mod
         go mod tidy
         go mod verify
         go mod download
-        make dep
     - name: Validate prerequisites
       run: |
         echo "*** Local binaries ***"
