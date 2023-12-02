@@ -96,7 +96,7 @@ dep:
 	@echo "DEBUG: started $@"
 	@go install golang.org/x/lint/golint@latest
 	@go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-	@go install github.com/goreleaser/goreleaser@latest
+	@#go install github.com/goreleaser/goreleaser@latest
 	@go install github.com/greenpau/versioned/cmd/versioned@latest
 	@go install github.com/kyoh86/richgo@latest
 	@echo "DEBUG: completed $@"

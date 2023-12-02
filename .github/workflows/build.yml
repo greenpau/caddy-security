@@ -51,8 +51,6 @@ jobs:
     - name: Install Go modules
       run: |
         make dep
-        git diff
-        cat go.mod
         go mod tidy
         go mod verify
         go mod download
