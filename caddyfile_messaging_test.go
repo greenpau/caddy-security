@@ -102,7 +102,7 @@ func TestParseCaddyfileMessaging(t *testing.T) {
               }
             }`),
 			shouldErr: true,
-			err:       fmt.Errorf("%s:%d - Error during parsing: Wrong argument count or unexpected line ending after 'foo', import chain: ['']", tf, 3),
+			err:       fmt.Errorf("wrong argument count or unexpected line ending after 'foo', at %s:%d", tf, 3),
 		},
 		{
 			name: "test malformed non-email provider definition",
