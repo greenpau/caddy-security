@@ -6,7 +6,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.7.5
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.4.0
-	github.com/greenpau/caddy-trace v1.1.12
+	github.com/greenpau/caddy-trace v1.1.13
 	github.com/greenpau/go-authcrunch v1.0.42
 	go.uber.org/zap v1.26.0
 )
@@ -58,7 +58,7 @@ require (
 	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/cel-go v0.17.0 // indirect
+	github.com/google/cel-go v0.15.1 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
 	github.com/google/go-tpm v0.9.0 // indirect
 	github.com/google/go-tspi v0.3.0 // indirect
