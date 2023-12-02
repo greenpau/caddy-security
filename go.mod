@@ -7,7 +7,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.4.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.0.42
+	github.com/greenpau/go-authcrunch v1.0.44
 	go.uber.org/zap v1.26.0
 )
 
