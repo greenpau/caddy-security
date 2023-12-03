@@ -7,6 +7,12 @@ couple of legal hurdles.
 
 Please see [`assets/cla/CLA.md`](assets/cla/CLA.md).
 
+Please follow these steps to add CLA consent:
+
+1. Add your info to `assets/cla/consent.yaml`
+2. Agree to CLA via comment in PR. See [here](https://github.com/contributor-assistant/github-action#demo-for-step-2-and-3)
+  how to do it.
+
 ## Pull Request Checklist
 
 Before sending your pull requests, make sure you followed this list.
