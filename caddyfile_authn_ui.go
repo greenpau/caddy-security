@@ -15,13 +15,14 @@
 package security
 
 import (
+	"os"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
-	"io/ioutil"
-	"strings"
 )
 
 func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string) error {
@@ -131,7 +132,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				portal.UI.CustomJsPath = strings.ReplaceAll(args, "js ", "")
 			case strings.HasPrefix(args, "html header path"):
 				args = strings.ReplaceAll(args, "html header path ", "")
-				b, err := ioutil.ReadFile(args)
+				b, err := os.ReadFile(args)
 				if err != nil {
 					return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
 				}
