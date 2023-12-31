@@ -23,7 +23,7 @@ Before sending your pull requests, make sure you followed this list.
 
 ## Development Environment
 
-The contribution to this project requires setting up a development
+Contribution to this project requires setting up a development
 environment. The following steps allow developers to test their
 setup using local source code.
 
