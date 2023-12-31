@@ -591,7 +591,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 			err:       fmt.Errorf("security.authorization.policy.with directive has no value, at %s:%d", tf, 4),
 		},
 		{
-			name: "test authorization policy with with unsupported directive",
+			name: "test authorization policy with unsupported directive",
 			d: caddyfile.NewTestDispenser(`
             security {
               authorization policy mypolicy {
