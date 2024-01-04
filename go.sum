@@ -183,8 +183,8 @@ github.com/googleapis/enterprise-certificate-proxy v0.3.2 h1:Vie5ybvEvT75RniqhfF
 github.com/googleapis/gax-go/v2 v2.12.0 h1:A+gCJKdRfqXkr+BIRGtZLibNXf0m1f9E4HG56etFpas=
 github.com/greenpau/caddy-trace v1.1.13 h1:sQveqzDt+O1/ZpfpJddXJ5S2UHtcvSVDKZRgZ9wGo/k=
 github.com/greenpau/caddy-trace v1.1.13/go.mod h1:K6lD24evCjgCFqz8KYJbXMvMAQ8wFEG0+Z4EEqDU1dA=
-github.com/greenpau/go-authcrunch v1.0.46 h1:t48k1logb2R7kBCLtqpst6e5hDwIoIUVSPXXL0jEZ1k=
-github.com/greenpau/go-authcrunch v1.0.46/go.mod h1:F80TyZPEAfDzzQlT93phe1TKCBvpNWhjJv90FAMVcAs=
+github.com/greenpau/go-authcrunch v1.0.47 h1:3qw9s6nbIjbewQjmXspgsdaMCWRSYZTQMxoU4JG6wx8=
+github.com/greenpau/go-authcrunch v1.0.47/go.mod h1:3rSgkhHBE8M2xx/6XoyQ+lw6dvQcR7DYuSg8xR1IDKM=
 github.com/greenpau/versioned v1.0.28 h1:qgoZYy2bNbWAC5Bb0sVVfv/UHSac4PuCwdQMHpp/f6s=
 github.com/greenpau/versioned v1.0.28/go.mod h1:rtFCvaWWNbMH4CJnje/xicgmrM63j++rUh5juSu0k/A=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1 h1:6UKoz5ujsI55KNpsJH3UwCq3T8kKbZwNZBNPuTTje8U=
@@ -508,8 +508,8 @@ golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5y
 golang.org/x/crypto v0.3.0/go.mod h1:hebNnKkNXi2UzZN1eVRvBB7co0a+JxK6XbPiWVs/3J4=
 golang.org/x/crypto v0.6.0/go.mod h1:OFC/31mSvZgRz0V1QTNCzfAI1aIRzbiufJtkMIlEp58=
 golang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliYc=
-golang.org/x/crypto v0.16.0 h1:mMMrFzRSCF0GvB7Ne27XVtVAaXLrPmgPC7/v0tkwHaY=
-golang.org/x/crypto v0.16.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
+golang.org/x/crypto v0.17.0 h1:r8bRNjWL3GshPW3gkd+RpvzWrZAwPS49OmTGZ/uhM4k=
+golang.org/x/crypto v0.17.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
 golang.org/x/exp v0.0.0-20231127185646-65229373498e h1:Gvh4YaCaXNs6dKTlfgismwWZKyjVZXwOPfIyUaqU3No=
 golang.org/x/exp v0.0.0-20231127185646-65229373498e/go.mod h1:iRJReGqOEeBhDZGkGbynYwcHlctCvnjTYIamk7uXpHI=
 golang.org/x/lint v0.0.0-20190930215403-16217165b5de/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
