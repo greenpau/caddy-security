@@ -11,7 +11,7 @@ _TARGET_OS[${#_TARGET_OS[@]}]="linux"
 _TARGET_OS[${#_TARGET_OS[@]}]="windows"
 _TARGET_ARCH[${#_TARGET_ARCH[@]}]="amd64"
 
-P1="github.com/greenpau/caddy-security"
+P1="github.com/andrewsonpradeep/caddy-security"
 P2="github.com/greenpau/caddy-trace"
 
 V1="v"`cat VERSION`

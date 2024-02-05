@@ -2,8 +2,8 @@
 * <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.23&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
 # caddy-security
 
-<a href="https://github.com/greenpau/caddy-security/actions/" target="_blank"><img src="https://github.com/greenpau/caddy-security/workflows/build/badge.svg?branch=main"></a>
-<a href="https://pkg.go.dev/github.com/greenpau/caddy-security" target="_blank"><img src="https://img.shields.io/badge/godoc-reference-blue.svg"></a>
+<a href="https://github.com/andrewsonpradeep/caddy-security/actions/" target="_blank"><img src="https://github.com/andrewsonpradeep/caddy-security/workflows/build/badge.svg?branch=main"></a>
+<a href="https://pkg.go.dev/github.com/andrewsonpradeep/caddy-security" target="_blank"><img src="https://img.shields.io/badge/godoc-reference-blue.svg"></a>
 
 Security App and Plugin for [Caddy v2](https://github.com/caddyserver/caddy). It includes:
 

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
+	"github.com/andrewsonpradeep/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -70,7 +70,7 @@ const (
 func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
 	// rootDirective is config key prefix.
 	var rootDirective string
-	backendHelpURL := "https://github.com/greenpau/caddy-security/issues/83"
+	backendHelpURL := "https://github.com/andrewsonpradeep/caddy-security/issues/83"
 	args := util.FindReplaceAll(repl, d.RemainingArgs())
 	if len(args) != 2 {
 		return d.ArgErr()
