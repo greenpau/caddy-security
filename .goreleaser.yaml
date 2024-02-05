@@ -2,7 +2,7 @@ project_name: authp
 
 release:
   github:
-    owner: greenpau
+    owner: andrewsonpradeep
     name: caddy-security
   draft: false
   prerelease: auto
