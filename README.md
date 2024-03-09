@@ -18,10 +18,10 @@ Please consider **sponsoring this project** via Github Sponsors!
 
 Please ask questions either here or via LinkedIn. I am happy to help you! @greenpau
 
-**Documentation**: [authp.github.io](https://authp.github.io)
+**Documentation**: [docs.authcrunch.com](https://docs.authcrunch.com)
 
-**Docker Container**: [authp/authp](https://github.com/authp/authp/pkgs/container/authp)
+**Docker Container**: [authcrunch/authcrunch](https://github.com/authcrunch/authcrunch/pkgs/container/authcrunch)
 
-**Configuration Examples**: [here](https://github.com/authp/authp.github.io/tree/main/assets/conf)
+**Configuration Examples**: [here](https://github.com/authcrunch/authcrunch.github.io/tree/main/assets/conf)
 
 **Security Policy**: [SECURITY.md](SECURITY.md)
