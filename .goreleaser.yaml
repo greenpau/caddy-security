@@ -51,7 +51,6 @@ changelog:
     - '^readme:'
     - '^tests?:'
     - '^misc:'
-    - '^upgrade'
     - '^update'
     - '^github'
     - '^release'
