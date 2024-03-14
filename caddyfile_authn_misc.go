@@ -18,6 +18,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"strings"
 )
 
@@ -65,6 +66,52 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, 
 		case "source address":
 			portal.TokenValidatorOptions.ValidateSourceAddress = true
 		case "":
+			return h.Errf("%s directive has no value", rootDirective)
+		default:
+			return h.Errf("%s directive %q is unsupported", rootDirective, v)
+		}
+	case "trust":
+		switch {
+		case strings.Contains(v, "logout redirect uri"):
+			var domainMatchType, domain, pathMatchType, path string
+			argp := 3
+			for argp < len(args) {
+				switch args[argp] {
+				case "domain", "path":
+					if hasMatchTypeKeywords(args[argp+1]) {
+						if !arrayElementExists(args, argp+2) {
+							return h.Errf("%s directive %q is malformed", rootDirective, v)
+						}
+						if args[argp] == "domain" {
+							domainMatchType = args[argp+1]
+							domain = args[argp+2]
+						} else {
+							pathMatchType = args[argp+1]
+							path = args[argp+2]
+						}
+						argp++
+					} else {
+						if args[argp] == "domain" {
+							domain = args[argp+1]
+							domainMatchType = "exact"
+						} else {
+							path = args[argp+1]
+							pathMatchType = "exact"
+						}
+					}
+					argp++
+				default:
+					return h.Errf("%s directive %q has unsupported key %s", rootDirective, v, args[argp])
+				}
+				argp++
+			}
+
+			redirectURIConfig, err := redirects.NewRedirectURIMatchConfig(domainMatchType, domain, pathMatchType, path)
+			if err != nil {
+				return h.Errf("%s directive %q erred: %v", rootDirective, v, err)
+			}
+			portal.TrustedLogoutRedirectURIConfigs = append(portal.TrustedLogoutRedirectURIConfigs, redirectURIConfig)
+		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
 		default:
 			return h.Errf("%s directive %q is unsupported", rootDirective, v)

@@ -3,7 +3,7 @@
 	local_certs
 	http_port 8080
 	https_port 8443
-	admin localhost:2999
+	admin off
 
 	security {
 		credentials root@localhost {
@@ -22,6 +22,24 @@
 		local identity store localdb {
 			realm local
 			path assets/config/users.json
+			user webadmin {
+				name Webmaster
+				email webadmin@localhost.localdomain
+				password "$2a$10$VLCDIncXaRFshFTGcz2aP.q.gR0O6y1i6mVDks/7WmE3JKLjPD.wu" overwrite
+				roles authp/admin authp/user
+			}
+			user jsmith {
+				name John Smith
+				email jsmith@localhost.localdomain
+				password "My@Password123"
+				roles "authp/user" "dash"
+			}
+			user mstone {
+				name Mia Stone
+				email mstone@localhost.localdomain
+				password "My@Password123"
+				roles "authp/user" "dash"
+			}
 		}
 
 		user registration localdbRegistry {
@@ -50,6 +68,7 @@
 				action add role authp/user
 				ui link "Portal Settings" /auth/settings icon "las la-cog"
 			}
+			trust logout redirect uri domain prefix google path suffix /
 		}
 
 		authorization policy mypolicy {
@@ -69,11 +88,15 @@
 		authenticate * with myportal
 	}
 
+	route /favicon.ico {
+		respond "not found" 404
+	}
+
 	route /xauth* {
 		authenticate * with myportal
 	}
 
-	route /app {
+	route /app* {
 		authorize with mypolicy
 		file_server {
 			root ./assets/config
