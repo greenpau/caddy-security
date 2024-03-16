@@ -34,7 +34,7 @@ devbuild:
 		xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/authcrunch \
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.0.49=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.0.50=/home/greenpau/dev/go/src/github.com/greenpau/go-authcrunch
 	@go build -v -o ./bin/authcrunch cmd/authcrunch/main.go;
 	@./bin/authcrunch version
 	@echo "$@: complete"
