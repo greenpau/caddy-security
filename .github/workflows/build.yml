@@ -13,7 +13,7 @@ jobs:
   core:
     strategy:
       matrix:
-        go-version: [1.20.x, 1.21.x]
+        go-version: [1.21.x, 1.22.x]
         platform: [ubuntu-latest]
     name: Build
     runs-on: ${{ matrix.platform }}
