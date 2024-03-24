@@ -87,6 +87,9 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 			CookieConfig:          &cookie.Config{},
 			TokenValidatorOptions: &options.TokenValidatorOptions{},
 			TokenGrantorOptions:   &options.TokenGrantorOptions{},
+			API: &authn.APIConfig{
+				ProfileEnabled: true,
+			},
 		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()

@@ -51,6 +51,18 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 					"identity_stores": [
 					  "localdb"
 					],
+                            "portal_admin_roles": {
+                                "authp/admin": true
+                            },
+                            "portal_user_roles": {
+                                "authp/user": true
+                            },
+                            "portal_guest_roles": {
+                                "authp/guest": true
+                            },
+                    "api": {
+                      "profile_enabled": true
+                    },
 					"token_validator_options": {},
 					"token_grantor_options": {}
 				  }
@@ -104,10 +116,22 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
+					"api": {
+                      "profile_enabled": true
+                    },
 					"cookie_config": {},
 					"identity_stores": [
 					  "contoso.com"
 					],
+                            "portal_admin_roles": {
+                                "authp/admin": true
+                            },
+                            "portal_user_roles": {
+                                "authp/user": true
+                            },
+                            "portal_guest_roles": {
+                                "authp/guest": true
+                            },
 					"token_validator_options": {},
 					"token_grantor_options": {}
 				  }

@@ -60,9 +60,21 @@ func TestParseCaddyfileSingleSignOnProvider(t *testing.T) {
 					"identity_stores": [
 					  "localdb"
 					],
+					        "portal_admin_roles": {
+                                "authp/admin": true
+                            },
+                            "portal_user_roles": {
+                                "authp/user": true
+                            },
+                            "portal_guest_roles": {
+                                "authp/guest": true
+                            },
 					"sso_providers": [
 					  "aws"
 					],
+					"api": {
+					  "profile_enabled": true
+					},
 					"token_validator_options": {},
 					"token_grantor_options": {}
 				  }

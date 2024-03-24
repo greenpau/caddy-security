@@ -75,7 +75,19 @@ func TestParseCaddyfileAuthenticationMisc(t *testing.T) {
 						{
 							"cookie_config": {},
 							"identity_stores": ["localdb"],
+							"portal_admin_roles": {
+								"authp/admin": true
+							},
+							"portal_user_roles": {
+								"authp/user": true
+							},
+							"portal_guest_roles": {
+								"authp/guest": true
+							},
                             "name": "myportal",
+		                    "api": {
+				              "profile_enabled": true
+						    },
 							"token_grantor_options": {},
 							"trusted_logout_redirect_uri_configs": [
 								{
