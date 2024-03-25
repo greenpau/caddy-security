@@ -97,7 +97,6 @@ qtest: covdir
 	@time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthenticationMisc ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileCredentials ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileMessaging ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentit* ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthentication ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthorization ./*.go
 	@#go test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfile ./*.go

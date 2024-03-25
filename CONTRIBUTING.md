@@ -23,7 +23,7 @@ Before sending your pull requests, make sure you followed this list.
 
 ## Development Environment
 
-The contribution to this project requires setting up a development
+Contribution to this project requires setting up a development
 environment. The following steps allow developers to test their
 setup using local source code.
 
@@ -34,7 +34,7 @@ mkdir -p ~/tmpdev
 cd ~/tmpdev
 ```
 
-Second, fork the following repositories in Github into to your own Github
+Second, fork the following repositories in GitHub into to your own GitHub
 handle, e.g. `anonymous`:
 
 * `https://github.com/greenpau/caddy-security` => `https://github.com/anonymous/caddy-security`
@@ -57,7 +57,7 @@ make dep
 
 Next, modify `go.mod` in `github.com/greenpau/caddy-security`. Include
 `replace` directives to instruct `go` using local directories, as opposed
-to follow Github versions.
+to follow GitHub versions.
 
 Note: the referenced versions must match.
 
