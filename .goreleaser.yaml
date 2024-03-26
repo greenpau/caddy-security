@@ -54,4 +54,5 @@ changelog:
     - '^update'
     - '^github'
     - '^release'
+    - '^chore:'
     # - '^\w+\s+' # a hack to remove commit messages without colons thus don't correspond to a package
