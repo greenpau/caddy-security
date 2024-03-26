@@ -15,41 +15,41 @@
 package security
 
 import (
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"strings"
 )
 
 // parseCaddyfileIdentityStore parses identity store configuration.
 //
 // Syntax:
 //
-//   <local|ldap> identity store <name> {
-//     type <local>
-//     file <file_path>
-//     realm <name>
-//     disabled
+//	<local|ldap> identity store <name> {
+//	  type <local>
+//	  file <file_path>
+//	  realm <name>
+//	  disabled
 //
-//     user <username> {
-//       name <full_name>
-//       email <address>
-//       password <plain_text_password> [overwrite]
-//       password bcrypt:<cost>:<hash> [overwrite]
-//       roles <role_name> [<role_name>]
-//     }
+//	  user <username> {
+//	    name <full_name>
+//	    email <address>
+//	    password <plain_text_password> [overwrite]
+//	    password bcrypt:<cost>:<hash> [overwrite]
+//	    roles <role_name> [<role_name>]
+//	  }
 //
-//     enable username recovery
-//     enable password recovery
-//     enable contact support
-//     support link <url>
-//     support email <email_address>
+//	  enable username recovery
+//	  enable password recovery
+//	  enable contact support
+//	  support link <url>
+//	  support email <email_address>
 //
-//     fallback role <role_name> [<role_name>]
-//   }
-//
+//	  fallback role <role_name> [<role_name>]
+//	}
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 	m := make(map[string]interface{})
@@ -142,10 +142,11 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "must contain single value")
 			}
 			userMap := make(map[string]interface{})
-			userMap["username"] = args[0]
+			username := util.FindReplace(repl, args[0])
+			userMap["username"] = username
 			for userNesting := d.Nesting(); d.NextBlock(userNesting); {
 				userPropName := d.Val()
-				userPropValue := d.RemainingArgs()
+				userPropValue := util.FindReplaceAll(repl, d.RemainingArgs())
 				switch userPropName {
 				case "email":
 					if len(userPropValue) != 1 {

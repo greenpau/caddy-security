@@ -21,7 +21,7 @@ Paste configuration here ...
 
 **Version Information**
 
-Provide output of `caddy list-modules -versions | grep git` below:
+Provide output of `caddy list-modules --versions | grep -E "(auth|security)"` below:
 
 ```
 Paste output here ...

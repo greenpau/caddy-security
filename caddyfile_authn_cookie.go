@@ -16,13 +16,14 @@ package security
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strconv"
-	"strings"
 )
 
 func parseCaddyfileAuthPortalCookie(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string, args []string) error {

@@ -196,8 +196,8 @@ github.com/googleapis/gax-go/v2 v2.12.0 h1:A+gCJKdRfqXkr+BIRGtZLibNXf0m1f9E4HG56
 github.com/googleapis/gax-go/v2 v2.12.0/go.mod h1:y+aIqrI5eb1YGMVJfuV3185Ts/D7qKpsEkdD5+I6QGU=
 github.com/greenpau/caddy-trace v1.1.13 h1:sQveqzDt+O1/ZpfpJddXJ5S2UHtcvSVDKZRgZ9wGo/k=
 github.com/greenpau/caddy-trace v1.1.13/go.mod h1:K6lD24evCjgCFqz8KYJbXMvMAQ8wFEG0+Z4EEqDU1dA=
-github.com/greenpau/go-authcrunch v1.1.2 h1:D3nFIMa0SvTRmUy5t4IgkRWf8kARpY91i7upPVvHYns=
-github.com/greenpau/go-authcrunch v1.1.2/go.mod h1:vW4Mjl2/QoD5tICLTz4v6mJ0GGxNBhj3VOJv/tk8uFQ=
+github.com/greenpau/go-authcrunch v1.1.3 h1:Adjmggv0ui3mVFspZFNiuwKt6CJzYfiogIFxft+KZBI=
+github.com/greenpau/go-authcrunch v1.1.3/go.mod h1:vW4Mjl2/QoD5tICLTz4v6mJ0GGxNBhj3VOJv/tk8uFQ=
 github.com/greenpau/versioned v1.0.30 h1:QILUlfTSyJnhT8Gw9lLonZmuP5ahNQoJizw7mo30IQ4=
 github.com/greenpau/versioned v1.0.30/go.mod h1:rtFCvaWWNbMH4CJnje/xicgmrM63j++rUh5juSu0k/A=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 h1:RtRsiaGvWxcwd8y3BiRZxsylPT8hLWZ5SPcfI+3IDNk=
