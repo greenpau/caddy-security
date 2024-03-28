@@ -20,7 +20,6 @@ import (
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
-	"io/ioutil"
 	"strings"
 )
 
@@ -130,19 +129,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 			case strings.HasPrefix(args, "js"):
 				portal.UI.CustomJsPath = strings.ReplaceAll(args, "js ", "")
 			case strings.HasPrefix(args, "html header path"):
-				args = strings.ReplaceAll(args, "html header path ", "")
-				b, err := ioutil.ReadFile(args)
-				if err != nil {
-					return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
-				}
-				for k, v := range ui.PageTemplates {
-					headIndex := strings.Index(v, "<meta name=\"description\"")
-					if headIndex < 1 {
-						continue
-					}
-					v = v[:headIndex] + string(b) + v[headIndex:]
-					ui.PageTemplates[k] = v
-				}
+				portal.UI.CustomHTMLHeaderPath = strings.ReplaceAll(args, "html header path ", "")
 			case args == "":
 				return h.Errf("%s %s directive has no value", rootDirective, subDirective)
 			default:
@@ -161,9 +148,11 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				return h.Errf("auth backend %s subdirective %s URI must be prefixed with %s, got %s",
 					rootDirective, subDirective, prefix, assetURI)
 			}
-			if err := ui.StaticAssets.AddAsset(assetURI, assetContentType, assetPath); err != nil {
-				return h.Errf("auth backend %s subdirective %s failed: %s", rootDirective, subDirective, err)
-			}
+			portal.UI.StaticAssets = append(portal.UI.StaticAssets, ui.StaticAsset{
+				Path:        assetURI,
+				FsPath:      assetPath,
+				ContentType: assetContentType,
+			})
 		case "disable":
 			args := util.FindReplaceAll(repl, h.RemainingArgs())
 			if err := portal.UI.DisablePage(args); err != nil {
