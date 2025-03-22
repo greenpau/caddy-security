@@ -12,7 +12,10 @@ require (
 	go.uber.org/zap v1.27.0
 )
 
-replace github.com/greenpau/go-authcrunch v1.1.4 => github.com/captainpryce/go-authcrunch v1.1.5
+replace (
+  github.com/greenpau/go-authcrunch v1.1.4 => github.com/captainpryce/go-authcrunch v1.1.5
+  github.com/greenpau/caddy-security v1.1.29 => github.com/captainpryce/caddy-security v1.1.3
+)
 
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
