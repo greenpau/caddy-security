@@ -1,0 +1,90 @@
+version: 6
+environments:
+  default:
+    channels:
+    - url: https://conda.anaconda.org/conda-forge/
+    packages:
+      osx-arm64:
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_go_select-2.3.0-cgo.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/go-1.23.6-h6d20c88_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcxx-20.1.1-ha82da77_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libgfortran-5.0.0-13_2_0_hd922786_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libgfortran5-13.2.0-hf226fd6_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-openmp-20.1.1-hdb05f8b_1.conda
+packages:
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/_go_select-2.3.0-cgo.tar.bz2
+  sha256: 5cd5dd9817d0d671ad3e2f85c967b4dcd1a297a686b7d5820e625e2f4f962558
+  md5: 79a39651abfce773c2948175d9b62986
+  arch: arm64
+  platform: osx
+  license: BSD-3-Clause
+  license_family: BSD
+  size: 5074
+  timestamp: 1627073534014
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/go-1.23.6-h6d20c88_0.conda
+  sha256: f57cf6c39e5a525d361f43457669226d68fca1dac9ab1933e2c8f399ccbaf33e
+  md5: 35357fe62b9925d48cb93eaea42c8f97
+  depends:
+  - __osx >=11.0
+  - _go_select ==2.3.0 cgo
+  - libcxx >=18
+  - libgfortran 5.*
+  - libgfortran5 >=13.2.0
+  constrains:
+  - clang_osx-arm64 18.*
+  - gfortran_osx-arm64 13.*
+  - clangxx_osx-arm64 18.*
+  arch: arm64
+  platform: osx
+  license: BSD-3-Clause
+  license_family: BSD
+  size: 93055892
+  timestamp: 1741195577935
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcxx-20.1.1-ha82da77_0.conda
+  sha256: 80dd8ae3fbcf508ed72f074ada2c7784298e822e8d19c3b84c266bb31456d77c
+  md5: 833c4899914bf96caf64b52ef415e319
+  depends:
+  - __osx >=11.0
+  arch: arm64
+  platform: osx
+  license: Apache-2.0 WITH LLVM-exception
+  license_family: Apache
+  size: 561543
+  timestamp: 1742449846779
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libgfortran-5.0.0-13_2_0_hd922786_3.conda
+  sha256: 44e541b4821c96b28b27fef5630883a60ce4fee91fd9c79f25a199f8f73f337b
+  md5: 4a55d9e169114b2b90d3ec4604cd7bbf
+  depends:
+  - libgfortran5 13.2.0 hf226fd6_3
+  arch: arm64
+  platform: osx
+  license: GPL-3.0-only WITH GCC-exception-3.1
+  license_family: GPL
+  size: 110233
+  timestamp: 1707330749033
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libgfortran5-13.2.0-hf226fd6_3.conda
+  sha256: bafc679eedb468a86aa4636061c55966186399ee0a04b605920d208d97ac579a
+  md5: 66ac81d54e95c534ae488726c1f698ea
+  depends:
+  - llvm-openmp >=8.0.0
+  constrains:
+  - libgfortran 5.0.0 13_2_0_*_3
+  arch: arm64
+  platform: osx
+  license: GPL-3.0-only WITH GCC-exception-3.1
+  license_family: GPL
+  size: 997381
+  timestamp: 1707330687590
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-openmp-20.1.1-hdb05f8b_1.conda
+  sha256: ae57041a588cd190cb55b602c1ed0ef3604ce28d3891515386a85693edd3c175
+  md5: 97236e94c3a82367c5fe3a90557e6207
+  depends:
+  - __osx >=11.0
+  constrains:
+  - openmp 20.1.1|20.1.1.*
+  arch: arm64
+  platform: osx
+  license: Apache-2.0 WITH LLVM-exception
+  license_family: APACHE
+  size: 282105
+  timestamp: 1742533199558

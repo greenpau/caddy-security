@@ -1,0 +1,15 @@
+[project]
+authors = ["Your Name <you@example.com>"]
+channels = ["conda-forge"]
+description = "Add a short description here"
+name = "caddy-security"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[activation]
+env = { GOPATH = "${HOME}/go", PATH = "${GOPATH}/bin:${PATH}" }
+
+[tasks]
+
+[dependencies]
+go = ">=1.23.6,<2"
