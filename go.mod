@@ -13,7 +13,7 @@ require (
 )
 
 replace (
-  github.com/greenpau/go-authcrunch v1.1.4 => github.com/captainpryce/go-authcrunch v1.1.5
+  github.com/greenpau/go-authcrunch v1.1.4 => github.com/captainpryce/go-authcrunch v1.1.6
   github.com/greenpau/caddy-security v1.1.29 => github.com/captainpryce/caddy-security v1.1.3
 )
 
