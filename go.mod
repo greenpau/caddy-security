@@ -10,10 +10,12 @@ require (
 	github.com/greenpau/go-authcrunch v1.1.4
 	github.com/tidwall/gjson v1.17.1
 	go.uber.org/zap v1.27.0
+  github.com/greenpau/caddy-security v1.1.29
 )
 
 replace (
-  github.com/greenpau/go-authcrunch v1.1.4 => github.com/captainpryce/go-authcrunch v1.1.6
+  github.com/greenpau/go-authcrunch v1.1.4 => github.com/captainpryce/go-authcrunch v1.1.7
+  github.com/greenpau/caddy-security v1.1.29 => github.com/captainpryce/caddy-security v1.1.4
 )
 
 require (
