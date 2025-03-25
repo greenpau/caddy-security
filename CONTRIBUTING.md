@@ -102,7 +102,7 @@ After the build, the resultant binary will be in `bin/` directory.
 You can then test it with your own configuration files.
 
 ```bash
-bin/caddy run -config assets/config/Caddyfile | jq
+bin/caddy run --config assets/config/Caddyfile | jq
 ```
 
 Additionally, you should be able to run tests:

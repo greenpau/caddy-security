@@ -13,7 +13,7 @@ jobs:
   core:
     strategy:
       matrix:
-        go-version: [1.21.x, 1.22.x]
+        go-version: [1.24.x]
         platform: [ubuntu-latest]
     name: Build
     runs-on: ${{ matrix.platform }}
@@ -21,12 +21,12 @@ jobs:
       GOBIN: /home/runner/.local/bin
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
       id: go
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Amend Environment Path
       run: |
         mkdir -p /home/runner/.local/bin
@@ -65,7 +65,7 @@ jobs:
     - name: Generate coverage report
       run: make coverage
     - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Test Coverage Report
         path: .coverage/coverage.html
