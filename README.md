@@ -1,5 +1,5 @@
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.29&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.29&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.30&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.30&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.8" target="_blank">linux/amd64</a>
 # caddy-security
 
 <a href="https://github.com/greenpau/caddy-security/actions/" target="_blank"><img src="https://github.com/greenpau/caddy-security/workflows/build/badge.svg?branch=main"></a>
