@@ -248,8 +248,8 @@ github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/greenpau/caddy-trace v1.1.13 h1:sQveqzDt+O1/ZpfpJddXJ5S2UHtcvSVDKZRgZ9wGo/k=
 github.com/greenpau/caddy-trace v1.1.13/go.mod h1:K6lD24evCjgCFqz8KYJbXMvMAQ8wFEG0+Z4EEqDU1dA=
-github.com/greenpau/go-authcrunch v1.1.6 h1:VOHbq6rLUKgtlvpZkejcFvXpDDguugitnnkZqPgqiYA=
-github.com/greenpau/go-authcrunch v1.1.6/go.mod h1:aPiScpG/0L8a1A+CfqO8F1BXMV1aHmqioVG5JhDzk6c=
+github.com/greenpau/go-authcrunch v1.1.7 h1:kaCQicME4f7IngAH2/OsJo0edlcjE4Gz08Mc7cEDgOk=
+github.com/greenpau/go-authcrunch v1.1.7/go.mod h1:aPiScpG/0L8a1A+CfqO8F1BXMV1aHmqioVG5JhDzk6c=
 github.com/greenpau/versioned v1.0.30 h1:QILUlfTSyJnhT8Gw9lLonZmuP5ahNQoJizw7mo30IQ4=
 github.com/greenpau/versioned v1.0.30/go.mod h1:rtFCvaWWNbMH4CJnje/xicgmrM63j++rUh5juSu0k/A=
 github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=

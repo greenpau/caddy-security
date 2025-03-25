@@ -20,10 +20,14 @@ V2="v1.1.8"
 P1=$(echo ${P1} | sed 's/\//%2F/g')
 P2=$(echo ${P2} | sed 's/\//%2F/g')
 
-#echo "package ${P1} ${V1}"
-#echo "package ${P2} ${V2}"
+echo "package ${P1} ${V1}"
+echo "package ${P2} ${V2}"
 
-sed -i '\/caddyserver.com\/api\/download/d' README.md
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  sed -i '' -e '/\/caddyserver.com\/api\/download/d' README.md
+else
+  sed -i '/\/caddyserver.com\/api\/download/d' README.md
+fi
 
 DLOAD_LINE=$(grep -Fn 'Download Caddy with the plugins enabled' README.md | cut -d":" -f1)
 DLOAD_LINE=$((DLOAD_LINE+1))
@@ -34,6 +38,10 @@ for OS_ID in "${!_TARGET_OS[@]}"; do
     ARCH_NAME=${_TARGET_ARCH[$ARCH_ID]};
     HREF="https://caddyserver.com/api/download?os=${OS_NAME}&arch=${ARCH_NAME}&p=${P1}%40${V1}&p=${P2}%40${V2}";
     HREF_LINK="* <a href=\"${HREF}\" target=\"_blank\">${OS_NAME}/${ARCH_NAME}</a>";
-    sed -i ''"${DLOAD_LINE}"' i '"${HREF_LINK}"'' README.md
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      gsed -i ''"${DLOAD_LINE}"' i '"${HREF_LINK}"'' README.md
+    else
+      sed -i ''"${DLOAD_LINE}"' i '"${HREF_LINK}"'' README.md
+    fi
   done
 done
