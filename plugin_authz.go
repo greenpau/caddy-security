@@ -39,7 +39,7 @@ func init() {
 }
 
 // AuthzMiddleware authorizes access to endpoints based on
-// the presense and content of JWT token.
+// the presence and content of JWT token.
 type AuthzMiddleware struct {
 	RouteMatcher   string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
 	GatekeeperName string `json:"gatekeeper_name,omitempty" xml:"gatekeeper_name,omitempty" yaml:"gatekeeper_name,omitempty"`
@@ -103,7 +103,7 @@ func (m *AuthzMiddleware) Validate() error {
 	return nil
 }
 
-// Authenticate authorizes access based on the presense and content of
+// Authenticate authorizes access based on the presence and content of
 // authorization token.
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
 	ar := requests.NewAuthorizationRequest()

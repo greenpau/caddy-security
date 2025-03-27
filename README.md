@@ -14,7 +14,7 @@ Security App and Plugin for [Caddy v2](https://github.com/caddyserver/caddy). It
 
 Please show your **appreciation for this work** and :star: :star: :star:
 
-Please consider **sponsoring this project** via Github Sponsors!
+Please consider **sponsoring this project** via GitHub Sponsors!
 
 Please ask questions either here or via LinkedIn. I am happy to help you! @greenpau
 
