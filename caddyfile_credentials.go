@@ -48,10 +48,19 @@ func parseCaddyfileCredentials(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg
 		v := util.FindReplaceAll(repl, d.RemainingArgs())
 		switch k {
 		case "domain":
+			if len(v) != 1 {
+				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
+			}
 			c.Domain = v[0]
 		case "username":
+			if len(v) != 1 {
+				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
+			}
 			c.Username = v[0]
 		case "password":
+			if len(v) != 1 {
+				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
+			}
 			c.Password = v[0]
 		default:
 			return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)

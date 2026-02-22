@@ -61,10 +61,19 @@ func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, repl *caddy.Repl
 		case "disabled":
 			disabled = true
 		case "entity_id", "driver":
+			if len(values) != 1 {
+				return d.Errf("malformed sso provider syntax: %s %v", k, values)
+			}
 			m[k] = values[0]
 		case "location":
+			if len(values) != 1 {
+				return d.Errf("malformed sso provider syntax: %s %v", k, values)
+			}
 			locations = append(locations, values[0])
 		case "cert":
+			if len(values) != 1 {
+				return d.Errf("malformed sso provider syntax: %s %v", k, values)
+			}
 			m["cert_path"] = values[0]
 		case "private":
 			if len(values) != 2 {

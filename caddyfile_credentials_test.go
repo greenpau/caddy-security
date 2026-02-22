@@ -144,6 +144,48 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 				errors.ErrCredKeyValueEmpty.WithArgs("password"),
 			),
 		},
+		{
+			name: "test credentials username without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              credentials smtp.contoso.com {
+                username
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{credPrefix, "smtp.contoso.com", "username"},
+				[]string{},
+			),
+		},
+		{
+			name: "test credentials domain without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              credentials smtp.contoso.com {
+                domain
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{credPrefix, "smtp.contoso.com", "domain"},
+				[]string{},
+			),
+		},
+		{
+			name: "test credentials password without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              credentials smtp.contoso.com {
+                password
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{credPrefix, "smtp.contoso.com", "password"},
+				[]string{},
+			),
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
