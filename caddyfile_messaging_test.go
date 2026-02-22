@@ -115,6 +115,62 @@ func TestParseCaddyfileMessaging(t *testing.T) {
 			shouldErr: true,
 			err:       errors.ErrMalformedDirective.WithArgs(msgPrefix, []string{"bar", "provider", "local_smtp_server"}),
 		},
+		{
+			name: "test email provider address without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              messaging email provider local_smtp_server {
+                address
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{msgPrefix, "email", "address"},
+				[]string{},
+			),
+		},
+		{
+			name: "test email provider protocol without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              messaging email provider local_smtp_server {
+                protocol
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{msgPrefix, "email", "protocol"},
+				[]string{},
+			),
+		},
+		{
+			name: "test email provider credentials without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              messaging email provider local_smtp_server {
+                credentials
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{msgPrefix, "email", "credentials"},
+				[]string{},
+			),
+		},
+		{
+			name: "test email provider sender without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              messaging email provider local_smtp_server {
+                sender
+              }
+            }`),
+			shouldErr: true,
+			err: errors.ErrMalformedDirective.WithArgs(
+				[]string{msgPrefix, "email", "sender"},
+				[]string{},
+			),
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -67,12 +67,24 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 			v := util.FindReplaceAll(repl, d.RemainingArgs())
 			switch k {
 			case "address":
+				if len(v) != 1 {
+					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
+				}
 				c.Address = v[0]
 			case "protocol":
+				if len(v) != 1 {
+					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
+				}
 				c.Protocol = v[0]
 			case "credentials":
+				if len(v) != 1 {
+					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
+				}
 				c.Credentials = v[0]
 			case "sender":
+				if len(v) < 1 {
+					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
+				}
 				c.SenderEmail = v[0]
 				if len(v) > 1 {
 					c.SenderName = v[1]

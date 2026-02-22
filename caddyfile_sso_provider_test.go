@@ -15,10 +15,12 @@
 package security
 
 import (
+	"fmt"
+	"testing"
+
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/google/go-cmp/cmp"
-	"testing"
 )
 
 func TestParseCaddyfileSingleSignOnProvider(t *testing.T) {
@@ -101,6 +103,28 @@ func TestParseCaddyfileSingleSignOnProvider(t *testing.T) {
 				]
 			  }
             }`,
+		},
+		{
+			name: "test sso provider entity_id without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              sso provider aws {
+                entity_id
+              }
+            }`),
+			shouldErr: true,
+			err:       fmt.Errorf("malformed sso provider syntax: entity_id [], at %s:%d", tf, 4),
+		},
+		{
+			name: "test sso provider driver without value",
+			d: caddyfile.NewTestDispenser(`
+            security {
+              sso provider aws {
+                driver
+              }
+            }`),
+			shouldErr: true,
+			err:       fmt.Errorf("malformed sso provider syntax: driver [], at %s:%d", tf, 4),
 		},
 	}
 	for _, tc := range testcases {
