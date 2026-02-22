@@ -102,7 +102,13 @@ After the build, the resultant binary will be in `bin/` directory.
 You can then test it with your own configuration files.
 
 ```bash
-bin/caddy run --config assets/config/Caddyfile | jq
+bin/authcrunch run --config assets/config/Caddyfile | jq
+```
+
+Validate the response. The server should respond with `1.0.0`.
+
+```bash
+curl -v https://127.0.0.1:8443/version
 ```
 
 Additionally, you should be able to run tests:
