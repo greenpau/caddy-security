@@ -147,6 +147,13 @@ logo:
 		assets/docs/images/logo.png
 	@echo "$@: complete"
 
+.PHONY: upgrade
+upgrade:
+	@echo "$@: started"
+	@go get -u ./...
+	@go mod tidy
+	@echo "$@: complete"
+
 .PHONY: license
 license:
 	@echo "$@: started"
