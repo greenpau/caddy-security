@@ -5,6 +5,14 @@
 	https_port 8443
 	admin off
 
+	on_demand_tls {
+		ask http://localhost:5555/
+	}
+
+	order trace before respond
+	order authenticate before respond
+	order authorize before basicauth
+
 	security {
 		credentials root@localhost {
 			username root
@@ -25,8 +33,7 @@
 			user webadmin {
 				name Webmaster
 				email webadmin@localhost.localdomain
-				password "$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
-				#password "Td45@4d269b7ec2f5ffd31ee5"
+				password "My@Password123" overwrite
 				roles "authp/admin" "authp/user"
 			}
 			user jsmith {
@@ -60,14 +67,14 @@
 			enable identity store localdb
 			ui {
 				links {
-					"My Website" "/app" icon "las la-star"
+					"My Website" "https://go.myfiosgateway.com:8443/app/" icon "las la-star"
 					"My Identity" "/auth/whoami" icon "las la-user"
 				}
 			}
 			transform user {
 				match origin local
 				action add role authp/user
-				ui link "Portal Settings" /auth/profile/ icon "las la-cog"
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
 			}
 			trust logout redirect uri domain prefix google path suffix /
 		}
@@ -80,31 +87,56 @@
 	}
 }
 
-127.0.0.1, localhost {
-	route /version* {
-		respond * "1.0.0" 200
+http://localhost:5555 {
+	bind 127.0.0.1
+	# trace tag="tls-on-demand"
+	@allowed_localhost query domain=localhost
+	@allowed_local query domain=go.myfiosgateway.com
+	@allowed_global query domain=auth.myfiosgateway.com
+	@allowed_apps query domain=go.myfiosgateway.com
+	respond @allowed_localhost 200
+	respond @allowed_local 200
+	respond @allowed_global 200
+	respond @allowed_apps 200
+	respond 400
+}
+
+auth.myfiosgateway.com:8443 {
+	tls internal {
+		on_demand
+	}
+
+	header {
+		Access-Control-Allow-Origin https://go.myfiosgateway.com
+		Access-Control-Allow-Credentials true
+		Access-Control-Allow-Methods *
+		Access-Control-Allow-Headers *
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
 	}
 
 	route /auth* {
-		authenticate * with myportal
+		authenticate with myportal
 	}
 
-	route /favicon.ico {
-		respond "not found" 404
+	route /* {
+		redir https://{hostport}/auth/ 302
 	}
+}
 
-	route /xauth* {
-		authenticate * with myportal
+go.myfiosgateway.com:8443 {
+	tls internal {
+		on_demand
+	}
+	
+	route /version* {
+		respond * "1.0.0" 200
 	}
 
 	route /app* {
 		authorize with mypolicy
 		file_server {
-			root ./assets/config
+			root ./assets/config/
 		}
-	}
-
-	route {
-		redir https://{hostport}/auth 302
 	}
 }

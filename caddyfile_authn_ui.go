@@ -15,13 +15,14 @@
 package security
 
 import (
+	"io/ioutil"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
-	"io/ioutil"
-	"strings"
 )
 
 func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string) error {
@@ -135,13 +136,17 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				if err != nil {
 					return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
 				}
-				for k, v := range ui.PageTemplates {
-					headIndex := strings.Index(v, "<meta name=\"description\"")
+				for _, k := range ui.PageTemplates.GetAssetPaths() {
+					asset, err := ui.PageTemplates.GetAsset(k)
+					if err != nil {
+						return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
+					}
+
+					headIndex := strings.Index(asset.Content, "<meta name=\"description\"")
 					if headIndex < 1 {
 						continue
 					}
-					v = v[:headIndex] + string(b) + v[headIndex:]
-					ui.PageTemplates[k] = v
+					asset.Content = asset.Content[:headIndex] + string(b) + asset.Content[headIndex:]
 				}
 			case args == "":
 				return h.Errf("%s %s directive has no value", rootDirective, subDirective)
