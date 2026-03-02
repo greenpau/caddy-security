@@ -15,11 +15,12 @@
 package security
 
 import (
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
-	"strings"
 )
 
 func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective, k string, args []string) error {
@@ -69,7 +70,7 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, 
 		}
 	case "trust":
 		switch {
-		case strings.Contains(v, "logout redirect uri"):
+		case strings.Contains(v, "logout redirect uri"), strings.Contains(v, "login redirect uri"):
 			var domainMatchType, domain, pathMatchType, path string
 			argp := 3
 			for argp < len(args) {
@@ -102,12 +103,15 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, 
 				}
 				argp++
 			}
-
 			redirectURIConfig, err := redirects.NewRedirectURIMatchConfig(domainMatchType, domain, pathMatchType, path)
 			if err != nil {
 				return h.Errf("%s directive %q erred: %v", rootDirective, v, err)
 			}
-			portal.TrustedLogoutRedirectURIConfigs = append(portal.TrustedLogoutRedirectURIConfigs, redirectURIConfig)
+			if strings.Contains(v, "logout redirect uri") {
+				portal.TrustedLogoutRedirectURIConfigs = append(portal.TrustedLogoutRedirectURIConfigs, redirectURIConfig)
+			} else {
+				portal.TrustedLoginRedirectURIConfigs = append(portal.TrustedLoginRedirectURIConfigs, redirectURIConfig)
+			}
 		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
 		default:

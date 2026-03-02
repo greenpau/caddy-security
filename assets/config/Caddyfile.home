@@ -78,6 +78,7 @@
 				ui link "User Profile" /auth/profile/ icon "las la-cog"
 			}
 			trust logout redirect uri domain prefix google path suffix /
+			trust login redirect uri domain exact google.com path suffix /
 		}
 
 		authorization policy mypolicy {
