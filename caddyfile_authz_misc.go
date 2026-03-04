@@ -15,12 +15,13 @@
 package security
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strconv"
-	"strings"
 )
 
 func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
@@ -42,10 +43,8 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 				remainingArguments = strings.TrimPrefix(remainingArguments, "with ")
 				validationArguments := strings.Split(remainingArguments, " ")
 				p.LoginHintValidators = validationArguments
-				break
 			default:
 				p.LoginHintValidators = []string{"email", "phone", "alphanumeric"}
-				break
 			}
 		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
