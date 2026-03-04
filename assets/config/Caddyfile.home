@@ -33,7 +33,8 @@
 			user webadmin {
 				name Webmaster
 				email webadmin@localhost.localdomain
-				password "My@Password123" overwrite
+				# password "Td45@4d269b7ec2f5ffd31ee5" overwrite
+				password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
 				roles "authp/admin" "authp/user"
 			}
 			user jsmith {
@@ -66,7 +67,7 @@
 			crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
 			enable identity store localdb
 			ui {
-				language fr
+				#language fr
 				#language zh
 				links {
 					"My Website" "https://go.myfiosgateway.com:8443/app/" icon "las la-star"
