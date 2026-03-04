@@ -138,6 +138,10 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 		}
 	}
 
+	if v, exists := ar.Response.User["userinfo|preferred_username"]; exists {
+		u.Metadata["username"] = v.(string)
+	}
+
 	return u, ar.Response.Authorized, nil
 }
 
