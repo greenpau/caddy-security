@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
 
 permissions:
   contents: write
@@ -16,6 +17,13 @@ jobs:
         with:
           fetch-depth: 0
       - run: git fetch --force --tags
+      - name: Ensure tag context for manual trigger
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # Identifies the most recent tag matching v*
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match "v*")
+          echo "Checking out latest tag: $LATEST_TAG"
+          git checkout $LATEST_TAG
       - uses: actions/setup-go@v5
         with:
           go-version: "~1.25"
