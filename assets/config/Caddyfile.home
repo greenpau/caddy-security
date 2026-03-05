@@ -87,6 +87,7 @@
 				#language zh
 				links {
 					"My Website" "https://go.myfiosgateway.com:8443/app/" icon "las la-star"
+					"Debug" "https://go.myfiosgateway.com:8443/version" icon "las la-star"
 					"My Identity" "/auth/whoami" icon "las la-user"
 				}
 			}
@@ -159,7 +160,7 @@ go.myfiosgateway.com:8443 {
 	
 	route /version* {
 		authorize with mypolicy
-		respond * "1.0.0 {http.auth.user.id} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
+		respond * "1.0.0 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
 		#respond * "1.0.0" 200
 	}
 

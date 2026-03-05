@@ -132,7 +132,7 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 	if v, exists := ar.Response.User["id"]; exists {
 		u.ID = v.(string)
 	}
-	for _, k := range []string{"claim_id", "sub", "email", "name", "issuer", "origin"} {
+	for _, k := range []string{"claim_id", "sub", "email", "name", "issuer", "origin", "realm"} {
 		if v, exists := ar.Response.User[k]; exists {
 			u.Metadata[k] = v.(string)
 		}
