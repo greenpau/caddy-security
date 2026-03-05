@@ -27,6 +27,22 @@
 			bcc greenpau@localhost
 		}
 
+		oauth identity provider github {
+			realm github
+			driver github
+			client_id {env.GITHUB_APP_CLIENT_ID}
+			client_secret {env.GITHUB_APP_CLIENT_SECRET}
+			icon github priority 100
+		}
+
+		oauth identity provider linkedin {
+			realm linkedin
+			driver linkedin
+			client_id {env.LINKEDIN_APP_CLIENT_ID}
+			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
+			icon linkedin priority 200
+		}
+
 		local identity store localdb {
 			realm local
 			path assets/config/users.json
@@ -82,6 +98,13 @@
 			trust logout redirect uri domain prefix google path suffix /
 			trust login redirect uri domain exact google.com path suffix /
 			enable admin api
+
+			transform user {
+				match realm github
+				action add role authp/user
+			}
+			enable identity provider github
+			enable identity provider linkedin
 		}
 
 		authorization policy mypolicy {
