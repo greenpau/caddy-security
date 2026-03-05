@@ -19,20 +19,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func parseCaddyfileAuthPortalCookie(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string, args []string) error {
+func parseCaddyfileAuthPortalCookie(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string, args []string) error {
 	switch {
 	case len(args) == 2:
 		if err := updateAuthPortalCookieConfig(portal, "default", args[0], args[1]); err != nil {
 			return h.Errf("%s %s directive erred: %v", rootDirective, strings.Join(args, " "), err)
 		}
-
 	case len(args) == 3:
 		if err := updateAuthPortalCookieConfig(portal, args[0], args[1], args[2]); err != nil {
 			return h.Errf("%s %s directive erred: %v", rootDirective, strings.Join(args, " "), err)
@@ -73,6 +71,10 @@ func updateAuthPortalCookieConfig(portal *authn.PortalConfig, domain, k, v strin
 			portal.CookieConfig.Path = v
 		} else {
 			portal.CookieConfig.Domains[domain].Path = v
+		}
+	case "guess":
+		if defaultDomain {
+			portal.CookieConfig.GuessDomainEnabled = true
 		}
 	case "lifetime":
 		lifetime, err := strconv.Atoi(v)

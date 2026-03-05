@@ -102,7 +102,7 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 					return err
 				}
 			case "cookie":
-				if err := parseCaddyfileAuthPortalCookie(d, repl, p, rootDirective, util.FindReplaceAll(repl, v)); err != nil {
+				if err := parseCaddyfileAuthPortalCookie(d, p, rootDirective, util.FindReplaceAll(repl, v)); err != nil {
 					return err
 				}
 			case "backend", "backends":
