@@ -89,7 +89,7 @@
 				#language zh
 				links {
 					"My Website" "https://go.myfiosgateway.com:8443/app/" icon "las la-star"
-					"Debug" "https://go.myfiosgateway.com:8443/version" icon "las la-star"
+					#"Debug" "https://go.myfiosgateway.com:8443/version" icon "las la-star"
 					"My Identity" "/auth/whoami" icon "las la-user"
 				}
 			}
