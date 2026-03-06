@@ -15,6 +15,7 @@
 package security
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -67,4 +68,36 @@ func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfi
 		return h.Errf("%s directive value of %q is unsupported", rootDirective, strings.Join(args, " "))
 	}
 	return nil
+}
+
+func cloneResolvedRuleConfigurations(cfgs []*acl.RuleConfiguration, repl *caddy.Replacer) ([]*acl.RuleConfiguration, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*acl.RuleConfiguration, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		comment, err := resolveRuntimeString(cfg.Comment, repl)
+		if err != nil {
+			return nil, err
+		}
+		conditions, err := cloneResolvedStringSlice(cfg.Conditions, repl)
+		if err != nil {
+			return nil, err
+		}
+		action, err := resolveRuntimeString(cfg.Action, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &acl.RuleConfiguration{
+			Comment:    comment,
+			Conditions: conditions,
+			Action:     action,
+		})
+	}
+	return clones, nil
 }

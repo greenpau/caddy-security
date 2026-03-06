@@ -116,6 +116,43 @@ func (app *App) Provision(ctx caddy.Context) error {
 	return nil
 }
 
+func resolveRuntimeConfig(cfg *authcrunch.Config) (*authcrunch.Config, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	repl := caddy.NewReplacer()
+	resolvedCfg := &authcrunch.Config{}
+
+	var err error
+	if resolvedCfg.Credentials, err = cloneResolvedCredentialsConfig(cfg.Credentials, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.Messaging, err = cloneResolvedMessagingConfig(cfg.Messaging, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.AuthenticationPortals, err = cloneResolvedPortalConfigs(cfg.AuthenticationPortals, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.AuthorizationPolicies, err = cloneResolvedPolicyConfigs(cfg.AuthorizationPolicies, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.IdentityStores, err = cloneResolvedIdentityStoreConfigs(cfg.IdentityStores, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.IdentityProviders, err = cloneResolvedIdentityProviderConfigs(cfg.IdentityProviders, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.SingleSignOnProviders, err = cloneResolvedSingleSignOnProviderConfigs(cfg.SingleSignOnProviders, repl); err != nil {
+		return nil, err
+	}
+	if resolvedCfg.UserRegistries, err = cloneResolvedUserRegistryConfigs(cfg.UserRegistries, repl); err != nil {
+		return nil, err
+	}
+
+	return resolvedCfg, nil
+}
+
 // Start starts the App.
 func (app App) Start() error {
 	app.logger.Debug(
