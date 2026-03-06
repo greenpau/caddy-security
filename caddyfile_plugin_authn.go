@@ -20,7 +20,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/greenpau/caddy-security/pkg/util"
 )
 
 func init() {
@@ -59,19 +58,17 @@ func getRouteFromParseAuthnPluginCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyf
 //
 // Syntax:
 //
-//   authenticate [<matcher>] with <portal_name>
+//	authenticate [<matcher>] with <portal_name>
 //
 // Examples:
 //
-//   authenticate with myportal
-//   authenticate * with myportal
-//   authenticate /* with myportal
-//   authenticate /auth* with myportal
-//
+//	authenticate with myportal
+//	authenticate * with myportal
+//	authenticate /* with myportal
+//	authenticate /auth* with myportal
 func parseAuthnPluginCaddyfile(h httpcaddyfile.Helper) (map[string]string, error) {
 	var i int
-	repl := caddy.NewReplacer()
-	args := util.FindReplaceAll(repl, h.RemainingArgs())
+	args := h.RemainingArgs()
 	m := make(map[string]string)
 
 	if args[0] != "authenticate" {

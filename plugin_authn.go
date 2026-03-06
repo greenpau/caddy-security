@@ -53,6 +53,12 @@ func (AuthnMiddleware) CaddyModule() caddy.ModuleInfo {
 
 // Provision provisions Authenticator.
 func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
+	resolvedPortalName, err := resolveRuntimeString(m.PortalName, caddy.NewReplacer())
+	if err != nil {
+		return fmt.Errorf("failed resolving portal name placeholder: %w", err)
+	}
+	m.PortalName = resolvedPortalName
+
 	appModule, err := ctx.App("security")
 	if err != nil {
 		return err

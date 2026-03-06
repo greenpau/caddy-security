@@ -15,9 +15,7 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
@@ -26,14 +24,14 @@ const (
 	userPrefix = "security.user"
 )
 
-func parseCaddyfileUser(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+func parseCaddyfileUser(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+	args := d.RemainingArgs()
 	if len(args) < 2 {
 		return d.ArgErr()
 	}
 	switch {
 	case args[0] == "registration":
-		if err := parseCaddyfileUserRegistration(d, repl, cfg, args[1]); err != nil {
+		if err := parseCaddyfileUserRegistration(d, cfg, args[1]); err != nil {
 			return err
 		}
 	default:

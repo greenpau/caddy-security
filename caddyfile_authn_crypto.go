@@ -15,20 +15,18 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func parseCaddyfileAuthPortalCrypto(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string, args []string) error {
+func parseCaddyfileAuthPortalCrypto(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string, args []string) error {
 	if len(args) < 3 {
 		return h.Errf("%v", errors.ErrConfigDirectiveShort.WithArgs(rootDirective, args))
 	}
 
-	encodedArgs := cfgutil.EncodeArgs(util.FindReplaceAll(repl, args))
+	encodedArgs := cfgutil.EncodeArgs(args)
 	switch args[0] {
 	case "key":
 	case "default":

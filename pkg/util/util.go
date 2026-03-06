@@ -15,32 +15,10 @@
 package util
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/google/uuid"
-	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"net/http"
 )
-
-// FindReplaceAll uses caddy.Replacer to replace strings in a given slice.
-func FindReplaceAll(repl *caddy.Replacer, arr []string) (output []string) {
-	if repl == nil {
-		output = append(output, arr...)
-		return output
-	}
-	for _, item := range arr {
-		output = append(output, repl.ReplaceAll(item, cfg.ReplErrStr))
-	}
-	return output
-}
-
-// FindReplace uses caddy.Replacer to replace strings in a given string.
-func FindReplace(repl *caddy.Replacer, s string) string {
-	if repl == nil {
-		return s
-	}
-	return repl.ReplaceAll(s, cfg.ReplErrStr)
-}
 
 // GetRequestID returns HTTP request id.
 func GetRequestID(r *http.Request) string {

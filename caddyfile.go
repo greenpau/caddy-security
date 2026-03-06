@@ -16,7 +16,6 @@ package security
 
 import (
 	//	"fmt"
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -45,7 +44,6 @@ func init() {
 //		authorization ...
 //	}
 func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
-	var repl *caddy.Replacer
 	app := new(App)
 	app.Config = authcrunch.NewConfig()
 
@@ -57,35 +55,35 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 		tld := d.Val()
 		switch tld {
 		case "credentials":
-			if err := parseCaddyfileCredentials(d, repl, app.Config); err != nil {
+			if err := parseCaddyfileCredentials(d, app.Config); err != nil {
 				return nil, err
 			}
 		case "messaging":
-			if err := parseCaddyfileMessaging(d, repl, app.Config); err != nil {
+			if err := parseCaddyfileMessaging(d, app.Config); err != nil {
 				return nil, err
 			}
 		case "local", "ldap", "oauth", "saml":
-			if err := parseCaddyfileIdentity(d, repl, app.Config, tld); err != nil {
+			if err := parseCaddyfileIdentity(d, app.Config, tld); err != nil {
 				return nil, err
 			}
 		case "user":
-			if err := parseCaddyfileUser(d, repl, app.Config); err != nil {
+			if err := parseCaddyfileUser(d, app.Config); err != nil {
 				return nil, err
 			}
 		case "authentication":
-			if err := parseCaddyfileAuthentication(d, repl, app.Config); err != nil {
+			if err := parseCaddyfileAuthentication(d, app.Config); err != nil {
 				return nil, err
 			}
 		case "authorization":
-			if err := parseCaddyfileAuthorization(d, repl, app.Config); err != nil {
+			if err := parseCaddyfileAuthorization(d, app.Config); err != nil {
 				return nil, err
 			}
 		case "sso":
-			if err := parseCaddyfileSingleSignOnProvider(d, repl, app.Config); err != nil {
+			if err := parseCaddyfileSingleSignOnProvider(d, app.Config); err != nil {
 				return nil, err
 			}
 		case "secrets":
-			if err := parseCaddyfileSecrets(d, repl, app); err != nil {
+			if err := parseCaddyfileSecrets(d, app); err != nil {
 				return nil, err
 			}
 		default:

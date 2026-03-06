@@ -15,9 +15,7 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -31,21 +29,20 @@ const (
 //
 // Syntax:
 //
-//   credentials <label> {
-//     username <username>
-//     password <password>
-//     domain <name>
-//   }
-//
-func parseCaddyfileCredentials(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+//	credentials <label> {
+//	  username <username>
+//	  password <password>
+//	  domain <name>
+//	}
+func parseCaddyfileCredentials(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+	args := d.RemainingArgs()
 	if len(args) != 1 {
 		return d.ArgErr()
 	}
 	c := &credentials.Generic{Name: args[0]}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
-		v := util.FindReplaceAll(repl, d.RemainingArgs())
+		v := d.RemainingArgs()
 		switch k {
 		case "domain":
 			if len(v) != 1 {
