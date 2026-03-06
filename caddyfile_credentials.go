@@ -15,6 +15,7 @@
 package security
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
@@ -67,4 +68,53 @@ func parseCaddyfileCredentials(d *caddyfile.Dispenser, cfg *authcrunch.Config) e
 		return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0]}, err)
 	}
 	return nil
+}
+
+func cloneResolvedCredentialsConfig(cfg *credentials.Config, repl *caddy.Replacer) (*credentials.Config, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	clone := &credentials.Config{}
+	if len(cfg.Generic) > 0 {
+		clone.Generic = make([]*credentials.Generic, 0, len(cfg.Generic))
+		for _, entry := range cfg.Generic {
+			resolvedEntry, err := cloneResolvedGenericCredential(entry, repl)
+			if err != nil {
+				return nil, err
+			}
+			clone.Generic = append(clone.Generic, resolvedEntry)
+		}
+	}
+	return clone, nil
+}
+
+func cloneResolvedGenericCredential(cfg *credentials.Generic, repl *caddy.Replacer) (*credentials.Generic, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	name, err := resolveRuntimeString(cfg.Name, repl)
+	if err != nil {
+		return nil, err
+	}
+	username, err := resolveRuntimeString(cfg.Username, repl)
+	if err != nil {
+		return nil, err
+	}
+	password, err := resolveRuntimeString(cfg.Password, repl)
+	if err != nil {
+		return nil, err
+	}
+	domain, err := resolveRuntimeString(cfg.Domain, repl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &credentials.Generic{
+		Name:     name,
+		Username: username,
+		Password: password,
+		Domain:   domain,
+	}, nil
 }

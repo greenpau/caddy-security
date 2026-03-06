@@ -17,9 +17,11 @@ package security
 import (
 	"strings"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 )
 
 // parseCaddyfileIdentityStore parses identity store configuration.
@@ -243,4 +245,36 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 	}
 
 	return nil
+}
+
+func cloneResolvedIdentityStoreConfigs(cfgs []*ids.IdentityStoreConfig, repl *caddy.Replacer) ([]*ids.IdentityStoreConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*ids.IdentityStoreConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		name, err := resolveRuntimeString(cfg.Name, repl)
+		if err != nil {
+			return nil, err
+		}
+		kind, err := resolveRuntimeString(cfg.Kind, repl)
+		if err != nil {
+			return nil, err
+		}
+		params, err := cloneResolvedInterfaceMap(cfg.Params, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &ids.IdentityStoreConfig{
+			Name:   name,
+			Kind:   kind,
+			Params: params,
+		})
+	}
+	return clones, nil
 }

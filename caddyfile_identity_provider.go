@@ -15,10 +15,12 @@
 package security
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"strconv"
 	"strings"
 )
@@ -215,4 +217,36 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 	}
 
 	return nil
+}
+
+func cloneResolvedIdentityProviderConfigs(cfgs []*idp.IdentityProviderConfig, repl *caddy.Replacer) ([]*idp.IdentityProviderConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*idp.IdentityProviderConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		name, err := resolveRuntimeString(cfg.Name, repl)
+		if err != nil {
+			return nil, err
+		}
+		kind, err := resolveRuntimeString(cfg.Kind, repl)
+		if err != nil {
+			return nil, err
+		}
+		params, err := cloneResolvedInterfaceMap(cfg.Params, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &idp.IdentityProviderConfig{
+			Name:   name,
+			Kind:   kind,
+			Params: params,
+		})
+	}
+	return clones, nil
 }

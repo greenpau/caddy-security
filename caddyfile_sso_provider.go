@@ -15,11 +15,13 @@
 package security
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	//"github.com/greenpau/go-authcrunch/pkg/errors"
 	//"strconv"
 	//"strings"
+	"github.com/greenpau/go-authcrunch/pkg/sso"
 )
 
 // parseCaddyfileSingleSignOnProvider parses single sign-on provider configuration.
@@ -98,4 +100,51 @@ func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, cfg *authcrunch.
 	}
 
 	return nil
+}
+
+func cloneResolvedSingleSignOnProviderConfigs(cfgs []*sso.SingleSignOnProviderConfig, repl *caddy.Replacer) ([]*sso.SingleSignOnProviderConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*sso.SingleSignOnProviderConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		name, err := resolveRuntimeString(cfg.Name, repl)
+		if err != nil {
+			return nil, err
+		}
+		driver, err := resolveRuntimeString(cfg.Driver, repl)
+		if err != nil {
+			return nil, err
+		}
+		entityID, err := resolveRuntimeString(cfg.EntityID, repl)
+		if err != nil {
+			return nil, err
+		}
+		locations, err := cloneResolvedStringSlice(cfg.Locations, repl)
+		if err != nil {
+			return nil, err
+		}
+		privateKeyPath, err := resolveRuntimeString(cfg.PrivateKeyPath, repl)
+		if err != nil {
+			return nil, err
+		}
+		certPath, err := resolveRuntimeString(cfg.CertPath, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &sso.SingleSignOnProviderConfig{
+			Name:           name,
+			Driver:         driver,
+			EntityID:       entityID,
+			Locations:      locations,
+			PrivateKeyPath: privateKeyPath,
+			CertPath:       certPath,
+		})
+	}
+	return clones, nil
 }

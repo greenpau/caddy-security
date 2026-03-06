@@ -15,6 +15,7 @@
 package security
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -131,4 +132,110 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, cfg *authcrunch.Config) err
 		return errors.ErrMalformedDirective.WithArgs(msgPrefix, args)
 	}
 	return nil
+}
+
+func cloneResolvedMessagingConfig(cfg *messaging.Config, repl *caddy.Replacer) (*messaging.Config, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	clone := &messaging.Config{}
+	if len(cfg.EmailProviders) > 0 {
+		clone.EmailProviders = make([]*messaging.EmailProvider, 0, len(cfg.EmailProviders))
+		for _, provider := range cfg.EmailProviders {
+			resolvedProvider, err := cloneResolvedEmailProvider(provider, repl)
+			if err != nil {
+				return nil, err
+			}
+			clone.EmailProviders = append(clone.EmailProviders, resolvedProvider)
+		}
+	}
+	if len(cfg.FileProviders) > 0 {
+		clone.FileProviders = make([]*messaging.FileProvider, 0, len(cfg.FileProviders))
+		for _, provider := range cfg.FileProviders {
+			resolvedProvider, err := cloneResolvedFileProvider(provider, repl)
+			if err != nil {
+				return nil, err
+			}
+			clone.FileProviders = append(clone.FileProviders, resolvedProvider)
+		}
+	}
+
+	return clone, nil
+}
+
+func cloneResolvedEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replacer) (*messaging.EmailProvider, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	name, err := resolveRuntimeString(cfg.Name, repl)
+	if err != nil {
+		return nil, err
+	}
+	address, err := resolveRuntimeString(cfg.Address, repl)
+	if err != nil {
+		return nil, err
+	}
+	protocol, err := resolveRuntimeString(cfg.Protocol, repl)
+	if err != nil {
+		return nil, err
+	}
+	credentialsName, err := resolveRuntimeString(cfg.Credentials, repl)
+	if err != nil {
+		return nil, err
+	}
+	senderEmail, err := resolveRuntimeString(cfg.SenderEmail, repl)
+	if err != nil {
+		return nil, err
+	}
+	senderName, err := resolveRuntimeString(cfg.SenderName, repl)
+	if err != nil {
+		return nil, err
+	}
+	templates, err := cloneResolvedStringMap(cfg.Templates, repl)
+	if err != nil {
+		return nil, err
+	}
+	bcc, err := cloneResolvedStringSlice(cfg.BlindCarbonCopy, repl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &messaging.EmailProvider{
+		Name:            name,
+		Address:         address,
+		Protocol:        protocol,
+		Credentials:     credentialsName,
+		SenderEmail:     senderEmail,
+		SenderName:      senderName,
+		Templates:       templates,
+		Passwordless:    cfg.Passwordless,
+		BlindCarbonCopy: bcc,
+	}, nil
+}
+
+func cloneResolvedFileProvider(cfg *messaging.FileProvider, repl *caddy.Replacer) (*messaging.FileProvider, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	name, err := resolveRuntimeString(cfg.Name, repl)
+	if err != nil {
+		return nil, err
+	}
+	rootDir, err := resolveRuntimeString(cfg.RootDir, repl)
+	if err != nil {
+		return nil, err
+	}
+	templates, err := cloneResolvedStringMap(cfg.Templates, repl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &messaging.FileProvider{
+		Name:      name,
+		RootDir:   rootDir,
+		Templates: templates,
+	}, nil
 }

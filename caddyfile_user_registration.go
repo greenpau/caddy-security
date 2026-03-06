@@ -15,6 +15,7 @@
 package security
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -132,4 +133,69 @@ func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 	}
 
 	return nil
+}
+
+func cloneResolvedUserRegistryConfigs(cfgs []*registry.UserRegistryConfig, repl *caddy.Replacer) ([]*registry.UserRegistryConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*registry.UserRegistryConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		name, err := resolveRuntimeString(cfg.Name, repl)
+		if err != nil {
+			return nil, err
+		}
+		title, err := resolveRuntimeString(cfg.Title, repl)
+		if err != nil {
+			return nil, err
+		}
+		code, err := resolveRuntimeString(cfg.Code, repl)
+		if err != nil {
+			return nil, err
+		}
+		dropbox, err := resolveRuntimeString(cfg.Dropbox, repl)
+		if err != nil {
+			return nil, err
+		}
+		termsLink, err := resolveRuntimeString(cfg.TermsConditionsLink, repl)
+		if err != nil {
+			return nil, err
+		}
+		privacyLink, err := resolveRuntimeString(cfg.PrivacyPolicyLink, repl)
+		if err != nil {
+			return nil, err
+		}
+		emailProvider, err := resolveRuntimeString(cfg.EmailProvider, repl)
+		if err != nil {
+			return nil, err
+		}
+		adminEmails, err := cloneResolvedStringSlice(cfg.AdminEmails, repl)
+		if err != nil {
+			return nil, err
+		}
+		identityStore, err := resolveRuntimeString(cfg.IdentityStore, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &registry.UserRegistryConfig{
+			Name:                    name,
+			Disabled:                cfg.Disabled,
+			Title:                   title,
+			Code:                    code,
+			Dropbox:                 dropbox,
+			RequireAcceptTerms:      cfg.RequireAcceptTerms,
+			RequireDomainMailRecord: cfg.RequireDomainMailRecord,
+			TermsConditionsLink:     termsLink,
+			PrivacyPolicyLink:       privacyLink,
+			EmailProvider:           emailProvider,
+			AdminEmails:             adminEmails,
+			IdentityStore:           identityStore,
+		})
+	}
+	return clones, nil
 }

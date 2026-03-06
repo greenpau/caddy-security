@@ -18,13 +18,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
 const (
@@ -133,4 +137,573 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config
 
 func mkcp(parts ...string) string {
 	return strings.Join(parts, ".")
+}
+
+func cloneResolvedPortalConfigs(cfgs []*authn.PortalConfig, repl *caddy.Replacer) ([]*authn.PortalConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*authn.PortalConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		clone, err := cloneResolvedPortalConfig(cfg, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, clone)
+	}
+	return clones, nil
+}
+
+func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*authn.PortalConfig, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	name, err := resolveRuntimeString(cfg.Name, repl)
+	if err != nil {
+		return nil, err
+	}
+	uiConfig, err := cloneResolvedUIParameters(cfg.UI, repl)
+	if err != nil {
+		return nil, err
+	}
+	transformerConfigs, err := cloneResolvedTransformerConfigs(cfg.UserTransformerConfigs, repl)
+	if err != nil {
+		return nil, err
+	}
+	cookieConfig, err := cloneResolvedCookieConfig(cfg.CookieConfig, repl)
+	if err != nil {
+		return nil, err
+	}
+	identityStores, err := cloneResolvedStringSlice(cfg.IdentityStores, repl)
+	if err != nil {
+		return nil, err
+	}
+	identityProviders, err := cloneResolvedStringSlice(cfg.IdentityProviders, repl)
+	if err != nil {
+		return nil, err
+	}
+	ssoProviders, err := cloneResolvedStringSlice(cfg.SingleSignOnProviders, repl)
+	if err != nil {
+		return nil, err
+	}
+	userRegistries, err := cloneResolvedStringSlice(cfg.UserRegistries, repl)
+	if err != nil {
+		return nil, err
+	}
+	accessListConfigs, err := cloneResolvedRuleConfigurations(cfg.AccessListConfigs, repl)
+	if err != nil {
+		return nil, err
+	}
+	cryptoKeyConfigs, err := cloneResolvedCryptoKeyConfigs(cfg.CryptoKeyConfigs, repl)
+	if err != nil {
+		return nil, err
+	}
+	cryptoKeyStoreConfig, err := cloneResolvedInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
+	if err != nil {
+		return nil, err
+	}
+	loginRedirects, err := cloneResolvedRedirectURIMatchConfigs(cfg.TrustedLoginRedirectURIConfigs, repl)
+	if err != nil {
+		return nil, err
+	}
+	logoutRedirects, err := cloneResolvedRedirectURIMatchConfigs(cfg.TrustedLogoutRedirectURIConfigs, repl)
+	if err != nil {
+		return nil, err
+	}
+	adminRoles, err := cloneResolvedInterfaceMap(cfg.PortalAdminRoles, repl)
+	if err != nil {
+		return nil, err
+	}
+	userRoles, err := cloneResolvedInterfaceMap(cfg.PortalUserRoles, repl)
+	if err != nil {
+		return nil, err
+	}
+	guestRoles, err := cloneResolvedInterfaceMap(cfg.PortalGuestRoles, repl)
+	if err != nil {
+		return nil, err
+	}
+	adminRolePatterns, err := cloneResolvedStringSlice(cfg.PortalAdminRolePatterns, repl)
+	if err != nil {
+		return nil, err
+	}
+	userRolePatterns, err := cloneResolvedStringSlice(cfg.PortalUserRolePatterns, repl)
+	if err != nil {
+		return nil, err
+	}
+	guestRolePatterns, err := cloneResolvedStringSlice(cfg.PortalGuestRolePatterns, repl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authn.PortalConfig{
+		Name:                            name,
+		UI:                              uiConfig,
+		UserTransformerConfigs:          transformerConfigs,
+		CookieConfig:                    cookieConfig,
+		IdentityStores:                  identityStores,
+		IdentityProviders:               identityProviders,
+		SingleSignOnProviders:           ssoProviders,
+		UserRegistries:                  userRegistries,
+		AccessListConfigs:               accessListConfigs,
+		TokenValidatorOptions:           cloneTokenValidatorOptions(cfg.TokenValidatorOptions),
+		CryptoKeyConfigs:                cryptoKeyConfigs,
+		CryptoKeyStoreConfig:            cryptoKeyStoreConfig,
+		TokenGrantorOptions:             cloneTokenGrantorOptions(cfg.TokenGrantorOptions),
+		TrustedLoginRedirectURIConfigs:  loginRedirects,
+		TrustedLogoutRedirectURIConfigs: logoutRedirects,
+		PortalAdminRoles:                adminRoles,
+		PortalUserRoles:                 userRoles,
+		PortalGuestRoles:                guestRoles,
+		PortalAdminRolePatterns:         adminRolePatterns,
+		PortalUserRolePatterns:          userRolePatterns,
+		PortalGuestRolePatterns:         guestRolePatterns,
+		API:                             cloneAPIConfig(cfg.API),
+	}, nil
+}
+
+func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Parameters, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	theme, err := resolveRuntimeString(cfg.Theme, repl)
+	if err != nil {
+		return nil, err
+	}
+	templates, err := cloneResolvedStringMap(cfg.Templates, repl)
+	if err != nil {
+		return nil, err
+	}
+	title, err := resolveRuntimeString(cfg.Title, repl)
+	if err != nil {
+		return nil, err
+	}
+	logoURL, err := resolveRuntimeString(cfg.LogoURL, repl)
+	if err != nil {
+		return nil, err
+	}
+	logoDescription, err := resolveRuntimeString(cfg.LogoDescription, repl)
+	if err != nil {
+		return nil, err
+	}
+	metaTitle, err := resolveRuntimeString(cfg.MetaTitle, repl)
+	if err != nil {
+		return nil, err
+	}
+	metaDescription, err := resolveRuntimeString(cfg.MetaDescription, repl)
+	if err != nil {
+		return nil, err
+	}
+	metaAuthor, err := resolveRuntimeString(cfg.MetaAuthor, repl)
+	if err != nil {
+		return nil, err
+	}
+	privateLinks, err := cloneResolvedLinks(cfg.PrivateLinks, repl)
+	if err != nil {
+		return nil, err
+	}
+	autoRedirectURL, err := resolveRuntimeString(cfg.AutoRedirectURL, repl)
+	if err != nil {
+		return nil, err
+	}
+	realms, err := cloneResolvedUserRealms(cfg.Realms, repl)
+	if err != nil {
+		return nil, err
+	}
+	customCSSPath, err := resolveRuntimeString(cfg.CustomCSSPath, repl)
+	if err != nil {
+		return nil, err
+	}
+	customJsPath, err := resolveRuntimeString(cfg.CustomJsPath, repl)
+	if err != nil {
+		return nil, err
+	}
+	customHTMLHeaderPath, err := resolveRuntimeString(cfg.CustomHTMLHeaderPath, repl)
+	if err != nil {
+		return nil, err
+	}
+	staticAssets, err := cloneResolvedStaticAssets(cfg.StaticAssets, repl)
+	if err != nil {
+		return nil, err
+	}
+	language, err := resolveRuntimeString(cfg.Language, repl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ui.Parameters{
+		Theme:                   theme,
+		Templates:               templates,
+		AllowRoleSelection:      cfg.AllowRoleSelection,
+		Title:                   title,
+		LogoURL:                 logoURL,
+		LogoDescription:         logoDescription,
+		MetaTitle:               metaTitle,
+		MetaDescription:         metaDescription,
+		MetaAuthor:              metaAuthor,
+		PrivateLinks:            privateLinks,
+		AutoRedirectURL:         autoRedirectURL,
+		Realms:                  realms,
+		PasswordRecoveryEnabled: cfg.PasswordRecoveryEnabled,
+		CustomCSSPath:           customCSSPath,
+		CustomJsPath:            customJsPath,
+		CustomHTMLHeaderPath:    customHTMLHeaderPath,
+		StaticAssets:            staticAssets,
+		Language:                language,
+		DisabledPages:           cloneStringBoolMap(cfg.DisabledPages),
+	}, nil
+}
+
+func cloneResolvedLinks(cfgs []ui.Link, repl *caddy.Replacer) ([]ui.Link, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]ui.Link, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		link, err := resolveRuntimeString(cfg.Link, repl)
+		if err != nil {
+			return nil, err
+		}
+		title, err := resolveRuntimeString(cfg.Title, repl)
+		if err != nil {
+			return nil, err
+		}
+		style, err := resolveRuntimeString(cfg.Style, repl)
+		if err != nil {
+			return nil, err
+		}
+		target, err := resolveRuntimeString(cfg.Target, repl)
+		if err != nil {
+			return nil, err
+		}
+		iconName, err := resolveRuntimeString(cfg.IconName, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, ui.Link{
+			Link:          link,
+			Title:         title,
+			Style:         style,
+			OpenNewWindow: cfg.OpenNewWindow,
+			Target:        target,
+			TargetEnabled: cfg.TargetEnabled,
+			IconName:      iconName,
+			IconEnabled:   cfg.IconEnabled,
+		})
+	}
+	return clones, nil
+}
+
+func cloneResolvedUserRealms(cfgs []ui.UserRealm, repl *caddy.Replacer) ([]ui.UserRealm, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]ui.UserRealm, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		name, err := resolveRuntimeString(cfg.Name, repl)
+		if err != nil {
+			return nil, err
+		}
+		label, err := resolveRuntimeString(cfg.Label, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, ui.UserRealm{
+			Name:  name,
+			Label: label,
+		})
+	}
+	return clones, nil
+}
+
+func cloneResolvedStaticAssets(cfgs []ui.StaticAsset, repl *caddy.Replacer) ([]ui.StaticAsset, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]ui.StaticAsset, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		path, err := resolveRuntimeString(cfg.Path, repl)
+		if err != nil {
+			return nil, err
+		}
+		fsPath, err := resolveRuntimeString(cfg.FsPath, repl)
+		if err != nil {
+			return nil, err
+		}
+		contentType, err := resolveRuntimeString(cfg.ContentType, repl)
+		if err != nil {
+			return nil, err
+		}
+		content, err := resolveRuntimeString(cfg.Content, repl)
+		if err != nil {
+			return nil, err
+		}
+		encodedContent, err := resolveRuntimeString(cfg.EncodedContent, repl)
+		if err != nil {
+			return nil, err
+		}
+		checksum, err := resolveRuntimeString(cfg.Checksum, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, ui.StaticAsset{
+			Path:           path,
+			FsPath:         fsPath,
+			Restricted:     cfg.Restricted,
+			ContentType:    contentType,
+			Content:        content,
+			EncodedContent: encodedContent,
+			Checksum:       checksum,
+		})
+	}
+	return clones, nil
+}
+
+func cloneResolvedTransformerConfigs(cfgs []*transformer.Config, repl *caddy.Replacer) ([]*transformer.Config, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*transformer.Config, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		matchers, err := cloneResolvedStringSlice(cfg.Matchers, repl)
+		if err != nil {
+			return nil, err
+		}
+		actions, err := cloneResolvedStringSlice(cfg.Actions, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &transformer.Config{
+			Matchers: matchers,
+			Actions:  actions,
+		})
+	}
+	return clones, nil
+}
+
+func cloneResolvedCookieConfig(cfg *cookie.Config, repl *caddy.Replacer) (*cookie.Config, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	domains, err := cloneResolvedCookieDomainConfigs(cfg.Domains, repl)
+	if err != nil {
+		return nil, err
+	}
+	path, err := resolveRuntimeString(cfg.Path, repl)
+	if err != nil {
+		return nil, err
+	}
+	sameSite, err := resolveRuntimeString(cfg.SameSite, repl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cookie.Config{
+		Domains:            domains,
+		Path:               path,
+		Lifetime:           cfg.Lifetime,
+		Insecure:           cfg.Insecure,
+		SameSite:           sameSite,
+		StripDomainEnabled: cfg.StripDomainEnabled,
+		GuessDomainEnabled: cfg.GuessDomainEnabled,
+	}, nil
+}
+
+func cloneResolvedCookieDomainConfigs(cfgs map[string]*cookie.DomainConfig, repl *caddy.Replacer) (map[string]*cookie.DomainConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make(map[string]*cookie.DomainConfig, len(cfgs))
+	for domain, cfg := range cfgs {
+		if cfg == nil {
+			clones[domain] = nil
+			continue
+		}
+		resolvedDomain, err := resolveRuntimeString(cfg.Domain, repl)
+		if err != nil {
+			return nil, err
+		}
+		path, err := resolveRuntimeString(cfg.Path, repl)
+		if err != nil {
+			return nil, err
+		}
+		sameSite, err := resolveRuntimeString(cfg.SameSite, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones[domain] = &cookie.DomainConfig{
+			Seq:                cfg.Seq,
+			Domain:             resolvedDomain,
+			Path:               path,
+			Lifetime:           cfg.Lifetime,
+			Insecure:           cfg.Insecure,
+			SameSite:           sameSite,
+			StripDomainEnabled: cfg.StripDomainEnabled,
+		}
+	}
+	return clones, nil
+}
+
+func cloneResolvedCryptoKeyConfigs(cfgs []*kms.CryptoKeyConfig, repl *caddy.Replacer) ([]*kms.CryptoKeyConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*kms.CryptoKeyConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		id, err := resolveRuntimeString(cfg.ID, repl)
+		if err != nil {
+			return nil, err
+		}
+		usage, err := resolveRuntimeString(cfg.Usage, repl)
+		if err != nil {
+			return nil, err
+		}
+		tokenName, err := resolveRuntimeString(cfg.TokenName, repl)
+		if err != nil {
+			return nil, err
+		}
+		source, err := resolveRuntimeString(cfg.Source, repl)
+		if err != nil {
+			return nil, err
+		}
+		algorithm, err := resolveRuntimeString(cfg.Algorithm, repl)
+		if err != nil {
+			return nil, err
+		}
+		envVarName, err := resolveRuntimeString(cfg.EnvVarName, repl)
+		if err != nil {
+			return nil, err
+		}
+		envVarType, err := resolveRuntimeString(cfg.EnvVarType, repl)
+		if err != nil {
+			return nil, err
+		}
+		envVarValue, err := resolveRuntimeString(cfg.EnvVarValue, repl)
+		if err != nil {
+			return nil, err
+		}
+		filePath, err := resolveRuntimeString(cfg.FilePath, repl)
+		if err != nil {
+			return nil, err
+		}
+		dirPath, err := resolveRuntimeString(cfg.DirPath, repl)
+		if err != nil {
+			return nil, err
+		}
+		secret, err := resolveRuntimeString(cfg.Secret, repl)
+		if err != nil {
+			return nil, err
+		}
+		preferredSignMethod, err := resolveRuntimeString(cfg.PreferredSignMethod, repl)
+		if err != nil {
+			return nil, err
+		}
+		evalExpr, err := cloneResolvedStringSlice(cfg.EvalExpr, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &kms.CryptoKeyConfig{
+			Seq:                 cfg.Seq,
+			ID:                  id,
+			Usage:               usage,
+			TokenName:           tokenName,
+			Source:              source,
+			Algorithm:           algorithm,
+			EnvVarName:          envVarName,
+			EnvVarType:          envVarType,
+			EnvVarValue:         envVarValue,
+			FilePath:            filePath,
+			DirPath:             dirPath,
+			TokenLifetime:       cfg.TokenLifetime,
+			Secret:              secret,
+			PreferredSignMethod: preferredSignMethod,
+			EvalExpr:            evalExpr,
+		})
+	}
+	return clones, nil
+}
+
+func cloneResolvedRedirectURIMatchConfigs(cfgs []*redirects.RedirectURIMatchConfig, repl *caddy.Replacer) ([]*redirects.RedirectURIMatchConfig, error) {
+	if len(cfgs) == 0 {
+		return nil, nil
+	}
+
+	clones := make([]*redirects.RedirectURIMatchConfig, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			clones = append(clones, nil)
+			continue
+		}
+		pathMatchType, err := resolveRuntimeString(cfg.PathMatchType, repl)
+		if err != nil {
+			return nil, err
+		}
+		path, err := resolveRuntimeString(cfg.Path, repl)
+		if err != nil {
+			return nil, err
+		}
+		domainMatchType, err := resolveRuntimeString(cfg.DomainMatchType, repl)
+		if err != nil {
+			return nil, err
+		}
+		domain, err := resolveRuntimeString(cfg.Domain, repl)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, &redirects.RedirectURIMatchConfig{
+			PathMatchType:   pathMatchType,
+			Path:            path,
+			DomainMatchType: domainMatchType,
+			Domain:          domain,
+		})
+	}
+	return clones, nil
+}
+
+func cloneTokenValidatorOptions(cfg *options.TokenValidatorOptions) *options.TokenValidatorOptions {
+	if cfg == nil {
+		return nil
+	}
+	return &options.TokenValidatorOptions{
+		ValidateSourceAddress:       cfg.ValidateSourceAddress,
+		ValidateBearerHeader:        cfg.ValidateBearerHeader,
+		ValidateMethodPath:          cfg.ValidateMethodPath,
+		ValidateAccessListPathClaim: cfg.ValidateAccessListPathClaim,
+	}
+}
+
+func cloneTokenGrantorOptions(cfg *options.TokenGrantorOptions) *options.TokenGrantorOptions {
+	if cfg == nil {
+		return nil
+	}
+	return &options.TokenGrantorOptions{
+		EnableSourceAddress: cfg.EnableSourceAddress,
+	}
+}
+
+func cloneAPIConfig(cfg *authn.APIConfig) *authn.APIConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &authn.APIConfig{
+		ProfileEnabled: cfg.ProfileEnabled,
+		AdminEnabled:   cfg.AdminEnabled,
+	}
 }
