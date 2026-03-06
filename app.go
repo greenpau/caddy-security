@@ -88,7 +88,17 @@ func (app *App) Provision(ctx caddy.Context) error {
 		app.secretsManagers = append(app.secretsManagers, mod.(SecretsManager))
 	}
 
-	server, err := authcrunch.NewServer(app.Config, app.logger)
+	resolvedConfig, err := resolveRuntimeConfig(app.Config)
+	if err != nil {
+		app.logger.Error(
+			"failed resolving app config placeholders",
+			zap.String("app", app.Name),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	server, err := authcrunch.NewServer(resolvedConfig, app.logger)
 	if err != nil {
 		app.logger.Error(
 			"failed provisioning app server instance",

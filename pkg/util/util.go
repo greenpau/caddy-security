@@ -24,6 +24,10 @@ import (
 
 // FindReplaceAll uses caddy.Replacer to replace strings in a given slice.
 func FindReplaceAll(repl *caddy.Replacer, arr []string) (output []string) {
+	if repl == nil {
+		output = append(output, arr...)
+		return output
+	}
 	for _, item := range arr {
 		output = append(output, repl.ReplaceAll(item, cfg.ReplErrStr))
 	}
@@ -32,6 +36,9 @@ func FindReplaceAll(repl *caddy.Replacer, arr []string) (output []string) {
 
 // FindReplace uses caddy.Replacer to replace strings in a given string.
 func FindReplace(repl *caddy.Replacer, s string) string {
+	if repl == nil {
+		return s
+	}
 	return repl.ReplaceAll(s, cfg.ReplErrStr)
 }
 

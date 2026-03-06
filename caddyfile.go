@@ -45,7 +45,7 @@ func init() {
 //		authorization ...
 //	}
 func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
-	repl := caddy.NewReplacer()
+	var repl *caddy.Replacer
 	app := new(App)
 	app.Config = authcrunch.NewConfig()
 
