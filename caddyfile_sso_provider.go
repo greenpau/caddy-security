@@ -29,14 +29,15 @@ import (
 //
 // Syntax:
 //
-//	sso provider <name> {
-//	  disabled
-//	  entity_id <name>
-//	  driver [aws]
-//	  private key <path/to/pem/file>
-//	  location https://url1/
-//	  location https://url2/
-//	}
+//   sso provider <name> {
+//     disabled
+//     entity_id <name>
+//     driver [aws]
+//     private key <path/to/pem/file>
+//     location https://url1/
+//     location https://url2/
+//   }
+//
 func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	var locations []string
 	var disabled bool

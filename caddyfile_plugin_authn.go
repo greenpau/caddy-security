@@ -58,14 +58,15 @@ func getRouteFromParseAuthnPluginCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyf
 //
 // Syntax:
 //
-//	authenticate [<matcher>] with <portal_name>
+//   authenticate [<matcher>] with <portal_name>
 //
 // Examples:
 //
-//	authenticate with myportal
-//	authenticate * with myportal
-//	authenticate /* with myportal
-//	authenticate /auth* with myportal
+//   authenticate with myportal
+//   authenticate * with myportal
+//   authenticate /* with myportal
+//   authenticate /auth* with myportal
+//
 func parseAuthnPluginCaddyfile(h httpcaddyfile.Helper) (map[string]string, error) {
 	var i int
 	args := h.RemainingArgs()
