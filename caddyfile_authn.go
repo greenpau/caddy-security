@@ -140,14 +140,14 @@ func mkcp(parts ...string) string {
 	return strings.Join(parts, ".")
 }
 
-func cloneResolvedPortalConfigs(cfgs []*authn.PortalConfig, repl *caddy.Replacer) ([]*authn.PortalConfig, error) {
+func resolvePortalConfigs(cfgs []*authn.PortalConfig, repl *caddy.Replacer) ([]*authn.PortalConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
 
 	clones := make([]*authn.PortalConfig, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		clone, err := cloneResolvedPortalConfig(cfg, repl)
+		clone, err := resolvePortalConfig(cfg, repl)
 		if err != nil {
 			return nil, err
 		}
@@ -156,21 +156,21 @@ func cloneResolvedPortalConfigs(cfgs []*authn.PortalConfig, repl *caddy.Replacer
 	return clones, nil
 }
 
-func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*authn.PortalConfig, error) {
+func resolvePortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*authn.PortalConfig, error) {
 	if cfg == nil {
 		return nil, nil
 	}
 
 	name := util.FindReplace(repl, cfg.Name)
-	uiConfig, err := cloneResolvedUIParameters(cfg.UI, repl)
+	uiConfig, err := resolveUIParameters(cfg.UI, repl)
 	if err != nil {
 		return nil, err
 	}
-	transformerConfigs, err := cloneResolvedTransformerConfigs(cfg.UserTransformerConfigs, repl)
+	transformerConfigs, err := resolveTransformerConfigs(cfg.UserTransformerConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
-	cookieConfig, err := cloneResolvedCookieConfig(cfg.CookieConfig, repl)
+	cookieConfig, err := resolveCookieConfig(cfg.CookieConfig, repl)
 	if err != nil {
 		return nil, err
 	}
@@ -178,20 +178,20 @@ func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*
 	identityProviders := util.FindReplaceAll(repl, cfg.IdentityProviders)
 	ssoProviders := util.FindReplaceAll(repl, cfg.SingleSignOnProviders)
 	userRegistries := util.FindReplaceAll(repl, cfg.UserRegistries)
-	accessListConfigs, err := cloneResolvedRuleConfigurations(cfg.AccessListConfigs, repl)
+	accessListConfigs, err := resolveRuleConfigurations(cfg.AccessListConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
-	cryptoKeyConfigs, err := cloneResolvedCryptoKeyConfigs(cfg.CryptoKeyConfigs, repl)
+	cryptoKeyConfigs, err := resolveCryptoKeyConfigs(cfg.CryptoKeyConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
 	cryptoKeyStoreConfig := cloneInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
-	loginRedirects, err := cloneResolvedRedirectURIMatchConfigs(cfg.TrustedLoginRedirectURIConfigs, repl)
+	loginRedirects, err := resolveRedirectURIMatchConfigs(cfg.TrustedLoginRedirectURIConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
-	logoutRedirects, err := cloneResolvedRedirectURIMatchConfigs(cfg.TrustedLogoutRedirectURIConfigs, repl)
+	logoutRedirects, err := resolveRedirectURIMatchConfigs(cfg.TrustedLogoutRedirectURIConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*
 	}, nil
 }
 
-func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Parameters, error) {
+func resolveUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Parameters, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -241,19 +241,19 @@ func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Pa
 	metaTitle := util.FindReplace(repl, cfg.MetaTitle)
 	metaDescription := util.FindReplace(repl, cfg.MetaDescription)
 	metaAuthor := util.FindReplace(repl, cfg.MetaAuthor)
-	privateLinks, err := cloneResolvedLinks(cfg.PrivateLinks, repl)
+	privateLinks, err := resolveLinks(cfg.PrivateLinks, repl)
 	if err != nil {
 		return nil, err
 	}
 	autoRedirectURL := util.FindReplace(repl, cfg.AutoRedirectURL)
-	realms, err := cloneResolvedUserRealms(cfg.Realms, repl)
+	realms, err := resolveUserRealms(cfg.Realms, repl)
 	if err != nil {
 		return nil, err
 	}
 	customCSSPath := util.FindReplace(repl, cfg.CustomCSSPath)
 	customJsPath := util.FindReplace(repl, cfg.CustomJsPath)
 	customHTMLHeaderPath := util.FindReplace(repl, cfg.CustomHTMLHeaderPath)
-	staticAssets, err := cloneResolvedStaticAssets(cfg.StaticAssets, repl)
+	staticAssets, err := resolveStaticAssets(cfg.StaticAssets, repl)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Pa
 	}, nil
 }
 
-func cloneResolvedLinks(cfgs []ui.Link, repl *caddy.Replacer) ([]ui.Link, error) {
+func resolveLinks(cfgs []ui.Link, repl *caddy.Replacer) ([]ui.Link, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -303,7 +303,7 @@ func cloneResolvedLinks(cfgs []ui.Link, repl *caddy.Replacer) ([]ui.Link, error)
 	return clones, nil
 }
 
-func cloneResolvedUserRealms(cfgs []ui.UserRealm, repl *caddy.Replacer) ([]ui.UserRealm, error) {
+func resolveUserRealms(cfgs []ui.UserRealm, repl *caddy.Replacer) ([]ui.UserRealm, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -318,7 +318,7 @@ func cloneResolvedUserRealms(cfgs []ui.UserRealm, repl *caddy.Replacer) ([]ui.Us
 	return clones, nil
 }
 
-func cloneResolvedStaticAssets(cfgs []ui.StaticAsset, repl *caddy.Replacer) ([]ui.StaticAsset, error) {
+func resolveStaticAssets(cfgs []ui.StaticAsset, repl *caddy.Replacer) ([]ui.StaticAsset, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -338,7 +338,7 @@ func cloneResolvedStaticAssets(cfgs []ui.StaticAsset, repl *caddy.Replacer) ([]u
 	return clones, nil
 }
 
-func cloneResolvedTransformerConfigs(cfgs []*transformer.Config, repl *caddy.Replacer) ([]*transformer.Config, error) {
+func resolveTransformerConfigs(cfgs []*transformer.Config, repl *caddy.Replacer) ([]*transformer.Config, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -359,12 +359,12 @@ func cloneResolvedTransformerConfigs(cfgs []*transformer.Config, repl *caddy.Rep
 	return clones, nil
 }
 
-func cloneResolvedCookieConfig(cfg *cookie.Config, repl *caddy.Replacer) (*cookie.Config, error) {
+func resolveCookieConfig(cfg *cookie.Config, repl *caddy.Replacer) (*cookie.Config, error) {
 	if cfg == nil {
 		return nil, nil
 	}
 
-	domains, err := cloneResolvedCookieDomainConfigs(cfg.Domains, repl)
+	domains, err := resolveCookieDomainConfigs(cfg.Domains, repl)
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +382,7 @@ func cloneResolvedCookieConfig(cfg *cookie.Config, repl *caddy.Replacer) (*cooki
 	}, nil
 }
 
-func cloneResolvedCookieDomainConfigs(cfgs map[string]*cookie.DomainConfig, repl *caddy.Replacer) (map[string]*cookie.DomainConfig, error) {
+func resolveCookieDomainConfigs(cfgs map[string]*cookie.DomainConfig, repl *caddy.Replacer) (map[string]*cookie.DomainConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -409,7 +409,7 @@ func cloneResolvedCookieDomainConfigs(cfgs map[string]*cookie.DomainConfig, repl
 	return clones, nil
 }
 
-func cloneResolvedCryptoKeyConfigs(cfgs []*kms.CryptoKeyConfig, repl *caddy.Replacer) ([]*kms.CryptoKeyConfig, error) {
+func resolveCryptoKeyConfigs(cfgs []*kms.CryptoKeyConfig, repl *caddy.Replacer) ([]*kms.CryptoKeyConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -454,7 +454,7 @@ func cloneResolvedCryptoKeyConfigs(cfgs []*kms.CryptoKeyConfig, repl *caddy.Repl
 	return clones, nil
 }
 
-func cloneResolvedRedirectURIMatchConfigs(cfgs []*redirects.RedirectURIMatchConfig, repl *caddy.Replacer) ([]*redirects.RedirectURIMatchConfig, error) {
+func resolveRedirectURIMatchConfigs(cfgs []*redirects.RedirectURIMatchConfig, repl *caddy.Replacer) ([]*redirects.RedirectURIMatchConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}

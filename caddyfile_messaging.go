@@ -135,7 +135,7 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, cfg *authcrunch.Config) err
 	return nil
 }
 
-func cloneResolvedMessagingConfig(cfg *messaging.Config, repl *caddy.Replacer) (*messaging.Config, error) {
+func resolveMessagingConfig(cfg *messaging.Config, repl *caddy.Replacer) (*messaging.Config, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -144,7 +144,7 @@ func cloneResolvedMessagingConfig(cfg *messaging.Config, repl *caddy.Replacer) (
 	if len(cfg.EmailProviders) > 0 {
 		clone.EmailProviders = make([]*messaging.EmailProvider, 0, len(cfg.EmailProviders))
 		for _, provider := range cfg.EmailProviders {
-			resolvedProvider, err := cloneResolvedEmailProvider(provider, repl)
+			resolvedProvider, err := resolveEmailProvider(provider, repl)
 			if err != nil {
 				return nil, err
 			}
@@ -154,7 +154,7 @@ func cloneResolvedMessagingConfig(cfg *messaging.Config, repl *caddy.Replacer) (
 	if len(cfg.FileProviders) > 0 {
 		clone.FileProviders = make([]*messaging.FileProvider, 0, len(cfg.FileProviders))
 		for _, provider := range cfg.FileProviders {
-			resolvedProvider, err := cloneResolvedFileProvider(provider, repl)
+			resolvedProvider, err := resolveFileProvider(provider, repl)
 			if err != nil {
 				return nil, err
 			}
@@ -165,7 +165,7 @@ func cloneResolvedMessagingConfig(cfg *messaging.Config, repl *caddy.Replacer) (
 	return clone, nil
 }
 
-func cloneResolvedEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replacer) (*messaging.EmailProvider, error) {
+func resolveEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replacer) (*messaging.EmailProvider, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -192,7 +192,7 @@ func cloneResolvedEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replac
 	}, nil
 }
 
-func cloneResolvedFileProvider(cfg *messaging.FileProvider, repl *caddy.Replacer) (*messaging.FileProvider, error) {
+func resolveFileProvider(cfg *messaging.FileProvider, repl *caddy.Replacer) (*messaging.FileProvider, error) {
 	if cfg == nil {
 		return nil, nil
 	}

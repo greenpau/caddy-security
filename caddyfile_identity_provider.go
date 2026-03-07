@@ -220,7 +220,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 	return nil
 }
 
-func cloneResolvedIdentityProviderConfigs(cfgs []*idp.IdentityProviderConfig, repl *caddy.Replacer) ([]*idp.IdentityProviderConfig, error) {
+func resolveIdentityProviderConfigs(cfgs []*idp.IdentityProviderConfig, repl *caddy.Replacer) ([]*idp.IdentityProviderConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}

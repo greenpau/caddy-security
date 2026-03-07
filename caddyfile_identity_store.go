@@ -248,7 +248,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 	return nil
 }
 
-func cloneResolvedIdentityStoreConfigs(cfgs []*ids.IdentityStoreConfig, repl *caddy.Replacer) ([]*ids.IdentityStoreConfig, error) {
+func resolveIdentityStoreConfigs(cfgs []*ids.IdentityStoreConfig, repl *caddy.Replacer) ([]*ids.IdentityStoreConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}

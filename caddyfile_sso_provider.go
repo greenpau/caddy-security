@@ -103,7 +103,7 @@ func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, cfg *authcrunch.
 	return nil
 }
 
-func cloneResolvedSingleSignOnProviderConfigs(cfgs []*sso.SingleSignOnProviderConfig, repl *caddy.Replacer) ([]*sso.SingleSignOnProviderConfig, error) {
+func resolveSingleSignOnProviderConfigs(cfgs []*sso.SingleSignOnProviderConfig, repl *caddy.Replacer) ([]*sso.SingleSignOnProviderConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}

@@ -71,7 +71,7 @@ func parseCaddyfileCredentials(d *caddyfile.Dispenser, cfg *authcrunch.Config) e
 	return nil
 }
 
-func cloneResolvedCredentialsConfig(cfg *credentials.Config, repl *caddy.Replacer) (*credentials.Config, error) {
+func resolveCredentialsConfig(cfg *credentials.Config, repl *caddy.Replacer) (*credentials.Config, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -80,7 +80,7 @@ func cloneResolvedCredentialsConfig(cfg *credentials.Config, repl *caddy.Replace
 	if len(cfg.Generic) > 0 {
 		clone.Generic = make([]*credentials.Generic, 0, len(cfg.Generic))
 		for _, entry := range cfg.Generic {
-			resolvedEntry, err := cloneResolvedGenericCredential(entry, repl)
+			resolvedEntry, err := resolveGenericCredential(entry, repl)
 			if err != nil {
 				return nil, err
 			}
@@ -90,7 +90,7 @@ func cloneResolvedCredentialsConfig(cfg *credentials.Config, repl *caddy.Replace
 	return clone, nil
 }
 
-func cloneResolvedGenericCredential(cfg *credentials.Generic, repl *caddy.Replacer) (*credentials.Generic, error) {
+func resolveGenericCredential(cfg *credentials.Generic, repl *caddy.Replacer) (*credentials.Generic, error) {
 	if cfg == nil {
 		return nil, nil
 	}

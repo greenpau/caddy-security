@@ -91,14 +91,14 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config)
 	return nil
 }
 
-func cloneResolvedPolicyConfigs(cfgs []*authz.PolicyConfig, repl *caddy.Replacer) ([]*authz.PolicyConfig, error) {
+func resolvePolicyConfigs(cfgs []*authz.PolicyConfig, repl *caddy.Replacer) ([]*authz.PolicyConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
 
 	clones := make([]*authz.PolicyConfig, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		clone, err := cloneResolvedPolicyConfig(cfg, repl)
+		clone, err := resolvePolicyConfig(cfg, repl)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +107,7 @@ func cloneResolvedPolicyConfigs(cfgs []*authz.PolicyConfig, repl *caddy.Replacer
 	return clones, nil
 }
 
-func cloneResolvedPolicyConfig(cfg *authz.PolicyConfig, repl *caddy.Replacer) (*authz.PolicyConfig, error) {
+func resolvePolicyConfig(cfg *authz.PolicyConfig, repl *caddy.Replacer) (*authz.PolicyConfig, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -115,24 +115,24 @@ func cloneResolvedPolicyConfig(cfg *authz.PolicyConfig, repl *caddy.Replacer) (*
 	name := util.FindReplace(repl, cfg.Name)
 	authURLPath := util.FindReplace(repl, cfg.AuthURLPath)
 	authRedirectQueryParameter := util.FindReplace(repl, cfg.AuthRedirectQueryParameter)
-	bypassConfigs, err := cloneResolvedBypassConfigs(cfg.BypassConfigs, repl)
+	bypassConfigs, err := resolveBypassConfigs(cfg.BypassConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
-	headerInjectionConfigs, err := cloneResolvedHeaderInjectionConfigs(cfg.HeaderInjectionConfigs, repl)
+	headerInjectionConfigs, err := resolveHeaderInjectionConfigs(cfg.HeaderInjectionConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
-	accessListRules, err := cloneResolvedRuleConfigurations(cfg.AccessListRules, repl)
+	accessListRules, err := resolveRuleConfigurations(cfg.AccessListRules, repl)
 	if err != nil {
 		return nil, err
 	}
-	cryptoKeyConfigs, err := cloneResolvedCryptoKeyConfigs(cfg.CryptoKeyConfigs, repl)
+	cryptoKeyConfigs, err := resolveCryptoKeyConfigs(cfg.CryptoKeyConfigs, repl)
 	if err != nil {
 		return nil, err
 	}
 	cryptoKeyStoreConfig := cloneInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
-	authProxyConfig, err := cloneResolvedAuthProxyConfig(cfg.AuthProxyConfig, repl)
+	authProxyConfig, err := resolveAuthProxyConfig(cfg.AuthProxyConfig, repl)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func cloneResolvedPolicyConfig(cfg *authz.PolicyConfig, repl *caddy.Replacer) (*
 	}, nil
 }
 
-func cloneResolvedBypassConfigs(cfgs []*bypass.Config, repl *caddy.Replacer) ([]*bypass.Config, error) {
+func resolveBypassConfigs(cfgs []*bypass.Config, repl *caddy.Replacer) ([]*bypass.Config, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -190,7 +190,7 @@ func cloneResolvedBypassConfigs(cfgs []*bypass.Config, repl *caddy.Replacer) ([]
 	return clones, nil
 }
 
-func cloneResolvedHeaderInjectionConfigs(cfgs []*injector.Config, repl *caddy.Replacer) ([]*injector.Config, error) {
+func resolveHeaderInjectionConfigs(cfgs []*injector.Config, repl *caddy.Replacer) ([]*injector.Config, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
@@ -211,7 +211,7 @@ func cloneResolvedHeaderInjectionConfigs(cfgs []*injector.Config, repl *caddy.Re
 	return clones, nil
 }
 
-func cloneResolvedAuthProxyConfig(cfg *authproxy.Config, repl *caddy.Replacer) (*authproxy.Config, error) {
+func resolveAuthProxyConfig(cfg *authproxy.Config, repl *caddy.Replacer) (*authproxy.Config, error) {
 	if cfg == nil {
 		return nil, nil
 	}

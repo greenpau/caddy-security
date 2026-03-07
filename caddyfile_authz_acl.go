@@ -71,7 +71,7 @@ func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfi
 	return nil
 }
 
-func cloneResolvedRuleConfigurations(cfgs []*acl.RuleConfiguration, repl *caddy.Replacer) ([]*acl.RuleConfiguration, error) {
+func resolveRuleConfigurations(cfgs []*acl.RuleConfiguration, repl *caddy.Replacer) ([]*acl.RuleConfiguration, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}

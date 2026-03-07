@@ -137,7 +137,7 @@ func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 	return nil
 }
 
-func cloneResolvedUserRegistryConfigs(cfgs []*registry.UserRegistryConfig, repl *caddy.Replacer) ([]*registry.UserRegistryConfig, error) {
+func resolveUserRegistryConfigs(cfgs []*registry.UserRegistryConfig, repl *caddy.Replacer) ([]*registry.UserRegistryConfig, error) {
 	if len(cfgs) == 0 {
 		return nil, nil
 	}
