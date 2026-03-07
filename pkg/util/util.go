@@ -35,6 +35,19 @@ func FindReplace(repl *caddy.Replacer, s string) string {
 	return repl.ReplaceAll(s, cfg.ReplErrStr)
 }
 
+// FindReplaceStringMap uses caddy.Replacer to replace strings in a given map.
+func FindReplaceStringMap(repl *caddy.Replacer, values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	output := make(map[string]string, len(values))
+	for key, value := range values {
+		output[key] = repl.ReplaceAll(value, cfg.ReplErrStr)
+	}
+	return output
+}
+
 // GetRequestID returns HTTP request id.
 func GetRequestID(r *http.Request) string {
 	rawRequestID := caddyhttp.GetVar(r.Context(), "request_id")

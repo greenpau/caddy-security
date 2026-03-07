@@ -234,7 +234,7 @@ func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Pa
 	}
 
 	theme := util.FindReplace(repl, cfg.Theme)
-	templates := cloneReplacedStringMap(cfg.Templates, repl)
+	templates := util.FindReplaceStringMap(repl, cfg.Templates)
 	title := util.FindReplace(repl, cfg.Title)
 	logoURL := util.FindReplace(repl, cfg.LogoURL)
 	logoDescription := util.FindReplace(repl, cfg.LogoDescription)
@@ -536,18 +536,6 @@ func cloneInterfaceBoolMap(values map[string]interface{}) map[string]interface{}
 	clone := make(map[string]interface{}, len(values))
 	for key, value := range values {
 		clone[key] = value
-	}
-	return clone
-}
-
-func cloneReplacedStringMap(values map[string]string, repl *caddy.Replacer) map[string]string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	clone := make(map[string]string, len(values))
-	for key, value := range values {
-		clone[key] = util.FindReplace(repl, value)
 	}
 	return clone
 }

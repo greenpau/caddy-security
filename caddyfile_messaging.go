@@ -176,7 +176,7 @@ func cloneResolvedEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replac
 	credentialsName := util.FindReplace(repl, cfg.Credentials)
 	senderEmail := util.FindReplace(repl, cfg.SenderEmail)
 	senderName := util.FindReplace(repl, cfg.SenderName)
-	templates := cloneReplacedStringMap(cfg.Templates, repl)
+	templates := util.FindReplaceStringMap(repl, cfg.Templates)
 	bcc := util.FindReplaceAll(repl, cfg.BlindCarbonCopy)
 
 	return &messaging.EmailProvider{
@@ -199,7 +199,7 @@ func cloneResolvedFileProvider(cfg *messaging.FileProvider, repl *caddy.Replacer
 
 	name := util.FindReplace(repl, cfg.Name)
 	rootDir := util.FindReplace(repl, cfg.RootDir)
-	templates := cloneReplacedStringMap(cfg.Templates, repl)
+	templates := util.FindReplaceStringMap(repl, cfg.Templates)
 
 	return &messaging.FileProvider{
 		Name:      name,
