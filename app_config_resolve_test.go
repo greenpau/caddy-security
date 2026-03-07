@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/caddyserver/caddy/v2"
+	caddyfileadapter "github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/greenpau/go-authcrunch"
@@ -86,6 +88,76 @@ func TestParseCaddyfilePreservesFilePlaceholders(t *testing.T) {
 	params := providers[0].(map[string]interface{})["params"].(map[string]interface{})
 	if gotSecret := params["client_secret"]; gotSecret != fmt.Sprintf("{file.%s}", secretFile) {
 		t.Fatalf("unexpected client_secret: got %v", gotSecret)
+	}
+}
+
+func TestCaddyfileAdapterPreservesSecurityPlaceholders(t *testing.T) {
+	secretFile := filepath.Join(t.TempDir(), "google-client-secret.txt")
+	if err := os.WriteFile(secretFile, []byte("super-secret-value"), 0600); err != nil {
+		t.Fatalf("failed writing secret file: %v", err)
+	}
+
+	t.Setenv("GOOGLE_CLIENT_SECRET_FILE", secretFile)
+
+	adapter := caddyfileadapter.Adapter{ServerType: httpcaddyfile.ServerType{}}
+	adapted, _, err := adapter.Adapt([]byte(`
+		{
+			admin off
+			security {
+				credentials smtp.contoso.com {
+					username foo
+					password {file.`+secretFile+`}
+				}
+
+				oauth identity provider authp {
+					realm authp
+					driver generic
+					client_id foo
+					client_secret {file.{$GOOGLE_CLIENT_SECRET_FILE}}
+					base_auth_url https://localhost/oauth
+					response_type code
+					required_token_fields access_token
+					authorization_url https://localhost/oauth/authorize
+					token_url https://localhost/oauth/access_token
+					jwks key 87329db33bf testdata/oauth/87329db33bf_pub.pem
+					disable key verification
+					disable tls verification
+				}
+
+				authentication portal myportal {
+					enable identity provider authp
+				}
+			}
+		}
+
+		http://localhost {
+			respond "ok"
+		}
+	`), nil)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	var cfg caddy.Config
+	if err := json.Unmarshal(adapted, &cfg); err != nil {
+		t.Fatalf("failed unmarshalling adapted config: %v", err)
+	}
+
+	var app App
+	if err := json.Unmarshal(cfg.AppsRaw["security"], &app); err != nil {
+		t.Fatalf("failed unmarshalling security app config: %v", err)
+	}
+
+	got := unpack(t, app.Config)
+	creds := got["credentials"].(map[string]interface{})["generic"].([]interface{})[0].(map[string]interface{})
+	if gotPassword := creds["password"]; gotPassword != fmt.Sprintf("{file.%s}", secretFile) {
+		t.Fatalf("unexpected adapted password: got %v", gotPassword)
+	}
+
+	providers := got["identity_providers"].([]interface{})
+	params := providers[0].(map[string]interface{})["params"].(map[string]interface{})
+	if gotSecret := params["client_secret"]; gotSecret != fmt.Sprintf("{file.%s}", secretFile) {
+		t.Fatalf("unexpected adapted client_secret: got %v", gotSecret)
 	}
 }
 
