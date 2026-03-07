@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
+	util "github.com/greenpau/caddy-security/pkg/util"
 )
 
 func cloneResolvedStringSlice(values []string, repl *caddy.Replacer) ([]string, error) {
@@ -51,6 +52,25 @@ func cloneResolvedStringMap(values map[string]string, repl *caddy.Replacer) (map
 		clone[key] = resolvedValue
 	}
 	return clone, nil
+}
+
+func cloneReplacedStringSlice(values []string, repl *caddy.Replacer) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return util.FindReplaceAll(repl, values)
+}
+
+func cloneReplacedStringMap(values map[string]string, repl *caddy.Replacer) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	clone := make(map[string]string, len(values))
+	for key, value := range values {
+		clone[key] = util.FindReplace(repl, value)
+	}
+	return clone
 }
 
 func cloneResolvedInterfaceMap(values map[string]interface{}, repl *caddy.Replacer) (map[string]interface{}, error) {

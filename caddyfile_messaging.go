@@ -17,6 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
@@ -189,18 +190,9 @@ func cloneResolvedEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replac
 	if err != nil {
 		return nil, err
 	}
-	senderName, err := resolveRuntimeString(cfg.SenderName, repl)
-	if err != nil {
-		return nil, err
-	}
-	templates, err := cloneResolvedStringMap(cfg.Templates, repl)
-	if err != nil {
-		return nil, err
-	}
-	bcc, err := cloneResolvedStringSlice(cfg.BlindCarbonCopy, repl)
-	if err != nil {
-		return nil, err
-	}
+	senderName := util.FindReplace(repl, cfg.SenderName)
+	templates := cloneReplacedStringMap(cfg.Templates, repl)
+	bcc := cloneReplacedStringSlice(cfg.BlindCarbonCopy, repl)
 
 	return &messaging.EmailProvider{
 		Name:            name,
@@ -228,10 +220,7 @@ func cloneResolvedFileProvider(cfg *messaging.FileProvider, repl *caddy.Replacer
 	if err != nil {
 		return nil, err
 	}
-	templates, err := cloneResolvedStringMap(cfg.Templates, repl)
-	if err != nil {
-		return nil, err
-	}
+	templates := cloneReplacedStringMap(cfg.Templates, repl)
 
 	return &messaging.FileProvider{
 		Name:      name,

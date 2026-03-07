@@ -20,6 +20,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -268,38 +269,14 @@ func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Pa
 		return nil, nil
 	}
 
-	theme, err := resolveRuntimeString(cfg.Theme, repl)
-	if err != nil {
-		return nil, err
-	}
-	templates, err := cloneResolvedStringMap(cfg.Templates, repl)
-	if err != nil {
-		return nil, err
-	}
-	title, err := resolveRuntimeString(cfg.Title, repl)
-	if err != nil {
-		return nil, err
-	}
-	logoURL, err := resolveRuntimeString(cfg.LogoURL, repl)
-	if err != nil {
-		return nil, err
-	}
-	logoDescription, err := resolveRuntimeString(cfg.LogoDescription, repl)
-	if err != nil {
-		return nil, err
-	}
-	metaTitle, err := resolveRuntimeString(cfg.MetaTitle, repl)
-	if err != nil {
-		return nil, err
-	}
-	metaDescription, err := resolveRuntimeString(cfg.MetaDescription, repl)
-	if err != nil {
-		return nil, err
-	}
-	metaAuthor, err := resolveRuntimeString(cfg.MetaAuthor, repl)
-	if err != nil {
-		return nil, err
-	}
+	theme := util.FindReplace(repl, cfg.Theme)
+	templates := cloneReplacedStringMap(cfg.Templates, repl)
+	title := util.FindReplace(repl, cfg.Title)
+	logoURL := util.FindReplace(repl, cfg.LogoURL)
+	logoDescription := util.FindReplace(repl, cfg.LogoDescription)
+	metaTitle := util.FindReplace(repl, cfg.MetaTitle)
+	metaDescription := util.FindReplace(repl, cfg.MetaDescription)
+	metaAuthor := util.FindReplace(repl, cfg.MetaAuthor)
 	privateLinks, err := cloneResolvedLinks(cfg.PrivateLinks, repl)
 	if err != nil {
 		return nil, err
@@ -312,26 +289,14 @@ func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Pa
 	if err != nil {
 		return nil, err
 	}
-	customCSSPath, err := resolveRuntimeString(cfg.CustomCSSPath, repl)
-	if err != nil {
-		return nil, err
-	}
-	customJsPath, err := resolveRuntimeString(cfg.CustomJsPath, repl)
-	if err != nil {
-		return nil, err
-	}
-	customHTMLHeaderPath, err := resolveRuntimeString(cfg.CustomHTMLHeaderPath, repl)
-	if err != nil {
-		return nil, err
-	}
+	customCSSPath := util.FindReplace(repl, cfg.CustomCSSPath)
+	customJsPath := util.FindReplace(repl, cfg.CustomJsPath)
+	customHTMLHeaderPath := util.FindReplace(repl, cfg.CustomHTMLHeaderPath)
 	staticAssets, err := cloneResolvedStaticAssets(cfg.StaticAssets, repl)
 	if err != nil {
 		return nil, err
 	}
-	language, err := resolveRuntimeString(cfg.Language, repl)
-	if err != nil {
-		return nil, err
-	}
+	language := util.FindReplace(repl, cfg.Language)
 
 	return &ui.Parameters{
 		Theme:                   theme,
@@ -363,36 +328,16 @@ func cloneResolvedLinks(cfgs []ui.Link, repl *caddy.Replacer) ([]ui.Link, error)
 
 	clones := make([]ui.Link, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		link, err := resolveRuntimeString(cfg.Link, repl)
-		if err != nil {
-			return nil, err
-		}
-		title, err := resolveRuntimeString(cfg.Title, repl)
-		if err != nil {
-			return nil, err
-		}
-		style, err := resolveRuntimeString(cfg.Style, repl)
-		if err != nil {
-			return nil, err
-		}
-		target, err := resolveRuntimeString(cfg.Target, repl)
-		if err != nil {
-			return nil, err
-		}
-		iconName, err := resolveRuntimeString(cfg.IconName, repl)
-		if err != nil {
-			return nil, err
-		}
-		clones = append(clones, ui.Link{
-			Link:          link,
-			Title:         title,
-			Style:         style,
-			OpenNewWindow: cfg.OpenNewWindow,
-			Target:        target,
-			TargetEnabled: cfg.TargetEnabled,
-			IconName:      iconName,
-			IconEnabled:   cfg.IconEnabled,
-		})
+			clones = append(clones, ui.Link{
+				Link:          util.FindReplace(repl, cfg.Link),
+				Title:         util.FindReplace(repl, cfg.Title),
+				Style:         util.FindReplace(repl, cfg.Style),
+				OpenNewWindow: cfg.OpenNewWindow,
+				Target:        util.FindReplace(repl, cfg.Target),
+				TargetEnabled: cfg.TargetEnabled,
+				IconName:      util.FindReplace(repl, cfg.IconName),
+				IconEnabled:   cfg.IconEnabled,
+			})
 	}
 	return clones, nil
 }
@@ -404,18 +349,10 @@ func cloneResolvedUserRealms(cfgs []ui.UserRealm, repl *caddy.Replacer) ([]ui.Us
 
 	clones := make([]ui.UserRealm, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		name, err := resolveRuntimeString(cfg.Name, repl)
-		if err != nil {
-			return nil, err
-		}
-		label, err := resolveRuntimeString(cfg.Label, repl)
-		if err != nil {
-			return nil, err
-		}
-		clones = append(clones, ui.UserRealm{
-			Name:  name,
-			Label: label,
-		})
+			clones = append(clones, ui.UserRealm{
+				Name:  util.FindReplace(repl, cfg.Name),
+				Label: util.FindReplace(repl, cfg.Label),
+			})
 	}
 	return clones, nil
 }
@@ -427,39 +364,15 @@ func cloneResolvedStaticAssets(cfgs []ui.StaticAsset, repl *caddy.Replacer) ([]u
 
 	clones := make([]ui.StaticAsset, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		path, err := resolveRuntimeString(cfg.Path, repl)
-		if err != nil {
-			return nil, err
-		}
-		fsPath, err := resolveRuntimeString(cfg.FsPath, repl)
-		if err != nil {
-			return nil, err
-		}
-		contentType, err := resolveRuntimeString(cfg.ContentType, repl)
-		if err != nil {
-			return nil, err
-		}
-		content, err := resolveRuntimeString(cfg.Content, repl)
-		if err != nil {
-			return nil, err
-		}
-		encodedContent, err := resolveRuntimeString(cfg.EncodedContent, repl)
-		if err != nil {
-			return nil, err
-		}
-		checksum, err := resolveRuntimeString(cfg.Checksum, repl)
-		if err != nil {
-			return nil, err
-		}
-		clones = append(clones, ui.StaticAsset{
-			Path:           path,
-			FsPath:         fsPath,
-			Restricted:     cfg.Restricted,
-			ContentType:    contentType,
-			Content:        content,
-			EncodedContent: encodedContent,
-			Checksum:       checksum,
-		})
+			clones = append(clones, ui.StaticAsset{
+				Path:           util.FindReplace(repl, cfg.Path),
+				FsPath:         util.FindReplace(repl, cfg.FsPath),
+				Restricted:     cfg.Restricted,
+				ContentType:    util.FindReplace(repl, cfg.ContentType),
+				Content:        util.FindReplace(repl, cfg.Content),
+				EncodedContent: util.FindReplace(repl, cfg.EncodedContent),
+				Checksum:       util.FindReplace(repl, cfg.Checksum),
+			})
 	}
 	return clones, nil
 }

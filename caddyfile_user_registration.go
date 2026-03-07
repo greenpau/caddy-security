@@ -17,6 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
@@ -150,34 +151,16 @@ func cloneResolvedUserRegistryConfigs(cfgs []*registry.UserRegistryConfig, repl 
 		if err != nil {
 			return nil, err
 		}
-		title, err := resolveRuntimeString(cfg.Title, repl)
-		if err != nil {
-			return nil, err
-		}
-		code, err := resolveRuntimeString(cfg.Code, repl)
-		if err != nil {
-			return nil, err
-		}
-		dropbox, err := resolveRuntimeString(cfg.Dropbox, repl)
-		if err != nil {
-			return nil, err
-		}
-		termsLink, err := resolveRuntimeString(cfg.TermsConditionsLink, repl)
-		if err != nil {
-			return nil, err
-		}
-		privacyLink, err := resolveRuntimeString(cfg.PrivacyPolicyLink, repl)
-		if err != nil {
-			return nil, err
-		}
+			title := util.FindReplace(repl, cfg.Title)
+			code := util.FindReplace(repl, cfg.Code)
+			dropbox := util.FindReplace(repl, cfg.Dropbox)
+			termsLink := util.FindReplace(repl, cfg.TermsConditionsLink)
+			privacyLink := util.FindReplace(repl, cfg.PrivacyPolicyLink)
 		emailProvider, err := resolveRuntimeString(cfg.EmailProvider, repl)
 		if err != nil {
 			return nil, err
 		}
-		adminEmails, err := cloneResolvedStringSlice(cfg.AdminEmails, repl)
-		if err != nil {
-			return nil, err
-		}
+			adminEmails := cloneReplacedStringSlice(cfg.AdminEmails, repl)
 		identityStore, err := resolveRuntimeString(cfg.IdentityStore, repl)
 		if err != nil {
 			return nil, err
