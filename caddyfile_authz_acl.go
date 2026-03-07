@@ -17,6 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
@@ -81,18 +82,9 @@ func cloneResolvedRuleConfigurations(cfgs []*acl.RuleConfiguration, repl *caddy.
 			clones = append(clones, nil)
 			continue
 		}
-		comment, err := resolveRuntimeString(cfg.Comment, repl)
-		if err != nil {
-			return nil, err
-		}
-		conditions, err := cloneResolvedStringSlice(cfg.Conditions, repl)
-		if err != nil {
-			return nil, err
-		}
-		action, err := resolveRuntimeString(cfg.Action, repl)
-		if err != nil {
-			return nil, err
-		}
+		comment := util.FindReplace(repl, cfg.Comment)
+		conditions := util.FindReplaceAll(repl, cfg.Conditions)
+		action := util.FindReplace(repl, cfg.Action)
 		clones = append(clones, &acl.RuleConfiguration{
 			Comment:    comment,
 			Conditions: conditions,

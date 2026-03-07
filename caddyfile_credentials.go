@@ -17,6 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -94,22 +95,10 @@ func cloneResolvedGenericCredential(cfg *credentials.Generic, repl *caddy.Replac
 		return nil, nil
 	}
 
-	name, err := resolveRuntimeString(cfg.Name, repl)
-	if err != nil {
-		return nil, err
-	}
-	username, err := resolveRuntimeString(cfg.Username, repl)
-	if err != nil {
-		return nil, err
-	}
-	password, err := resolveRuntimeString(cfg.Password, repl)
-	if err != nil {
-		return nil, err
-	}
-	domain, err := resolveRuntimeString(cfg.Domain, repl)
-	if err != nil {
-		return nil, err
-	}
+	name := util.FindReplace(repl, cfg.Name)
+	username := util.FindReplace(repl, cfg.Username)
+	password := util.FindReplace(repl, cfg.Password)
+	domain := util.FindReplace(repl, cfg.Domain)
 
 	return &credentials.Generic{
 		Name:     name,

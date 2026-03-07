@@ -19,6 +19,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -258,18 +259,9 @@ func cloneResolvedIdentityStoreConfigs(cfgs []*ids.IdentityStoreConfig, repl *ca
 			clones = append(clones, nil)
 			continue
 		}
-		name, err := resolveRuntimeString(cfg.Name, repl)
-		if err != nil {
-			return nil, err
-		}
-		kind, err := resolveRuntimeString(cfg.Kind, repl)
-		if err != nil {
-			return nil, err
-		}
-		params, err := cloneResolvedInterfaceMap(cfg.Params, repl)
-		if err != nil {
-			return nil, err
-		}
+		name := util.FindReplace(repl, cfg.Name)
+		kind := util.FindReplace(repl, cfg.Kind)
+		params := cloneInterfaceMap(cfg.Params, repl)
 		clones = append(clones, &ids.IdentityStoreConfig{
 			Name:   name,
 			Kind:   kind,

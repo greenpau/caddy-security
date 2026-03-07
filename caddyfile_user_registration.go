@@ -147,24 +147,15 @@ func cloneResolvedUserRegistryConfigs(cfgs []*registry.UserRegistryConfig, repl 
 			clones = append(clones, nil)
 			continue
 		}
-		name, err := resolveRuntimeString(cfg.Name, repl)
-		if err != nil {
-			return nil, err
-		}
-			title := util.FindReplace(repl, cfg.Title)
-			code := util.FindReplace(repl, cfg.Code)
-			dropbox := util.FindReplace(repl, cfg.Dropbox)
-			termsLink := util.FindReplace(repl, cfg.TermsConditionsLink)
-			privacyLink := util.FindReplace(repl, cfg.PrivacyPolicyLink)
-		emailProvider, err := resolveRuntimeString(cfg.EmailProvider, repl)
-		if err != nil {
-			return nil, err
-		}
-			adminEmails := cloneReplacedStringSlice(cfg.AdminEmails, repl)
-		identityStore, err := resolveRuntimeString(cfg.IdentityStore, repl)
-		if err != nil {
-			return nil, err
-		}
+		name := util.FindReplace(repl, cfg.Name)
+		title := util.FindReplace(repl, cfg.Title)
+		code := util.FindReplace(repl, cfg.Code)
+		dropbox := util.FindReplace(repl, cfg.Dropbox)
+		termsLink := util.FindReplace(repl, cfg.TermsConditionsLink)
+		privacyLink := util.FindReplace(repl, cfg.PrivacyPolicyLink)
+		emailProvider := util.FindReplace(repl, cfg.EmailProvider)
+		adminEmails := util.FindReplaceAll(repl, cfg.AdminEmails)
+		identityStore := util.FindReplace(repl, cfg.IdentityStore)
 		clones = append(clones, &registry.UserRegistryConfig{
 			Name:                    name,
 			Disabled:                cfg.Disabled,

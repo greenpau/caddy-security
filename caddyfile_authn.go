@@ -161,10 +161,7 @@ func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*
 		return nil, nil
 	}
 
-	name, err := resolveRuntimeString(cfg.Name, repl)
-	if err != nil {
-		return nil, err
-	}
+	name := util.FindReplace(repl, cfg.Name)
 	uiConfig, err := cloneResolvedUIParameters(cfg.UI, repl)
 	if err != nil {
 		return nil, err
@@ -177,22 +174,10 @@ func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*
 	if err != nil {
 		return nil, err
 	}
-	identityStores, err := cloneResolvedStringSlice(cfg.IdentityStores, repl)
-	if err != nil {
-		return nil, err
-	}
-	identityProviders, err := cloneResolvedStringSlice(cfg.IdentityProviders, repl)
-	if err != nil {
-		return nil, err
-	}
-	ssoProviders, err := cloneResolvedStringSlice(cfg.SingleSignOnProviders, repl)
-	if err != nil {
-		return nil, err
-	}
-	userRegistries, err := cloneResolvedStringSlice(cfg.UserRegistries, repl)
-	if err != nil {
-		return nil, err
-	}
+	identityStores := util.FindReplaceAll(repl, cfg.IdentityStores)
+	identityProviders := util.FindReplaceAll(repl, cfg.IdentityProviders)
+	ssoProviders := util.FindReplaceAll(repl, cfg.SingleSignOnProviders)
+	userRegistries := util.FindReplaceAll(repl, cfg.UserRegistries)
 	accessListConfigs, err := cloneResolvedRuleConfigurations(cfg.AccessListConfigs, repl)
 	if err != nil {
 		return nil, err
@@ -201,10 +186,7 @@ func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*
 	if err != nil {
 		return nil, err
 	}
-	cryptoKeyStoreConfig, err := cloneResolvedInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
-	if err != nil {
-		return nil, err
-	}
+	cryptoKeyStoreConfig := cloneInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
 	loginRedirects, err := cloneResolvedRedirectURIMatchConfigs(cfg.TrustedLoginRedirectURIConfigs, repl)
 	if err != nil {
 		return nil, err
@@ -213,30 +195,12 @@ func cloneResolvedPortalConfig(cfg *authn.PortalConfig, repl *caddy.Replacer) (*
 	if err != nil {
 		return nil, err
 	}
-	adminRoles, err := cloneResolvedInterfaceMap(cfg.PortalAdminRoles, repl)
-	if err != nil {
-		return nil, err
-	}
-	userRoles, err := cloneResolvedInterfaceMap(cfg.PortalUserRoles, repl)
-	if err != nil {
-		return nil, err
-	}
-	guestRoles, err := cloneResolvedInterfaceMap(cfg.PortalGuestRoles, repl)
-	if err != nil {
-		return nil, err
-	}
-	adminRolePatterns, err := cloneResolvedStringSlice(cfg.PortalAdminRolePatterns, repl)
-	if err != nil {
-		return nil, err
-	}
-	userRolePatterns, err := cloneResolvedStringSlice(cfg.PortalUserRolePatterns, repl)
-	if err != nil {
-		return nil, err
-	}
-	guestRolePatterns, err := cloneResolvedStringSlice(cfg.PortalGuestRolePatterns, repl)
-	if err != nil {
-		return nil, err
-	}
+	adminRoles := cloneInterfaceMap(cfg.PortalAdminRoles, repl)
+	userRoles := cloneInterfaceMap(cfg.PortalUserRoles, repl)
+	guestRoles := cloneInterfaceMap(cfg.PortalGuestRoles, repl)
+	adminRolePatterns := util.FindReplaceAll(repl, cfg.PortalAdminRolePatterns)
+	userRolePatterns := util.FindReplaceAll(repl, cfg.PortalUserRolePatterns)
+	guestRolePatterns := util.FindReplaceAll(repl, cfg.PortalGuestRolePatterns)
 
 	return &authn.PortalConfig{
 		Name:                            name,
@@ -281,10 +245,7 @@ func cloneResolvedUIParameters(cfg *ui.Parameters, repl *caddy.Replacer) (*ui.Pa
 	if err != nil {
 		return nil, err
 	}
-	autoRedirectURL, err := resolveRuntimeString(cfg.AutoRedirectURL, repl)
-	if err != nil {
-		return nil, err
-	}
+	autoRedirectURL := util.FindReplace(repl, cfg.AutoRedirectURL)
 	realms, err := cloneResolvedUserRealms(cfg.Realms, repl)
 	if err != nil {
 		return nil, err
@@ -328,16 +289,16 @@ func cloneResolvedLinks(cfgs []ui.Link, repl *caddy.Replacer) ([]ui.Link, error)
 
 	clones := make([]ui.Link, 0, len(cfgs))
 	for _, cfg := range cfgs {
-			clones = append(clones, ui.Link{
-				Link:          util.FindReplace(repl, cfg.Link),
-				Title:         util.FindReplace(repl, cfg.Title),
-				Style:         util.FindReplace(repl, cfg.Style),
-				OpenNewWindow: cfg.OpenNewWindow,
-				Target:        util.FindReplace(repl, cfg.Target),
-				TargetEnabled: cfg.TargetEnabled,
-				IconName:      util.FindReplace(repl, cfg.IconName),
-				IconEnabled:   cfg.IconEnabled,
-			})
+		clones = append(clones, ui.Link{
+			Link:          util.FindReplace(repl, cfg.Link),
+			Title:         util.FindReplace(repl, cfg.Title),
+			Style:         util.FindReplace(repl, cfg.Style),
+			OpenNewWindow: cfg.OpenNewWindow,
+			Target:        util.FindReplace(repl, cfg.Target),
+			TargetEnabled: cfg.TargetEnabled,
+			IconName:      util.FindReplace(repl, cfg.IconName),
+			IconEnabled:   cfg.IconEnabled,
+		})
 	}
 	return clones, nil
 }
@@ -349,10 +310,10 @@ func cloneResolvedUserRealms(cfgs []ui.UserRealm, repl *caddy.Replacer) ([]ui.Us
 
 	clones := make([]ui.UserRealm, 0, len(cfgs))
 	for _, cfg := range cfgs {
-			clones = append(clones, ui.UserRealm{
-				Name:  util.FindReplace(repl, cfg.Name),
-				Label: util.FindReplace(repl, cfg.Label),
-			})
+		clones = append(clones, ui.UserRealm{
+			Name:  util.FindReplace(repl, cfg.Name),
+			Label: util.FindReplace(repl, cfg.Label),
+		})
 	}
 	return clones, nil
 }
@@ -364,15 +325,15 @@ func cloneResolvedStaticAssets(cfgs []ui.StaticAsset, repl *caddy.Replacer) ([]u
 
 	clones := make([]ui.StaticAsset, 0, len(cfgs))
 	for _, cfg := range cfgs {
-			clones = append(clones, ui.StaticAsset{
-				Path:           util.FindReplace(repl, cfg.Path),
-				FsPath:         util.FindReplace(repl, cfg.FsPath),
-				Restricted:     cfg.Restricted,
-				ContentType:    util.FindReplace(repl, cfg.ContentType),
-				Content:        util.FindReplace(repl, cfg.Content),
-				EncodedContent: util.FindReplace(repl, cfg.EncodedContent),
-				Checksum:       util.FindReplace(repl, cfg.Checksum),
-			})
+		clones = append(clones, ui.StaticAsset{
+			Path:           util.FindReplace(repl, cfg.Path),
+			FsPath:         util.FindReplace(repl, cfg.FsPath),
+			Restricted:     cfg.Restricted,
+			ContentType:    util.FindReplace(repl, cfg.ContentType),
+			Content:        util.FindReplace(repl, cfg.Content),
+			EncodedContent: util.FindReplace(repl, cfg.EncodedContent),
+			Checksum:       util.FindReplace(repl, cfg.Checksum),
+		})
 	}
 	return clones, nil
 }
@@ -388,14 +349,8 @@ func cloneResolvedTransformerConfigs(cfgs []*transformer.Config, repl *caddy.Rep
 			clones = append(clones, nil)
 			continue
 		}
-		matchers, err := cloneResolvedStringSlice(cfg.Matchers, repl)
-		if err != nil {
-			return nil, err
-		}
-		actions, err := cloneResolvedStringSlice(cfg.Actions, repl)
-		if err != nil {
-			return nil, err
-		}
+		matchers := util.FindReplaceAll(repl, cfg.Matchers)
+		actions := util.FindReplaceAll(repl, cfg.Actions)
 		clones = append(clones, &transformer.Config{
 			Matchers: matchers,
 			Actions:  actions,
@@ -413,14 +368,8 @@ func cloneResolvedCookieConfig(cfg *cookie.Config, repl *caddy.Replacer) (*cooki
 	if err != nil {
 		return nil, err
 	}
-	path, err := resolveRuntimeString(cfg.Path, repl)
-	if err != nil {
-		return nil, err
-	}
-	sameSite, err := resolveRuntimeString(cfg.SameSite, repl)
-	if err != nil {
-		return nil, err
-	}
+	path := util.FindReplace(repl, cfg.Path)
+	sameSite := util.FindReplace(repl, cfg.SameSite)
 
 	return &cookie.Config{
 		Domains:            domains,
@@ -444,18 +393,9 @@ func cloneResolvedCookieDomainConfigs(cfgs map[string]*cookie.DomainConfig, repl
 			clones[domain] = nil
 			continue
 		}
-		resolvedDomain, err := resolveRuntimeString(cfg.Domain, repl)
-		if err != nil {
-			return nil, err
-		}
-		path, err := resolveRuntimeString(cfg.Path, repl)
-		if err != nil {
-			return nil, err
-		}
-		sameSite, err := resolveRuntimeString(cfg.SameSite, repl)
-		if err != nil {
-			return nil, err
-		}
+		resolvedDomain := util.FindReplace(repl, cfg.Domain)
+		path := util.FindReplace(repl, cfg.Path)
+		sameSite := util.FindReplace(repl, cfg.SameSite)
 		clones[domain] = &cookie.DomainConfig{
 			Seq:                cfg.Seq,
 			Domain:             resolvedDomain,
@@ -480,58 +420,19 @@ func cloneResolvedCryptoKeyConfigs(cfgs []*kms.CryptoKeyConfig, repl *caddy.Repl
 			clones = append(clones, nil)
 			continue
 		}
-		id, err := resolveRuntimeString(cfg.ID, repl)
-		if err != nil {
-			return nil, err
-		}
-		usage, err := resolveRuntimeString(cfg.Usage, repl)
-		if err != nil {
-			return nil, err
-		}
-		tokenName, err := resolveRuntimeString(cfg.TokenName, repl)
-		if err != nil {
-			return nil, err
-		}
-		source, err := resolveRuntimeString(cfg.Source, repl)
-		if err != nil {
-			return nil, err
-		}
-		algorithm, err := resolveRuntimeString(cfg.Algorithm, repl)
-		if err != nil {
-			return nil, err
-		}
-		envVarName, err := resolveRuntimeString(cfg.EnvVarName, repl)
-		if err != nil {
-			return nil, err
-		}
-		envVarType, err := resolveRuntimeString(cfg.EnvVarType, repl)
-		if err != nil {
-			return nil, err
-		}
-		envVarValue, err := resolveRuntimeString(cfg.EnvVarValue, repl)
-		if err != nil {
-			return nil, err
-		}
-		filePath, err := resolveRuntimeString(cfg.FilePath, repl)
-		if err != nil {
-			return nil, err
-		}
-		dirPath, err := resolveRuntimeString(cfg.DirPath, repl)
-		if err != nil {
-			return nil, err
-		}
-		secret, err := resolveRuntimeString(cfg.Secret, repl)
-		if err != nil {
-			return nil, err
-		}
-		preferredSignMethod, err := resolveRuntimeString(cfg.PreferredSignMethod, repl)
-		if err != nil {
-			return nil, err
-		}
-		evalExpr, err := cloneResolvedStringSlice(cfg.EvalExpr, repl)
-		if err != nil {
-			return nil, err
-		}
+		id := util.FindReplace(repl, cfg.ID)
+		usage := util.FindReplace(repl, cfg.Usage)
+		tokenName := util.FindReplace(repl, cfg.TokenName)
+		source := util.FindReplace(repl, cfg.Source)
+		algorithm := util.FindReplace(repl, cfg.Algorithm)
+		envVarName := util.FindReplace(repl, cfg.EnvVarName)
+		envVarType := util.FindReplace(repl, cfg.EnvVarType)
+		envVarValue := util.FindReplace(repl, cfg.EnvVarValue)
+		filePath := util.FindReplace(repl, cfg.FilePath)
+		dirPath := util.FindReplace(repl, cfg.DirPath)
+		secret := util.FindReplace(repl, cfg.Secret)
+		preferredSignMethod := util.FindReplace(repl, cfg.PreferredSignMethod)
+		evalExpr := util.FindReplaceAll(repl, cfg.EvalExpr)
 		clones = append(clones, &kms.CryptoKeyConfig{
 			Seq:                 cfg.Seq,
 			ID:                  id,
@@ -564,22 +465,10 @@ func cloneResolvedRedirectURIMatchConfigs(cfgs []*redirects.RedirectURIMatchConf
 			clones = append(clones, nil)
 			continue
 		}
-		pathMatchType, err := resolveRuntimeString(cfg.PathMatchType, repl)
-		if err != nil {
-			return nil, err
-		}
-		path, err := resolveRuntimeString(cfg.Path, repl)
-		if err != nil {
-			return nil, err
-		}
-		domainMatchType, err := resolveRuntimeString(cfg.DomainMatchType, repl)
-		if err != nil {
-			return nil, err
-		}
-		domain, err := resolveRuntimeString(cfg.Domain, repl)
-		if err != nil {
-			return nil, err
-		}
+		pathMatchType := util.FindReplace(repl, cfg.PathMatchType)
+		path := util.FindReplace(repl, cfg.Path)
+		domainMatchType := util.FindReplace(repl, cfg.DomainMatchType)
+		domain := util.FindReplace(repl, cfg.Domain)
 		clones = append(clones, &redirects.RedirectURIMatchConfig{
 			PathMatchType:   pathMatchType,
 			Path:            path,
@@ -588,6 +477,79 @@ func cloneResolvedRedirectURIMatchConfigs(cfgs []*redirects.RedirectURIMatchConf
 		})
 	}
 	return clones, nil
+}
+
+func cloneInterfaceMap(values map[string]interface{}, repl *caddy.Replacer) map[string]interface{} {
+	if len(values) == 0 {
+		return nil
+	}
+
+	clone := make(map[string]interface{}, len(values))
+	for key, value := range values {
+		clone[key] = cloneInterfaceValue(value, repl)
+	}
+	return clone
+}
+
+func cloneInterfaceValue(value interface{}, repl *caddy.Replacer) interface{} {
+	switch v := value.(type) {
+	case string:
+		return util.FindReplace(repl, v)
+	case []string:
+		return util.FindReplaceAll(repl, v)
+	case []interface{}:
+		clone := make([]interface{}, 0, len(v))
+		for _, entry := range v {
+			clone = append(clone, cloneInterfaceValue(entry, repl))
+		}
+		return clone
+	case []map[string]interface{}:
+		clone := make([]map[string]interface{}, 0, len(v))
+		for _, entry := range v {
+			clone = append(clone, cloneInterfaceMap(entry, repl))
+		}
+		return clone
+	case map[string]interface{}:
+		return cloneInterfaceMap(v, repl)
+	default:
+		return v
+	}
+}
+
+func cloneStringBoolMap(values map[string]bool) map[string]bool {
+	if len(values) == 0 {
+		return nil
+	}
+
+	clone := make(map[string]bool, len(values))
+	for key, value := range values {
+		clone[key] = value
+	}
+	return clone
+}
+
+func cloneInterfaceBoolMap(values map[string]interface{}) map[string]interface{} {
+	if len(values) == 0 {
+		return nil
+	}
+
+	clone := make(map[string]interface{}, len(values))
+	for key, value := range values {
+		clone[key] = value
+	}
+	return clone
+}
+
+func cloneReplacedStringMap(values map[string]string, repl *caddy.Replacer) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	clone := make(map[string]string, len(values))
+	for key, value := range values {
+		clone[key] = util.FindReplace(repl, value)
+	}
+	return clone
 }
 
 func cloneTokenValidatorOptions(cfg *options.TokenValidatorOptions) *options.TokenValidatorOptions {

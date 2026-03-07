@@ -170,29 +170,14 @@ func cloneResolvedEmailProvider(cfg *messaging.EmailProvider, repl *caddy.Replac
 		return nil, nil
 	}
 
-	name, err := resolveRuntimeString(cfg.Name, repl)
-	if err != nil {
-		return nil, err
-	}
-	address, err := resolveRuntimeString(cfg.Address, repl)
-	if err != nil {
-		return nil, err
-	}
-	protocol, err := resolveRuntimeString(cfg.Protocol, repl)
-	if err != nil {
-		return nil, err
-	}
-	credentialsName, err := resolveRuntimeString(cfg.Credentials, repl)
-	if err != nil {
-		return nil, err
-	}
-	senderEmail, err := resolveRuntimeString(cfg.SenderEmail, repl)
-	if err != nil {
-		return nil, err
-	}
+	name := util.FindReplace(repl, cfg.Name)
+	address := util.FindReplace(repl, cfg.Address)
+	protocol := util.FindReplace(repl, cfg.Protocol)
+	credentialsName := util.FindReplace(repl, cfg.Credentials)
+	senderEmail := util.FindReplace(repl, cfg.SenderEmail)
 	senderName := util.FindReplace(repl, cfg.SenderName)
 	templates := cloneReplacedStringMap(cfg.Templates, repl)
-	bcc := cloneReplacedStringSlice(cfg.BlindCarbonCopy, repl)
+	bcc := util.FindReplaceAll(repl, cfg.BlindCarbonCopy)
 
 	return &messaging.EmailProvider{
 		Name:            name,
@@ -212,14 +197,8 @@ func cloneResolvedFileProvider(cfg *messaging.FileProvider, repl *caddy.Replacer
 		return nil, nil
 	}
 
-	name, err := resolveRuntimeString(cfg.Name, repl)
-	if err != nil {
-		return nil, err
-	}
-	rootDir, err := resolveRuntimeString(cfg.RootDir, repl)
-	if err != nil {
-		return nil, err
-	}
+	name := util.FindReplace(repl, cfg.Name)
+	rootDir := util.FindReplace(repl, cfg.RootDir)
 	templates := cloneReplacedStringMap(cfg.Templates, repl)
 
 	return &messaging.FileProvider{

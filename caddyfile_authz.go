@@ -17,6 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -111,18 +112,9 @@ func cloneResolvedPolicyConfig(cfg *authz.PolicyConfig, repl *caddy.Replacer) (*
 		return nil, nil
 	}
 
-	name, err := resolveRuntimeString(cfg.Name, repl)
-	if err != nil {
-		return nil, err
-	}
-	authURLPath, err := resolveRuntimeString(cfg.AuthURLPath, repl)
-	if err != nil {
-		return nil, err
-	}
-	authRedirectQueryParameter, err := resolveRuntimeString(cfg.AuthRedirectQueryParameter, repl)
-	if err != nil {
-		return nil, err
-	}
+	name := util.FindReplace(repl, cfg.Name)
+	authURLPath := util.FindReplace(repl, cfg.AuthURLPath)
+	authRedirectQueryParameter := util.FindReplace(repl, cfg.AuthRedirectQueryParameter)
 	bypassConfigs, err := cloneResolvedBypassConfigs(cfg.BypassConfigs, repl)
 	if err != nil {
 		return nil, err
@@ -139,30 +131,15 @@ func cloneResolvedPolicyConfig(cfg *authz.PolicyConfig, repl *caddy.Replacer) (*
 	if err != nil {
 		return nil, err
 	}
-	cryptoKeyStoreConfig, err := cloneResolvedInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
-	if err != nil {
-		return nil, err
-	}
+	cryptoKeyStoreConfig := cloneInterfaceMap(cfg.CryptoKeyStoreConfig, repl)
 	authProxyConfig, err := cloneResolvedAuthProxyConfig(cfg.AuthProxyConfig, repl)
 	if err != nil {
 		return nil, err
 	}
-	allowedTokenSources, err := cloneResolvedStringSlice(cfg.AllowedTokenSources, repl)
-	if err != nil {
-		return nil, err
-	}
-	forbiddenURL, err := resolveRuntimeString(cfg.ForbiddenURL, repl)
-	if err != nil {
-		return nil, err
-	}
-	userIdentityField, err := resolveRuntimeString(cfg.UserIdentityField, repl)
-	if err != nil {
-		return nil, err
-	}
-	loginHintValidators, err := cloneResolvedStringSlice(cfg.LoginHintValidators, repl)
-	if err != nil {
-		return nil, err
-	}
+	allowedTokenSources := util.FindReplaceAll(repl, cfg.AllowedTokenSources)
+	forbiddenURL := util.FindReplace(repl, cfg.ForbiddenURL)
+	userIdentityField := util.FindReplace(repl, cfg.UserIdentityField)
+	loginHintValidators := util.FindReplaceAll(repl, cfg.LoginHintValidators)
 
 	return &authz.PolicyConfig{
 		Name:                        name,
@@ -203,14 +180,8 @@ func cloneResolvedBypassConfigs(cfgs []*bypass.Config, repl *caddy.Replacer) ([]
 			clones = append(clones, nil)
 			continue
 		}
-		matchType, err := resolveRuntimeString(cfg.MatchType, repl)
-		if err != nil {
-			return nil, err
-		}
-		uri, err := resolveRuntimeString(cfg.URI, repl)
-		if err != nil {
-			return nil, err
-		}
+		matchType := util.FindReplace(repl, cfg.MatchType)
+		uri := util.FindReplace(repl, cfg.URI)
 		clones = append(clones, &bypass.Config{
 			MatchType: matchType,
 			URI:       uri,
@@ -230,14 +201,8 @@ func cloneResolvedHeaderInjectionConfigs(cfgs []*injector.Config, repl *caddy.Re
 			clones = append(clones, nil)
 			continue
 		}
-		header, err := resolveRuntimeString(cfg.Header, repl)
-		if err != nil {
-			return nil, err
-		}
-		field, err := resolveRuntimeString(cfg.Field, repl)
-		if err != nil {
-			return nil, err
-		}
+		header := util.FindReplace(repl, cfg.Header)
+		field := util.FindReplace(repl, cfg.Field)
 		clones = append(clones, &injector.Config{
 			Header: header,
 			Field:  field,
@@ -251,10 +216,7 @@ func cloneResolvedAuthProxyConfig(cfg *authproxy.Config, repl *caddy.Replacer) (
 		return nil, nil
 	}
 
-	portalName, err := resolveRuntimeString(cfg.PortalName, repl)
-	if err != nil {
-		return nil, err
-	}
+	portalName := util.FindReplace(repl, cfg.PortalName)
 
 	return &authproxy.Config{
 		PortalName: portalName,

@@ -179,12 +179,12 @@ func TestResolveRuntimeConfig(t *testing.T) {
 	}
 }
 
-func TestResolveRuntimeConfigErrorsOnUnknownPlaceholder(t *testing.T) {
+func TestResolveRuntimeConfigUsesLegacyReplacementSemantics(t *testing.T) {
 	appConfig, err := loadAppFromCaddyfile(t, `
-		security {
-			credentials smtp.contoso.com {
-				username foo
-				password {unknown.secret}
+			security {
+				credentials smtp.contoso.com {
+					username foo
+					password {unknown.secret}
 			}
 
 			local identity store localdb {
@@ -200,8 +200,15 @@ func TestResolveRuntimeConfigErrorsOnUnknownPlaceholder(t *testing.T) {
 		t.Fatalf("expected success, got: %v", err)
 	}
 
-	if _, err := resolveRuntimeConfig(appConfig.Config); err == nil {
-		t.Fatal("expected placeholder resolution failure")
+	resolvedConfig, err := resolveRuntimeConfig(appConfig.Config)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	resolved := unpack(t, resolvedConfig)
+	resolvedCreds := resolved["credentials"].(map[string]interface{})["generic"].([]interface{})[0].(map[string]interface{})
+	if got := resolvedCreds["password"]; got != "ERROR_REPLACEMENT" {
+		t.Fatalf("unexpected password replacement: got %v", got)
 	}
 }
 

@@ -56,11 +56,7 @@ func (AuthzMiddleware) CaddyModule() caddy.ModuleInfo {
 
 // Provision provisions Authorizer.
 func (m *AuthzMiddleware) Provision(ctx caddy.Context) error {
-	resolvedGatekeeperName, err := resolveRuntimeString(m.GatekeeperName, caddy.NewReplacer())
-	if err != nil {
-		return fmt.Errorf("failed resolving gatekeeper name placeholder: %w", err)
-	}
-	m.GatekeeperName = resolvedGatekeeperName
+	m.GatekeeperName = util.FindReplace(caddy.NewReplacer(), m.GatekeeperName)
 
 	appModule, err := ctx.App("security")
 	if err != nil {
