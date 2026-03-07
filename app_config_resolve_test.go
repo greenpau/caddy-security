@@ -161,6 +161,79 @@ func TestCaddyfileAdapterPreservesSecurityPlaceholders(t *testing.T) {
 	}
 }
 
+func TestCaddyValidateResolvesSecurityAppPlaceholdersAtProvision(t *testing.T) {
+	secretDir := t.TempDir()
+	passwordFile := filepath.Join(secretDir, "smtp-password.txt")
+	clientSecretFile := filepath.Join(secretDir, "client-secret.txt")
+	tokenSecretFile := filepath.Join(secretDir, "token-secret.txt")
+	if err := os.WriteFile(passwordFile, []byte("smtp-password"), 0600); err != nil {
+		t.Fatalf("failed writing password file: %v", err)
+	}
+	if err := os.WriteFile(clientSecretFile, []byte("client-secret"), 0600); err != nil {
+		t.Fatalf("failed writing client secret file: %v", err)
+	}
+	if err := os.WriteFile(tokenSecretFile, []byte("token-secret"), 0600); err != nil {
+		t.Fatalf("failed writing token secret file: %v", err)
+	}
+
+	t.Setenv("TMP_LOCAL_DB_PATH", filepath.Join(secretDir, "users.json"))
+
+	adapter := caddyfileadapter.Adapter{ServerType: httpcaddyfile.ServerType{}}
+	adapted, _, err := adapter.Adapt([]byte(`
+		{
+			admin off
+			security {
+				credentials smtp.contoso.com {
+					username foo
+					password {file.`+passwordFile+`}
+				}
+
+				local identity store localdb {
+					realm local
+					path {env.TMP_LOCAL_DB_PATH}
+				}
+
+				oauth identity provider authp {
+					realm authp
+					driver generic
+					client_id foo
+					client_secret {file.`+clientSecretFile+`}
+					base_auth_url https://localhost/oauth
+					response_type code
+					required_token_fields access_token
+					authorization_url https://localhost/oauth/authorize
+					token_url https://localhost/oauth/access_token
+					jwks key 87329db33bf testdata/oauth/87329db33bf_pub.pem
+					disable key verification
+					disable tls verification
+				}
+
+				authentication portal myportal {
+					crypto key sign-verify {file.`+tokenSecretFile+`}
+					enable identity store localdb
+					enable identity provider authp
+				}
+			}
+		}
+
+		http://localhost {
+			respond "ok"
+		}
+	`), nil)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	var cfg caddy.Config
+	if err := json.Unmarshal(adapted, &cfg); err != nil {
+		t.Fatalf("failed unmarshalling adapted config: %v", err)
+	}
+
+	if err := caddy.Validate(&cfg); err != nil {
+		t.Fatalf("expected security app provision to resolve placeholders successfully, got: %v", err)
+	}
+}
+
 func TestResolveRuntimeConfig(t *testing.T) {
 	secretDir := t.TempDir()
 	passwordFile := filepath.Join(secretDir, "smtp-password.txt")
