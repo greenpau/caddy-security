@@ -15,7 +15,6 @@
 package security
 
 import (
-	"io/ioutil"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -134,23 +133,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConf
 			case strings.HasPrefix(args, "js"):
 				portal.UI.CustomJsPath = strings.ReplaceAll(args, "js ", "")
 			case strings.HasPrefix(args, "html header path"):
-				args = strings.ReplaceAll(args, "html header path ", "")
-				b, err := ioutil.ReadFile(args)
-				if err != nil {
-					return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
-				}
-				for _, k := range ui.PageTemplates.GetAssetPaths() {
-					asset, err := ui.PageTemplates.GetAsset(k)
-					if err != nil {
-						return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
-					}
-
-					headIndex := strings.Index(asset.Content, "<meta name=\"description\"")
-					if headIndex < 1 {
-						continue
-					}
-					asset.Content = asset.Content[:headIndex] + string(b) + asset.Content[headIndex:]
-				}
+				portal.UI.CustomHTMLHeaderPath = strings.ReplaceAll(args, "html header path ", "")
 			case args == "":
 				return h.Errf("%s %s directive has no value", rootDirective, subDirective)
 			default:
@@ -169,9 +152,11 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConf
 				return h.Errf("auth backend %s subdirective %s URI must be prefixed with %s, got %s",
 					rootDirective, subDirective, prefix, assetURI)
 			}
-			if err := ui.StaticAssets.AddAsset(assetURI, assetContentType, assetPath); err != nil {
-				return h.Errf("auth backend %s subdirective %s failed: %s", rootDirective, subDirective, err)
-			}
+			portal.UI.StaticAssets = append(portal.UI.StaticAssets, ui.StaticAsset{
+				Path:        assetURI,
+				ContentType: assetContentType,
+				FsPath:      assetPath,
+			})
 		case "disable":
 			args := h.RemainingArgs()
 			if err := portal.UI.DisablePage(args); err != nil {

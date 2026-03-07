@@ -91,6 +91,53 @@ func TestParseCaddyfilePreservesFilePlaceholders(t *testing.T) {
 	}
 }
 
+func TestParseCaddyfilePreservesUIPointerPlaceholders(t *testing.T) {
+	headerFile := filepath.Join(t.TempDir(), "header.html")
+	assetFile := filepath.Join(t.TempDir(), "custom.js")
+	if err := os.WriteFile(headerFile, []byte("<meta name=\"robots\" content=\"noindex\">"), 0600); err != nil {
+		t.Fatalf("failed writing header file: %v", err)
+	}
+	if err := os.WriteFile(assetFile, []byte("console.log('ok');"), 0600); err != nil {
+		t.Fatalf("failed writing asset file: %v", err)
+	}
+
+	t.Setenv("HEADER_PATH", headerFile)
+	t.Setenv("ASSET_PATH", assetFile)
+
+	app, err := parseCaddyfile(caddyfile.NewTestDispenser(`
+		security {
+			local identity store localdb {
+				realm local
+				path /tmp/localdb.json
+			}
+
+			authentication portal myportal {
+				enable identity store localdb
+				ui {
+					custom html header path {env.HEADER_PATH}
+					static_asset assets/js/custom.js application/javascript {env.ASSET_PATH}
+				}
+			}
+		}`), nil)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	got := unpack(t, string(app.(httpcaddyfile.App).Value))
+	portal := got["config"].(map[string]interface{})["authentication_portals"].([]interface{})[0].(map[string]interface{})
+	uiConfig := portal["ui"].(map[string]interface{})
+
+	if gotPath := uiConfig["custom_html_header_path"]; gotPath != "{env.HEADER_PATH}" {
+		t.Fatalf("unexpected custom_html_header_path: got %v", gotPath)
+	}
+
+	staticAssets := uiConfig["static_assets"].([]interface{})
+	asset := staticAssets[0].(map[string]interface{})
+	if gotPath := asset["fs_path"]; gotPath != "{env.ASSET_PATH}" {
+		t.Fatalf("unexpected static asset path: got %v", gotPath)
+	}
+}
+
 func TestCaddyfileAdapterPreservesSecurityPlaceholders(t *testing.T) {
 	secretFile := filepath.Join(t.TempDir(), "google-client-secret.txt")
 	if err := os.WriteFile(secretFile, []byte("super-secret-value"), 0600); err != nil {
@@ -158,6 +205,70 @@ func TestCaddyfileAdapterPreservesSecurityPlaceholders(t *testing.T) {
 	params := providers[0].(map[string]interface{})["params"].(map[string]interface{})
 	if gotSecret := params["client_secret"]; gotSecret != fmt.Sprintf("{file.%s}", secretFile) {
 		t.Fatalf("unexpected adapted client_secret: got %v", gotSecret)
+	}
+}
+
+func TestCaddyfileAdapterPreservesUIPlaceholderPaths(t *testing.T) {
+	headerFile := filepath.Join(t.TempDir(), "header.html")
+	assetFile := filepath.Join(t.TempDir(), "custom.js")
+	if err := os.WriteFile(headerFile, []byte("<meta name=\"robots\" content=\"noindex\">"), 0600); err != nil {
+		t.Fatalf("failed writing header file: %v", err)
+	}
+	if err := os.WriteFile(assetFile, []byte("console.log('ok');"), 0600); err != nil {
+		t.Fatalf("failed writing asset file: %v", err)
+	}
+
+	t.Setenv("HEADER_PATH", headerFile)
+	t.Setenv("ASSET_PATH", assetFile)
+
+	adapter := caddyfileadapter.Adapter{ServerType: httpcaddyfile.ServerType{}}
+	adapted, _, err := adapter.Adapt([]byte(`
+		{
+			admin off
+			security {
+				local identity store localdb {
+					realm local
+					path /tmp/localdb.json
+				}
+
+				authentication portal myportal {
+					enable identity store localdb
+					ui {
+						custom html header path {env.HEADER_PATH}
+						static_asset assets/js/custom.js application/javascript {env.ASSET_PATH}
+					}
+				}
+			}
+		}
+
+		http://localhost {
+			respond "ok"
+		}
+	`), nil)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	var cfg caddy.Config
+	if err := json.Unmarshal(adapted, &cfg); err != nil {
+		t.Fatalf("failed unmarshalling adapted config: %v", err)
+	}
+
+	var app App
+	if err := json.Unmarshal(cfg.AppsRaw["security"], &app); err != nil {
+		t.Fatalf("failed unmarshalling security app config: %v", err)
+	}
+
+	got := unpack(t, app.Config)
+	portal := got["authentication_portals"].([]interface{})[0].(map[string]interface{})
+	uiConfig := portal["ui"].(map[string]interface{})
+	if gotPath := uiConfig["custom_html_header_path"]; gotPath != "{env.HEADER_PATH}" {
+		t.Fatalf("unexpected adapted custom_html_header_path: got %v", gotPath)
+	}
+	staticAssets := uiConfig["static_assets"].([]interface{})
+	asset := staticAssets[0].(map[string]interface{})
+	if gotPath := asset["fs_path"]; gotPath != "{env.ASSET_PATH}" {
+		t.Fatalf("unexpected adapted static asset path: got %v", gotPath)
 	}
 }
 
@@ -234,11 +345,65 @@ func TestCaddyValidateResolvesSecurityAppPlaceholdersAtProvision(t *testing.T) {
 	}
 }
 
+func TestCaddyValidateResolvesUIPointerPlaceholdersAtProvision(t *testing.T) {
+	secretDir := t.TempDir()
+	headerFile := filepath.Join(secretDir, "header.html")
+	assetFile := filepath.Join(secretDir, "custom.js")
+	if err := os.WriteFile(headerFile, []byte("<meta name=\"robots\" content=\"noindex\">"), 0600); err != nil {
+		t.Fatalf("failed writing header file: %v", err)
+	}
+	if err := os.WriteFile(assetFile, []byte("console.log('ok');"), 0600); err != nil {
+		t.Fatalf("failed writing asset file: %v", err)
+	}
+
+	t.Setenv("HEADER_PATH", headerFile)
+	t.Setenv("ASSET_PATH", assetFile)
+
+	adapter := caddyfileadapter.Adapter{ServerType: httpcaddyfile.ServerType{}}
+	adapted, _, err := adapter.Adapt([]byte(`
+		{
+			admin off
+			security {
+				local identity store localdb {
+					realm local
+					path /tmp/localdb.json
+				}
+
+				authentication portal myportal {
+					enable identity store localdb
+					ui {
+						custom html header path {env.HEADER_PATH}
+						static_asset assets/js/custom.js application/javascript {env.ASSET_PATH}
+					}
+				}
+			}
+		}
+
+		http://localhost {
+			respond "ok"
+		}
+	`), nil)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	var cfg caddy.Config
+	if err := json.Unmarshal(adapted, &cfg); err != nil {
+		t.Fatalf("failed unmarshalling adapted config: %v", err)
+	}
+
+	if err := caddy.Validate(&cfg); err != nil {
+		t.Fatalf("expected UI placeholder paths to resolve during provision, got: %v", err)
+	}
+}
+
 func TestResolveRuntimeConfig(t *testing.T) {
 	secretDir := t.TempDir()
 	passwordFile := filepath.Join(secretDir, "smtp-password.txt")
 	clientSecretFile := filepath.Join(secretDir, "client-secret.txt")
 	tokenSecretFile := filepath.Join(secretDir, "token-secret.txt")
+	headerFile := filepath.Join(secretDir, "header.html")
+	assetFile := filepath.Join(secretDir, "custom.js")
 	if err := os.WriteFile(passwordFile, []byte("smtp-password"), 0600); err != nil {
 		t.Fatalf("failed writing password file: %v", err)
 	}
@@ -248,8 +413,16 @@ func TestResolveRuntimeConfig(t *testing.T) {
 	if err := os.WriteFile(tokenSecretFile, []byte("token-secret"), 0600); err != nil {
 		t.Fatalf("failed writing token secret file: %v", err)
 	}
+	if err := os.WriteFile(headerFile, []byte("<meta name=\"robots\" content=\"noindex\">"), 0600); err != nil {
+		t.Fatalf("failed writing header file: %v", err)
+	}
+	if err := os.WriteFile(assetFile, []byte("console.log('ok');"), 0600); err != nil {
+		t.Fatalf("failed writing asset file: %v", err)
+	}
 
 	t.Setenv("TMP_LOCAL_DB_PATH", filepath.Join(secretDir, "users.json"))
+	t.Setenv("TMP_HEADER_PATH", headerFile)
+	t.Setenv("TMP_ASSET_PATH", assetFile)
 
 	appConfig, err := loadAppFromCaddyfile(t, `
 		security {
@@ -282,6 +455,10 @@ func TestResolveRuntimeConfig(t *testing.T) {
 				crypto key sign-verify {file.`+tokenSecretFile+`}
 				enable identity store localdb
 				enable identity provider authp
+				ui {
+					custom html header path {env.TMP_HEADER_PATH}
+					static_asset assets/js/custom.js application/javascript {env.TMP_ASSET_PATH}
+				}
 			}
 		}`)
 	if err != nil {
@@ -332,6 +509,23 @@ func TestResolveRuntimeConfig(t *testing.T) {
 	}
 	if got := resolvedTokenSecret; got != "token-secret" {
 		t.Fatalf("unexpected resolved token_secret: got %v", got)
+	}
+
+	originalUI := originalPortal["ui"].(map[string]interface{})
+	resolvedUI := resolvedPortal["ui"].(map[string]interface{})
+	if got := originalUI["custom_html_header_path"]; got != "{env.TMP_HEADER_PATH}" {
+		t.Fatalf("unexpected original custom_html_header_path: got %v", got)
+	}
+	if got := resolvedUI["custom_html_header_path"]; got != headerFile {
+		t.Fatalf("unexpected resolved custom_html_header_path: got %v", got)
+	}
+	originalStaticAssets := originalUI["static_assets"].([]interface{})
+	resolvedStaticAssets := resolvedUI["static_assets"].([]interface{})
+	if got := originalStaticAssets[0].(map[string]interface{})["fs_path"]; got != "{env.TMP_ASSET_PATH}" {
+		t.Fatalf("unexpected original static asset path: got %v", got)
+	}
+	if got := resolvedStaticAssets[0].(map[string]interface{})["fs_path"]; got != assetFile {
+		t.Fatalf("unexpected resolved static asset path: got %v", got)
 	}
 }
 
