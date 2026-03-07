@@ -30,43 +30,44 @@ import (
 //
 // Syntax:
 //
-//	oauth identity provider <name> {
-//	  realm <name>
-//	  driver <name>
-//	  base_auth_url <base_url>
-//	  metadata_url <metadata_url>
-//	  client_id <client_id>
-//	  client_secret <client_secret>
-//	  scopes openid email profile
-//	  disable metadata_discovery
-//	  authorization_url <authorization_url>
-//	  disable key verification
-//	  disable email claim check
-//	  region <name>
-//	  user_pool_id <name>
-//	  icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
-//	  enable accept header
-//	  enable js callback
-//	  enable id_token cookie [<cookie_name>]
-//	  enable logout
-//	  extract <field1> <fieldN> from userinfo
-//	  extract all from userinfo
-//	  user_info_roles_field_name role
-//	}
+//   oauth identity provider <name> {
+//     realm <name>
+//     driver <name>
+//     base_auth_url <base_url>
+//     metadata_url <metadata_url>
+//     client_id <client_id>
+//     client_secret <client_secret>
+//     scopes openid email profile
+//     disable metadata_discovery
+//     authorization_url <authorization_url>
+//     disable key verification
+//     disable email claim check
+//     region <name>
+//     user_pool_id <name>
+//     icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
+//     enable accept header
+//     enable js callback
+//     enable id_token cookie [<cookie_name>]
+//     enable logout
+//     extract <field1> <fieldN> from userinfo
+//     extract all from userinfo
+//     user_info_roles_field_name role
+//   }
 //
-//	oauth identity provider <name> {
-//	  realm gitlab
-//	  driver gitlab
-//	  domain_name <domain>
-//	  client_id <client_id>
-//	  client_secret <client_secret>
-//	  user_group_filters <regex_pattern>
-//	}
+//   oauth identity provider <name> {
+//     realm gitlab
+//     driver gitlab
+//     domain_name <domain>
+//     client_id <client_id>
+//     client_secret <client_secret>
+//     user_group_filters <regex_pattern>
+//   }
 //
-//	saml identity provider <name> {
-//	  realm <name>
-//	  driver <name>
-//	}
+//   saml identity provider <name> {
+//     realm <name>
+//     driver <name>
+//   }
+//
 func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 

@@ -31,22 +31,23 @@ const (
 //
 // Syntax:
 //
-//	messaging email provider <name> {
-//	  address <address>
-//	  protocol smtp
-//	  credentials <credential_name>
-//	  sender <email_address> [name]
-//	  template password_recovery <path>
-//	  template registration_confirmation <path>
-//	  template registration_ready <path>
-//	  template registration_verdict <path>
-//	  template mfa_otp <path>
-//	  bcc <email_address_1> <email_address2>
-//	}
+//   messaging email provider <name> {
+//     address <address>
+//     protocol smtp
+//     credentials <credential_name>
+//     sender <email_address> [name]
+//     template password_recovery <path>
+//     template registration_confirmation <path>
+//     template registration_ready <path>
+//     template registration_verdict <path>
+//     template mfa_otp <path>
+//     bcc <email_address_1> <email_address2>
+//   }
 //
-//	messaging file provider <name> {
-//	  rootdir <path>
-//	}
+//   messaging file provider <name> {
+//     rootdir <path>
+//   }
+//
 func parseCaddyfileMessaging(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	args := d.RemainingArgs()
 	if len(args) != 3 {
