@@ -28,18 +28,19 @@ import (
 //
 // Syntax:
 //
-//	user registration <name> {
-//	  title <name>
-//	  code <name>
-//	  dropbox <path>
-//	  require accept terms
-//	  require domain mx
-//	  email provider <name>
-//	  admin email <email_address_1> <<email_address_N>
-//	  identity store <name>
-//	  link terms <url>
-//	  link privacy <url>
-//	}
+//   user registration <name> {
+//     title <name>
+//     code <name>
+//     dropbox <path>
+//     require accept terms
+//     require domain mx
+//     email provider <name>
+//     admin email <email_address_1> <<email_address_N>
+//     identity store <name>
+//     link terms <url>
+//     link privacy <url>
+//   }
+//
 func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Config, name string) error {
 	var disabled bool
 
