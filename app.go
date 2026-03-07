@@ -17,10 +17,13 @@ package security
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 
 	"go.uber.org/zap"
@@ -98,6 +101,15 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 
+	if err := provisionUISideEffects(resolvedConfig); err != nil {
+		app.logger.Error(
+			"failed applying UI side effects",
+			zap.String("app", app.Name),
+			zap.Error(err),
+		)
+		return err
+	}
+
 	server, err := authcrunch.NewServer(resolvedConfig, app.logger)
 	if err != nil {
 		app.logger.Error(
@@ -113,6 +125,41 @@ func (app *App) Provision(ctx caddy.Context) error {
 		"provisioned app instance",
 		zap.String("app", app.Name),
 	)
+	return nil
+}
+
+func provisionUISideEffects(cfg *authcrunch.Config) error {
+	if cfg == nil {
+		return nil
+	}
+	for _, portal := range cfg.AuthenticationPortals {
+		if portal.UI == nil {
+			continue
+		}
+		if portal.UI.CustomHTMLHeaderPath != "" {
+			b, err := ioutil.ReadFile(portal.UI.CustomHTMLHeaderPath)
+			if err != nil {
+				return err
+			}
+			for _, k := range ui.PageTemplates.GetAssetPaths() {
+				asset, err := ui.PageTemplates.GetAsset(k)
+				if err != nil {
+					return err
+				}
+
+				headIndex := strings.Index(asset.Content, "<meta name=\"description\"")
+				if headIndex < 1 {
+					continue
+				}
+				asset.Content = asset.Content[:headIndex] + string(b) + asset.Content[headIndex:]
+			}
+		}
+		for _, asset := range portal.UI.StaticAssets {
+			if err := ui.StaticAssets.AddAsset(asset.Path, asset.ContentType, asset.FsPath); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
