@@ -40,6 +40,8 @@ import (
 //	    password <plain_text_password> [overwrite]
 //	    password bcrypt:<cost>:<hash> [overwrite]
 //	    roles <role_name> [<role_name>]
+//	    api key <key_id> <plain_text_api_key>
+//	    api key <key_id> bcrypt:<cost>:<hash>
 //	  }
 //
 //	  enable username recovery
@@ -144,6 +146,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 			userMap := make(map[string]interface{})
 			username := util.FindReplace(repl, args[0])
 			userMap["username"] = username
+			apiKeyList := []map[string]interface{}{}
 			for userNesting := d.Nesting(); d.NextBlock(userNesting); {
 				userPropName := d.Val()
 				userPropValue := util.FindReplaceAll(repl, d.RemainingArgs())
@@ -176,9 +179,23 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain one or more value")
 					}
 					userMap[userPropName] = userPropValue
+				case "api":
+					if len(userPropValue) != 3 {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" key must contain two values")
+					}
+					if userPropValue[0] != "key" {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must be followed by key")
+					}
+					keyData := make(map[string]any)
+					keyData["id"] = userPropValue[1]
+					keyData["payload"] = userPropValue[2]
+					apiKeyList = append(apiKeyList, keyData)
 				default:
 					return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported prop "+userPropName)
 				}
+			}
+			if len(apiKeyList) > 0 {
+				userMap["api_keys"] = apiKeyList
 			}
 			userMaps = append(userMaps, userMap)
 		case "groups":

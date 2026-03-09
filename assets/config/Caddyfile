@@ -25,7 +25,7 @@
 			user webadmin {
 				name Webmaster
 				email webadmin@localhost.localdomain
-				password "$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
+				password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
 				#password "Td45@4d269b7ec2f5ffd31ee5"
 				roles "authp/admin" "authp/user"
 			}

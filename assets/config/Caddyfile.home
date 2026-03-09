@@ -52,6 +52,7 @@
 				# password "Td45@4d269b7ec2f5ffd31ee5" overwrite
 				password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
 				roles "authp/admin" "authp/user"
+				api key cb8vP9aZyTwD9PislKK7Gvtg "bcrypt:10:$2a$10$NFuI7HlolCvjqghLLdcIkeRpSGLidSdCuDb8yG1EadXZtmMmbg.Ky"
 			}
 			user jsmith {
 				name John Smith
