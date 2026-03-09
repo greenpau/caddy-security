@@ -15,58 +15,59 @@
 package security
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"strconv"
-	"strings"
 )
 
 // parseCaddyfileIdentityProvider parses identity provider configuration.
 //
 // Syntax:
 //
-//   oauth identity provider <name> {
-//     realm <name>
-//     driver <name>
-//     base_auth_url <base_url>
-//     metadata_url <metadata_url>
-//     client_id <client_id>
-//     client_secret <client_secret>
-//     scopes openid email profile
-//     disable metadata_discovery
-//     authorization_url <authorization_url>
-//     disable key verification
-//     disable email claim check
-//     region <name>
-//     user_pool_id <name>
-//     icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
-//     enable accept header
-//     enable js callback
-//     enable id_token cookie [<cookie_name>]
-//     enable logout
-//     extract <field1> <fieldN> from userinfo
-//     extract all from userinfo
-//     user_info_roles_field_name role
-//   }
+//	oauth identity provider <name> {
+//	  realm <name>
+//	  driver <name>
+//	  base_auth_url <base_url>
+//	  metadata_url <metadata_url>
+//	  logout_url <logout_url>
+//	  client_id <client_id>
+//	  client_secret <client_secret>
+//	  scopes openid email profile
+//	  disable metadata_discovery
+//	  authorization_url <authorization_url>
+//	  disable key verification
+//	  disable email claim check
+//	  region <name>
+//	  user_pool_id <name>
+//	  icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
+//	  enable accept header
+//	  enable js callback
+//	  enable id_token cookie [<cookie_name>]
+//	  enable logout
+//	  extract <field1> <fieldN> from userinfo
+//	  extract all from userinfo
+//	  user_info_roles_field_name role
+//	}
 //
-//   oauth identity provider <name> {
-//     realm gitlab
-//     driver gitlab
-//     domain_name <domain>
-//     client_id <client_id>
-//     client_secret <client_secret>
-//     user_group_filters <regex_pattern>
-//   }
+//	oauth identity provider <name> {
+//	  realm gitlab
+//	  driver gitlab
+//	  domain_name <domain>
+//	  client_id <client_id>
+//	  client_secret <client_secret>
+//	  user_group_filters <regex_pattern>
+//	}
 //
-//   saml identity provider <name> {
-//     realm <name>
-//     driver <name>
-//   }
-//
+//	saml identity provider <name> {
+//	  realm <name>
+//	  driver <name>
+//	}
 func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 
@@ -102,6 +103,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 			// OAuth
 			"domain_name", "client_id", "client_secret", "server_id", "base_auth_url",
 			"metadata_url", "identity_token_name", "authorization_url", "token_url",
+			"logout_url",
 			"region", "user_pool_id", "user_info_roles_field_name",
 			// SAML
 			"idp_metadata_location", "idp_sign_cert_location", "idp_login_url",
