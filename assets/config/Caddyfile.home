@@ -52,7 +52,8 @@
 				# password "Td45@4d269b7ec2f5ffd31ee5" overwrite
 				password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
 				roles "authp/admin" "authp/user"
-				api key cb8vP9aZyTwD9PislKK7Gvtg "bcrypt:10:$2a$10$NFuI7HlolCvjqghLLdcIkeRpSGLidSdCuDb8yG1EadXZtmMmbg.Ky"
+				# secret: r7lQbaotIG4303j2to2sS5cOYBEyRAAgDGlbhfgFBxPM889501VDbk8ZmGHAevr8Buv6YRqG
+				api key r7lQbaotIG4303j2to2sS5cO "bcrypt:10:$2a$10$dQTjh/Vt2Bu2Vf5OEvyLwOD3wMIi/jbKVdim1xH9GhpV065nUa80G"
 			}
 			user jsmith {
 				name John Smith
@@ -116,6 +117,13 @@
 			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
 			allow roles authp/admin authp/user
 		}
+
+		authorization policy api_access_policy {
+			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
+			allow roles authp/admin authp/user
+			with api key auth portal myportal realm local
+			with api key header name X-Secret
+		}
 	}
 }
 
@@ -147,6 +155,26 @@ auth.myfiosgateway.com:8443 {
 		X-Frame-Options DENY
 	}
 
+	# Vite Development Server
+	route /todo-dev/profile* {
+		reverse_proxy http://127.0.0.1:3000
+	}
+
+	# Appplication files
+	route /todo-prod/profile* {
+		authorize with mypolicy
+		uri strip_prefix /auth/profile
+		file_server {
+			root {$HOME}/dev/src/github.com/authcrunch/authcrunch-ui/frontend/profile/build/
+			pass_thru
+		}
+		rewrite * /index.html
+		file_server {
+			root {$HOME}/dev/src/github.com/authcrunch/authcrunch-ui/frontend/profile/build/
+			pass_thru
+		}
+	}
+
 	route /auth* {
 		authenticate with myportal
 	}
@@ -165,6 +193,11 @@ go.myfiosgateway.com:8443 {
 		authorize with mypolicy
 		respond * "1.0.0 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
 		#respond * "1.0.0" 200
+	}
+
+	route /api/* {
+		authorize with api_access_policy
+		respond * "api access granted to {http.auth.user.id} in {http.auth.user.realm}" 200
 	}
 
 	route /app* {

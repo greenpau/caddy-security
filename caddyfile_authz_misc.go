@@ -108,11 +108,14 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 			p.AddRawIdpConfig(cfgutil.EncodeArgs(args))
 		case strings.HasPrefix(v, "api key auth"):
 			p.AddRawIdpConfig(cfgutil.EncodeArgs(args))
+		case strings.HasPrefix(v, "api key header name ") && len(args) == 5:
+			p.SetAPIKeyHeaderName(args[4])
 		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
 		default:
 			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
 		}
 	}
+
 	return nil
 }
