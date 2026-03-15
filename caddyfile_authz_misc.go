@@ -110,6 +110,8 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 			p.AddRawIdpConfig(cfgutil.EncodeArgs(args))
 		case strings.HasPrefix(v, "api key header name ") && len(args) == 5:
 			p.SetAPIKeyHeaderName(args[4])
+		case strings.HasPrefix(v, "auth realm header name ") && len(args) == 5:
+			p.SetAuthRealmHeaderName(args[4])
 		case v == "":
 			return h.Errf("%s directive has no value", rootDirective)
 		default:
