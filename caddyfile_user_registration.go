@@ -15,32 +15,34 @@
 package security
 
 import (
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
-	"strings"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 // parseCaddyfileIdentityProvider parses identity provider configuration.
 //
 // Syntax:
 //
-//   user registration <name> {
-//     title <name>
-//     code <name>
-//     dropbox <path>
-//     require accept terms
-//     require domain mx
-//     email provider <name>
-//     admin email <email_address_1> <<email_address_N>
-//     identity store <name>
-//     link terms <url>
-//     link privacy <url>
-//   }
-//
+//	user registration <name> {
+//	  title <name>
+//	  code <name>
+//	  dropbox <path>
+//	  require accept terms
+//	  require domain mx
+//	  email provider <name>
+//	  admin email <email_address_1> <<email_address_N>
+//	  identity store <name>
+//	  link terms <url>
+//	  link privacy <url>
+//	  <allow|deny> [exact|partial|prefix|suffix|regex] domain <string>
+//	}
 func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, name string) error {
 	var disabled bool
 
@@ -123,6 +125,8 @@ func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, repl *caddy.Replacer
 			default:
 				return d.Errf("%s directive %q contains unsupported value", rd, args)
 			}
+		case "allow", "deny":
+			r.DomainRestrictions = append(r.DomainRestrictions, k+" "+cfgutil.EncodeArgs(args))
 		default:
 			return errors.ErrMalformedDirective.WithArgs(rd, args)
 		}

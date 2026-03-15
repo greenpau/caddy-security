@@ -48,6 +48,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 				  {
                     "auth_url_path": "/auth",
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
                     "name": "mypolicy",
@@ -106,6 +107,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 					"disable_auth_redirect": true,
 					"disable_auth_redirect_query": true,
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
 					"auth_redirect_query_param": "return_path_url",
 					"auth_redirect_status_code": 302,
 					"access_list_rules": [
@@ -188,6 +190,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                     "name": "mypolicy2",
                     "auth_url_path": "/auth",
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
 			        "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
                     "redirect_with_javascript": true,
@@ -258,6 +261,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                     "name": "mypolicy",
 					"auth_url_path": "/auth",
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
                     "access_list_rules": [
@@ -307,6 +311,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
                     "access_list_rules": [
@@ -340,6 +345,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
 					"login_hint_validators": ["email", "phone", "alphanumeric"],
@@ -372,6 +378,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                     "name": "mypolicy",
                     "auth_url_path": "/auth",
 					"api_key_header_name": "X-Api-Key",
+					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
 					"login_hint_validators": ["email", "phone"],

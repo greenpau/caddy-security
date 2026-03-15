@@ -69,8 +69,49 @@
 			}
 		}
 
+
+		# local identity store userpool1 {
+		# 	realm userpool1.localdomain
+		# 	path assets/config/userpool1.json
+		# 	icon "USERPOOL1" "las la-shield-alt la-2x" "white" "#fc6d26" priority 90
+		# 	user webadmin {
+		# 		name Webmaster
+		# 		email webadmin@localhost.localdomain
+		# 		password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
+		# 		roles "authp/admin" "authp/user"
+		# 	}
+		# 	user jsmith {
+		# 		name John Smith
+		# 		email jsmith@localhost.localdomain
+		# 		password "My@Password123"
+		# 		roles "authp/user" "dash"
+		# 		# apikey: FDWgq9cSwD6lF1d6djazgSxyh6cDRFfkBobyp5bWIkbRvCWt03oXauCSz8pa1sJsAO8txytf
+		# 		api key FDWgq9cSwD6lF1d6djazgSxy "bcrypt:10:$2a$10$UQNdEmDD0zhg1crmy9EoEeXyxfPzVf31y8Dvig8rCceHj0xW1W7nC"
+		# 	}
+		# }
+
+		# local identity store userpool2 {
+		# 	realm userpool2.localdomain
+		# 	icon "USERPOOL2" "las la-shield-alt la-2x" "white" "#fc6d26" priority 80
+		# 	path assets/config/userpool2.json
+		# 	user webadmin {
+		# 		name Webmaster
+		# 		email webadmin@localhost.localdomain
+		# 		password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
+		# 		roles "authp/admin" "authp/user"
+		# 	}
+		# 	user mstone {
+		# 		name Mia Stone
+		# 		email mstone@localhost.localdomain
+		# 		password "My@Password123"
+		# 		roles "authp/user" "dash"
+		# 		# apikey: IP8PjcP4sKRS50CVuIYHN5ylNaKoJHCwtg3eklq67uk0dX9OQoylCWnBcKFqpTD5u2cFyARr
+		# 		api key IP8PjcP4sKRS50CVuIYHN5yl "bcrypt:10:$2a$10$.DFyI5DxFeuQUWoTFNQIiOAG5Pf8DuzrClFA7qSTg5azL44mtaSRa"
+		# 	}
+		# }
+
 		user registration localdbRegistry {
-			dropbox assets/config/registrations.json
+			dropbox assets/config/registrations_local.json
 			title "User Registration"
 			code "NY2020"
 			require accept terms
@@ -78,7 +119,20 @@
 			email provider localhost-smtp-server
 			admin email admin@localhost
 			identity store localdb
+			# allow domain outlook.com
 		}
+
+		# user registration userpool1dbRegistry {
+		# 	dropbox assets/config/registrations_userpool1.json
+		# 	title "User Registration"
+		# 	code "NY2020"
+		# 	require accept terms
+		# 	require domain mx
+		# 	email provider localhost-smtp-server
+		# 	admin email admin@localhost
+		# 	identity store userpool1
+		# 	# allow domain outlook.com
+		# }
 
 		authentication portal myportal {
 			crypto default token lifetime 3600
@@ -110,6 +164,8 @@
 			}
 			enable identity provider github
 			enable identity provider linkedin
+			# enable identity store userpool1
+			# enable identity store userpool2
 		}
 
 		authorization policy mypolicy {
@@ -122,7 +178,10 @@
 			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
 			allow roles authp/admin authp/user
 			with api key auth portal myportal realm local
-			with api key header name X-Secret
+			# with api key header name X-Secret
+			# with basic auth portal myportal realm userpool1.localdomain
+			# with basic auth portal myportal realm userpool2.localdomain
+			# with auth realm header name X-My-Auth-Realm
 		}
 	}
 }
