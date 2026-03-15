@@ -76,7 +76,7 @@ replace github.com/greenpau/go-authcrunch v1.1.24 => /Users/greenpau/dev/src/git
 Alternatively:
 
 ```bash
-go mod edit -replace github.com/greenpau/go-authcrunch@v1.1.24=/home/greenpau/dev/src/github.com/greenpau/go-authcrunch@v1.0.48
+go mod edit -replace github.com/greenpau/go-authcrunch@v1.1.24=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 ```
 
 Then, modify `Makefile` such that that replacement passes to `xcaddy` builder:
