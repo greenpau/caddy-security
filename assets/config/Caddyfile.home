@@ -110,6 +110,30 @@
 		# 	}
 		# }
 
+		ldap identity store example.com {
+			realm example.com
+			servers {
+				ldap://ldap.forumsys.com posix_groups
+			}
+			attributes {
+				name cn
+				surname foo
+				username uid
+				member_of uniqueMember
+				email mail
+			}
+			username "cn=read-only-admin,dc=example,dc=com"
+			password "password"
+			search_base_dn "DC=EXAMPLE,DC=COM"
+			search_filter "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))"
+			# groups {
+			# 	"ou=mathematicians,dc=example,dc=com" authp/admin
+			# 	"ou=scientists,dc=example,dc=com" authp/user
+			# }
+			enable short automatic group mapping
+			enable full automatic group mapping
+		}
+
 		user registration localdbRegistry {
 			dropbox assets/config/registrations_local.json
 			title "User Registration"
@@ -162,10 +186,17 @@
 				match realm github
 				action add role authp/user
 			}
+
+			transform user {
+				match realm example.com
+				action add role authp/user
+			}
+
 			enable identity provider github
 			enable identity provider linkedin
 			# enable identity store userpool1
 			# enable identity store userpool2
+			enable identity store example.com
 		}
 
 		authorization policy mypolicy {

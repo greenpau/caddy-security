@@ -53,6 +53,7 @@ import (
 //
 //	  fallback role <role_name> [<role_name>]
 //	  icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
+//	  enable <short|full> automatic group mapping
 //	}
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
@@ -227,6 +228,8 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 			case "username_recovery":
 			case "password_recovery":
 			case "contact_support":
+			case "full_automatic_group_mapping":
+			case "short_automatic_group_mapping":
 			default:
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")
 			}

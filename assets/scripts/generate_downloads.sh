@@ -16,7 +16,7 @@ P2="github.com/greenpau/caddy-trace"
 
 V1="v"`cat VERSION`
 # V2=`cat go.mod | grep "${P2}" | grep -v replace | cut -f2 | cut -d" " -f2`
-V2="v1.1.8"
+V2="v1.1.13"
 P1=$(echo ${P1} | sed 's/\//%2F/g')
 P2=$(echo ${P2} | sed 's/\//%2F/g')
 
