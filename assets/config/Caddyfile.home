@@ -33,6 +33,7 @@
 			client_id {env.GITHUB_APP_CLIENT_ID}
 			client_secret {env.GITHUB_APP_CLIENT_SECRET}
 			icon github priority 100
+			enable id token cookie id_token
 		}
 
 		oauth identity provider linkedin {
@@ -41,6 +42,7 @@
 			client_id {env.LINKEDIN_APP_CLIENT_ID}
 			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
 			icon linkedin priority 200
+			enable id token cookie id_token
 		}
 
 		local identity store localdb {
@@ -110,29 +112,29 @@
 		# 	}
 		# }
 
-		ldap identity store example.com {
-			realm example.com
-			servers {
-				ldap://ldap.forumsys.com posix_groups
-			}
-			attributes {
-				name cn
-				surname foo
-				username uid
-				member_of uniqueMember
-				email mail
-			}
-			username "cn=read-only-admin,dc=example,dc=com"
-			password "password"
-			search_base_dn "DC=EXAMPLE,DC=COM"
-			search_filter "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))"
-			# groups {
-			# 	"ou=mathematicians,dc=example,dc=com" authp/admin
-			# 	"ou=scientists,dc=example,dc=com" authp/user
-			# }
-			enable short automatic group mapping
-			enable full automatic group mapping
-		}
+		# ldap identity store example.com {
+		# 	realm example.com
+		# 	servers {
+		# 		ldap://ldap.forumsys.com posix_groups
+		# 	}
+		# 	attributes {
+		# 		name cn
+		# 		surname foo
+		# 		username uid
+		# 		member_of uniqueMember
+		# 		email mail
+		# 	}
+		# 	username "cn=read-only-admin,dc=example,dc=com"
+		# 	password "password"
+		# 	search_base_dn "DC=EXAMPLE,DC=COM"
+		# 	search_filter "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))"
+		# 	# groups {
+		# 	# 	"ou=mathematicians,dc=example,dc=com" authp/admin
+		# 	# 	"ou=scientists,dc=example,dc=com" authp/user
+		# 	# }
+		# 	enable short automatic group mapping
+		# 	enable full automatic group mapping
+		# }
 
 		user registration localdbRegistry {
 			dropbox assets/config/registrations_local.json
@@ -187,16 +189,16 @@
 				action add role authp/user
 			}
 
-			transform user {
-				match realm example.com
-				action add role authp/user
-			}
+			# transform user {
+			# 	match realm example.com
+			# 	action add role authp/user
+			# }
 
 			enable identity provider github
 			enable identity provider linkedin
 			# enable identity store userpool1
 			# enable identity store userpool2
-			enable identity store example.com
+			# enable identity store example.com
 		}
 
 		authorization policy mypolicy {
@@ -258,7 +260,9 @@ auth.myfiosgateway.com:8443 {
 			root {$HOME}/dev/src/github.com/authcrunch/authcrunch-ui/frontend/profile/build/
 			pass_thru
 		}
+
 		rewrite * /index.html
+
 		file_server {
 			root {$HOME}/dev/src/github.com/authcrunch/authcrunch-ui/frontend/profile/build/
 			pass_thru
