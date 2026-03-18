@@ -1,5 +1,10 @@
 # Contributing Guidelines
 
+## AI Generated Content
+
+> AI generated content is **NOT ALLOWED**, unless it was rewritten by a human who
+> checked every line!
+
 ## Contributor License Agreements
 
 I'd love to accept your pull request! Before I can take them, we have to jump a
