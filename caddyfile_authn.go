@@ -57,6 +57,7 @@ const (
 //	    cookie lifetime <seconds>
 //	    cookie samesite <lax|strict|none>
 //	    cookie insecure <on|off>
+//	    set <session_id|redirect_url|sandbox_id|id_token|access_token|refresh_token> cookie name <name>
 //
 //	    validate source address
 //
@@ -115,7 +116,7 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 				if err := parseCaddyfileAuthPortalTransform(d, repl, p, rootDirective, v); err != nil {
 					return err
 				}
-			case "enable", "validate", "trust":
+			case "enable", "validate", "trust", "set":
 				if err := parseCaddyfileAuthPortalMisc(d, repl, p, rootDirective, k, v); err != nil {
 					return err
 				}

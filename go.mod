@@ -7,7 +7,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.1.25
+	github.com/greenpau/go-authcrunch v1.1.26
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/zap v1.27.1
 )
@@ -107,7 +107,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/russellhaering/goxmldsig v1.5.0 // indirect
+	github.com/russellhaering/goxmldsig v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect

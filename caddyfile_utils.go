@@ -28,13 +28,6 @@ func hasMatchTypeKeywords(s string) bool {
 	return hasWord(s, keywords)
 }
 
-func lastArrayElement(args []string, argp int) bool {
-	if (len(args) - 1) == argp {
-		return true
-	}
-	return false
-}
-
 func arrayElementExists(args []string, argp int) bool {
 	if len(args) > argp {
 		return true

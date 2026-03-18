@@ -33,7 +33,6 @@
 			client_id {env.GITHUB_APP_CLIENT_ID}
 			client_secret {env.GITHUB_APP_CLIENT_SECRET}
 			icon github priority 100
-			enable id token cookie id_token
 		}
 
 		oauth identity provider linkedin {
@@ -42,7 +41,8 @@
 			client_id {env.LINKEDIN_APP_CLIENT_ID}
 			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
 			icon linkedin priority 200
-			enable id token cookie id_token
+			# enable id token cookie id_token CONTOSO_ID_TOKEN
+			enable id token cookie
 		}
 
 		local identity store localdb {
@@ -166,6 +166,12 @@
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
 			cookie guess domain
+			# set session_id cookie name CONTOSO_SESSION_ID
+			# set redirect_url cookie name CONTOSO_REDIRECT_URL
+			# set sandbox_id cookie name CONTOSO_SANDBOX_ID
+			# set id_token cookie name CONTOSO_ID_TOKEN
+			# set access_token cookie name CONTOSO_ACCESS_TOKEN
+			# set refresh_token cookie name CONTOSO_REFRESH_TOKEN
 			ui {
 				#language fr
 				#language zh
@@ -180,12 +186,17 @@
 				action add role authp/user
 				ui link "User Profile" /auth/profile/ icon "las la-cog"
 			}
-			trust logout redirect uri domain prefix google path suffix /
-			trust login redirect uri domain exact google.com path suffix /
+			trust logout redirect uri domain partial myfiosgateway.com path suffix /
+			trust login redirect uri domain partial myfiosgateway.com path suffix /
 			enable admin api
 
 			transform user {
 				match realm github
+				action add role authp/user
+			}
+
+			transform user {
+				match realm linkedin
 				action add role authp/user
 			}
 
@@ -202,9 +213,11 @@
 		}
 
 		authorization policy mypolicy {
-			set auth url /auth/
+			set auth url https://auth.myfiosgateway.com:8443/auth/?redirect_url=https://go.myfiosgateway.com:8443/app/
 			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
 			allow roles authp/admin authp/user
+			# set session_id cookie name CONTOSO_SESSION_ID
+			# set access_token cookie name CONTOSO_ACCESS_TOKEN
 		}
 
 		authorization policy api_access_policy {
@@ -215,6 +228,7 @@
 			# with basic auth portal myportal realm userpool1.localdomain
 			# with basic auth portal myportal realm userpool2.localdomain
 			# with auth realm header name X-My-Auth-Realm
+			# set session_id cookie name CONTOSO_SESSION_ID
 		}
 	}
 }

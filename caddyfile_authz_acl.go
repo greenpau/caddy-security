@@ -15,15 +15,16 @@
 package security
 
 import (
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strings"
 )
 
-func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, repl *caddy.Replacer, p *authz.PolicyConfig, rootDirective string, args []string) error {
+func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, _ *caddy.Replacer, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)
 	}

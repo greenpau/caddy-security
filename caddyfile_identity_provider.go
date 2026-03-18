@@ -102,7 +102,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 		case "realm", "driver", "tenant_id",
 			// OAuth
 			"domain_name", "client_id", "client_secret", "server_id", "base_auth_url",
-			"metadata_url", "identity_token_name", "authorization_url", "token_url",
+			"metadata_url", "identity_token_field_name", "authorization_url", "token_url",
 			"logout_url",
 			"region", "user_pool_id", "user_info_roles_field_name",
 			// SAML
@@ -168,8 +168,15 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 				m[v+"_enabled"] = true
 			case strings.HasPrefix(v, "id_token_cookie"):
 				m["identity_token_cookie_enabled"] = true
-				if !strings.HasSuffix(v, "id_token_cookie") {
-					m["identity_token_cookie_name"] = args[len(args)-1]
+				switch {
+				case len(args) == 3:
+				case len(args) == 4:
+					m["identity_token_field_name"] = args[3]
+				case len(args) == 5:
+					m["identity_token_field_name"] = args[3]
+					m["identity_token_cookie_name"] = args[4]
+				default:
+					return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "missing args")
 				}
 			default:
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported value")

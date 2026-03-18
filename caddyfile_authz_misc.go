@@ -24,7 +24,7 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replacer, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
+func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, _ *caddy.Replacer, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
 	v := strings.Join(args, " ")
 	v = strings.TrimSpace(v)
 	switch k {
@@ -78,6 +78,18 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 		}
 	case "set":
 		switch {
+		case strings.Contains(v, "cookie name") && len(args) >= 4:
+			if args[3] == "" {
+				return h.Errf("%s directive %s has empty name", rootDirective, v)
+			}
+			switch args[0] {
+			case "session_id":
+				p.SessionIDCookieName = args[3]
+			case "access_token":
+				p.AccessTokenCookieNames = args[3:]
+			default:
+				return h.Errf("%s directive %s has unsupported %s name", rootDirective, v, args[0])
+			}
 		case strings.HasPrefix(v, "token sources "):
 			p.AllowedTokenSources = strings.Split(strings.TrimPrefix(v, "token sources "), " ")
 		case strings.HasPrefix(v, "auth url "):
@@ -118,6 +130,5 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, repl *caddy.Replace
 			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
 		}
 	}
-
 	return nil
 }

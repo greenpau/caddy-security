@@ -22,7 +22,7 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func parseCaddyfileAuthorizationBypass(h *caddyfile.Dispenser, repl *caddy.Replacer, p *authz.PolicyConfig, rootDirective string, args []string) error {
+func parseCaddyfileAuthorizationBypass(h *caddyfile.Dispenser, _ *caddy.Replacer, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)
 	}
