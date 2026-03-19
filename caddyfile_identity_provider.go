@@ -18,9 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -68,7 +66,7 @@ import (
 //	  realm <name>
 //	  driver <name>
 //	}
-func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
+func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 
 	m := make(map[string]interface{})
@@ -94,7 +92,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, repl *caddy.Replacer
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
-		args := util.FindReplaceAll(repl, d.RemainingArgs())
+		args := d.RemainingArgs()
 		rd := mkcp("security."+kind+".identity.provider["+name+"]", k)
 		switch k {
 		case "disabled":

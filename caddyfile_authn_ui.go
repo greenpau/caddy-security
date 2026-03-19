@@ -15,22 +15,20 @@
 package security
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 )
 
-func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string) error {
+func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string) error {
 	for nesting := h.Nesting(); h.NextBlock(nesting); {
 		subDirective := h.Val()
 		switch subDirective {
 		case "template":
-			hargs := util.FindReplaceAll(repl, h.RemainingArgs())
+			hargs := h.RemainingArgs()
 			switch {
 			case len(hargs) == 2:
 				portal.UI.Templates[hargs[0]] = hargs[1]
@@ -49,7 +47,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 			}
 			portal.UI.Language = h.Val()
 		case "logo":
-			hargs := util.FindReplaceAll(repl, h.RemainingArgs())
+			hargs := h.RemainingArgs()
 			args := strings.Join(hargs, " ")
 			args = strings.TrimSpace(args)
 			switch {
@@ -63,7 +61,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				return h.Errf("%s directive %q is unsupported", rootDirective, args)
 			}
 		case "meta":
-			hargs := util.FindReplaceAll(repl, h.RemainingArgs())
+			hargs := h.RemainingArgs()
 			args := strings.Join(hargs, " ")
 			args = strings.TrimSpace(args)
 			switch {
@@ -82,11 +80,11 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 			if !h.NextArg() {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
 			}
-			portal.UI.AutoRedirectURL = util.FindReplace(repl, h.Val())
+			portal.UI.AutoRedirectURL = h.Val()
 		case "links":
 			for subNesting := h.Nesting(); h.NextBlock(subNesting); {
 				title := h.Val()
-				args := util.FindReplaceAll(repl, h.RemainingArgs())
+				args := h.RemainingArgs()
 				if len(args) == 0 {
 					return h.Errf("auth backend %s subdirective %s has no value", subDirective, title)
 				}
@@ -124,7 +122,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				portal.UI.PrivateLinks = append(portal.UI.PrivateLinks, privateLink)
 			}
 		case "custom":
-			args := strings.Join(util.FindReplaceAll(repl, h.RemainingArgs()), " ")
+			args := strings.Join(h.RemainingArgs(), " ")
 			args = strings.TrimSpace(args)
 			switch {
 			case strings.HasPrefix(args, "css path"):
@@ -137,7 +135,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				portal.UI.CustomJsPath = strings.ReplaceAll(args, "js ", "")
 			case strings.HasPrefix(args, "html header path"):
 				args = strings.ReplaceAll(args, "html header path ", "")
-				b, err := ioutil.ReadFile(args)
+				b, err := os.ReadFile(args)
 				if err != nil {
 					return h.Errf("%s %s subdirective: %s %v", rootDirective, subDirective, args, err)
 				}
@@ -159,7 +157,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				return h.Errf("%s directive %q is unsupported", rootDirective, args)
 			}
 		case "static_asset":
-			args := util.FindReplaceAll(repl, h.RemainingArgs())
+			args := h.RemainingArgs()
 			if len(args) != 3 {
 				return h.Errf("auth backend %s subdirective %s is malformed", rootDirective, subDirective)
 			}
@@ -175,7 +173,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, repl *caddy.Replacer, po
 				return h.Errf("auth backend %s subdirective %s failed: %s", rootDirective, subDirective, err)
 			}
 		case "disable":
-			args := util.FindReplaceAll(repl, h.RemainingArgs())
+			args := h.RemainingArgs()
 			if err := portal.UI.DisablePage(args); err != nil {
 				return h.Errf("auth backend %s subdirective %s is malformed: %v", rootDirective, subDirective, err)
 			}

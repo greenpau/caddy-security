@@ -15,9 +15,7 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
@@ -31,25 +29,24 @@ const (
 //
 // Syntax:
 //
-//   messaging email provider <name> {
-//     address <address>
-//     protocol smtp
-//     credentials <credential_name>
-//     sender <email_address> [name]
-//     template password_recovery <path>
-//     template registration_confirmation <path>
-//     template registration_ready <path>
-//     template registration_verdict <path>
-//     template mfa_otp <path>
-//     bcc <email_address_1> <email_address2>
-//   }
+//	messaging email provider <name> {
+//	  address <address>
+//	  protocol smtp
+//	  credentials <credential_name>
+//	  sender <email_address> [name]
+//	  template password_recovery <path>
+//	  template registration_confirmation <path>
+//	  template registration_ready <path>
+//	  template registration_verdict <path>
+//	  template mfa_otp <path>
+//	  bcc <email_address_1> <email_address2>
+//	}
 //
-//   messaging file provider <name> {
-//     rootdir <path>
-//   }
-//
-func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+//	messaging file provider <name> {
+//	  rootdir <path>
+//	}
+func parseCaddyfileMessaging(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+	args := d.RemainingArgs()
 	if len(args) != 3 {
 		return d.ArgErr()
 	}
@@ -64,7 +61,7 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
-			v := util.FindReplaceAll(repl, d.RemainingArgs())
+			v := d.RemainingArgs()
 			switch k {
 			case "address":
 				if len(v) != 1 {
@@ -116,7 +113,7 @@ func parseCaddyfileMessaging(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *
 		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
-			v := util.FindReplaceAll(repl, d.RemainingArgs())
+			v := d.RemainingArgs()
 			if len(v) != 1 {
 				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
 			}

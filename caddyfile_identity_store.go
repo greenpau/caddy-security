@@ -17,9 +17,7 @@ package security
 import (
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -55,7 +53,7 @@ import (
 //	  icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
 //	  enable <short|full> automatic group mapping
 //	}
-func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
+func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 	m := make(map[string]interface{})
 
@@ -76,7 +74,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
-		args := util.FindReplaceAll(repl, d.RemainingArgs())
+		args := d.RemainingArgs()
 		rd := mkcp("security.identity.store["+name+"]", k)
 		switch k {
 		case "disabled":
@@ -153,12 +151,12 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "must contain single value")
 			}
 			userMap := make(map[string]interface{})
-			username := util.FindReplace(repl, args[0])
+			username := args[0]
 			userMap["username"] = username
 			apiKeyList := []map[string]interface{}{}
 			for userNesting := d.Nesting(); d.NextBlock(userNesting); {
 				userPropName := d.Val()
-				userPropValue := util.FindReplaceAll(repl, d.RemainingArgs())
+				userPropValue := d.RemainingArgs()
 				switch userPropName {
 				case "email":
 					if len(userPropValue) != 1 {

@@ -17,13 +17,12 @@ package security
 import (
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
-func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, _ *caddy.Replacer, portal *authn.PortalConfig, rootDirective, k string, args []string) error {
+func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective, k string, args []string) error {
 	v := strings.Join(args, " ")
 	v = strings.TrimSpace(v)
 	switch k {

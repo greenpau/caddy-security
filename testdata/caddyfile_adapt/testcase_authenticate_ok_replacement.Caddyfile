@@ -1,0 +1,3 @@
+:8443 {
+	authenticate /auth* with {env.SECURITY_PORTAL_NAME}
+}

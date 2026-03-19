@@ -15,9 +15,7 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	//"github.com/greenpau/go-authcrunch/pkg/errors"
 	//"strconv"
@@ -28,22 +26,21 @@ import (
 //
 // Syntax:
 //
-//   sso provider <name> {
-//     disabled
-//     entity_id <name>
-//     driver [aws]
-//     private key <path/to/pem/file>
-//     location https://url1/
-//     location https://url2/
-//   }
-//
-func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
+//	sso provider <name> {
+//	  disabled
+//	  entity_id <name>
+//	  driver [aws]
+//	  private key <path/to/pem/file>
+//	  location https://url1/
+//	  location https://url2/
+//	}
+func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	var locations []string
 	var disabled bool
 
 	m := make(map[string]interface{})
 
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+	args := d.RemainingArgs()
 
 	if len(args) != 2 {
 		return d.Errf("malformed sso syntax: %v", args)
@@ -56,7 +53,7 @@ func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, repl *caddy.Repl
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
-		values := util.FindReplaceAll(repl, d.RemainingArgs())
+		values := d.RemainingArgs()
 		switch k {
 		case "disabled":
 			disabled = true

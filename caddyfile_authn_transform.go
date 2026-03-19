@@ -15,23 +15,22 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strings"
 )
 
-func parseCaddyfileAuthPortalTransform(h *caddyfile.Dispenser, repl *caddy.Replacer, portal *authn.PortalConfig, rootDirective string, rootArgs []string) error {
+func parseCaddyfileAuthPortalTransform(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string, rootArgs []string) error {
 	args := strings.Join(rootArgs, " ")
 	switch args {
 	case "user", "users":
 		tc := &transformer.Config{}
 		for nesting := h.Nesting(); h.NextBlock(nesting); {
-			trKey := util.FindReplace(repl, h.Val())
-			trArgs := util.FindReplaceAll(repl, h.RemainingArgs())
+			trKey := h.Val()
+			trArgs := h.RemainingArgs()
 			trArgs = append([]string{trKey}, trArgs...)
 			encodedArgs := cfgutil.EncodeArgs(trArgs)
 			var matchArgs bool

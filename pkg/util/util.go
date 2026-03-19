@@ -15,24 +15,36 @@
 package util
 
 import (
+	"errors"
+	"net/http"
+	"strings"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/google/uuid"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"net/http"
 )
 
 // FindReplaceAll uses caddy.Replacer to replace strings in a given slice.
-func FindReplaceAll(repl *caddy.Replacer, arr []string) (output []string) {
+func FindReplaceAll(repl *caddy.Replacer, arr []string) ([]string, error) {
+	var outputs []string
 	for _, item := range arr {
-		output = append(output, repl.ReplaceAll(item, cfg.ReplErrStr))
+		output, err := FindReplace(repl, item)
+		if err != nil {
+			return outputs, err
+		}
+		outputs = append(outputs, output)
 	}
-	return output
+	return outputs, nil
 }
 
 // FindReplace uses caddy.Replacer to replace strings in a given string.
-func FindReplace(repl *caddy.Replacer, s string) string {
-	return repl.ReplaceAll(s, cfg.ReplErrStr)
+func FindReplace(repl *caddy.Replacer, s string) (string, error) {
+	output := repl.ReplaceAll(s, cfg.ReplErrStr)
+	if strings.Contains(output, cfg.ReplErrStr) {
+		return "", errors.New("failed to perform replacement")
+	}
+	return output, nil
 }
 
 // GetRequestID returns HTTP request id.

@@ -15,14 +15,13 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func parseCaddyfileAuthorizationBypass(h *caddyfile.Dispenser, _ *caddy.Replacer, p *authz.PolicyConfig, rootDirective string, args []string) error {
+func parseCaddyfileAuthorizationBypass(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)
 	}

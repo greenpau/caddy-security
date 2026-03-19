@@ -15,10 +15,8 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 )
 
 const (
@@ -32,8 +30,8 @@ const (
 //	secrets <secrets_plugin_name> <secret_id> {
 //	  ...
 //	}
-func parseCaddyfileSecrets(d *caddyfile.Dispenser, repl *caddy.Replacer, app *App) error {
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+func parseCaddyfileSecrets(d *caddyfile.Dispenser, app *App) error {
+	args := d.RemainingArgs()
 	if len(args) != 2 {
 		return d.ArgErr()
 	}
@@ -45,8 +43,8 @@ func parseCaddyfileSecrets(d *caddyfile.Dispenser, repl *caddy.Replacer, app *Ap
 		return err
 	}
 
-	app.SecretsManagersRaw = append(
-		app.SecretsManagersRaw,
+	app.SecretsManagerConfigs = append(
+		app.SecretsManagerConfigs,
 		caddyconfig.JSONModuleObject(mod, "driver", modName, nil),
 	)
 

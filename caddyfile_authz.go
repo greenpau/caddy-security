@@ -15,9 +15,7 @@
 package security
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -27,16 +25,25 @@ const (
 	authzPrefix = "security.authorization"
 )
 
-// parseCaddyfileAuthorization parses authorization configuration.
+// parseCaddyfileAuthorization parses authorization policy configuration.
 //
 // Syntax:
 //
-//   authorization portal <name> {
-//   }
-//
-func parseCaddyfileAuthorization(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
+//		authorization policy <name> {
+//	   crypto
+//	   acl
+//	   <allow|deny>
+//	   bypass
+//	   enable
+//	   disable
+//	   validate
+//	   set
+//	   with
+//	   inject
+//		}
+func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	var rootDirective string
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+	args := d.RemainingArgs()
 	if len(args) != 2 {
 		return d.ArgErr()
 	}
@@ -48,32 +55,32 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, repl *caddy.Replacer, c
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
 			case "crypto":
-				v := util.FindReplaceAll(repl, d.RemainingArgs())
-				if err := parseCaddyfileAuthorizationCrypto(d, repl, p, rootDirective, v); err != nil {
+				v := d.RemainingArgs()
+				if err := parseCaddyfileAuthorizationCrypto(d, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "acl":
-				v := util.FindReplaceAll(repl, d.RemainingArgs())
-				if err := parseCaddyfileAuthorizationACL(d, repl, p, rootDirective, v); err != nil {
+				v := d.RemainingArgs()
+				if err := parseCaddyfileAuthorizationACL(d, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "allow", "deny":
-				v := util.FindReplaceAll(repl, d.RemainingArgs())
-				if err := parseCaddyfileAuthorizationACLShortcuts(d, repl, p, rootDirective, k, v); err != nil {
+				v := d.RemainingArgs()
+				if err := parseCaddyfileAuthorizationACLShortcuts(d, p, rootDirective, k, v); err != nil {
 					return err
 				}
 			case "bypass":
-				v := util.FindReplaceAll(repl, d.RemainingArgs())
-				if err := parseCaddyfileAuthorizationBypass(d, repl, p, rootDirective, v); err != nil {
+				v := d.RemainingArgs()
+				if err := parseCaddyfileAuthorizationBypass(d, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "enable", "disable", "validate", "set", "with":
-				if err := parseCaddyfileAuthorizationMisc(d, repl, p, rootDirective, k, d.RemainingArgs()); err != nil {
+				if err := parseCaddyfileAuthorizationMisc(d, p, rootDirective, k, d.RemainingArgs()); err != nil {
 					return err
 				}
 			case "inject":
-				v := util.FindReplaceAll(repl, d.RemainingArgs())
-				if err := parseCaddyfileAuthorizationHeaderInjection(d, repl, p, rootDirective, v); err != nil {
+				v := d.RemainingArgs()
+				if err := parseCaddyfileAuthorizationHeaderInjection(d, p, rootDirective, v); err != nil {
 					return err
 				}
 			default:

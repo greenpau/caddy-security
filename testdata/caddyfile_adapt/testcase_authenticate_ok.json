@@ -8,6 +8,19 @@
 					],
 					"routes": [
 						{
+							"handle": [
+								{
+									"handler": "static_response",
+									"headers": {
+										"Location": [
+											"https://{http.request.hostport}/auth/"
+										]
+									},
+									"status_code": 302
+								}
+							]
+						},
+						{
 							"match": [
 								{
 									"path": [
@@ -22,25 +35,9 @@
 										{
 											"handle": [
 												{
-													"handler": "subroute",
-													"routes": [
-														{
-															"handle": [
-																{
-																	"handler": "authenticator",
-																	"portal_name": "myportal",
-																	"route_matcher": "*"
-																}
-															]
-														}
-													]
-												}
-											],
-											"match": [
-												{
-													"path": [
-														"*"
-													]
+													"handler": "authenticator",
+													"portal_name": "myportal",
+													"route_matcher": "*"
 												}
 											]
 										}

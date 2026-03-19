@@ -17,14 +17,13 @@ package security
 import (
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func parseCaddyfileAuthorizationACLShortcuts(h *caddyfile.Dispenser, _ *caddy.Replacer, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
+func parseCaddyfileAuthorizationACLShortcuts(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)
 	}

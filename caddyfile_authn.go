@@ -15,12 +15,9 @@
 package security
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -71,11 +68,10 @@ const (
 //		trust [login|logout] redirect uri domain [exact|partial|prefix|suffix|regex] <domain_name> path [exact|partial|prefix|suffix|regex] <path>
 //
 //	}
-func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, cfg *authcrunch.Config) error {
+func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	// rootDirective is config key prefix.
 	var rootDirective string
-	backendHelpURL := "https://github.com/greenpau/caddy-security/issues/83"
-	args := util.FindReplaceAll(repl, d.RemainingArgs())
+	args := d.RemainingArgs()
 	if len(args) != 2 {
 		return d.ArgErr()
 	}
@@ -95,29 +91,27 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, repl *caddy.Replacer, 
 		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
-			v := util.FindReplaceAll(repl, d.RemainingArgs())
+			v := d.RemainingArgs()
 			rootDirective = mkcp(authnPrefix, args[0], k)
 			switch k {
 			case "crypto":
-				if err := parseCaddyfileAuthPortalCrypto(d, repl, p, rootDirective, v); err != nil {
+				if err := parseCaddyfileAuthPortalCrypto(d, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "cookie":
-				if err := parseCaddyfileAuthPortalCookie(d, p, rootDirective, util.FindReplaceAll(repl, v)); err != nil {
+				if err := parseCaddyfileAuthPortalCookie(d, p, rootDirective, v); err != nil {
 					return err
 				}
-			case "backend", "backends":
-				return fmt.Errorf("The backend directive is no longer supported. Please see %s for details", backendHelpURL)
 			case "ui":
-				if err := parseCaddyfileAuthPortalUI(d, repl, p, rootDirective); err != nil {
+				if err := parseCaddyfileAuthPortalUI(d, p, rootDirective); err != nil {
 					return err
 				}
 			case "transform":
-				if err := parseCaddyfileAuthPortalTransform(d, repl, p, rootDirective, v); err != nil {
+				if err := parseCaddyfileAuthPortalTransform(d, p, rootDirective, v); err != nil {
 					return err
 				}
 			case "enable", "validate", "trust", "set":
-				if err := parseCaddyfileAuthPortalMisc(d, repl, p, rootDirective, k, v); err != nil {
+				if err := parseCaddyfileAuthPortalMisc(d, p, rootDirective, k, v); err != nil {
 					return err
 				}
 			default:

@@ -2,4 +2,6 @@
 	route /auth* {
 		authenticate with myportal
 	}
+
+	redir https://{hostport}/auth/ 302
 }

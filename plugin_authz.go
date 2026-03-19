@@ -20,8 +20,10 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/caddyauth"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -36,6 +38,7 @@ const (
 
 func init() {
 	caddy.RegisterModule(AuthzMiddleware{})
+	httpcaddyfile.RegisterHandlerDirective("authorize", parseAuthzCaddyfile)
 	httpcaddyfile.RegisterDirectiveOrder("authorize", httpcaddyfile.Before, "basicauth")
 }
 
@@ -70,6 +73,13 @@ func (m *AuthzMiddleware) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("security app config is nil")
 	}
 
+	repl := caddy.NewReplacer()
+	if v, err := util.FindReplace(repl, m.GatekeeperName); err == nil {
+		m.GatekeeperName = v
+	} else {
+		return fmt.Errorf("%s config is malformed: %v", authzPluginName, err)
+	}
+
 	gatekeeper, err := app.getGatekeeper(m.GatekeeperName)
 	if err != nil {
 		return fmt.Errorf("security app erred with %q authorization policy: %v", m.GatekeeperName, err)
@@ -80,13 +90,24 @@ func (m *AuthzMiddleware) Provision(ctx caddy.Context) error {
 }
 
 // UnmarshalCaddyfile unmarshals caddyfile.
-func (m *AuthzMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) (err error) {
-	cfg, err := parseAuthzPluginCaddyfile(httpcaddyfile.Helper{Dispenser: d})
-	if err != nil {
-		return err
+func (m *AuthzMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	args := d.RemainingArgs()
+	switch len(args) {
+	case 3:
+		m.RouteMatcher = "*"
+		if args[1] != "with" {
+			return d.Errf("directive must contain %q keyword: %s", "with", strings.Join(args, " "))
+		}
+		m.GatekeeperName = args[2]
+	case 4:
+		if args[2] != "with" {
+			return d.Errf("directive must contain %q keyword: %s", "with", strings.Join(args, " "))
+		}
+		m.RouteMatcher = args[1]
+		m.GatekeeperName = args[3]
+	default:
+		return d.Errf("malformed directive: %s", strings.Join(args, " "))
 	}
-	m.RouteMatcher = cfg["path"]
-	m.GatekeeperName = cfg["gatekeeper_name"]
 	return nil
 }
 
@@ -159,6 +180,18 @@ func getAuthorizationDetails(r *http.Request, ar *requests.AuthorizationRequest)
 		}
 	}
 	return strings.Join(details, ", ")
+}
+
+func parseAuthzCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	m := &AuthzMiddleware{}
+	if err := m.UnmarshalCaddyfile(h.Dispenser); err != nil {
+		return nil, err
+	}
+	return caddyauth.Authentication{
+		ProvidersRaw: caddy.ModuleMap{
+			authzPluginName: caddyconfig.JSON(m, nil),
+		},
+	}, nil
 }
 
 // Interface guards

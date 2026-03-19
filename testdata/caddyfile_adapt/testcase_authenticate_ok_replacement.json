@@ -1,0 +1,31 @@
+{
+    "apps": {
+        "http": {
+            "servers": {
+                "srv0": {
+                    "listen": [
+                        ":8443"
+                    ],
+                    "routes": [
+                        {
+                            "match": [
+                                {
+                                    "path": [
+                                        "/auth*"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "authenticator",
+                                    "portal_name": "{env.SECURITY_PORTAL_NAME}",
+                                    "route_matcher": "*"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

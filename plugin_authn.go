@@ -17,6 +17,7 @@ package security
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -27,12 +28,9 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
-const (
-	authnPluginName = "authenticator"
-)
-
 func init() {
 	caddy.RegisterModule(AuthnMiddleware{})
+	httpcaddyfile.RegisterHandlerDirective("authenticate", parseAuthnCaddyfile)
 	httpcaddyfile.RegisterDirectiveOrder("authenticate", httpcaddyfile.Before, "respond")
 }
 
@@ -67,6 +65,13 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("security app config is nil")
 	}
 
+	repl := caddy.NewReplacer()
+	if v, err := util.FindReplace(repl, m.PortalName); err == nil {
+		m.PortalName = v
+	} else {
+		return fmt.Errorf("authenticator config is malformed: %v", err)
+	}
+
 	portal, err := app.getPortal(m.PortalName)
 	if err != nil {
 		return fmt.Errorf("security app erred with %q authentication portal: %v", m.PortalName, err)
@@ -77,13 +82,24 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 }
 
 // UnmarshalCaddyfile unmarshals a caddyfile.
-func (m *AuthnMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) (err error) {
-	cfg, err := parseAuthnPluginCaddyfile(httpcaddyfile.Helper{Dispenser: d})
-	if err != nil {
-		return err
+func (m *AuthnMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	args := d.RemainingArgs()
+	switch len(args) {
+	case 3:
+		m.RouteMatcher = "*"
+		if args[1] != "with" {
+			return d.Errf("directive must contain %q keyword: %s", "with", strings.Join(args, " "))
+		}
+		m.PortalName = args[2]
+	case 4:
+		if args[2] != "with" {
+			return d.Errf("directive must contain %q keyword: %s", "with", strings.Join(args, " "))
+		}
+		m.RouteMatcher = args[1]
+		m.PortalName = args[3]
+	default:
+		return d.Errf("malformed directive: %s", strings.Join(args, " "))
 	}
-	m.RouteMatcher = cfg["path"]
-	m.PortalName = cfg["portal_name"]
 	return nil
 }
 
@@ -107,6 +123,14 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
 	return m.portal.ServeHTTP(r.Context(), w, r, rr)
+}
+
+func parseAuthnCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	m := &AuthnMiddleware{}
+	if err := m.UnmarshalCaddyfile(h.Dispenser); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // Interface guards

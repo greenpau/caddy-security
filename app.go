@@ -49,8 +49,8 @@ type App struct {
 	Name   string             `json:"-"`
 	Config *authcrunch.Config `json:"config,omitempty"`
 
-	SecretsManagersRaw []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
-	secretsManagers    []SecretsManager
+	SecretsManagerConfigs []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
+	secretsManagers       []SecretsManager
 
 	server *authcrunch.Server
 	logger *zap.Logger
@@ -74,7 +74,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 		zap.String("app", app.Name),
 	)
 
-	secretsManagerMods, err := ctx.LoadModule(app, "SecretsManagersRaw")
+	secretsManagerConfigs, err := ctx.LoadModule(app, "SecretsManagerConfigs")
 	if err != nil {
 		app.logger.Error(
 			"app failed loading secrets manager plugins",
@@ -84,8 +84,17 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 
-	for _, mod := range secretsManagerMods.([]any) {
-		app.secretsManagers = append(app.secretsManagers, mod.(SecretsManager))
+	for _, conf := range secretsManagerConfigs.([]any) {
+		app.secretsManagers = append(app.secretsManagers, conf.(SecretsManager))
+	}
+
+	if err := app.Config.Validate(); err != nil {
+		app.logger.Error(
+			"app failed validating config",
+			zap.String("app_name", app.Name),
+			zap.Error(err),
+		)
+		return err
 	}
 
 	server, err := authcrunch.NewServer(app.Config, app.logger)
@@ -97,6 +106,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 		)
 		return err
 	}
+
 	app.server = server
 
 	app.logger.Info(

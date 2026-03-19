@@ -12,6 +12,16 @@
 	# order trace before respond
 
 	security {
+		secrets static_secrets_manager access_token {
+			shared_secret b006d65b-c923-46a1-8da1-7d52558508fe
+		}
+
+		secrets static_secrets_manager users/jsmith {
+			name "John Smith"
+			email "jsmith@localhost.localdomain"
+			password "My@Password123"
+		}
+
 		credentials root@localhost {
 			username root
 			password foobar
@@ -55,10 +65,16 @@
 				# secret: r7lQbaotIG4303j2to2sS5cOYBEyRAAgDGlbhfgFBxPM889501VDbk8ZmGHAevr8Buv6YRqG
 				api key r7lQbaotIG4303j2to2sS5cO "bcrypt:10:$2a$10$dQTjh/Vt2Bu2Vf5OEvyLwOD3wMIi/jbKVdim1xH9GhpV065nUa80G"
 			}
-			user jsmith {
-				name John Smith
-				email jsmith@localhost.localdomain
-				password "My@Password123"
+			# user jsmith {
+			# 	name John Smith
+			# 	email jsmith@localhost.localdomain
+			# 	password "My@Password123"
+			# 	roles "authp/user" "dash"
+			# }
+			user "secrets:users/jsmith:name" {
+				name "secrets:users/jsmith:name"
+				email "secrets:users/jsmith:email"
+				password "secrets:users/jsmith:password"
 				roles "authp/user" "dash"
 			}
 			user mstone {
@@ -160,7 +176,7 @@
 
 		authentication portal myportal {
 			crypto default token lifetime 3600
-			crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520
+			crypto key sign-verify "secrets:access_token:shared_secret"
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
 			cookie guess domain
@@ -211,15 +227,15 @@
 		}
 
 		authorization policy mypolicy {
-			set auth url https://auth.myfiosgateway.com:8443/auth/?redirect_url=https://go.myfiosgateway.com:8443/app/
-			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
+			set auth url https://auth.myfiosgateway.com:8443/auth/
+			crypto key verify "secrets:access_token:shared_secret"
 			allow roles authp/admin authp/user
 			# set session_id cookie name CONTOSO_SESSION_ID
 			# set access_token cookie name CONTOSO_ACCESS_TOKEN
 		}
 
 		authorization policy api_access_policy {
-			crypto key verify 01ee2688-36e4-47f9-8c06-d18483702520
+			crypto key verify "secrets:access_token:shared_secret"
 			allow roles authp/admin authp/user
 			with api key auth portal myportal realm local
 			# with api key header name X-Secret
@@ -281,9 +297,7 @@ auth.myfiosgateway.com:8443 {
 		}
 	}
 
-	route /auth* {
-		authenticate with myportal
-	}
+	authenticate /auth* with myportal
 
 	route /* {
 		redir https://{hostport}/auth/ 302

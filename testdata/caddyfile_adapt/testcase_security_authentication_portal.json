@@ -41,7 +41,7 @@
                                 "source": "config",
                                 "algorithm": "hmac",
                                 "token_lifetime": 3600,
-                                "token_secret": "ERROR_REPLACEMENT"
+                                "token_secret": "{env.JWT_SHARED_KEY}"
                             }
                         ],
                         "crypto_key_store_config": {
@@ -71,15 +71,15 @@
                             "realm": "local",
                             "users": [
                                 {
-                                    "email_address": "ERROR_REPLACEMENT",
-                                    "name": "ERROR_REPLACEMENT",
-                                    "password": "ERROR_REPLACEMENT",
+                                    "email_address": "{env.USERS_ADMIN_EMAIL}",
+                                    "name": "{env.USERS_ADMIN_NAME}",
+                                    "password": "{env.USERS_ADMIN_SECRET}",
                                     "password_overwrite_enabled": true,
                                     "roles": [
                                         "authp/admin",
                                         "authp/user"
                                     ],
-                                    "username": "ERROR_REPLACEMENT"
+                                    "username": "{env.USERS_ADMIN_USERNAME}"
                                 }
                             ]
                         }

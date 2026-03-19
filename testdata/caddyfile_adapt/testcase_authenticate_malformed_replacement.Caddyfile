@@ -1,0 +1,5 @@
+:8443 {
+	route /auth* {
+		authenticate with {env.SECURITY_PORTAL_NAME}
+	}
+}
