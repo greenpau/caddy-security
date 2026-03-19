@@ -1,0 +1,10 @@
+{
+	order authorize before basicauth
+}
+
+:8443 {
+	route /api/* {
+		authorize with api_access_policy
+		respond * "api access granted to {http.auth.user.id} in {http.auth.user.realm}" 200
+	}
+}

@@ -94,16 +94,18 @@ qtest: covdir
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAppConfig ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentity ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileSingleSignOnProvider ./*.go
-	@time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthenticationMisc ./*.go
+	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthenticationMisc ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileCredentials ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileMessaging ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentit* ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthentication ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthorization ./*.go
+	@time richgo test -v -coverprofile=.coverage/coverage.out -run TestCaddyfileAdaptAuthenticationToJSON ./*.go
 	@#go test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfile ./*.go
 	@#go test -v -coverprofile=.coverage/coverage.out -run Test* ./pkg/services/...
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
+	@#go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html;
+	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@echo "$@: complete"
 
 .PHONY: dep

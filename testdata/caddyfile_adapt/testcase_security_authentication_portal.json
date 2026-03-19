@@ -1,0 +1,91 @@
+{
+    "apps": {
+        "security": {
+            "config": {
+                "authentication_portals": [
+                    {
+                        "name": "myportal",
+                        "ui": {
+                            "private_links": [
+                                {
+                                    "link": "/auth/whoami",
+                                    "title": "My Identity",
+                                    "icon_name": "las la-user",
+                                    "icon_enabled": true
+                                }
+                            ]
+                        },
+                        "user_transformer_configs": [
+                            {
+                                "matchers": [
+                                    "exact match origin local"
+                                ],
+                                "actions": [
+                                    "action add role authp/user",
+                                    "ui link \"User Profile\" /auth/profile/ icon \"las la-cog\""
+                                ]
+                            }
+                        ],
+                        "cookie_config": {
+                            "guess_domain_enabled": true
+                        },
+                        "identity_stores": [
+                            "localdb"
+                        ],
+                        "token_validator_options": {},
+                        "crypto_key_configs": [
+                            {
+                                "id": "0",
+                                "usage": "sign-verify",
+                                "token_name": "access_token",
+                                "source": "config",
+                                "algorithm": "hmac",
+                                "token_lifetime": 3600,
+                                "token_secret": "ERROR_REPLACEMENT"
+                            }
+                        ],
+                        "crypto_key_store_config": {
+                            "token_lifetime": 3600
+                        },
+                        "token_grantor_options": {},
+                        "portal_admin_roles": {
+                            "authp/admin": true
+                        },
+                        "portal_user_roles": {
+                            "authp/user": true
+                        },
+                        "portal_guest_roles": {
+                            "authp/guest": true
+                        },
+                        "api": {
+                            "profile_enabled": true
+                        }
+                    }
+                ],
+                "identity_stores": [
+                    {
+                        "name": "localdb",
+                        "kind": "local",
+                        "params": {
+                            "path": "assets/config/users.json",
+                            "realm": "local",
+                            "users": [
+                                {
+                                    "email_address": "ERROR_REPLACEMENT",
+                                    "name": "ERROR_REPLACEMENT",
+                                    "password": "ERROR_REPLACEMENT",
+                                    "password_overwrite_enabled": true,
+                                    "roles": [
+                                        "authp/admin",
+                                        "authp/user"
+                                    ],
+                                    "username": "ERROR_REPLACEMENT"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

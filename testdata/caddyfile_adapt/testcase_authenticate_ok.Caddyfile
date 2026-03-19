@@ -1,0 +1,9 @@
+{
+	order authenticate before respond
+}
+
+:8443 {
+	route /auth* {
+		authenticate with myportal
+	}
+}
