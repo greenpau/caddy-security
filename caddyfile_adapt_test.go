@@ -46,7 +46,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			name:                "malformed authenticate plugin config",
 			inputFileNamePrefix: "testcase_authenticate_malformed",
 			shouldErr:           true,
-			err:                 fmt.Errorf("parsing caddyfile tokens for 'route': parsing caddyfile tokens for 'authenticate': malformed directive: [authenticate], at Caddyfile:7, at Caddyfile:8"),
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'route': parsing caddyfile tokens for 'authenticate': malformed directive: [authenticate], at Caddyfile:3, at Caddyfile:4"),
 		},
 		{
 			name:                "security app config with authentication portal connected to local identity store",

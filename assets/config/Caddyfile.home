@@ -9,9 +9,7 @@
 		ask http://localhost:5555/
 	}
 
-	order trace before respond
-	order authenticate before respond
-	order authorize before basicauth
+	# order trace before respond
 
 	security {
 		credentials root@localhost {

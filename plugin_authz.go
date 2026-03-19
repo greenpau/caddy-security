@@ -36,6 +36,7 @@ const (
 
 func init() {
 	caddy.RegisterModule(AuthzMiddleware{})
+	httpcaddyfile.RegisterDirectiveOrder("authorize", httpcaddyfile.Before, "basicauth")
 }
 
 // AuthzMiddleware authorizes access to endpoints based on

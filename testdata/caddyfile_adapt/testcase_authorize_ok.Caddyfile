@@ -1,7 +1,3 @@
-{
-	order authorize before basicauth
-}
-
 :8443 {
 	route /api/* {
 		authorize with api_access_policy

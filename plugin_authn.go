@@ -33,6 +33,7 @@ const (
 
 func init() {
 	caddy.RegisterModule(AuthnMiddleware{})
+	httpcaddyfile.RegisterDirectiveOrder("authenticate", httpcaddyfile.Before, "respond")
 }
 
 // AuthnMiddleware implements Form-Based, Basic, Local, LDAP,

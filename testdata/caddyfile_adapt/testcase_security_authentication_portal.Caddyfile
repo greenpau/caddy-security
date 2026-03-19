@@ -9,7 +9,6 @@
 				password "{env.USERS_ADMIN_SECRET}" overwrite
 				roles "authp/admin" "authp/user"
 			}
-
 		}
 
 		authentication portal myportal {

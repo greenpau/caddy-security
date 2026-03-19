@@ -52,6 +52,12 @@ test: covdir linter
 	@go test -v -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
 
+.PHONY: fmtcfg
+fmtcfg:
+	@echo "$@: started"
+	@for f in `find ./testdata/caddyfile_adapt/ -type f -name '*.Caddyfile'`; do bin/authcrunch fmt --overwrite $$f; done
+	@echo "$@: complete"
+
 .PHONY: ctest
 ctest: covdir linter
 	@echo "$@: started"
