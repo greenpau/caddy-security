@@ -41,7 +41,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.1.28=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.1.29=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
@@ -55,6 +55,7 @@ linter:
 fmtcfg:
 	@echo "$@: started"
 	@for f in `find ./testdata/caddyfile_adapt/ -type f -name '*.Caddyfile'`; do bin/authcrunch fmt --overwrite $$f; done
+	@for f in `find ./assets/config/ -type f -name '*Caddyfile'`; do bin/authcrunch fmt --overwrite $$f; done
 	@echo "$@: complete"
 
 .PHONY: install-test-tools

@@ -30,6 +30,16 @@
 		# 	bcc greenpau@localhost
 		# }
 
+		oauth identity provider azure {
+			realm azure
+			driver azure
+			tenant_id {env.AZURE_APP_TENANT_ID}
+			client_id {env.AZURE_APP_CLIENT_ID}
+			client_secret {env.AZURE_APP_CLIENT_SECRET}
+			scopes openid email profile
+			enable id token cookie id_token AZURE_ID_TOKEN
+		}
+
 		oauth identity provider github {
 			realm github
 			driver github
@@ -79,7 +89,6 @@
 				roles "authp/user" "dash"
 			}
 		}
-
 
 		# local identity store userpool1 {
 		# 	realm userpool1.localdomain
@@ -216,6 +225,13 @@
 				ui link "My Identity JSON" "/auth/whoami?id_token=true&format=json" icon "las la-user"
 			}
 
+			transform user {
+				match realm azure
+				action add role authp/user
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+				ui link "My Identity JSON" "/auth/whoami?id_token=true&format=json" icon "las la-user"
+			}
+
 			# transform user {
 			# 	match realm example.com
 			# 	action add role authp/user
@@ -223,6 +239,8 @@
 
 			enable identity provider github
 			enable identity provider linkedin
+			enable identity provider azure
+
 			# enable identity store userpool1
 			# enable identity store userpool2
 			# enable identity store example.com
@@ -312,7 +330,7 @@ go.myfiosgateway.com:8443 {
 	tls internal {
 		on_demand
 	}
-	
+
 	route /version* {
 		authorize with mypolicy
 		respond * "1.0.0 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
