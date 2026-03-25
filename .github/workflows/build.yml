@@ -9,6 +9,9 @@ on:
     branches:
     - main
 
+permissions:
+  contents: read
+
 jobs:
   core:
     strategy:
