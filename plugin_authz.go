@@ -74,7 +74,7 @@ func (m *AuthzMiddleware) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if v, err := util.FindReplace(repl, m.GatekeeperName); err == nil {
+	if v, _, err := util.FindReplace(repl, m.GatekeeperName); err == nil {
 		m.GatekeeperName = v
 	} else {
 		return fmt.Errorf("%s config is malformed: %v", authzPluginName, err)

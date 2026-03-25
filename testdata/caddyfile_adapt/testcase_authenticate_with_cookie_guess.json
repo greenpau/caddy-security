@@ -1,31 +1,31 @@
 {
     "apps": {
+        "http": {
+            "servers": {
+                "srv0": {
+                    "listen": [
+                        ":443"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "authenticator",
+                                    "portal_name": "myportal",
+                                    "route_matcher": "*"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
         "security": {
             "config": {
                 "authentication_portals": [
                     {
                         "name": "myportal",
-                        "ui": {
-                            "private_links": [
-                                {
-                                    "link": "/auth/whoami",
-                                    "title": "My Identity",
-                                    "icon_name": "las la-user",
-                                    "icon_enabled": true
-                                }
-                            ]
-                        },
-                        "user_transformer_configs": [
-                            {
-                                "matchers": [
-                                    "exact match origin local"
-                                ],
-                                "actions": [
-                                    "action add role authp/user",
-                                    "ui link \"User Profile\" /auth/profile/ icon \"las la-cog\""
-                                ]
-                            }
-                        ],
+                        "ui": {},
                         "cookie_config": {
                             "guess_domain_enabled": true,
                             "session_id_cookie_name": "AUTHP_SESSION_ID",
@@ -41,11 +41,9 @@
                         ],
                         "token_validator_options": {},
                         "raw_crypto_key_store_config": [
-                            "crypto default token lifetime 3600",
                             "crypto key sign-verify {env.JWT_SHARED_KEY}"
                         ],
                         "crypto_key_store_config": {
-                            "token_lifetime": 3600,
                             "raw_key_configs": [
                                 "crypto key sign-verify {env.JWT_SHARED_KEY}"
                             ],
@@ -69,24 +67,11 @@
                 ],
                 "identity_stores": [
                     {
-                        "name": "localdb",
+                        "name": "local",
                         "kind": "local",
                         "params": {
                             "path": "assets/config/users.json",
-                            "realm": "local",
-                            "users": [
-                                {
-                                    "email_address": "{env.USERS_ADMIN_EMAIL}",
-                                    "name": "{env.USERS_ADMIN_NAME}",
-                                    "password": "{env.USERS_ADMIN_SECRET}",
-                                    "password_overwrite_enabled": true,
-                                    "roles": [
-                                        "authp/admin",
-                                        "authp/user"
-                                    ],
-                                    "username": "{env.USERS_ADMIN_USERNAME}"
-                                }
-                            ]
+                            "realm": "local"
                         }
                     }
                 ]

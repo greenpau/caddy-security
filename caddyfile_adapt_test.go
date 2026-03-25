@@ -69,8 +69,28 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			inputFileNamePrefix: "testcase_authorize_ok",
 		},
 		{
+			name:                "authorize plugin config with api",
+			inputFileNamePrefix: "testcase_authorize_with_api",
+		},
+		{
 			name:                "authenticate plugin config",
 			inputFileNamePrefix: "testcase_authenticate_ok",
+		},
+		{
+			name:                "authenticate plugin config with ui",
+			inputFileNamePrefix: "testcase_authenticate_with_ui",
+		},
+		{
+			name:                "authenticate plugin config with cookie guess domain",
+			inputFileNamePrefix: "testcase_authenticate_with_cookie_guess",
+		},
+		{
+			name:                "authenticate plugin config with cookie specific domain",
+			inputFileNamePrefix: "testcase_authenticate_with_cookie_domain",
+		},
+		{
+			name:                "authenticate plugin config with cookie multi domain",
+			inputFileNamePrefix: "testcase_authenticate_with_cookie_multi_domain",
 		},
 		{
 			name:                "malformed authenticate plugin config",
@@ -91,6 +111,14 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			inputFileNamePrefix: "testcase_authenticate_ok_replacement",
 		},
 		{
+			name:                "authenticate plugin config with credentials",
+			inputFileNamePrefix: "testcase_authenticate_with_credentials",
+		},
+		{
+			name:                "authenticate plugin config with registration",
+			inputFileNamePrefix: "testcase_authenticate_with_registration",
+		},
+		{
 			name:                "security app config with authentication portal with static secrets manager plugin",
 			inputFileNamePrefix: "testcase_security_with_secrets",
 			shouldErr:           true,
@@ -102,6 +130,8 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			inputFilePath := fmt.Sprintf("./testdata/caddyfile_adapt/%s.Caddyfile", tc.inputFileNamePrefix)
 			outputFilePath := fmt.Sprintf("./testdata/caddyfile_adapt/%s.json", tc.inputFileNamePrefix)
 			envFilePath := fmt.Sprintf("./testdata/caddyfile_adapt/%s.env", tc.inputFileNamePrefix)
+
+			t.Logf("output file: %s", outputFilePath)
 
 			for _, tv := range parseTestEnvVars(envFilePath) {
 				t.Logf("setting environment variable %s=%s", tv.key, tv.value)

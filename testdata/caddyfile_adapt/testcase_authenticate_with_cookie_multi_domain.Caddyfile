@@ -1,0 +1,15 @@
+{
+	security {
+		local identity store local assets/config/users.json
+		authentication portal myportal {
+			crypto key sign-verify {env.JWT_SHARED_KEY}
+			enable identity store localdb
+			cookie domain {env.GLOBAL_APP_DOMAIN}
+			cookie domain caddy.rocks
+		}
+	}
+}
+
+:443 {
+	authenticate with myportal
+}

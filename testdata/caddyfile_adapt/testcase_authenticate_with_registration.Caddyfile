@@ -1,0 +1,53 @@
+{
+	security {
+		credentials root@localhost {
+			username root
+			password foobar
+		}
+
+		messaging email provider {env.EMAIL_PROVIDER_ID} {
+			address 127.0.0.1:1025
+			protocol smtp
+			passwordless
+			sender root@localhost "My Auth Portal"
+			bcc greenpau@localhost
+		}
+
+		user registration {env.USER_REGISTRY_ID} {
+			dropbox assets/config/registrations_local.json
+			title "User Registration"
+			code {env.REGISTER_CODE}
+			require accept terms
+			require domain mx
+			email provider {env.EMAIL_PROVIDER_ID}
+			admin email admin@localhost
+			identity store localdb
+			allow domain outlook.com
+		}
+
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+			user {env.USERS_ADMIN_USERNAME} {
+				name "{env.USERS_ADMIN_NAME}"
+				email "{env.USERS_ADMIN_EMAIL}"
+				password "{env.USERS_ADMIN_SECRET}" overwrite
+				roles "authp/admin" "authp/user"
+			}
+		}
+
+		authentication portal myportal {
+			crypto default token lifetime 3600
+			crypto key sign-verify {env.JWT_SHARED_KEY}
+			enable identity store localdb
+		}
+	}
+}
+
+:8443 {
+	route /auth* {
+		authenticate with myportal
+	}
+
+	redir https://{hostport}/auth/ 302
+}

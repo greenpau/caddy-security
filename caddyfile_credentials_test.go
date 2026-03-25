@@ -51,12 +51,12 @@ func TestParseCaddyfileCredentials(t *testing.T) {
               }
             }`),
 			want: `{
-			  "generic": [
-				{
-				  "name":     "smtp.contoso.com",
-				  "username": "foo",
-				  "password": "bar"
-				}
+			  "raw_credential_configs": [
+			    [
+			  	  "name smtp.contoso.com",
+				  "username foo",
+				  "password bar"
+			    ]
 			  ]
 			}`,
 		},
@@ -80,13 +80,13 @@ func TestParseCaddyfileCredentials(t *testing.T) {
               }
             }`),
 			want: `{
-			  "generic": [
-				{
-				  "name":     "smtp.contoso.com",
-				  "username": "foo",
-				  "password": "bar",
-				  "domain":   "contoso.com"
-				}
+			  "raw_credential_configs": [
+			    [
+			  	  "name smtp.contoso.com",
+				  "username foo",
+				  "password bar",
+				  "domain contoso.com"
+			    ]
 			  ]
             }`,
 		},
@@ -114,34 +114,6 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 			err: errors.ErrMalformedDirective.WithArgs(
 				[]string{credPrefix, "smtp.contoso.com", "foo"},
 				[]string{"bar"},
-			),
-		},
-		{
-			name: "test smtp credentials without username",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              credentials smtp.contoso.com {
-                password bar
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{credPrefix, "smtp.contoso.com"},
-				errors.ErrCredKeyValueEmpty.WithArgs("username"),
-			),
-		},
-		{
-			name: "test smtp credentials without password",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              credentials smtp.contoso.com {
-                username foo
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{credPrefix, "smtp.contoso.com"},
-				errors.ErrCredKeyValueEmpty.WithArgs("password"),
 			),
 		},
 		{

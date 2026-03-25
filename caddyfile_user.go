@@ -31,9 +31,7 @@ func parseCaddyfileUser(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	}
 	switch {
 	case args[0] == "registration":
-		if err := parseCaddyfileUserRegistration(d, cfg, args[1]); err != nil {
-			return err
-		}
+		parseCaddyfileUserRegistration(d, cfg, args[1], "local")
 	default:
 		return errors.ErrMalformedDirective.WithArgs(userPrefix, args)
 	}

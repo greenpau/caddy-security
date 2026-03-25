@@ -1,0 +1,33 @@
+{
+    "apps": {
+        "http": {
+            "servers": {
+                "srv0": {
+                    "listen": [
+                        ":8443"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "authentication",
+                                    "providers": {
+                                        "authorizer": {
+                                            "gatekeeper_name": "api_access_policy",
+                                            "route_matcher": "*"
+                                        }
+                                    }
+                                },
+                                {
+                                    "body": "ok",
+                                    "handler": "static_response",
+                                    "status_code": 200
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

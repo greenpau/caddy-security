@@ -66,7 +66,7 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if v, err := util.FindReplace(repl, m.PortalName); err == nil {
+	if v, _, err := util.FindReplace(repl, m.PortalName); err == nil {
 		m.PortalName = v
 	} else {
 		return fmt.Errorf("authenticator config is malformed: %v", err)

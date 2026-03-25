@@ -1,0 +1,116 @@
+{
+    "authentication_portals": [
+        {
+            "name": "myportal",
+            "ui": {
+                "templates": {
+                    "login": "tmp/bar/ui/login.template",
+                    "portal": "tmp/barui/portal.template",
+                    "sandbox": "tmp/barui/sandbox.template",
+                    "whoami": "tmp/barui/whoami.template"
+                },
+                "meta_title": "\"Contoso Inc.\" Authentication Portal",
+                "meta_description": "Authentication Portal for \"Contoso Inc.\" Users.",
+                "meta_author": "\"Contoso Inc.\"",
+                "private_links": [
+                    {
+                        "link": "https://apps.contoso.com:8443/",
+                        "title": "My Apps",
+                        "icon_name": "las la-sitemap",
+                        "icon_enabled": true
+                    }
+                ],
+                "static_assets": [
+                    {
+                        "path": "assets/tmp/bar/images/banner.jpg",
+                        "fs_path": "ui/banner.jpg",
+                        "content_type": "images/jpg"
+                    },
+                    {
+                        "path": "assets/tmp/bar/images/logo.png",
+                        "fs_path": "ui/logo.png",
+                        "content_type": "images/png"
+                    },
+                    {
+                        "path": "assets/tmp/bar/images/favicon.png",
+                        "fs_path": "ui/favicon.png",
+                        "content_type": "images/png"
+                    }
+                ]
+            },
+            "user_transformer_configs": [
+                {
+                    "matchers": [
+                        "exact match origin local"
+                    ],
+                    "actions": [
+                        "action add role authp/user",
+                        "ui link \"User Profile\" /auth/profile/ icon \"las la-cog\""
+                    ]
+                }
+            ],
+            "cookie_config": {
+                "guess_domain_enabled": true,
+                "session_id_cookie_name": "AUTHP_SESSION_ID",
+                "referer_cookie_name": "AUTHP_REDIRECT_URL",
+                "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+                "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+                "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+                "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+                "cookie_name_prefix": "AUTHP"
+            },
+            "identity_stores": [
+                "localdb"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+                "crypto default token lifetime 3600",
+                "crypto key sign-verify foo"
+            ],
+            "crypto_key_store_config": {
+                "token_lifetime": 3600,
+                "raw_key_configs": [
+                    "crypto key sign-verify foo"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+                "authp/admin": true
+            },
+            "portal_user_roles": {
+                "authp/user": true
+            },
+            "portal_guest_roles": {
+                "authp/guest": true
+            },
+            "api": {
+                "profile_enabled": true
+            }
+        }
+    ],
+    "identity_stores": [
+        {
+            "name": "localdb",
+            "kind": "local",
+            "params": {
+                "path": "assets/config/users.json",
+                "realm": "local",
+                "users": [
+                    {
+                        "email_address": "webadmin@localhost.localdomain",
+                        "name": "Webmaster",
+                        "password": "\"bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG\"",
+                        "password_overwrite_enabled": true,
+                        "roles": [
+                            "authp/admin",
+                            "authp/user"
+                        ],
+                        "username": "\"webadmin\""
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -17,12 +17,7 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
-)
-
-const (
-	msgPrefix = "security.messaging"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 // parseCaddyfileCredentials parses messaging configuration.
@@ -47,88 +42,21 @@ const (
 //	}
 func parseCaddyfileMessaging(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	args := d.RemainingArgs()
-	if len(args) != 3 {
+	if len(args) < 3 {
 		return d.ArgErr()
 	}
 	if args[1] != "provider" {
 		return d.ArgErr()
 	}
 
-	switch args[0] {
-	case "email":
-		c := &messaging.EmailProvider{
-			Name: args[2],
-		}
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			k := d.Val()
-			v := d.RemainingArgs()
-			switch k {
-			case "address":
-				if len(v) != 1 {
-					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-				}
-				c.Address = v[0]
-			case "protocol":
-				if len(v) != 1 {
-					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-				}
-				c.Protocol = v[0]
-			case "credentials":
-				if len(v) != 1 {
-					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-				}
-				c.Credentials = v[0]
-			case "sender":
-				if len(v) < 1 {
-					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-				}
-				c.SenderEmail = v[0]
-				if len(v) > 1 {
-					c.SenderName = v[1]
-				}
-			case "template":
-				if len(v) != 2 {
-					return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-				}
-				if c.Templates == nil {
-					c.Templates = make(map[string]string)
-				}
-				c.Templates[v[0]] = v[1]
-			case "passwordless":
-				c.Passwordless = true
-			case "bcc":
-				for _, r := range v {
-					c.BlindCarbonCopy = append(c.BlindCarbonCopy, r)
-				}
-			default:
-				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-			}
-		}
-		if err := cfg.AddMessagingProvider(c); err != nil {
-			return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], args[1]}, err)
-		}
-	case "file":
-		p := &messaging.FileProvider{
-			Name: args[2],
-		}
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			k := d.Val()
-			v := d.RemainingArgs()
-			if len(v) != 1 {
-				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-			}
-			switch k {
-			case "rootdir":
-				p.RootDir = v[0]
-			default:
-				return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], k}, v)
-			}
-		}
-		if err := cfg.AddMessagingProvider(p); err != nil {
-			return errors.ErrMalformedDirective.WithArgs([]string{msgPrefix, args[0], args[1]}, err)
-		}
-	default:
-		return errors.ErrMalformedDirective.WithArgs(msgPrefix, args)
+	instructions := []string{}
+	instructions = append(instructions, cfgutil.EncodeArgs([]string{"name", args[2]}))
+	instructions = append(instructions, cfgutil.EncodeArgs([]string{"kind", args[0]}))
+
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		instruction := append([]string{d.Val()}, d.RemainingArgs()...)
+		instructions = append(instructions, cfgutil.EncodeArgs(instruction))
 	}
+	cfg.AddMessagingProvider(instructions)
 	return nil
 }

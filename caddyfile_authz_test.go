@@ -61,17 +61,16 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                         "action": "allow log debug"
                       }
                     ],
-					"crypto_key_configs": [
-                      {
-                        "id": "0",
-                        "usage": "verify",
-                        "token_name": "access_token",
-                        "source": "config",
-                        "algorithm": "hmac",
-                        "token_lifetime": 900,
-                        "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
-                      }
-                    ]
+					"raw_crypto_key_store_config": [
+					  "crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+					],
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default",
+					  "raw_key_configs": [
+					    "crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+					  ]
+					}
                   }
                 ]
               }
@@ -118,17 +117,16 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 						"action": "allow log debug"
 					  }
 					],
-					"crypto_key_configs": [
-					  {
-						"id": "0",
-						"usage": "verify",
-						"token_name": "access_token",
-						"source": "config",
-						"algorithm": "hmac",
-						"token_lifetime": 900,
-						"token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
-					  }
+					"raw_crypto_key_store_config": [
+					  "crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
 					],
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default",
+					  "raw_key_configs": [
+					    "crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+					  ]
+					},
 					"auth_proxy_config": {
 					  "portal_name": "default",
 					  "basic_auth": {
@@ -144,6 +142,10 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 						}
 					  }
 					},
+					"auth_proxy_raw_config": [
+					  "basic auth portal default realm local",
+					  "api key auth portal default realm local"
+					],
 					"allowed_token_sources": [
 					  "query"
 					],
@@ -210,17 +212,16 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
                         "action": "deny log warn"
                       }
                     ],
-                    "crypto_key_configs": [
-                      {
-                        "id": "0",
-                        "usage": "verify",
-                        "token_name": "access_token",
-                        "source": "config",
-                        "algorithm": "hmac",
-                        "token_lifetime": 900,
-                        "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286"
-                      }
-                    ],
+					"raw_crypto_key_store_config": [
+					  "crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+					],
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default",
+					  "raw_key_configs": [
+					    "crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+					  ]
+					},
 					"strip_token_enabled": true,
 					"additional_scopes": true,
 					"user_identity_field": "id",
@@ -264,6 +265,10 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
                     "access_list_rules": [
                       {
                         "conditions": ["match roles authp/admin authp/user"],
@@ -314,6 +319,10 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
                     "access_list_rules": [
                       {
                         "conditions": ["match roles authp/admin authp/user"],
@@ -348,6 +357,10 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
 					"login_hint_validators": ["email", "phone", "alphanumeric"],
 					"access_list_rules": [
                       {
@@ -381,6 +394,10 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
 					"login_hint_validators": ["email", "phone"],
                     "access_list_rules": [
                       {
@@ -852,6 +869,7 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test: %s", tc.name)
 			app, err := parseCaddyfile(tc.d, nil)
 			if err != nil {
 				if !tc.shouldErr {

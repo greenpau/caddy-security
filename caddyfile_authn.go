@@ -82,7 +82,7 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config
 			UI: &ui.Parameters{
 				Templates: make(map[string]string),
 			},
-			CookieConfig:          &cookie.Config{},
+			CookieConfig:          cookie.NewConfig(),
 			TokenValidatorOptions: &options.TokenValidatorOptions{},
 			TokenGrantorOptions:   &options.TokenGrantorOptions{},
 			API: &authn.APIConfig{

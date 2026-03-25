@@ -15,13 +15,11 @@
 package security
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/google/go-cmp/cmp"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 func TestParseCaddyfileMessaging(t *testing.T) {
@@ -64,112 +62,32 @@ func TestParseCaddyfileMessaging(t *testing.T) {
             }`),
 			want: `{
                 "credentials": {
-                  "generic": [
-                    {
-                      "name": "root@localhost",
-                      "username": "root",
-                      "password": "foobar"
-                    }
-                  ]
+				  "raw_credential_configs": [
+				    [
+				      "name root@localhost",
+					  "username root",
+					  "password foobar"
+					]
+				  ]
                 },
                 "messaging": {
-                  "email_providers": [
-                    {
-                      "name": "local_smtp_server",
-                      "address": "localhost:25",
-                      "protocol": "smtp",
-                      "credentials": "root@localhost",
-                      "sender_email": "root@localhost",
-                      "sender_name": "Auth Portal",
-                      "templates": {
-                        "mfa_otp": "path/to/mfa_otp.tmpl",
-                        "password_recovery": "path/to/password_recovery.tmpl",
-                        "registration_confirmation": "path/to/registration_confirmation.tmpl",
-                        "registration_ready": "path/to/registration_ready.tmpl",
-						"registration_verdict": "path/to/registration_verdict.tmpl"
-                      }
-                    }
+                  "raw_configs": [
+                    [
+				  		"name local_smtp_server",
+						"kind email",
+						"address localhost:25",
+						"protocol smtp",
+						"credentials root@localhost",
+						"sender root@localhost \"Auth Portal\"",
+						"template password_recovery path/to/password_recovery.tmpl",
+						"template registration_confirmation path/to/registration_confirmation.tmpl",
+						"template registration_ready path/to/registration_ready.tmpl",
+						"template registration_verdict path/to/registration_verdict.tmpl",
+						"template mfa_otp path/to/mfa_otp.tmpl"
+                    ]
                   ]
                 }
 			}`,
-		},
-		{
-			name: "test malformed email provider definition",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              messaging email provider local_smtp_server foo {
-				address localhost:25
-              }
-            }`),
-			shouldErr: true,
-			err:       fmt.Errorf("wrong argument count or unexpected line ending after 'foo', at %s:%d", tf, 3),
-		},
-		{
-			name: "test malformed non-email provider definition",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              messaging bar provider local_smtp_server {
-                address localhost:25
-              }
-            }`),
-			shouldErr: true,
-			err:       errors.ErrMalformedDirective.WithArgs(msgPrefix, []string{"bar", "provider", "local_smtp_server"}),
-		},
-		{
-			name: "test email provider address without value",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              messaging email provider local_smtp_server {
-                address
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{msgPrefix, "email", "address"},
-				[]string{},
-			),
-		},
-		{
-			name: "test email provider protocol without value",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              messaging email provider local_smtp_server {
-                protocol
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{msgPrefix, "email", "protocol"},
-				[]string{},
-			),
-		},
-		{
-			name: "test email provider credentials without value",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              messaging email provider local_smtp_server {
-                credentials
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{msgPrefix, "email", "credentials"},
-				[]string{},
-			),
-		},
-		{
-			name: "test email provider sender without value",
-			d: caddyfile.NewTestDispenser(`
-            security {
-              messaging email provider local_smtp_server {
-                sender
-              }
-            }`),
-			shouldErr: true,
-			err: errors.ErrMalformedDirective.WithArgs(
-				[]string{msgPrefix, "email", "sender"},
-				[]string{},
-			),
 		},
 	}
 	for _, tc := range testcases {

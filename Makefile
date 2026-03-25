@@ -8,6 +8,12 @@ BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BUILD_DIR:=$(shell pwd)
 CADDY_VERSION="v2.11.2"
 
+VERBOSE:=-v
+ifdef TEST
+	TEST:="-run ${TEST}"
+endif
+TEST_DIR:="./..."
+
 all: info build
 	@echo "$@: complete"
 
@@ -35,8 +41,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.1.26=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
-	@go build -v -o ./bin/authcrunch cmd/authcrunch/main.go;
+		--with github.com/greenpau/go-authcrunch@v1.1.27=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
@@ -46,25 +51,53 @@ linter:
 	@#golint -set_exit_status ./...
 	@echo "$@: complete"
 
-.PHONY: test
-test: covdir linter
-	@echo "$@: started"
-	@echo "DEBUG: started $@"
-	@go test -v -coverprofile=.coverage/coverage.out ./...
-	@echo "$@: complete"
-
 .PHONY: fmtcfg
 fmtcfg:
 	@echo "$@: started"
 	@for f in `find ./testdata/caddyfile_adapt/ -type f -name '*.Caddyfile'`; do bin/authcrunch fmt --overwrite $$f; done
 	@echo "$@: complete"
 
-.PHONY: ctest
-ctest: covdir linter
+.PHONY: install-test-tools
+install-test-tools:
 	@echo "$@: started"
-	@echo "DEBUG: started $@"
-	@#time richgo test -v -coverprofile=.coverage/coverage.out ./...
-	@time richgo test -v -coverprofile=.coverage/coverage.out ./*.go
+	@richgo version || go install github.com/kyoh86/richgo@latest
+	@tparse -v || go install github.com/mfridman/tparse@latest
+	@go-test-report version || go install github.com/vakenbolt/go-test-report@latest
+	@echo "$@: complete"
+
+.PHONY: run-tests
+run-tests:
+	@echo "$@: started"
+	@go test -json $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out $(TEST_DIR) | tee .coverage/test_output.jsonl
+	@echo "$@: complete"
+
+QUICK_TEST_DIR="./..."
+QUICK_TEST_PATTERN_RUN="-run"
+#QUICK_TEST_PATTERN="Test(CaddyfileAdaptAuthenticationToJSON|ResolveRuntimeAppConfig)"
+#QUICK_TEST_PATTERN="Test(ParseCaddyfileIdentity)"
+#QUICK_TEST_PATTERN="Test(ParseCaddyfileAuthentication)"
+#QUICK_TEST_PATTERN="Test(ParseCaddyfileAuthenticationMisc)"
+QUICK_TEST_PATTERN="Test(ParseCaddyfileAuthorization)"
+.PHONY: run-quick-tests
+run-quick-tests:
+	@echo "$@: started"
+	@go test -json $(VERBOSE) -coverprofile=.coverage/coverage.out $(QUICK_TEST_PATTERN_RUN) $(QUICK_TEST_PATTERN) $(QUICK_TEST_DIR) | tee .coverage/test_output.jsonl
+	@echo "$@: complete"
+
+.PHONY: run-reports
+run-reports:
+	@echo "$@: started"
+	@cat .coverage/test_output.jsonl | go-test-report -o .coverage/test_output.html
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+	@echo "$@: complete"
+
+
+.PHONY: test
+test: covdir linter install-test-tools run-tests run-reports
+	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
+		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
+		exit 1; \
+	fi
 	@echo "$@: complete"
 
 .PHONY: covdir
@@ -95,24 +128,11 @@ clean:
 	@echo "$@: complete"
 
 .PHONY: qtest
-qtest: covdir
-	@echo "$@: started"
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestApp ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAppConfig ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentity ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileSingleSignOnProvider ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthenticationMisc ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileCredentials ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileMessaging ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileIdentit* ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthentication ./*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfileAuthorization ./*.go
-	@time richgo test -v -coverprofile=.coverage/coverage.out -run TestCaddyfileAdaptAuthenticationToJSON ./*.go
-	@#go test -v -coverprofile=.coverage/coverage.out -run TestParseCaddyfile ./*.go
-	@#go test -v -coverprofile=.coverage/coverage.out -run Test* ./pkg/services/...
-	@#go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html;
-	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
+qtest: covdir install-test-tools run-quick-tests run-reports
+	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
+		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
+		exit 1; \
+	fi
 	@echo "$@: complete"
 
 .PHONY: dep

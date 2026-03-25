@@ -26,13 +26,14 @@ func parseCaddyfileAuthPortalCrypto(h *caddyfile.Dispenser, portal *authn.Portal
 		return h.Errf("%v", errors.ErrConfigDirectiveShort.WithArgs(rootDirective, args))
 	}
 
-	encodedArgs := cfgutil.EncodeArgs(args)
 	switch args[0] {
 	case "key":
 	case "default":
 	default:
 		return h.Errf("%v", errors.ErrConfigDirectiveValueUnsupported.WithArgs(rootDirective, args))
 	}
-	portal.AddRawCryptoConfigs(encodedArgs)
+
+	updatedArgs := append([]string{cryptoKeyword}, args...)
+	portal.AddRawCryptoKeyStoreConfig(cfgutil.EncodeArgs(updatedArgs))
 	return nil
 }

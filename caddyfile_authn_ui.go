@@ -88,7 +88,7 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConf
 				if len(args) == 0 {
 					return h.Errf("auth backend %s subdirective %s has no value", subDirective, title)
 				}
-				privateLink := ui.Link{
+				privateLink := &ui.Link{
 					Title: title,
 					Link:  args[0],
 				}
@@ -169,14 +169,12 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConf
 				return h.Errf("auth backend %s subdirective %s URI must be prefixed with %s, got %s",
 					rootDirective, subDirective, prefix, assetURI)
 			}
-			if err := ui.StaticAssets.AddAsset(assetURI, assetContentType, assetPath); err != nil {
-				return h.Errf("auth backend %s subdirective %s failed: %s", rootDirective, subDirective, err)
-			}
-		case "disable":
-			args := h.RemainingArgs()
-			if err := portal.UI.DisablePage(args); err != nil {
-				return h.Errf("auth backend %s subdirective %s is malformed: %v", rootDirective, subDirective, err)
-			}
+
+			portal.UI.StaticAssets = append(portal.UI.StaticAssets, &ui.StaticAsset{
+				Path:        assetURI,
+				ContentType: assetContentType,
+				FsPath:      assetPath,
+			})
 		default:
 			return h.Errf("unsupported subdirective for %s: %s", rootDirective, subDirective)
 		}

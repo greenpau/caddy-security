@@ -174,6 +174,13 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 						  "insecure": true
 						}
 					  },
+						"session_id_cookie_name": "AUTHP_SESSION_ID",
+						"referer_cookie_name": "AUTHP_REDIRECT_URL",
+						"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+						"cookie_name_prefix": "AUTHP",
 					  "insecure": true
 					},
 					"identity_providers": [
@@ -182,32 +189,30 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 					  "azure",
 					  "okta"
 					],
-                            "portal_admin_roles": {
-                                "authp/admin": true
-                            },
-                            "portal_user_roles": {
-                                "authp/user": true
-                            },
-                            "portal_guest_roles": {
-                                "authp/guest": true
-                            },
+					"portal_admin_roles": {
+						"authp/admin": true
+					},
+					"portal_user_roles": {
+						"authp/user": true
+					},
+					"portal_guest_roles": {
+						"authp/guest": true
+					},
 					"token_validator_options": {
 					  "validate_source_address": true
 					},
-					"crypto_key_configs": [
-					  {
-						"id": "0",
-						"usage": "sign-verify",
-						"token_name": "access_token",
-						"source": "config",
-						"algorithm": "hmac",
-						"token_lifetime": 3600,
-						"token_secret": "01ee2688-36e4-47f9-8c06-d18483702520"
-					  }
-					],
 					"crypto_key_store_config": {
-					  "token_lifetime": 3600
+						"auto_generate_algo": "ES512",
+						"auto_generate_tag":  "default",
+						"raw_key_configs": [
+							"crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
+						],
+						"token_lifetime": 3600
 					},
+					"raw_crypto_key_store_config": [
+					  "crypto default token lifetime 3600",
+					  "crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
+					],
 					"token_grantor_options": {
 					  "enable_source_address": true
 					}
@@ -324,6 +329,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test: %s", tc.name)
 			app, err := parseCaddyfile(tc.d, nil)
 			if err != nil {
 				if !tc.shouldErr {

@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	authzPrefix = "security.authorization"
+	authzPrefix   string = "security.authorization"
+	cryptoKeyword string = "crypto"
 )
 
 // parseCaddyfileAuthorization parses authorization policy configuration.
@@ -54,7 +55,7 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config)
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
-			case "crypto":
+			case cryptoKeyword:
 				v := d.RemainingArgs()
 				if err := parseCaddyfileAuthorizationCrypto(d, p, rootDirective, v); err != nil {
 					return err

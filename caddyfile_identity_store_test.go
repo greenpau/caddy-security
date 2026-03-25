@@ -15,10 +15,11 @@
 package security
 
 import (
+	"testing"
+
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/google/go-cmp/cmp"
-	"testing"
 )
 
 func TestParseCaddyfileIdentityStore(t *testing.T) {
@@ -47,7 +48,19 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
-					"cookie_config": {},
+					"cookie_config": {
+						"session_id_cookie_name": "AUTHP_SESSION_ID",
+						"referer_cookie_name": "AUTHP_REDIRECT_URL",
+						"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+						"cookie_name_prefix": "AUTHP"
+					},
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
 					"identity_stores": [
 					  "localdb"
 					],
@@ -119,7 +132,19 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 					"api": {
                       "profile_enabled": true
                     },
-					"cookie_config": {},
+					"cookie_config": {
+						"session_id_cookie_name": "AUTHP_SESSION_ID",
+						"referer_cookie_name": "AUTHP_REDIRECT_URL",
+						"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+						"cookie_name_prefix": "AUTHP"
+					},
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
 					"identity_stores": [
 					  "contoso.com"
 					],

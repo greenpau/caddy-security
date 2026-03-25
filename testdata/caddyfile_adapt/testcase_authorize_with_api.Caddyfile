@@ -1,0 +1,6 @@
+:8443 {
+	authorize with api_access_policy {
+		with api key auth portal myportal realm example.com
+	}
+	respond * "ok" 200
+}

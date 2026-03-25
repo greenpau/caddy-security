@@ -26,25 +26,33 @@ import (
 )
 
 // FindReplaceAll uses caddy.Replacer to replace strings in a given slice.
-func FindReplaceAll(repl *caddy.Replacer, arr []string) ([]string, error) {
+func FindReplaceAll(repl *caddy.Replacer, arr []string) ([]string, bool, error) {
 	var outputs []string
+	var anyReplaced bool
 	for _, item := range arr {
-		output, err := FindReplace(repl, item)
+		output, replaced, err := FindReplace(repl, item)
 		if err != nil {
-			return outputs, err
+			return outputs, replaced, err
+		}
+		if replaced {
+			anyReplaced = true
 		}
 		outputs = append(outputs, output)
 	}
-	return outputs, nil
+	return outputs, anyReplaced, nil
 }
 
 // FindReplace uses caddy.Replacer to replace strings in a given string.
-func FindReplace(repl *caddy.Replacer, s string) (string, error) {
+func FindReplace(repl *caddy.Replacer, s string) (string, bool, error) {
+	var replaced bool
 	output := repl.ReplaceAll(s, cfg.ReplErrStr)
 	if strings.Contains(output, cfg.ReplErrStr) {
-		return "", errors.New("failed to perform replacement")
+		return "", true, errors.New("failed to perform replacement")
 	}
-	return output, nil
+	if output != s {
+		replaced = true
+	}
+	return output, replaced, nil
 }
 
 // GetRequestID returns HTTP request id.

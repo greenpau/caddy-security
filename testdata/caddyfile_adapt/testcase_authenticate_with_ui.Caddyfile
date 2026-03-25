@@ -1,0 +1,49 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+			user {env.USERS_ADMIN_USERNAME} {
+				name "{env.USERS_ADMIN_NAME}"
+				email "{env.USERS_ADMIN_EMAIL}"
+				password "{env.USERS_ADMIN_SECRET}" overwrite
+				roles "authp/admin" "authp/user"
+			}
+		}
+
+		authentication portal myportal {
+			crypto default token lifetime 3600
+			crypto key sign-verify {env.JWT_SHARED_KEY}
+			enable identity store localdb
+			cookie guess domain
+			ui {
+				meta title "{env.APP_COMPANY_NAME} Authentication Portal"
+				meta author {env.APP_COMPANY_NAME}
+				meta description "Authentication Portal for {env.APP_COMPANY_NAME} Users."
+				static_asset "assets/{env.APP_FILES_DIR}/images/banner.jpg" "images/jpg" ui/banner.jpg
+				static_asset "assets/{env.APP_FILES_DIR}/images/logo.png" "images/png" ui/logo.png
+				static_asset "assets/{env.APP_FILES_DIR}/images/favicon.png" "images/png" ui/favicon.png
+				template login {env.APP_FILES_DIR}/ui/login.template
+				template sandbox {env.APP_FILES_DIR}ui/sandbox.template
+				template portal {env.APP_FILES_DIR}ui/portal.template
+				template whoami {env.APP_FILES_DIR}ui/whoami.template
+				links {
+					"My Apps" https://apps.{env.GLOBAL_APP_DOMAIN}:8443/ icon "las la-sitemap"
+				}
+			}
+			transform user {
+				match origin local
+				action add role authp/user
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+			}
+		}
+	}
+}
+
+:8443 {
+	route /auth* {
+		authenticate with myportal
+	}
+
+	redir https://{hostport}/auth/ 302
+}

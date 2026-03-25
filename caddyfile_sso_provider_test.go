@@ -58,19 +58,31 @@ func TestParseCaddyfileSingleSignOnProvider(t *testing.T) {
 				  {
 					"name": "myportal",
 					"ui": {},
-					"cookie_config": {},
+					"cookie_config": {
+						"session_id_cookie_name": "AUTHP_SESSION_ID",
+						"referer_cookie_name": "AUTHP_REDIRECT_URL",
+						"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+						"cookie_name_prefix": "AUTHP"
+					},
 					"identity_stores": [
 					  "localdb"
 					],
-					        "portal_admin_roles": {
-                                "authp/admin": true
-                            },
-                            "portal_user_roles": {
-                                "authp/user": true
-                            },
-                            "portal_guest_roles": {
-                                "authp/guest": true
-                            },
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
+					"portal_admin_roles": {
+						"authp/admin": true
+					},
+					"portal_user_roles": {
+						"authp/user": true
+					},
+					"portal_guest_roles": {
+						"authp/guest": true
+					},
 					"sso_providers": [
 					  "aws"
 					],
@@ -129,6 +141,7 @@ func TestParseCaddyfileSingleSignOnProvider(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test: %s", tc.name)
 			app, err := parseCaddyfile(tc.d, nil)
 			if err != nil {
 				if !tc.shouldErr {

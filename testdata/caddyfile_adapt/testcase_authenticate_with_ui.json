@@ -1,17 +1,92 @@
 {
     "apps": {
+        "http": {
+            "servers": {
+                "srv0": {
+                    "listen": [
+                        ":8443"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "static_response",
+                                    "headers": {
+                                        "Location": [
+                                            "https://{http.request.hostport}/auth/"
+                                        ]
+                                    },
+                                    "status_code": 302
+                                }
+                            ]
+                        },
+                        {
+                            "match": [
+                                {
+                                    "path": [
+                                        "/auth*"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "subroute",
+                                    "routes": [
+                                        {
+                                            "handle": [
+                                                {
+                                                    "handler": "authenticator",
+                                                    "portal_name": "myportal",
+                                                    "route_matcher": "*"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
         "security": {
             "config": {
                 "authentication_portals": [
                     {
                         "name": "myportal",
                         "ui": {
+                            "templates": {
+                                "login": "{env.APP_FILES_DIR}/ui/login.template",
+                                "portal": "{env.APP_FILES_DIR}ui/portal.template",
+                                "sandbox": "{env.APP_FILES_DIR}ui/sandbox.template",
+                                "whoami": "{env.APP_FILES_DIR}ui/whoami.template"
+                            },
+                            "meta_title": "{env.APP_COMPANY_NAME} Authentication Portal",
+                            "meta_description": "Authentication Portal for {env.APP_COMPANY_NAME} Users.",
+                            "meta_author": "{env.APP_COMPANY_NAME}",
                             "private_links": [
                                 {
-                                    "link": "/auth/whoami",
-                                    "title": "My Identity",
-                                    "icon_name": "las la-user",
+                                    "link": "https://apps.{env.GLOBAL_APP_DOMAIN}:8443/",
+                                    "title": "My Apps",
+                                    "icon_name": "las la-sitemap",
                                     "icon_enabled": true
+                                }
+                            ],
+                            "static_assets": [
+                                {
+                                    "path": "assets/{env.APP_FILES_DIR}/images/banner.jpg",
+                                    "fs_path": "ui/banner.jpg",
+                                    "content_type": "images/jpg"
+                                },
+                                {
+                                    "path": "assets/{env.APP_FILES_DIR}/images/logo.png",
+                                    "fs_path": "ui/logo.png",
+                                    "content_type": "images/png"
+                                },
+                                {
+                                    "path": "assets/{env.APP_FILES_DIR}/images/favicon.png",
+                                    "fs_path": "ui/favicon.png",
+                                    "content_type": "images/png"
                                 }
                             ]
                         },

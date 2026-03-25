@@ -40,6 +40,7 @@ func init() {
 }
 
 type SecretsManager interface {
+	GetConfig(context.Context) map[string]interface{}
 	GetSecret(context.Context) (map[string]interface{}, error)
 	GetSecretByKey(context.Context, string) (interface{}, error)
 }
@@ -85,7 +86,18 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	for _, conf := range secretsManagerConfigs.([]any) {
-		app.secretsManagers = append(app.secretsManagers, conf.(SecretsManager))
+		secretsManagerPlugin := conf.(SecretsManager)
+		app.logger.Info(
+			"loaded secrets manager plugin",
+			zap.String("app_name", app.Name),
+			zap.Any("config", secretsManagerPlugin.GetConfig(ctx)),
+		)
+		app.secretsManagers = append(app.secretsManagers, secretsManagerPlugin)
+	}
+
+	repl := caddy.NewReplacer()
+	if err := ResolveRuntimeAppConfig(ctx, repl, app.secretsManagers, app.Config, app.logger); err != nil {
+		return err
 	}
 
 	if err := app.Config.Validate(); err != nil {

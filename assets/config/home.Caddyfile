@@ -3,25 +3,14 @@
 	local_certs
 	http_port 8080
 	https_port 8443
-	admin off
+	#admin off
+	admin localhost:2025
 
 	on_demand_tls {
 		ask http://localhost:5555/
 	}
 
-	# order trace before respond
-
 	security {
-		secrets static_secrets_manager access_token {
-			shared_secret b006d65b-c923-46a1-8da1-7d52558508fe
-		}
-
-		secrets static_secrets_manager users/jsmith {
-			name "John Smith"
-			email "jsmith@localhost.localdomain"
-			password "My@Password123"
-		}
-
 		credentials root@localhost {
 			username root
 			password foobar
@@ -34,6 +23,12 @@
 			sender root@localhost "My Auth Portal"
 			bcc greenpau@localhost
 		}
+
+		# messaging file provider localhost-file-server {
+		# 	root_dir assets/config
+		# 	sender root@localhost "My Auth Portal"
+		# 	bcc greenpau@localhost
+		# }
 
 		oauth identity provider github {
 			realm github
@@ -49,8 +44,8 @@
 			client_id {env.LINKEDIN_APP_CLIENT_ID}
 			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
 			icon linkedin priority 200
-			# enable id token cookie id_token CONTOSO_ID_TOKEN
-			enable id token cookie
+			#enable id token cookie id_token
+			enable id token cookie id_token LINKEDIN_ID_TOKEN
 		}
 
 		local identity store localdb {
@@ -71,10 +66,10 @@
 			# 	password "My@Password123"
 			# 	roles "authp/user" "dash"
 			# }
-			user "secrets:users/jsmith:name" {
-				name "secrets:users/jsmith:name"
-				email "secrets:users/jsmith:email"
-				password "secrets:users/jsmith:password"
+			user {env.JSMITH_USERNAME} {
+				name "{env.JSMITH_NAME}"
+				email "{env.JSMITH_EMAIL}"
+				password "{env.JSMITH_PASSWORD}"
 				roles "authp/user" "dash"
 			}
 			user mstone {
@@ -157,6 +152,7 @@
 			require accept terms
 			require domain mx
 			email provider localhost-smtp-server
+			# email provider localhost-file-server
 			admin email admin@localhost
 			identity store localdb
 			# allow domain outlook.com
@@ -176,7 +172,7 @@
 
 		authentication portal myportal {
 			crypto default token lifetime 3600
-			crypto key sign-verify "secrets:access_token:shared_secret"
+			crypto key r7xc8y6 sign-verify {env.JWT_SECRET_1}
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
 			cookie guess domain
@@ -186,6 +182,7 @@
 			# set id_token cookie name CONTOSO_ID_TOKEN
 			# set access_token cookie name CONTOSO_ACCESS_TOKEN
 			# set refresh_token cookie name CONTOSO_REFRESH_TOKEN
+			set cookie name prefix CONTOSO
 			ui {
 				#language fr
 				#language zh
@@ -200,6 +197,7 @@
 				action add role authp/user
 				ui link "User Profile" /auth/profile/ icon "las la-cog"
 			}
+
 			trust logout redirect uri domain partial myfiosgateway.com path suffix /
 			trust login redirect uri domain partial myfiosgateway.com path suffix /
 			enable admin api
@@ -207,11 +205,15 @@
 			transform user {
 				match realm github
 				action add role authp/user
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+				ui link "My Identity JSON" "/auth/whoami?id_token=true&format=json" icon "las la-user"
 			}
 
 			transform user {
 				match realm linkedin
 				action add role authp/user
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+				ui link "My Identity JSON" "/auth/whoami?id_token=true&format=json" icon "las la-user"
 			}
 
 			# transform user {
@@ -228,14 +230,14 @@
 
 		authorization policy mypolicy {
 			set auth url https://auth.myfiosgateway.com:8443/auth/
-			crypto key verify "secrets:access_token:shared_secret"
+			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
 			allow roles authp/admin authp/user
 			# set session_id cookie name CONTOSO_SESSION_ID
 			# set access_token cookie name CONTOSO_ACCESS_TOKEN
 		}
 
 		authorization policy api_access_policy {
-			crypto key verify "secrets:access_token:shared_secret"
+			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
 			allow roles authp/admin authp/user
 			with api key auth portal myportal realm local
 			# with api key header name X-Secret
@@ -297,7 +299,9 @@ auth.myfiosgateway.com:8443 {
 		}
 	}
 
-	authenticate /auth* with myportal
+	route /auth* {
+		authenticate with myportal
+	}
 
 	route /* {
 		redir https://{hostport}/auth/ 302

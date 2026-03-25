@@ -17,8 +17,8 @@ package security
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -39,7 +39,9 @@ func parseCaddyfileCredentials(d *caddyfile.Dispenser, cfg *authcrunch.Config) e
 	if len(args) != 1 {
 		return d.ArgErr()
 	}
-	c := &credentials.Generic{Name: args[0]}
+	instructions := []string{}
+	instructions = append(instructions, cfgutil.EncodeArgs([]string{"name", args[0]}))
+
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
 		v := d.RemainingArgs()
@@ -48,23 +50,21 @@ func parseCaddyfileCredentials(d *caddyfile.Dispenser, cfg *authcrunch.Config) e
 			if len(v) != 1 {
 				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
 			}
-			c.Domain = v[0]
+			instructions = append(instructions, cfgutil.EncodeArgs([]string{k, v[0]}))
 		case "username":
 			if len(v) != 1 {
 				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
 			}
-			c.Username = v[0]
+			instructions = append(instructions, cfgutil.EncodeArgs([]string{k, v[0]}))
 		case "password":
 			if len(v) != 1 {
 				return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
 			}
-			c.Password = v[0]
+			instructions = append(instructions, cfgutil.EncodeArgs([]string{k, v[0]}))
 		default:
 			return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0], k}, v)
 		}
 	}
-	if err := cfg.AddCredential(c); err != nil {
-		return errors.ErrMalformedDirective.WithArgs([]string{credPrefix, args[0]}, err)
-	}
+	cfg.AddCredential(instructions)
 	return nil
 }

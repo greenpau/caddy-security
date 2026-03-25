@@ -54,12 +54,12 @@ func TestParseCaddyfileAppConfig(t *testing.T) {
             }`),
 			want: `{
 			    "credentials": {
-				  "generic": [
-				    {
-					  "name":     "smtp.contoso.com",
-					  "username": "foo",
-					  "password": "bar"
-					}
+				  "raw_credential_configs": [
+				    [
+				      "name smtp.contoso.com",
+					  "username foo",
+					  "password bar"
+					]
 				  ]
 				}
 			}`,

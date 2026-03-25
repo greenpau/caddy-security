@@ -25,13 +25,14 @@ func parseCaddyfileAuthorizationCrypto(h *caddyfile.Dispenser, policy *authz.Pol
 	if len(args) < 3 {
 		return h.Errf("%v", errors.ErrConfigDirectiveShort.WithArgs(rootDirective, args))
 	}
-	encodedArgs := cfgutil.EncodeArgs(args)
 	switch args[0] {
 	case "key":
 	case "default":
 	default:
 		return h.Errf("%v", errors.ErrConfigDirectiveValueUnsupported.WithArgs(rootDirective, args))
 	}
-	policy.AddRawCryptoConfigs(encodedArgs)
+
+	updatedArgs := append([]string{cryptoKeyword}, args...)
+	policy.AddRawCryptoKeyStoreConfig(cfgutil.EncodeArgs(updatedArgs))
 	return nil
 }

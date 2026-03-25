@@ -15,12 +15,8 @@
 package security
 
 import (
-	"strings"
-
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/registry"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -41,100 +37,15 @@ import (
 //	  link privacy <url>
 //	  <allow|deny> [exact|partial|prefix|suffix|regex] domain <string>
 //	}
-func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Config, name string) error {
-	var disabled bool
-
-	r := &registry.UserRegistryConfig{
-		Name: name,
-	}
+func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Config, name, kind string) error {
+	instructions := []string{}
+	instructions = append(instructions, cfgutil.EncodeArgs([]string{"name", name}))
+	instructions = append(instructions, cfgutil.EncodeArgs([]string{"kind", kind}))
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		k := d.Val()
-		args := d.RemainingArgs()
-		rd := mkcp("security.user.registration["+name+"]", k)
-		switch k {
-		case "disabled":
-			disabled = true
-		case "title":
-			if len(args) != 1 {
-				return d.Errf("%s directive %q must contain single value", rd, args)
-			}
-			r.Title = args[0]
-		case "code":
-			if len(args) != 1 {
-				return d.Errf("%s directive %q must contain single value", rd, args)
-			}
-			r.Code = args[0]
-		case "dropbox":
-			if len(args) != 1 {
-				return d.Errf("%s directive %q must contain single value", rd, args)
-			}
-			r.Dropbox = args[0]
-		case "require":
-			switch strings.Join(args, " ") {
-			case "accept terms":
-				r.RequireAcceptTerms = true
-			case "domain mx":
-				r.RequireDomainMailRecord = true
-			case "":
-				return d.Errf("%s directive has no value", rd)
-			default:
-				return d.Errf("%s directive %q is unsupported", rd, args)
-			}
-		case "link":
-			if len(args) != 2 {
-				return d.Errf("%s directive %q must contain key-value pair", rd, args)
-			}
-			switch args[0] {
-			case "terms":
-				r.TermsConditionsLink = args[1]
-			case "privacy":
-				r.PrivacyPolicyLink = args[1]
-			default:
-				return d.Errf("%s directive %q contains unsupported value", rd, args)
-			}
-		case "email":
-			if len(args) != 2 {
-				return d.Errf("%s directive %q must contain key-value pair", rd, args)
-			}
-			switch args[0] {
-			case "provider":
-				r.EmailProvider = args[1]
-			default:
-				return d.Errf("%s directive %q contains unsupported value", rd, args)
-			}
-		case "identity":
-			if len(args) != 2 {
-				return d.Errf("%s directive %q must contain key-value pair", rd, args)
-			}
-			switch args[0] {
-			case "store":
-				r.IdentityStore = args[1]
-			default:
-				return d.Errf("%s directive %q contains unsupported value", rd, args)
-			}
-		case "admin":
-			if len(args) < 2 {
-				return d.Errf("%s directive %q must contain key-value pair", rd, args)
-			}
-			switch args[0] {
-			case "email", "emails":
-				r.AdminEmails = args[1:]
-			default:
-				return d.Errf("%s directive %q contains unsupported value", rd, args)
-			}
-		case "allow", "deny":
-			r.DomainRestrictions = append(r.DomainRestrictions, k+" "+cfgutil.EncodeArgs(args))
-		default:
-			return errors.ErrMalformedDirective.WithArgs(rd, args)
-		}
+		instruction := append([]string{d.Val()}, d.RemainingArgs()...)
+		instructions = append(instructions, cfgutil.EncodeArgs(instruction))
 	}
-
-	if !disabled {
-		if err := cfg.AddUserRegistry(r); err != nil {
-			return err
-		}
-	}
-
+	cfg.AddUserRegistry(instructions)
 	return nil
 }

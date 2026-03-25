@@ -1,0 +1,163 @@
+{
+    "apps": {
+        "http": {
+            "servers": {
+                "srv0": {
+                    "listen": [
+                        ":8443"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "static_response",
+                                    "headers": {
+                                        "Location": [
+                                            "https://{http.request.hostport}/auth/"
+                                        ]
+                                    },
+                                    "status_code": 302
+                                }
+                            ]
+                        },
+                        {
+                            "match": [
+                                {
+                                    "path": [
+                                        "/auth*"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "subroute",
+                                    "routes": [
+                                        {
+                                            "handle": [
+                                                {
+                                                    "handler": "authenticator",
+                                                    "portal_name": "myportal",
+                                                    "route_matcher": "*"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        "security": {
+            "config": {
+                "credentials": {
+                    "raw_credential_configs": [
+                        [
+                            "name root@localhost",
+                            "username root",
+                            "password foobar"
+                        ]
+                    ]
+                },
+                "messaging": {
+                    "raw_configs": [
+                        [
+                            "name {env.EMAIL_PROVIDER_ID}",
+                            "kind email",
+                            "address 127.0.0.1:1025",
+                            "protocol smtp",
+                            "passwordless",
+                            "sender root@localhost \"My Auth Portal\"",
+                            "bcc greenpau@localhost"
+                        ]
+                    ]
+                },
+                "user_registration": {
+                    "raw_configs": [
+                        [
+                            "name {env.USER_REGISTRY_ID}",
+                            "kind local",
+                            "dropbox assets/config/registrations_local.json",
+                            "title \"User Registration\"",
+                            "code {env.REGISTER_CODE}",
+                            "require accept terms",
+                            "require domain mx",
+                            "email provider {env.EMAIL_PROVIDER_ID}",
+                            "admin email admin@localhost",
+                            "identity store localdb",
+                            "allow domain outlook.com"
+                        ]
+                    ]
+                },
+                "authentication_portals": [
+                    {
+                        "name": "myportal",
+                        "ui": {},
+                        "cookie_config": {
+                            "session_id_cookie_name": "AUTHP_SESSION_ID",
+                            "referer_cookie_name": "AUTHP_REDIRECT_URL",
+                            "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+                            "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+                            "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+                            "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+                            "cookie_name_prefix": "AUTHP"
+                        },
+                        "identity_stores": [
+                            "localdb"
+                        ],
+                        "token_validator_options": {},
+                        "raw_crypto_key_store_config": [
+                            "crypto default token lifetime 3600",
+                            "crypto key sign-verify {env.JWT_SHARED_KEY}"
+                        ],
+                        "crypto_key_store_config": {
+                            "token_lifetime": 3600,
+                            "raw_key_configs": [
+                                "crypto key sign-verify {env.JWT_SHARED_KEY}"
+                            ],
+                            "auto_generate_tag": "default",
+                            "auto_generate_algo": "ES512"
+                        },
+                        "token_grantor_options": {},
+                        "portal_admin_roles": {
+                            "authp/admin": true
+                        },
+                        "portal_user_roles": {
+                            "authp/user": true
+                        },
+                        "portal_guest_roles": {
+                            "authp/guest": true
+                        },
+                        "api": {
+                            "profile_enabled": true
+                        }
+                    }
+                ],
+                "identity_stores": [
+                    {
+                        "name": "localdb",
+                        "kind": "local",
+                        "params": {
+                            "path": "assets/config/users.json",
+                            "realm": "local",
+                            "users": [
+                                {
+                                    "email_address": "{env.USERS_ADMIN_EMAIL}",
+                                    "name": "{env.USERS_ADMIN_NAME}",
+                                    "password": "{env.USERS_ADMIN_SECRET}",
+                                    "password_overwrite_enabled": true,
+                                    "roles": [
+                                        "authp/admin",
+                                        "authp/user"
+                                    ],
+                                    "username": "{env.USERS_ADMIN_USERNAME}"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

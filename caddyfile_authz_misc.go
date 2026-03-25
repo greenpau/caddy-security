@@ -116,9 +116,9 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, p *authz.PolicyConf
 	case "with":
 		switch {
 		case strings.HasPrefix(v, "basic auth"):
-			p.AddRawIdpConfig(cfgutil.EncodeArgs(args))
+			p.AddAuthProxyRawConfig(cfgutil.EncodeArgs(args))
 		case strings.HasPrefix(v, "api key auth"):
-			p.AddRawIdpConfig(cfgutil.EncodeArgs(args))
+			p.AddAuthProxyRawConfig(cfgutil.EncodeArgs(args))
 		case strings.HasPrefix(v, "api key header name ") && len(args) == 5:
 			p.SetAPIKeyHeaderName(args[4])
 		case strings.HasPrefix(v, "auth realm header name ") && len(args) == 5:
