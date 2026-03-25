@@ -1,16 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-</head>
+  </head>
 
-<body>
-  <h1>App</h1>
+  <body>
+    <h1>App</h1>
 
-  <p><a href="https://auth.myfiosgateway.com:8443/auth/logout?redirect_uri=https://google.com/">logout with redirect</a></p>
-  <p><a href="https://auth.myfiosgateway.com:8443/auth/portal">back to portal</a></p>
-
-</body>
+    <p>
+      <a
+        href="https://auth.myfiosgateway.com:8443/auth/logout?redirect_uri=https://google.com/"
+        >logout with redirect</a
+      >
+    </p>
+        <p>
+      <a
+        href="https://auth.myfiosgateway.com:8443/auth/logout"
+        >logout without redirect</a
+      >
+    </p>
+    <p>
+      <a href="https://auth.myfiosgateway.com:8443/auth/portal"
+        >back to portal</a
+      >
+    </p>
+    <p>
+      <a href="https://auth.myfiosgateway.com:8443/auth/whoami">my identity</a>
+    </p>
+    <p>
+      <a
+        href="https://auth.myfiosgateway.com:8443/auth/whoami?id_token=true&format=json"
+        >my identity (JSON)</a
+      >
+    </p>
+    <p>
+      <a href="https://auth.myfiosgateway.com:8443/auth/api/refresh_token"
+        >token refresh</a
+      >
+    </p>
+  </body>
 </html>
