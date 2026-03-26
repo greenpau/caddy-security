@@ -260,6 +260,7 @@
 			allow roles authp/admin authp/user
 			with api key auth portal myportal realm local
 			with basic auth portal myportal realm local
+			validate bearer header
 			# with basic auth portal myportal realm userpool1.localdomain
 			# with api key header name X-Secret
 			# with basic auth portal myportal realm userpool1.localdomain
