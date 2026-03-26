@@ -181,7 +181,7 @@
 
 		authentication portal myportal {
 			crypto default token lifetime 3600
-			crypto key r7xc8y6 sign-verify {env.JWT_SECRET_1}
+			# crypto key r7xc8y6 sign-verify {env.JWT_SECRET_1}
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
 			cookie guess domain
@@ -248,16 +248,19 @@
 
 		authorization policy mypolicy {
 			set auth url https://auth.myfiosgateway.com:8443/auth/
-			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
+			# crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
 			allow roles authp/admin authp/user
 			# set session_id cookie name CONTOSO_SESSION_ID
 			# set access_token cookie name CONTOSO_ACCESS_TOKEN
 		}
 
 		authorization policy api_access_policy {
-			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
+			disable auth redirect
+			# crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
 			allow roles authp/admin authp/user
 			with api key auth portal myportal realm local
+			with basic auth portal myportal realm local
+			# with basic auth portal myportal realm userpool1.localdomain
 			# with api key header name X-Secret
 			# with basic auth portal myportal realm userpool1.localdomain
 			# with basic auth portal myportal realm userpool2.localdomain
