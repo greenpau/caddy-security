@@ -10,6 +10,12 @@
 		ask http://localhost:5555/
 	}
 
+	log {
+		format json {
+			time_format iso8601
+		}
+	}
+
 	security {
 		credentials root@localhost {
 			username root
@@ -196,8 +202,8 @@
 				#language fr
 				#language zh
 				links {
-					"My Website" "https://go.myfiosgateway.com:8443/app/" icon "las la-star"
-					#"Debug" "https://go.myfiosgateway.com:8443/version" icon "las la-star"
+					"My Website" "https://go.myfiosgateway.com:8444/app/" icon "las la-star"
+					#"Debug" "https://go.myfiosgateway.com:8444/version" icon "las la-star"
 					"My Identity" "/auth/whoami" icon "las la-user"
 				}
 			}
@@ -245,29 +251,6 @@
 			# enable identity store userpool2
 			# enable identity store example.com
 		}
-
-		authorization policy mypolicy {
-			set auth url https://auth.myfiosgateway.com:8443/auth/
-			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
-			allow roles authp/admin authp/user
-			# set session_id cookie name CONTOSO_SESSION_ID
-			# set access_token cookie name CONTOSO_ACCESS_TOKEN
-		}
-
-		authorization policy api_access_policy {
-			disable auth redirect
-			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
-			allow roles authp/admin authp/user
-			with api key auth portal myportal realm local
-			with basic auth portal myportal realm local
-			validate bearer header
-			# with basic auth portal myportal realm userpool1.localdomain
-			# with api key header name X-Secret
-			# with basic auth portal myportal realm userpool1.localdomain
-			# with basic auth portal myportal realm userpool2.localdomain
-			# with auth realm header name X-My-Auth-Realm
-			# set session_id cookie name CONTOSO_SESSION_ID
-		}
 	}
 }
 
@@ -306,7 +289,7 @@ auth.myfiosgateway.com:8443 {
 
 	# Appplication files
 	route /todo-prod/profile* {
-		authorize with mypolicy
+		# authorize with mypolicy
 		uri strip_prefix /auth/profile
 		file_server {
 			root {$HOME}/dev/src/github.com/authcrunch/authcrunch-ui/frontend/profile/build/
@@ -327,29 +310,5 @@ auth.myfiosgateway.com:8443 {
 
 	route /* {
 		redir https://{hostport}/auth/ 302
-	}
-}
-
-go.myfiosgateway.com:8443 {
-	tls internal {
-		on_demand
-	}
-
-	route /version* {
-		authorize with mypolicy
-		respond * "1.0.0 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
-		#respond * "1.0.0" 200
-	}
-
-	route /api/* {
-		authorize with api_access_policy
-		respond * "api access granted to {http.auth.user.id} in {http.auth.user.realm}" 200
-	}
-
-	route /app* {
-		authorize with mypolicy
-		file_server {
-			root ./assets/config/
-		}
 	}
 }

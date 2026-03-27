@@ -1,0 +1,92 @@
+{
+	debug
+	local_certs
+	http_port 8081
+	https_port 8443
+	#admin off
+	admin localhost:2026
+
+	# order trace before basicauth
+
+	on_demand_tls {
+		ask http://localhost:5556/
+	}
+
+	log {
+		format json {
+			time_format iso8601
+		}
+	}
+
+	security {
+		authorization policy mypolicy {
+			set auth url https://auth.myfiosgateway.com:8443/auth/
+			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
+			allow roles authp/admin authp/user
+			set session_id cookie name CONTOSO_SESSION_ID
+			set access_token cookie name CONTOSO_ACCESS_TOKEN
+		}
+
+		authorization policy api_access_policy {
+			disable auth redirect
+			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
+			allow roles authp/admin authp/user
+			set session_id cookie name CONTOSO_SESSION_ID
+			set access_token cookie name CONTOSO_ACCESS_TOKEN
+
+			# with api key auth portal https://auth.myfiosgateway.com:8443/auth realm local
+			# with basic auth portal https://auth.myfiosgateway.com:8443/auth realm local
+
+			validate bearer header
+			# with basic auth portal myportal realm userpool1.localdomain
+			# with api key header name X-Secret
+			# with basic auth portal myportal realm userpool1.localdomain
+			# with basic auth portal myportal realm userpool2.localdomain
+			# with auth realm header name X-My-Auth-Realm
+			# set session_id cookie name CONTOSO_SESSION_ID
+		}
+	}
+}
+
+http://localhost:5556 {
+	bind 127.0.0.1
+	# trace tag="tls-on-demand"
+	@allowed_localhost query domain=localhost
+	@allowed_local query domain=go.myfiosgateway.com
+	@allowed_global query domain=auth.myfiosgateway.com
+	@allowed_apps query domain=go.myfiosgateway.com
+	respond @allowed_localhost 200
+	respond @allowed_local 200
+	respond @allowed_global 200
+	respond @allowed_apps 200
+	respond 400
+}
+
+go.myfiosgateway.com:8444 {
+	tls internal {
+		on_demand
+	}
+
+	route /health* {
+		respond * "1.0.0" 200
+	}
+
+	route /version* {
+		authorize with mypolicy
+		respond * "1.0.0 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
+	}
+
+	route /api/* {
+		# trace tag="api"
+		authorize with api_access_policy
+		respond * "api access granted to {http.auth.user.id} in {http.auth.user.realm}" 200
+	}
+
+	route /app* {
+		# trace tag="api"
+		authorize with mypolicy
+		file_server {
+			root ./assets/config/
+		}
+	}
+}

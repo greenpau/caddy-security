@@ -128,19 +128,13 @@ func TestParseCaddyfileAuthorization(t *testing.T) {
 					  ]
 					},
 					"auth_proxy_config": {
-					  "portal_name": "default",
-					  "basic_auth": {
-						"enabled": true,
 						"realms": {
-						  "local": true
+							"local": {
+								"api_key_auth_enabled": true,
+								"basic_auth_enabled":   true,
+								"portal_name":          "default"
+							}
 						}
-					  },
-					  "api_key_auth": {
-						"enabled": true,
-						"realms": {
-						  "local": true
-						}
-					  }
 					},
 					"auth_proxy_raw_config": [
 					  "basic auth portal default realm local",

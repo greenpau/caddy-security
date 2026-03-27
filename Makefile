@@ -41,7 +41,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.1.31=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.1.32=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
