@@ -176,8 +176,9 @@ release-git-commit:
 	@git push
 	@git push --tags
 	@echo "If necessary, run the following commands:"
-	@echo "  git push --delete origin v$(APP_VERSION)"
-	@echo "  git tag --delete v$(APP_VERSION)"
+	@echo "  git push --delete origin v$(PLUGIN_VERSION)"
+	@echo "  git tag --delete v$(PLUGIN_VERSION)"
+	@echo "  go mod edit -retract v$(PLUGIN_VERSION)"
 	@echo "DEBUG: completed $@"
 
 .PHONY: release
