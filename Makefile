@@ -41,7 +41,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.1.32=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.1.33=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
@@ -146,25 +146,43 @@ dep:
 	@go install github.com/kyoh86/richgo@latest
 	@echo "$@: complete"
 
-.PHONY: release
-release:
-	@echo "$@: started"
+
+.PHONY: sync
+sync:
+	@echo "DEBUG: started $@"
+	@assets/scripts/update_doc_refs.sh
+
+.PHONY: release-git-check
+release-git-check:
+	@echo "DEBUG: started $@"
 	@go mod tidy;
 	@go mod verify;
 	@if [ $(GIT_BRANCH) != "main" ]; then echo "cannot release to non-main branch $(GIT_BRANCH)" && false; fi
 	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && false )
+	@echo "DEBUG: completed $@"
+
+.PHONY: release-update-version
+release-update-version:
+	@echo "DEBUG: started $@"
 	@versioned -patch
-	@echo "Patched version"
 	@assets/scripts/generate_downloads.sh
-	@git add VERSION README.md
+	@git add VERSION README.md CONTRIBUTING.md Makefile
+
+.PHONY: release-git-commit
+release-git-commit:
+	@echo "DEBUG: started $@"
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
 	@git push --tags
-	@@echo "If necessary, run the following commands:"
-	@echo "  git push --delete origin v$(PLUGIN_VERSION)"
-	@echo "  git tag --delete v$(PLUGIN_VERSION)"
-	@echo "$@: complete"
+	@echo "If necessary, run the following commands:"
+	@echo "  git push --delete origin v$(APP_VERSION)"
+	@echo "  git tag --delete v$(APP_VERSION)"
+	@echo "DEBUG: completed $@"
+
+.PHONY: release
+release: release-git-check build release-update-version release-git-commit
+	@echo "DEBUG: completed $@"
 
 .PHONY: logo
 logo:

@@ -188,6 +188,7 @@
 		authentication portal myportal {
 			crypto default token lifetime 3600
 			crypto key r7xc8y6 sign-verify {env.JWT_SECRET_1}
+			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
 			cookie guess domain

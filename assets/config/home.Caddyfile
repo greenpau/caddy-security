@@ -81,6 +81,8 @@
 				email "{env.JSMITH_EMAIL}"
 				password "{env.JSMITH_PASSWORD}"
 				roles "authp/user" "dash"
+				# secret: Lpi1BhMmSIcRk96E7QBovuik2rww3PV5JfSkzSVGNmKlNNCjpKbe66750TrUHIgcl67OEeCz
+				api key Lpi1BhMmSIcRk96E7QBovuik "bcrypt:10:$2a$10$vXJdZH7MMADIMCA9JQGTeemMfvXiZ/6C8oUZEgtObIz4b67mWdybe"
 			}
 			user mstone {
 				name Mia Stone
@@ -182,6 +184,7 @@
 		authentication portal myportal {
 			crypto default token lifetime 3600
 			crypto key r7xc8y6 sign-verify {env.JWT_SECRET_1}
+			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
 			cookie guess domain
@@ -249,6 +252,7 @@
 		authorization policy mypolicy {
 			set auth url https://auth.myfiosgateway.com:8443/auth/
 			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
+			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			allow roles authp/admin authp/user
 			# set session_id cookie name CONTOSO_SESSION_ID
 			# set access_token cookie name CONTOSO_ACCESS_TOKEN
@@ -257,6 +261,7 @@
 		authorization policy api_access_policy {
 			disable auth redirect
 			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
+			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			allow roles authp/admin authp/user
 			with api key auth portal myportal realm local
 			with basic auth portal myportal realm local
