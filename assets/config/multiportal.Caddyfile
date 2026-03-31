@@ -1,0 +1,201 @@
+{
+	debug
+	local_certs
+	http_port 8081
+	https_port 8443
+	#admin off
+	admin localhost:2026
+
+	# order trace before basicauth
+
+	on_demand_tls {
+		ask http://localhost:5556/
+	}
+
+	log {
+		format json {
+			time_format iso8601
+		}
+	}
+
+	security {
+		local identity store localdb8443 {
+			realm local8443
+			path assets/config/users_8443.json
+			user webadmin {
+				name Webmaster
+				email webadmin@localhost.localdomain
+				password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
+				roles "authp/admin" "authp/user"
+			}
+			user jsmith {
+				name John Smith
+				email jsmith@localhost.localdomain
+				password "My@Password123"
+				roles "authp/user" "dash"
+			}
+		}
+
+		local identity store localdb8444 {
+			realm local8444
+			path assets/config/users_8444.json
+			user webadmin {
+				name Webmaster
+				email webadmin@localhost.localdomain
+				password "bcrypt:10:$2a$10$r3mhN5ZzrmufA2rjcn4iCuaAXN9.3OCDxiPYheSuU8Pq1xWiiDBhG" overwrite
+				roles "authp/admin" "authp/user"
+			}
+			user mstone {
+				name Mia Stone
+				email mstone@localhost.localdomain
+				password "My@Password123"
+				roles "authp/user" "dash"
+			}
+		}
+
+		authentication portal myportal_8443 {
+			crypto default token lifetime 3600
+			crypto key aEA81C verify key8443
+			enable identity store localdb8443
+			# cookie guess domain
+			# cookie domain myfiosgateway.com
+			set cookie name prefix CONTOSO8443
+			ui {
+				links {
+					"Version" "/version" icon "las la-star"
+					"My Identity" "/auth/whoami" icon "las la-user"
+				}
+			}
+			transform user {
+				match realm local8443
+				action add role authp/user
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+			}
+
+			trust logout redirect uri domain partial myfiosgateway.com path suffix /
+			trust login redirect uri domain partial myfiosgateway.com path suffix /
+		}
+
+		authentication portal myportal_8444 {
+			crypto default token lifetime 3600
+			crypto key b1D6sX verify key8444
+			enable identity store localdb8444
+			# cookie guess domain
+			# cookie domain myfiosgateway.com
+			set cookie name prefix CONTOSO8444
+			ui {
+				links {
+					"Version" "/version" icon "las la-star"
+					"My Identity" "/auth/whoami" icon "las la-user"
+				}
+				language fr
+			}
+			transform user {
+				match realm local8444
+				action add role authp/user
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+			}
+
+			trust logout redirect uri domain partial myfiosgateway.com path suffix /
+			trust login redirect uri domain partial myfiosgateway.com path suffix /
+		}
+
+		authorization policy mypolicy_8443 {
+			disable auth redirect
+			#set auth url /auth
+			crypto key aEA81C verify key8443
+			set session_id cookie name CONTOSO8443_SESSION_ID
+			set access_token cookie name CONTOSO8443_ACCESS_TOKEN
+			acl rule {
+				comment allow admin users
+				match role authp/admin
+				allow stop log info
+			}
+			acl rule {
+				comment allow standard users
+				match role authp/user
+				allow stop log info
+			}
+			acl rule {
+				comment default deny
+				match any
+				deny log warn
+			}
+		}
+
+		authorization policy mypolicy_8444 {
+			#set auth url /auth
+			disable auth redirect
+			crypto key b1D6sX verify key8444
+			set session_id cookie name CONTOSO8444_SESSION_ID
+			set access_token cookie name CONTOSO8444_ACCESS_TOKEN
+			acl rule {
+				comment allow admin users
+				match role authp/admin
+				allow stop log info
+			}
+			acl rule {
+				comment allow standard users
+				match role authp/user
+				allow stop log info
+			}
+			acl rule {
+				comment default deny
+				match any
+				deny log warn
+			}
+		}
+	}
+}
+
+http://localhost:5556 {
+	bind 127.0.0.1
+	# trace tag="tls-on-demand"
+	@allowed_localhost query domain=localhost
+	@allowed_local query domain=go.myfiosgateway.com
+	@allowed_global query domain=auth.myfiosgateway.com
+	@allowed_apps query domain=go.myfiosgateway.com
+	respond @allowed_localhost 200
+	respond @allowed_local 200
+	respond @allowed_global 200
+	respond @allowed_apps 200
+	respond 400
+}
+
+go.myfiosgateway.com:8443 {
+	tls internal {
+		on_demand
+	}
+
+	route /auth* {
+		authenticate with myportal_8443
+	}
+
+	route /version* {
+		authorize with mypolicy_8443
+		respond * "8443 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
+	}
+
+	route /* {
+		redir https://{hostport}/auth/ 302
+	}
+}
+
+go.myfiosgateway.com:8444 {
+	tls internal {
+		on_demand
+	}
+
+	route /auth* {
+		authenticate with myportal_8444
+	}
+
+	route /version* {
+		authorize with mypolicy_8444
+		respond * "8444 {http.auth.user.id} {http.auth.user.realm} {http.auth.user.roles} {http.auth.user.email} {http.auth.user.origin} {http.auth.user.issuer}" 200
+	}
+
+	route /* {
+		redir https://{hostport}/auth/ 302
+	}
+}
