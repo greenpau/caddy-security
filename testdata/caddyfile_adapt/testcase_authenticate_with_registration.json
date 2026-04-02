@@ -114,6 +114,7 @@
                         "crypto_key_store_config": {
                             "token_lifetime": 3600,
                             "raw_key_configs": [
+                                "crypto default token lifetime 3600",
                                 "crypto key sign-verify {env.JWT_SHARED_KEY}"
                             ],
                             "auto_generate_tag": "default",

@@ -205,6 +205,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 						"auto_generate_algo": "ES512",
 						"auto_generate_tag":  "default",
 						"raw_key_configs": [
+							"crypto default token lifetime 3600",
 							"crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
 						],
 						"token_lifetime": 3600
