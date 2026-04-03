@@ -46,6 +46,7 @@
 			client_id {env.GITHUB_APP_CLIENT_ID}
 			client_secret {env.GITHUB_APP_CLIENT_SECRET}
 			icon github priority 100
+			disable pkce
 		}
 
 		oauth identity provider linkedin {

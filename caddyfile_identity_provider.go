@@ -151,7 +151,7 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 			v := strings.Join(args, "_")
 			switch v {
 			case "metadata_discovery", "key_verification", "pass_grant_type",
-				"response_type", "scope", "nonce", "email_claim_check":
+				"response_type", "scope", "nonce", "pkce", "email_claim_check":
 				m[v+"_disabled"] = true
 			case "tls_verification":
 				m["tls_insecure_skip_verify"] = true
