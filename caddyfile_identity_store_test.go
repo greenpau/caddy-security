@@ -210,6 +210,92 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 			  }
             }`,
 		},
+		{
+			name: "test local identity store with auth challenge rules",
+			d: caddyfile.NewTestDispenser(`
+            security {
+			  local identity store localdb {
+				realm local
+				path /tmp/localdb
+				user jsmith {
+					name John Smith
+					email jsmith@localdomain.local
+					password "My@Password123"
+					roles authp/user
+					auth challenges u2f
+					auth challenges password totp if u2f not available
+					auth challenges password if u2f and totp not available
+				}
+			  }
+              authentication portal myportal {
+                enable identity store localdb
+              }
+            }`),
+			want: `{
+			  "config": {
+				"authentication_portals": [
+				  {
+					"name": "myportal",
+					"ui": {},
+					"cookie_config": {
+						"session_id_cookie_name": "AUTHP_SESSION_ID",
+						"referer_cookie_name": "AUTHP_REDIRECT_URL",
+						"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+						"cookie_name_prefix": "AUTHP"
+					},
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
+					"identity_stores": [
+					  "localdb"
+					],
+					"portal_admin_roles": {
+						"authp/admin": true
+					},
+					"portal_user_roles": {
+						"authp/user": true
+					},
+					"portal_guest_roles": {
+						"authp/guest": true
+					},
+					"api": {
+					  "profile_enabled": true
+					},
+					"token_validator_options": {},
+					"token_grantor_options": {}
+				  }
+				],
+				"identity_stores": [
+				  {
+					"name": "localdb",
+					"kind": "local",
+					"params": {
+					  "path": "/tmp/localdb",
+					  "realm": "local",
+					  "users": [
+						{
+						  "username": "jsmith",
+						  "name": "John Smith",
+						  "email_address": "jsmith@localdomain.local",
+						  "password": "My@Password123",
+						  "roles": ["authp/user"],
+						  "auth_challenge_rules": [
+							"u2f",
+							"password totp if u2f not available",
+							"password if u2f and totp not available"
+						  ]
+						}
+					  ]
+					}
+				  }
+				]
+			  }
+            }`,
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
