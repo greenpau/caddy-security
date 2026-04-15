@@ -119,6 +119,10 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			inputFileNamePrefix: "testcase_authenticate_with_registration",
 		},
 		{
+			name:                "authenticate plugin config with auth challenges",
+			inputFileNamePrefix: "testcase_authenticate_with_auth_challenges",
+		},
+		{
 			name:                "security app config with authentication portal with static secrets manager plugin",
 			inputFileNamePrefix: "testcase_security_with_secrets",
 			shouldErr:           true,

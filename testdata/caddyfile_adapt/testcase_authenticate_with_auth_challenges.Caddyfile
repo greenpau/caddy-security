@@ -1,0 +1,26 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+			user jsmith {
+				name John Smith
+				email jsmith@localdomain.local
+				password "My@Password123"
+				roles authp/user
+				auth challenges u2f
+				auth challenges password totp if u2f not available
+				auth challenges password if u2f and totp not available
+			}
+		}
+
+		authentication portal myportal {
+			crypto key sign-verify {env.JWT_SHARED_KEY}
+			enable identity store localdb
+		}
+	}
+}
+
+:443 {
+	authenticate with myportal
+}
