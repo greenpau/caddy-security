@@ -154,6 +154,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 			username := args[0]
 			userMap["username"] = username
 			apiKeyList := []map[string]interface{}{}
+			authChallengeRules := []string{}
 			for userNesting := d.Nesting(); d.NextBlock(userNesting); {
 				userPropName := d.Val()
 				userPropValue := d.RemainingArgs()
@@ -186,6 +187,11 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain one or more value")
 					}
 					userMap[userPropName] = userPropValue
+				case "auth":
+					if len(userPropValue) < 2 || userPropValue[0] != "challenges" {
+						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must be followed by challenges")
+					}
+					authChallengeRules = append(authChallengeRules, strings.Join(userPropValue[1:], " "))
 				case "api":
 					if len(userPropValue) != 3 {
 						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" key must contain two values")
@@ -203,6 +209,9 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 			}
 			if len(apiKeyList) > 0 {
 				userMap["api_keys"] = apiKeyList
+			}
+			if len(authChallengeRules) > 0 {
+				userMap["auth_challenge_rules"] = authChallengeRules
 			}
 			userMaps = append(userMaps, userMap)
 		case "groups":
