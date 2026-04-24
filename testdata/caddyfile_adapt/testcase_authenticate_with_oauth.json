@@ -1,0 +1,144 @@
+{
+  "logging": {
+    "logs": {
+      "default": {
+        "level": "DEBUG"
+      }
+    }
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":8443"
+          ],
+          "routes": [
+            {
+              "handle": [
+                {
+                  "handler": "authentication",
+                  "providers": {
+                    "authorizer": {
+                      "gatekeeper_name": "zoo",
+                      "route_matcher": "*"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "security": {
+      "config": {
+        "authentication_portals": [
+          {
+            "name": "discordportal",
+            "ui": {},
+            "user_transformer_configs": [
+              {
+                "matchers": [
+                  "exact match role discord.com/{env.DISCORD_TEAMWHITELIST}/members"
+                ],
+                "actions": [
+                  "action add role authp/user"
+                ]
+              }
+            ],
+            "cookie_config": {
+              "session_id_cookie_name": "AUTHP_SESSION_ID",
+              "referer_cookie_name": "AUTHP_REDIRECT_URL",
+              "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+              "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+              "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+              "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+              "cookie_name_prefix": "AUTHP"
+            },
+            "identity_providers": [
+              "discord"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+              "crypto default token lifetime 3600",
+              "crypto key sign-verify {env.DISCORD_JWT_SECRET}"
+            ],
+            "crypto_key_store_config": {
+              "token_lifetime": 3600,
+              "raw_key_configs": [
+                "crypto key sign-verify {env.DISCORD_JWT_SECRET}"
+              ],
+              "auto_generate_tag": "default",
+              "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+              "authp/admin": true
+            },
+            "portal_user_roles": {
+              "authp/user": true
+            },
+            "portal_guest_roles": {
+              "authp/guest": true
+            },
+            "api": {
+              "profile_enabled": true
+            }
+          }
+        ],
+        "authorization_policies": [
+          {
+            "name": "zoo",
+            "auth_url_path": "https://test.com/oauth2/discord",
+            "auth_redirect_query_param": "redirect_url",
+            "auth_redirect_status_code": 302,
+            "access_list_rules": [
+              {
+                "conditions": [
+                  "match roles authp/user"
+                ],
+                "action": "allow log debug"
+              }
+            ],
+            "raw_crypto_key_store_config": [
+              "crypto key verify {env.DISCORD_JWT_SECRET}"
+            ],
+            "crypto_key_store_config": {
+              "raw_key_configs": [
+                "crypto key verify {env.DISCORD_JWT_SECRET}"
+              ],
+              "auto_generate_tag": "default",
+              "auto_generate_algo": "ES512"
+            },
+            "forbidden_url": "https://test.com/forbidden",
+            "user_identity_field": "id",
+            "api_key_header_name": "X-Api-Key",
+            "auth_realm_header_name": "X-Auth-Realm"
+          }
+        ],
+        "identity_providers": [
+          {
+            "name": "discord",
+            "kind": "oauth",
+            "params": {
+              "authorization_url": "https://discordapp.com/oauth2/authorize?prompt=none",
+              "client_id": "{env.OAUTH_CLIENT_ID}",
+              "client_secret": "{env.OAUTH_CLIENT_SECRET}",
+              "driver": "discord",
+              "realm": "discord",
+              "scopes": [
+                "identify",
+                "email",
+                "guilds"
+              ],
+              "user_group_filters": [
+                "{env.DISCORD_TEAMWHITELIST}"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+	debug
+	order authenticate before respond
+	order authorize before basicauth
+
+	# TODO: look at https://github.com/enum-gg/caddy-discord
+	security {
+		oauth identity provider discord {
+			realm discord
+			driver discord
+			authorization_url https://discordapp.com/oauth2/authorize?prompt=none
+			client_id {env.OAUTH_CLIENT_ID}
+			client_secret {env.OAUTH_CLIENT_SECRET}
+			scopes identify email guilds
+			user_group_filters {env.DISCORD_TEAMWHITELIST}
+		}
+		authentication portal discordportal {
+			crypto default token lifetime 3600
+			crypto key sign-verify {env.DISCORD_JWT_SECRET}
+			enable identity provider discord
+			transform user {
+				match role discord.com/{env.DISCORD_TEAMWHITELIST}/members
+				action add role authp/user
+			}
+		}
+		authorization policy zoo {
+			set auth url https://test.com/oauth2/discord
+			set forbidden url https://test.com/forbidden
+			set user identity id
+			crypto key verify {env.DISCORD_JWT_SECRET}
+			allow roles authp/user
+		}
+	}
+}
+
+:8443 {
+	authorize with zoo
+}
