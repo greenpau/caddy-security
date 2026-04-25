@@ -144,6 +144,10 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 			name:                "authenticate plugin config with ui",
 			inputFileNamePrefix: "testcase_authenticate_with_ui",
 		},
+		{
+			name:                "authenticate plugin config with oauth",
+			inputFileNamePrefix: "testcase_authenticate_with_oauth",
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

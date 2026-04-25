@@ -118,8 +118,10 @@ func substitute(ctx context.Context, repl *caddy.Replacer, secretManagers []Secr
 				continue
 			case string:
 				// Validate that every element in the interface slice is a string
+				entries := []string{}
 				for i, item := range v {
-					if _, ok := item.(string); !ok {
+					vStr, ok := item.(string)
+					if !ok {
 						log.Error("mixed types in string list",
 							zap.String("path", currentPath),
 							zap.Int("index", i),
@@ -127,7 +129,13 @@ func substitute(ctx context.Context, repl *caddy.Replacer, secretManagers []Secr
 						)
 						return fmt.Errorf("found mixed types in list: %s", currentPath)
 					}
+					entry, err := substituteString(ctx, repl, secretManagers, path, vStr, log)
+					if err != nil {
+						return err
+					}
+					entries = append(entries, entry)
 				}
+				data[key] = entries
 			case map[string]interface{}:
 				for i, item := range v {
 					if m, ok := item.(map[string]interface{}); ok {
@@ -240,21 +248,6 @@ func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		}
 		config.Credentials.RawCredentialConfigs = rawCredentialConfigs
 		if err := config.Credentials.Validate(); err != nil {
-			return err
-		}
-	}
-
-	if config.Messaging != nil {
-		rawMessagingConfigs := [][]string{}
-		for _, rawMessagingConfig := range config.Messaging.RawConfigs {
-			if values, err := substituteStrings(ctx, repl, secretManagers, "RawMessagingConfigs", rawMessagingConfig, log); err == nil {
-				rawMessagingConfigs = append(rawMessagingConfigs, values)
-			} else {
-				return err
-			}
-		}
-		config.Messaging.RawConfigs = rawMessagingConfigs
-		if err := config.Messaging.Validate(); err != nil {
 			return err
 		}
 	}
