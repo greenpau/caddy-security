@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Identity Stores"
+  short_description: "Configure local and LDAP stores"
+  default_prompt: "Use $configuration-identity-stores to configure local or LDAP identity stores."
