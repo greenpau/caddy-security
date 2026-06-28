@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Messaging"
+  short_description: "Configure email and file messaging"
+  default_prompt: "Use $configuration-messaging to configure caddy-security messaging providers."
