@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Authentication UI"
+  short_description: "Configure authentication portal UI"
+  default_prompt: "Use $configuration-authentication-ui to configure caddy-security authentication portal UI blocks."

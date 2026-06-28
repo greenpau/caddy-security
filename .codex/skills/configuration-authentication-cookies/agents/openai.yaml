@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Authentication Cookies"
+  short_description: "Configure authentication cookies"
+  default_prompt: "Use $configuration-authentication-cookies to configure caddy-security authentication portal cookies."

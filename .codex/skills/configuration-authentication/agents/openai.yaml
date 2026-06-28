@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Authentication"
+  short_description: "Configure authentication portals"
+  default_prompt: "Use $configuration-authentication to configure a caddy-security authentication portal."

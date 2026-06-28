@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Authentication User Transforms"
+  short_description: "Configure authentication user transforms"
+  default_prompt: "Use $configuration-authentication-user-transforms to configure caddy-security authentication portal user transforms."
