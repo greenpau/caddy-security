@@ -175,4 +175,4 @@ More info: added a focused contributor workflow and repository etiquette notes.
 When asked to "create commit message for the change", create a file in
 `tmp/commits` and place the commit message in that file. Commit message files in
 `tmp/commits` are working artifacts and should not be committed unless explicitly
-requested.
+requested. Prefix the file name with `YYYYMMDD_HHMM_` prefix.
