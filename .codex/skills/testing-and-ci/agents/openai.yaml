@@ -1,0 +1,4 @@
+interface:
+  display_name: "Testing and CI"
+  short_description: "caddy-security test and CI workflow"
+  default_prompt: "Use $testing-and-ci to choose and run the right caddy-security test workflow."

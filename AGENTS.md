@@ -41,3 +41,10 @@ for the workflow used when asked to create a commit message for a change.
 Use the repo-local `scripts-and-automation` skill when choosing, running, or
 documenting Makefile targets, repository scripts, build/test/report workflows,
 generated artifacts, dependency automation, or release/version procedures.
+
+## Testing and CI
+
+Use the repo-local `testing-and-ci` skill when choosing or running tests,
+adding or updating test coverage, maintaining Caddyfile adapt or runtime
+resolution fixtures, interpreting CI failures, reproducing GitHub Actions
+locally, or documenting validation for a change.
