@@ -24,6 +24,9 @@ Read these files when details matter:
 
 Use focused sibling skills for specialized portal sub-blocks:
 
+- `configuration-crypto` for portal `crypto` defaults, JWT signing keys,
+  auto-generated keys, token names and lifetimes, secret-backed key material,
+  and System API `system` keys.
 - `configuration-authentication-cookies` for `cookie` and token-cookie naming.
 - `configuration-authentication-ui` for `ui` blocks, templates, static assets,
   custom CSS/JS/HTML, themes, languages, logos, and private links.

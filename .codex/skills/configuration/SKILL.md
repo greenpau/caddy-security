@@ -81,6 +81,10 @@ authorize /api/* with api_policy
   `caddyfile_authn.go` and `caddyfile_authn_*.go`.
 - Authorization policies: `configuration-authorization`, parsed by
   `caddyfile_authz.go` and `caddyfile_authz_*.go`.
+- Crypto directives and token or System API keys:
+  `configuration-crypto`, parsed by `caddyfile_authn_crypto.go` and
+  `caddyfile_authz_crypto.go`, implemented by local
+  `go-authcrunch/pkg/kms`, and resolved by `caddyfile_resolve.go`.
 - Reusable generic credentials: `configuration-credentials`, parsed by
   `caddyfile_credentials.go`.
 - Local and LDAP stores: `configuration-identity-stores`, parsed by

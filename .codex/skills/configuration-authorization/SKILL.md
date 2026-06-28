@@ -10,6 +10,11 @@ description: "caddy-security authorization policy Caddyfile configuration. Use w
 Use this skill to configure `authorization policy <name>` blocks and the
 route-level `authorize [<matcher>] with <policy>` handler.
 
+Use `configuration-crypto` for detailed policy `crypto` key syntax, token
+verification material, token names and lifetimes, auto-generated key behavior,
+secret-backed key material, and System API `system` keys for remote Basic or
+API-key auth.
+
 Read these files when details matter:
 
 - `caddyfile_authz.go` for the policy block.

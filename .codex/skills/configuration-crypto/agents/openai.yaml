@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Crypto"
+  short_description: "Configure authentication and authorization crypto"
+  default_prompt: "Use $configuration-crypto to configure caddy-security crypto directives for authentication portals and authorization policies."
