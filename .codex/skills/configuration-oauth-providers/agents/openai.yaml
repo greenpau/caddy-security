@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration OAuth Providers"
+  short_description: "Configure OAuth and OIDC providers"
+  default_prompt: "Use $configuration-oauth-providers to configure caddy-security OAuth identity providers."
