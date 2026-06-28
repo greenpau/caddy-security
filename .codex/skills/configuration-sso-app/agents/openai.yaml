@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration SSO App"
+  short_description: "Configure Single Sign-On app"
+  default_prompt: "Use $configuration-sso-app to configure the caddy-security SSO app."
