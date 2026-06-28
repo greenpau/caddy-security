@@ -35,3 +35,9 @@ TODO.
 
 Use the repo-local `source-code-management` skill for commit message rules and
 for the workflow used when asked to create a commit message for a change.
+
+## Scripts and Automation
+
+Use the repo-local `scripts-and-automation` skill when choosing, running, or
+documenting Makefile targets, repository scripts, build/test/report workflows,
+generated artifacts, dependency automation, or release/version procedures.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scripts and Automation"
+  short_description: "caddy-security automation commands"
+  default_prompt: "Use $scripts-and-automation to choose the correct caddy-security automation command."
