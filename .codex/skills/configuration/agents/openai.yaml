@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration"
+  short_description: "Build caddy-security Caddyfiles"
+  default_prompt: "Use $configuration to create a caddy-security Caddyfile for authentication and authorization."
