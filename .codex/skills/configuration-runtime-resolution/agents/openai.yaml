@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Runtime Resolution"
+  short_description: "Use placeholders and secret values"
+  default_prompt: "Use $configuration-runtime-resolution to configure caddy-security runtime placeholders and secret lookups."
