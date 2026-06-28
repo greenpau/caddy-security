@@ -31,6 +31,12 @@ the `security.secrets` namespace, such as
 
 TODO.
 
+## Coding Directives
+
+Use the repo-local `coding-directives` skill when creating, modifying, or
+reviewing application code, Caddyfile directives, Caddy modules, authcrunch
+config mapping, HTTP handlers, or Go tests in this repository.
+
 ## Source Code Management
 
 Use the repo-local `source-code-management` skill for commit message rules and

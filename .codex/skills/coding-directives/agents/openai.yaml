@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coding Directives"
+  short_description: "caddy-security Go coding rules"
+  default_prompt: "Use $coding-directives to apply caddy-security coding rules while editing code."
