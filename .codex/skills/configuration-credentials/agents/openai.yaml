@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Credentials"
+  short_description: "Configure reusable credentials"
+  default_prompt: "Use $configuration-credentials to configure reusable caddy-security credentials."
