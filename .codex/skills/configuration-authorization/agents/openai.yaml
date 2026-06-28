@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Authorization"
+  short_description: "Configure authorization policies"
+  default_prompt: "Use $configuration-authorization to configure a caddy-security authorization policy."
