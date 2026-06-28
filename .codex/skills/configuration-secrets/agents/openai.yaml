@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Secrets"
+  short_description: "Configure secrets managers"
+  default_prompt: "Use $configuration-secrets to configure caddy-security secrets managers."
