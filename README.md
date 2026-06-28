@@ -5,7 +5,10 @@
 <a href="https://github.com/greenpau/caddy-security/actions/workflows/build.yml" target="_blank"><img src="https://github.com/greenpau/caddy-security/actions/workflows/build.yml/badge.svg"></a>
 <a href="https://pkg.go.dev/github.com/greenpau/caddy-security" target="_blank"><img src="https://img.shields.io/badge/godoc-reference-blue.svg"></a>
 
-Security App and Plugin for [Caddy v2](https://github.com/caddyserver/caddy). It includes:
+Security App with Authentication and Authorization Plugins
+for [Caddy v2](https://github.com/caddyserver/caddy).
+
+It includes:
 
 * Authentication Plugin for implementing Form-Based, Basic, Local, LDAP, OpenID
   Connect, OAuth 2.0, SAML Authentication
@@ -18,10 +21,7 @@ Please consider **sponsoring this project** via Github Sponsors!
 
 Please ask questions either here or via LinkedIn. I am happy to help you! @greenpau
 
-**Documentation**: [docs.authcrunch.com](https://docs.authcrunch.com)
-
-**Docker Container**: [authcrunch/authcrunch](https://github.com/authcrunch/authcrunch/pkgs/container/authcrunch)
-
-**Configuration Examples**: [here](https://github.com/authcrunch/authcrunch.github.io/tree/main/assets/conf)
-
-**Security Policy**: [SECURITY.md](SECURITY.md)
+Documentation for this project was previously hosted at
+https://docs.authcrunch.com. As AI agents become part of the development
+workflow, this repository is moving to skill-based documentation that helps both
+humans and AI agents work with the codebase.

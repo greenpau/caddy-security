@@ -1,0 +1,4 @@
+interface:
+  display_name: "Source Code Management"
+  short_description: "Commit message rules for caddy-security"
+  default_prompt: "Use $source-code-management to create a commit message for this change."
