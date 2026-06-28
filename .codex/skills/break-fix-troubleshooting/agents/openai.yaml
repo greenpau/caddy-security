@@ -1,0 +1,4 @@
+interface:
+  display_name: "Break-Fix Troubleshooting"
+  short_description: "Diagnose caddy-security support issues"
+  default_prompt: "Use $break-fix-troubleshooting to diagnose a caddy-security configuration or runtime issue and prepare a break-fix report."

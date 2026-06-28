@@ -6,8 +6,9 @@
 HTTP authentication/authorization integrations backed by
 `github.com/greenpau/go-authcrunch`. The global `security` Caddyfile option is
 adapted into the app configuration and can define credentials, messaging,
-identity stores and providers, SSO providers, local users, registration flows,
-authentication portals, authorization policies, and pluggable secrets managers.
+identity stores, OAuth and SAML identity providers, SSO app providers, local
+users, registration flows, authentication portals, authorization policies, and
+pluggable secrets managers.
 
 The module registers two primary HTTP integrations: `authenticate`, which serves
 an authentication portal for form-based, basic, local, LDAP, OpenID Connect,
@@ -41,9 +42,9 @@ modules register from package `init` hooks.
   registers the authorization provider used in Caddy's authentication chain.
 - `caddyfile.go` registers the global `security` Caddyfile option and dispatches
   parser blocks. The `caddyfile_<domain>.go` files parse credentials,
-  messaging, identity stores/providers, SSO providers, local users,
-  registrations, authentication portals, authorization policies, secrets, and
-  runtime replacement behavior.
+  messaging, identity stores, OAuth and SAML identity providers, SSO app
+  providers, local users, registrations, authentication portals, authorization
+  policies, secrets, and runtime replacement behavior.
 - `caddyfile_authn_*` files parse authentication portal subdirectives such as
   cookies, crypto, UI, transforms, and miscellaneous portal settings.
   `caddyfile_authz_*` files parse authorization policy subdirectives such as
@@ -79,6 +80,23 @@ modules register from package `init` hooks.
 Use the repo-local `coding-directives` skill when creating, modifying, or
 reviewing application code, Caddyfile directives, Caddy modules, authcrunch
 config mapping, HTTP handlers, or Go tests in this repository.
+
+## Configuration
+
+Use the repo-local `configuration` skill when creating, reviewing, or modifying
+Caddy Caddyfile configurations for caddy-security authentication portals,
+authorization policies, identity stores, OAuth and SAML identity providers, SSO
+app providers, local users, registration flows, messaging, credentials, secrets
+managers, runtime replacement, or the `authenticate` and `authorize` HTTP
+integrations.
+
+## Break-Fix Troubleshooting
+
+Use the repo-local `break-fix-troubleshooting` skill when diagnosing reported
+configuration, deployment, or runtime failures; analyzing Caddyfiles, Caddy
+logs, redirect loops, login failures, authorization denials, OAuth/OIDC/SAML,
+LDAP, local-user, module-version, or runtime secret issues; or preparing
+responses for `.github/ISSUE_TEMPLATE/break-fix.md`.
 
 ## Source Code Management
 
