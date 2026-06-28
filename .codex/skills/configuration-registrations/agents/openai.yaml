@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Registrations"
+  short_description: "Configure user registration flows"
+  default_prompt: "Use $configuration-registrations to configure caddy-security user registration flows."
