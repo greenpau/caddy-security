@@ -117,6 +117,34 @@ When `scopes` is omitted, authcrunch defaults by driver:
   static-key form with `disable key verification`; without metadata discovery,
   authcrunch otherwise still attempts to fetch JWKS during provider setup.
 
+## Provider-Side Claim Notes
+
+Some OAuth failures require changes in the upstream provider console, not the
+Caddyfile parser:
+
+- Discord: the default `identify` scope yields the Discord user identity. Add
+  `email` for email claims, `guilds` for guild membership, and
+  `guilds.members.read` for guild role checks. When `user_group_filters`
+  matches a guild, authcrunch can emit roles such as
+  `discord.com/<guild_id>/members`, `discord.com/<guild_id>/admins`, and
+  `discord.com/<guild_id>/role/<role_id>` for transform matching.
+- GitHub: configure App account permissions for email addresses with read-only
+  access when `/whoami` or transforms need email claims. Without this provider
+  permission and user consent, email may be absent even when the Caddyfile is
+  valid.
+- Keycloak: create realm roles or groups that correspond to application roles,
+  assign users to them, and add client mappers for email and groups/roles so
+  the claims appear in tokens or userinfo. Missing mappers often look like a
+  transform bug but are provider-side configuration.
+- Cognito: configure required user-pool fields, app client callback/sign-out
+  URLs, domain, and custom attributes before login. The legacy docs note that
+  custom attributes such as `custom:roles` and `custom:timezone` may not appear
+  in the issued portal token without additional provider/userinfo extraction
+  behavior.
+- Ping Identity, Auth0, OneLogin, and other hosted providers often require
+  console-side callback URL, logout URL, scope, and claim mapping setup even
+  when the generic Caddyfile shape is correct.
+
 ## Common Options
 
 The parser accepts single-value OAuth fields such as `realm`, `driver`,
@@ -182,6 +210,16 @@ configure explicit URLs as required by the driver and account for JWKS behavior.
 
 `logout_url` also enables external provider logout behavior even without
 `enable logout`.
+
+External logout is separate from local portal logout. Without `enable logout`
+or a manual `logout_url`, the portal clears local cookies but may leave the
+upstream IdP session active. With `enable logout`, authcrunch uses
+provider-specific logout handling when implemented. Current docs describe
+redirect parameter behavior for Google (`continue`), Azure/GitLab/Okta
+(`post_logout_redirect_uri`), Cognito (`logout_uri` plus client context),
+GitHub (logout URL without redirect parameter), and generic providers (manual
+URL as-is). For Facebook, Discord, LinkedIn, and Nextcloud, verify current
+authcrunch source before promising provider-side session termination.
 
 For id token cookies, use the spaced Caddyfile form:
 
