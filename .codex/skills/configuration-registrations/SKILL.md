@@ -95,6 +95,34 @@ the directive name, authcrunch can notify through a matching email or file
 messaging provider. Coordinate identity store names with
 `configuration-identity-stores`.
 
+## Workflow Notes
+
+Registration is not the same as immediate account activation. The user reaches
+the form from the portal's register link, submits username, password, email,
+name, optional registration code, and required terms acceptance, then receives
+an email confirmation link and short passcode. The confirmation passcode is
+time-limited in authcrunch; when it expires, the user must register again.
+
+After email confirmation, current docs still describe administrator approval as
+manual: review the dropbox file and move approved user data into the target
+local identity store database or another management path. Do not promise a full
+admin approval UI unless the current go-authcrunch implementation provides it.
+
+When multiple registrations target different identity stores or realms, use
+separate dropbox paths. The portal exposes realm-specific registration URLs,
+for example:
+
+```text
+/auth/register/local
+/auth/register/userpool1.localdomain
+```
+
+For local validation without a real SMTP server, `smtp-debug-server` from
+`github.com/emersion/go-smtp/cmd/smtp-debug-server` can listen on
+`127.0.0.1:1025` and print raw registration email content. This is useful for
+verifying confirmation links, passcodes, BCC handling, and registration
+metadata. Installing it may require network access.
+
 ## Fixtures
 
 Use these examples:
