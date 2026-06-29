@@ -48,6 +48,20 @@ not require authentication.
 
 Coordinate `credentials <name>` with `configuration-credentials`.
 
+For local registration or MFA email testing, run a mock SMTP server on the
+configured address:
+
+```bash
+go install github.com/emersion/go-smtp/cmd/smtp-debug-server@latest
+smtp-debug-server
+```
+
+The common docs examples use `127.0.0.1:1025` with `protocol smtp` and
+`passwordless`. The debug server prints raw SMTP conversations and rendered
+messages, which helps verify confirmation links, passcodes, BCC recipients,
+sender identity, and registration metadata. Installing the tool may require
+network access; use an existing local binary when available.
+
 ## File Provider
 
 ```caddyfile
