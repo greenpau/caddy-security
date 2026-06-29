@@ -50,6 +50,14 @@ is legacy context, not the source of truth.
   placeholder resolution.
 - Login failures: check enabled identity stores/providers, portal path routing,
   credentials, user transforms, cookie settings, crypto keys, and clock skew.
+- Portal API failures: check `Accept: application/json` or `format=json`,
+  portal base path, latest `sandbox_secret` in challenge flows, token source
+  headers/cookies, `/beacon` versus `/whoami` semantics, and whether admin
+  endpoints have `enable admin api` plus an admin session.
+- Sandbox or MFA lockouts: check checkpoint order, `require mfa` transforms,
+  registered TOTP/U2F tokens, sandbox expiration, repeated password failures,
+  MFA failure counters on the user record, and whether the user is being forced
+  to register an MFA token during login.
 - OAuth/OIDC callback failures: check redirect URI, issuer/discovery URL,
   client ID/secret, scopes, PKCE settings, state/cookie behavior, trusted
   redirects, reverse-proxy headers, and provider-specific constraints.
@@ -57,10 +65,20 @@ is legacy context, not the source of truth.
   metadata, role attributes, and whether the issue is an identity-provider flow
   or an SSO app-provider flow.
 - LDAP failures: check bind credentials, search base, filters, username and
-  group attributes, realm, TLS settings, and network reachability.
+  group attributes, realm, TLS settings, network reachability, exact one-user
+  search results, role-producing group mappings, and the service-bind then
+  user-rebind flow.
+- Registration failures: check messaging provider delivery, confirmation link
+  base URL, passcode expiry, domain/MX restrictions, dropbox path, admin email,
+  target identity store, and whether manual approval or database transfer is
+  still required.
 - Authorization denials: check route order, `authorize with <policy>` wiring,
   token cookie/header availability, verify keys, ACL rules, roles, claim names,
   bypass rules, and injected identity headers.
+- Basic/API-key auth failures: check `X-Auth-Realm` or configured realm header,
+  API key header name, one `with ... realm ...` line per accepted realm,
+  System API keys for remote portals, and whether the response is a `401` auth
+  failure or a browser-style redirect due to missing credentials.
 - Redirect loops or missing sessions: check cookie domain/path/security flags,
   auth URL, same-site behavior, source address validation, TLS termination, and
   whether authn and authz use matching crypto material.
