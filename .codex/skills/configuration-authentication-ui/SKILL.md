@@ -77,6 +77,29 @@ Do not invent UI directives from authcrunch struct fields unless
 `caddyfile_authn_ui.go` parses them. The Caddyfile parser does not currently
 support a top-level `ui title` or `allow settings for role` subdirective.
 
+## Languages
+
+Use `language <id>` inside the `ui` block for portal localization:
+
+```caddyfile
+ui {
+	language fr
+}
+```
+
+The supported language set and message keys come from local go-authcrunch
+translation data, especially `pkg/translate/data/messages.json`. Check that
+file when validating whether a language or message is available; do not infer
+support from screenshots alone.
+
+## Client Integration Patterns
+
+Custom JavaScript can implement post-login behavior that `auto_redirect_url`
+cannot express, such as calling `/whoami`, checking the referrer from a
+`/sandbox/` path, inspecting roles, and redirecting users to a role-specific
+dashboard. Treat such scripts as application code: review same-origin
+assumptions, JSON `Accept` headers, role checks, and failure behavior.
+
 ## Fixtures
 
 Use this fixture as the main example:
