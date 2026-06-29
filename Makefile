@@ -6,7 +6,7 @@ LATEST_GIT_COMMIT:=$(shell git log --format="%H" -n 1 | head -1)
 BUILD_USER:=$(shell whoami)
 BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BUILD_DIR:=$(shell pwd)
-CADDY_VERSION="v2.11.2"
+CADDY_VERSION="v2.11.4"
 
 VERBOSE:=-v
 ifdef TEST
@@ -41,7 +41,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.1.39=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.1.40=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
@@ -171,7 +171,7 @@ release-update-version:
 .PHONY: release-git-commit
 release-git-commit:
 	@echo "DEBUG: started $@"
-	@git commit -m "released v`cat VERSION | head -1`"
+	@git commit -m "ops: released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
 	@git push --tags
