@@ -88,6 +88,37 @@ rebuild all default cookie names:
 set cookie name prefix AUTHP
 ```
 
+## Effective Scope
+
+Cookie domain and path behavior is often the cause of successful login followed
+by protected-route redirects. By default, cookies are host-only unless
+`cookie domain <domain>` or `cookie guess domain` sets a Domain attribute. Do
+not add a leading dot to cookie domains.
+
+Common default portal cookie paths:
+
+- Session and access-token cookies are broad and normally use `/`.
+- Redirect and sandbox cookies are portal-base scoped, such as `/auth/`.
+- ID-token cookies are scoped to the portal identity endpoint, commonly
+  `<base>/whoami`.
+- Refresh-token cookies are scoped to the refresh-token API path, commonly
+  `<base>/api/refresh_token`.
+
+When `authenticate` and `authorize` run on separate Caddy instances, mirror
+custom access-token and session cookie names in the authorization policy:
+
+```caddyfile
+authorization policy app_policy {
+	set session_id cookie name CONTOSO_SESSION_ID
+	set access_token cookie name CONTOSO_ACCESS_TOKEN
+}
+```
+
+When the portal and policy are in the same provisioned `security` app,
+authcrunch can discover the portal access-token cookie name for local
+gatekeepers, but cross-instance deployments cannot rely on that shared runtime
+state.
+
 ## Fixtures
 
 Use these fixtures as examples:
