@@ -72,16 +72,16 @@ module github.com/greenpau/caddy-security
 go 1.21
 
 require (
-    github.com/greenpau/go-authcrunch v1.1.40
+    github.com/greenpau/go-authcrunch v1.1.41
 )
 
-replace github.com/greenpau/go-authcrunch v1.1.40 => /Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+replace github.com/greenpau/go-authcrunch v1.1.41 => /Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 ```
 
 Alternatively:
 
 ```bash
-go mod edit -replace github.com/greenpau/go-authcrunch@v1.1.40=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+go mod edit -replace github.com/greenpau/go-authcrunch@v1.1.41=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 ```
 
 Then, modify `Makefile` such that that replacement passes to `xcaddy` builder:
@@ -90,7 +90,7 @@ Then, modify `Makefile` such that that replacement passes to `xcaddy` builder:
         @mkdir -p ../xcaddy-$(PLUGIN_NAME) && cd ../xcaddy-$(PLUGIN_NAME) && \
                 xcaddy build $(CADDY_VERSION) --output ../$(PLUGIN_NAME)/bin/caddy \
                 --with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
-                --with github.com/greenpau/go-authcrunch@v1.1.40=/home/greenpau/dev/src/github.com/greenpau/go-authcrunch
+                --with github.com/greenpau/go-authcrunch@v1.1.41=/home/greenpau/dev/src/github.com/greenpau/go-authcrunch
 ```
 
 Once all the necessary packages are installed, you should be ready to compile
@@ -120,4 +120,13 @@ Additionally, you should be able to run tests:
 
 ```bash
 make ctest
+```
+
+For more complex E2E testing, use `home.Caddyfile`. You can then browse to `https://auth.myfiosgateway.com:8443/`
+to access the portal.
+
+```bash
+make devbuild
+source ~/.config/caddy/Caddyfile_vars.sh
+bin/authcrunch run --config assets/config/home.Caddyfile
 ```
