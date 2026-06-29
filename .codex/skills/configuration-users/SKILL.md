@@ -70,6 +70,14 @@ Do not generate unsupported user subdirectives. In particular, the underlying
 Caddyfile parser does not expose `auth_challenge_rules` or API key overwrite
 syntax inside `user` blocks.
 
+Authentication challenge rules may still exist in local user records and can be
+managed outside the Caddyfile, such as with `authdbctl` or Profile API paths in
+go-authcrunch. Rules use challenge names like `password`, `totp`, `u2f`, and
+`mfa`, plus conditions such as `if u2f not available`. Treat those as runtime
+user-database behavior for troubleshooting; do not add `auth challenges ...`
+lines to generated local-user Caddyfile blocks until parser support and tests
+exist.
+
 ## Secrets
 
 Prefer environment placeholders or secret lookups for passwords and API keys:
