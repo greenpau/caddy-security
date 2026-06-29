@@ -20,15 +20,15 @@ Read these files when details matter:
   Caddyfile parser wrappers.
 - `caddyfile_resolve.go` for env, file, and secrets substitution in raw crypto
   lines before authcrunch validation.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/kms/` for the real crypto
+- `../go-authcrunch/pkg/kms/` for the real crypto
   grammar, key loading, defaults, signing, verification, and System API keys.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/config.go` and
+- `../go-authcrunch/pkg/authn/config.go` and
   `portal.go` for portal key-store construction, token signing, and the portal
   validator.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authz/config.go`,
+- `../go-authcrunch/pkg/authz/config.go`,
   `gatekeeper.go`, and `pkg/authz/validator/` for policy key-store
   construction, token discovery, and verification.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authproxy/` and
+- `../go-authcrunch/pkg/authproxy/` and
   `pkg/system/` for remote Basic/API-key auth encrypted with `system` keys.
 
 ## Mental Model
@@ -298,7 +298,7 @@ Use these examples for orientation:
 - `testdata/caddyfile_adapt/testcase_security_with_secrets.Caddyfile` for
   secret-backed crypto values.
 - `assets/config/home.Caddyfile` for multiple key IDs and `system` keys.
-- `~/dev/src/github.com/authcrunch/authcrunch.github.io/docs/authenticate/auth-cookie.md`,
+- `../authcrunch.github.io/docs/authenticate/auth-cookie.md`,
   `docs/authorize/token-verification.md`, and
   `docs/authenticate/api/50-system-api.md` for user-facing crypto examples;
   prefer current code when docs and implementation differ.

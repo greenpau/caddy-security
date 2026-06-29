@@ -29,10 +29,10 @@ plugin, and explain why.
    before drafting the Caddyfile.
    Load `configuration-http-integrations` whenever adding route-level
    `authenticate` or `authorize` handlers.
-   For `saml identity provider <name>` blocks, inspect
-   `caddyfile_identity_provider.go` and local `go-authcrunch/pkg/idp/saml`
-   directly until a dedicated SAML identity-provider skill exists; do not
-   substitute the SSO app skill.
+   Load `configuration-saml-providers` for `saml identity provider <name>`
+   blocks; do not substitute the SSO app skill.
+   Load `authentication-portal-api` when the request involves Portal API,
+   JSON login, `/whoami`, `/beacon`, or admin/server API endpoints.
 3. Start from the smallest valid `security` app block, then add route handlers
    that reference the configured portal or policy by name.
 4. Prefer environment placeholders or secret lookups for passwords, API keys,
@@ -103,6 +103,9 @@ authorize /api/* with api_policy
   `caddyfile_messaging.go`.
 - OAuth/OIDC identity providers: `configuration-oauth-providers`, parsed by
   `caddyfile_identity.go` and `caddyfile_identity_provider.go`.
+- SAML login identity providers: `configuration-saml-providers`, parsed by
+  `caddyfile_identity.go` and `caddyfile_identity_provider.go`, implemented by
+  local `go-authcrunch/pkg/idp/saml`.
 - User registrations: `configuration-registrations`, parsed by
   `caddyfile_user.go` and `caddyfile_user_registration.go`.
 - Runtime placeholder and secret resolution: `configuration-runtime-resolution`,
@@ -113,14 +116,16 @@ authorize /api/* with api_policy
   `caddyfile_sso_provider.go`.
 - Local user entries in identity stores: `configuration-users`, parsed inside
   `caddyfile_identity_store.go`.
+- Portal JSON/admin APIs: `authentication-portal-api`, implemented by local
+  `go-authcrunch/pkg/authn/handle_*` handlers and enabled in Caddyfile by
+  authentication portal options.
 
 Keep this map synchronized with every directory matching
 `.codex/skills/configuration-*`.
 
-SAML identity-provider blocks currently have no dedicated `configuration-*`
-skill. They are parsed by `caddyfile_identity.go`,
-`caddyfile_identity_provider.go`, and local `go-authcrunch/pkg/idp/saml`. This
-is distinct from the SSO app.
+SAML identity-provider blocks are distinct from SSO app providers. Use
+`configuration-saml-providers` for login through external SAML IdPs and
+`configuration-sso-app` for portal-provided SAML SSO app endpoints.
 
 ## Fixtures
 

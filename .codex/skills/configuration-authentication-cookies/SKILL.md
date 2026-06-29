@@ -15,9 +15,9 @@ Read these files when details matter:
 - `caddyfile_authn_cookie.go` for accepted Caddyfile cookie syntax.
 - `caddyfile_authn_misc.go` for `set <token> cookie name` and cookie prefix
   directives.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/cookie/` for cookie
+- `../go-authcrunch/pkg/authn/cookie/` for cookie
   defaults, domain matching, SameSite validation, and emitted attributes.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/portal.go` for how
+- `../go-authcrunch/pkg/authn/portal.go` for how
   access-token cookie names feed the portal validator and grantor.
 
 Use `configuration-authentication` for the surrounding portal and

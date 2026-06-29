@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration SAML Providers"
+  short_description: "Configure SAML login identity providers"
+  default_prompt: "Use $configuration-saml-providers to configure caddy-security SAML login identity providers."

@@ -20,10 +20,10 @@ Read these files when details matter:
 - `caddyfile_authn_crypto.go` for crypto key directives.
 - `caddyfile_authn_misc.go` for `enable`, `validate`, and `trust`.
 - `plugin_authn.go` for route-level `authenticate` syntax.
-- `~/dev/src/github.com/greenpau/go-authcrunch/config.go` for portal
+- `../go-authcrunch/config.go` for portal
   validation, default backend attachment, and user registration wiring.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/config.go` and
-  `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/portal.go` for
+- `../go-authcrunch/pkg/authn/config.go` and
+  `../go-authcrunch/pkg/authn/portal.go` for
   portal defaults and runtime behavior.
 
 Use focused sibling skills for specialized portal sub-blocks:
@@ -37,6 +37,10 @@ Use focused sibling skills for specialized portal sub-blocks:
 - `configuration-authentication-user-transforms` for `transform user` blocks,
   ACL matchers, transform actions, challenges, claim replacements, and UI links
   emitted by transforms.
+- `configuration-saml-providers` for `saml identity provider <name>` login
+  providers enabled by the portal.
+- `authentication-portal-api` for JSON login, `/whoami`, `/beacon`, refresh
+  token, and admin/server API endpoint behavior.
 
 ## Shape
 
@@ -118,6 +122,26 @@ trust logout redirect uri domain example.com path /
 
 The match type is optional and defaults to `exact`; supported match types are
 `exact`, `partial`, `prefix`, `suffix`, and `regex`.
+
+Enable admin/server API endpoints only when they are needed and protected by
+an authenticated admin session:
+
+```caddyfile
+enable admin api
+```
+
+See `authentication-portal-api` for `/api/server/metadata`,
+`/api/server/realms`, `/api/server/info`, JSON login, `/beacon`, and `/whoami`
+behavior. Admin API troubleshooting should check the directive, the active
+portal session, and whether the user has an admin role before changing route
+layout.
+
+Portal access uses built-in role tiers. `authp/admin` grants administrative
+portal capabilities, `authp/user` grants normal user settings/profile
+capabilities, and `authp/guest` is the fallback portal-only role when neither
+admin nor user roles are assigned. When debugging portal UI access, search
+debug logs for configured portal access-list rules and inspect transforms that
+add or drop `authp/*` roles.
 
 ## Fixtures
 

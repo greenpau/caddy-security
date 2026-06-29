@@ -12,11 +12,11 @@ Use this skill for `ui` blocks inside `authentication portal <name>` blocks.
 Read these files when details matter:
 
 - `caddyfile_authn_ui.go` for accepted Caddyfile UI syntax.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/ui/params.go` for
+- `../go-authcrunch/pkg/authn/ui/params.go` for
   authcrunch UI parameters.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/portal.go` for UI
+- `../go-authcrunch/pkg/authn/portal.go` for UI
   defaults, template loading, static assets, theme and language validation.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/ui/static.go` for
+- `../go-authcrunch/pkg/authn/ui/static.go` for
   static asset loading and content-type handling.
 
 Use `configuration-authentication` for the surrounding portal and

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Portal API"
+  short_description: "Use portal and admin APIs"
+  default_prompt: "Use $authentication-portal-api to work with caddy-security authentication portal JSON APIs and admin endpoints."

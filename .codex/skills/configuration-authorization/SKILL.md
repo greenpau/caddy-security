@@ -29,12 +29,12 @@ Read these files when details matter:
 - `caddyfile_authz_misc.go` for `enable`, `disable`, `validate`, `set`, and
   `with`.
 - `plugin_authz.go` for route-level `authorize` syntax.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authz/config.go` and
+- `../go-authcrunch/pkg/authz/config.go` and
   `gatekeeper.go` for policy defaults and runtime wiring.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authz/validator/` for token
+- `../go-authcrunch/pkg/authz/validator/` for token
   source, bearer, method/path, path-ACL, source-address, Basic, and API-key
   behavior.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/acl/` for ACL fields,
+- `../go-authcrunch/pkg/acl/` for ACL fields,
   aliases, match strategies, and action semantics.
 
 ## Shape
@@ -199,6 +199,31 @@ with auth realm header name X-Auth-Realm
 Basic/API-key auth is consulted after normal token sources fail. The request
 realm must match `with auth realm header name`, defaulting to `X-Auth-Realm`;
 failed Basic or API-key auth returns `401`.
+
+Client checks for Basic and API-key auth:
+
+```bash
+curl -H 'X-Auth-Realm: local' --user 'jsmith:My@Password123' https://app.example.com/api/foo
+curl -H 'X-Auth-Realm: local' -H 'X-Api-Key: <api-key>' https://app.example.com/api/foo
+```
+
+If clients cannot send `X-Auth-Realm`, set a default before `authorize` with
+Caddy's `request_header` directive:
+
+```caddyfile
+route /api/* {
+	request_header +X-Auth-Realm "local"
+	authorize with api_policy
+}
+```
+
+A malformed API key or failed Basic credential should return `401`. If the API
+key header name is wrong or absent, the policy may treat the request like an
+unauthenticated browser request and redirect to the auth URL unless
+`disable auth redirect` is set. For multiple realms, configure one
+`with basic auth portal ... realm ...` or `with api key auth portal ... realm
+...` line per accepted realm and require clients to send the matching realm
+header.
 
 Bypass authorization only for paths that do not need authenticated user
 metadata:

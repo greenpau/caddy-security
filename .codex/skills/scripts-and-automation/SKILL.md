@@ -79,9 +79,8 @@ Development in `caddy-security` often connects this module to a local
 `github.com/greenpau/go-authcrunch` checkout that sits next to the
 `caddy-security` directory in the filesystem tree. If `caddy-security` is at
 `<parent>/caddy-security`, assume `go-authcrunch` is at
-`<parent>/go-authcrunch`, such as `~/dev/src/github.com/greenpau/caddy-security`
-paired with `~/dev/src/github.com/greenpau/go-authcrunch`, or
-`~/foo/caddy-security` paired with `~/foo/go-authcrunch`.
+`<parent>/go-authcrunch`; from this repository, that path is
+`../go-authcrunch`.
 
 Use a Go module replacement when the user is aligning `caddy-security` changes
 with parallel local `go-authcrunch` work. Read the currently required

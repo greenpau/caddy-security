@@ -277,6 +277,11 @@ conflict with another third-party plugin, and explain the conflicting directive
 order. Do not use global order directives as a default fix for login failures,
 redirect loops, or authorization denials.
 
+Legacy docs-site examples and old solution briefs may still include global
+`order authenticate before respond` and `order authorize before basicauth`
+lines. Treat those examples as historical route-shape references, not as
+current guidance to copy into new Caddyfiles.
+
 ## Validation
 
 When changing Caddyfile examples or fixtures, validate with the narrowest

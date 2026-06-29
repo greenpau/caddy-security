@@ -13,11 +13,11 @@ blocks.
 Read these files when details matter:
 
 - `caddyfile_authn_transform.go` for Caddyfile transform forwarding.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/authn/transformer/` for
+- `../go-authcrunch/pkg/authn/transformer/` for
   supported transform actions and claim replacement behavior.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/acl/condition.go` for ACL
+- `../go-authcrunch/pkg/acl/condition.go` for ACL
   matcher grammar.
-- `~/dev/src/github.com/greenpau/go-authcrunch/pkg/acl/acl.go` for field
+- `../go-authcrunch/pkg/acl/acl.go` for field
   aliases and field data types.
 
 Use `configuration-authentication` for the surrounding portal and

@@ -54,6 +54,23 @@ Local store-level options supported by authcrunch are `login_icon`,
 set those with `icon`, `enable username recovery`, `enable password recovery`,
 `enable contact support`, `support link`, and `support email`.
 
+When a local database path does not exist, authcrunch can create the database
+and bootstrap an administrative user. For first-run support, inspect Caddy logs
+for the generated username, email, and password. These environment variables can
+override the bootstrap account:
+
+```text
+AUTHP_ADMIN_USER
+AUTHP_ADMIN_EMAIL
+AUTHP_ADMIN_SECRET
+```
+
+The local database stores password and username policy fields. The default
+password policy requires length 8-128, and the default username policy requires
+length 3-50. Users with non-guest portal access can change their password from
+the portal profile/settings UI; administrators can also update hashes with
+`authdbctl` or by editing the local database carefully.
+
 ## LDAP Stores
 
 LDAP stores require `realm` and `servers` at config-validation time. At
@@ -99,6 +116,11 @@ default ports `389` and `636`, or a port in the URL, and defaults timeout to 5
 seconds; the Caddyfile parser currently exposes only `ignore_cert_errors` and
 `posix_groups` server flags.
 
+Prefer `trusted_authority <path>` for LDAPS trust over `ignore_cert_errors`.
+When collecting a server certificate chain for trust configuration, use
+`openssl s_client -showcerts` against the LDAPS endpoint, split the PEM
+certificates, and point `trusted_authority` at the required CA files.
+
 If `search_user_filter`, `search_group_filter`, or `attributes` are omitted,
 authcrunch defaults to Active Directory-style values:
 `sAMAccountName`/`mail`, `memberOf`, `givenName`, `sn`, and
@@ -121,6 +143,24 @@ Group mapping rules:
 - Do not add new Caddyfile fallback-role examples until
   `caddyfile_identity_store.go` is fixed and tested: the current parser stores
   `args[2:]`, so ordinary `fallback role authp/user` drops the first role.
+
+Runtime LDAP authentication flow:
+
+1. Authcrunch opens a fresh LDAP connection for the login attempt; it does not
+   keep long-lived LDAP connections open.
+2. It binds with the configured service `username` and `password`.
+3. It substitutes the submitted username/email into `search_user_filter` and
+   searches under `search_base_dn`.
+4. Authentication fails unless exactly one user object is found.
+5. It maps LDAP group DNs to roles from explicit or automatic group mapping.
+   If no role is produced and no supported fallback applies, authentication
+   fails before token issuance.
+6. It re-binds as the found user DN with the submitted password. A successful
+   re-bind allows token issuance.
+
+This flow means a correct-looking Caddyfile can still fail because the search
+filter is too broad, group membership does not map to any role, LDAPS trust is
+missing, or service bind credentials are wrong.
 
 ## Store Options
 
