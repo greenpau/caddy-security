@@ -6,6 +6,7 @@ release:
     name: caddy-security
   draft: false
   prerelease: auto
+  footer: "{{ .Env.GO_AUTHCRUNCH_CHANGELOG }}"
 
 checksum:
   name_template: "{{.ProjectName}}_{{.Version}}_SHA256SUMS"

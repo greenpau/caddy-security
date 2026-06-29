@@ -29,6 +29,16 @@ jobs:
           go-version: "~1.25"
           check-latest: true
           cache: true
+      - name: Generate go-authcrunch changelog
+        shell: bash
+        run: |
+          changelog_file="${RUNNER_TEMP}/go-authcrunch-changelog.md"
+          assets/scripts/generate_go_authcrunch_changelog.sh > "${changelog_file}"
+          {
+            echo "GO_AUTHCRUNCH_CHANGELOG<<GO_AUTHCRUNCH_CHANGELOG_EOF"
+            cat "${changelog_file}"
+            echo "GO_AUTHCRUNCH_CHANGELOG_EOF"
+          } >> "${GITHUB_ENV}"
       - uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
