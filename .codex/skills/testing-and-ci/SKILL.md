@@ -113,9 +113,9 @@ wants debug artifacts kept.
 
 `.github/workflows/build.yml` runs on pushes and pull requests to `main` using
 Ubuntu and Go `1.25.x`. It installs `make` and `libnss3-tools`, sets `GOBIN` to
-`/home/runner/.local/bin`, runs `make dep`, `go mod tidy`, `go mod verify`,
-`go mod download`, runs `make test || true` followed by `make test`, then runs
-`make coverage` and uploads `.coverage/coverage.html`.
+the runner-local bin directory, runs `make dep`, `go mod tidy`,
+`go mod verify`, `go mod download`, runs `make test || true` followed by
+`make test`, then runs `make coverage` and uploads `.coverage/coverage.html`.
 
 For local CI reproduction, use:
 

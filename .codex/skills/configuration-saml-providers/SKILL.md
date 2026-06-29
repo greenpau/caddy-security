@@ -18,9 +18,6 @@ Read these files when details matter:
   dispatch and accepted provider fields.
 - `../go-authcrunch/pkg/idp/saml/` for validation,
   metadata handling, assertion validation, and driver behavior.
-- `../authcrunch.github.io/docs/authenticate/saml/`
-  for legacy Azure AD and JumpCloud setup walkthroughs; prefer current parser
-  and authcrunch source when docs and code differ.
 
 ## Shape
 
@@ -71,16 +68,18 @@ For Azure AD, the docs use these common fields: `idp_metadata_location`,
 `entity_id`, and one or more `acs_url` lines. Azure app roles can appear in
 SAML assertions when configured under the Enterprise Application claims.
 
-For JumpCloud, configure a custom SAML app with SP entity ID, IdP entity ID,
-ACS URL, NameID as email, RSA-SHA256 signing, and user attributes such as email
-and display name. Download JumpCloud metadata and the IdP certificate and point
-the Caddyfile at those files.
+Current go-authcrunch SAML validation supports `driver azure` and
+`driver generic`. There is no first-class `driver jumpcloud`; for JumpCloud,
+use `driver generic`, configure a custom SAML app with SP entity ID, IdP entity
+ID, ACS URL, NameID as email, RSA-SHA256 signing, and user attributes such as
+email and display name. Download JumpCloud metadata and the IdP certificate and
+point the Caddyfile at those files.
 
 ## Review Checklist
 
 - Use `saml identity provider <name>`, not `sso provider <name>`.
-- Include a stable `realm` and `driver`; supported drivers depend on the
-  current authcrunch SAML implementation.
+- Include a stable `realm` and `driver`; current local go-authcrunch supports
+  `azure` and `generic`.
 - Configure IdP metadata and signing certificate paths or URLs accepted by the
   current parser and authcrunch validator.
 - Include every externally reachable ACS URL with `acs_url`, especially when
@@ -95,7 +94,5 @@ the Caddyfile at those files.
 
 Use these references:
 
-- `assets/conf/saml/jumpcloud/Caddyfile` in the docs repository for a legacy
-  JumpCloud example.
 - `caddyfile_identity_provider.go` for current accepted Caddyfile fields.
 - `go-authcrunch/pkg/idp/saml` for runtime validation and assertion behavior.

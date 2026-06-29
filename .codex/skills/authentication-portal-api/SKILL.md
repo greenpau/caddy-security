@@ -18,9 +18,6 @@ Read these files when details matter:
 - `../go-authcrunch/pkg/authn/handle_http_*.go`
   for browser versus JSON behavior.
 - `caddyfile_authn_misc.go` for `enable admin api`.
-- `../authcrunch.github.io/docs/authenticate/api/`
-  for user-facing examples; prefer current authcrunch source when docs and code
-  differ.
 
 ## JSON Requests
 
@@ -47,8 +44,10 @@ Programmatic login is challenge-based:
 3. The client posts the same identity plus `sandbox_id`, current
    `sandbox_secret`, `challenge_kind`, and `challenge_response`.
 4. The portal may rotate `sandbox_secret` and return another challenge.
-5. When all checkpoints pass, the response includes `authenticated: true` and
-   token names plus access and, when enabled, refresh token values.
+5. When all checkpoints pass, the current JSON login path returns
+   `authenticated: true`, `access_token_name`, and `access_token`. The
+   `AuthResponse` struct has refresh-token fields, but the current
+   `handleIssueTokens` path in local go-authcrunch does not populate them.
 
 Common challenge kinds are `password`, `totp`, and `mfa`. For WebAuthn/U2F,
 the client first answers `challenge_kind: mfa` with
@@ -106,5 +105,7 @@ roles before suspecting handler bugs.
   auth challenge rules stored in the local user database.
 - `/whoami` omits upstream ID token: verify the OAuth provider uses
   `enable id token cookie ...` and the browser/client sends the ID-token cookie.
+- `/api/refresh_token` surprises: the current endpoint is an authenticated JSON
+  endpoint that returns a timestamp; it does not mint a replacement token value.
 - Admin endpoint returns unauthorized: verify `enable admin api`, active portal
   session, and `authp/admin` or equivalent portal admin role.

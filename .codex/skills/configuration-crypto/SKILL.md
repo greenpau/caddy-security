@@ -298,7 +298,3 @@ Use these examples for orientation:
 - `testdata/caddyfile_adapt/testcase_security_with_secrets.Caddyfile` for
   secret-backed crypto values.
 - `assets/config/home.Caddyfile` for multiple key IDs and `system` keys.
-- `../authcrunch.github.io/docs/authenticate/auth-cookie.md`,
-  `docs/authorize/token-verification.md`, and
-  `docs/authenticate/api/50-system-api.md` for user-facing crypto examples;
-  prefer current code when docs and implementation differ.

@@ -66,12 +66,15 @@ workflow with an ad hoc workaround.
 
 `make devbuild` uses `xcaddy` to build Caddy into `bin/authcrunch` with this
 module, `caddy-security-secrets-static-secrets-manager`, `caddy-trace`, and a
-local `go-authcrunch` replacement. It also writes to the sibling directory
-`../xcaddy-caddy-security` and assumes `go-authcrunch` is checked out next to
-`caddy-security` as `../go-authcrunch`.
+local `go-authcrunch` replacement. It writes to the sibling directory
+`../xcaddy-caddy-security`, but the current Makefile hard-codes the
+go-authcrunch replacement path in its `--replace` argument instead of using the
+generic `../go-authcrunch` path.
 
 Run `make devbuild` only when the user explicitly wants that integrated local
-Caddy build and the sibling checkout/path assumptions are acceptable.
+Caddy build and the sibling output plus hard-coded go-authcrunch path are
+acceptable for the current machine, or after updating the Makefile path
+deliberately.
 
 ## Local go-authcrunch Development
 

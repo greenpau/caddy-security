@@ -15,9 +15,6 @@ especially `pkg/ids/local/user.go`, `pkg/ids/local/authenticator.go`, and
 
 Use `configuration-identity-stores` for the surrounding store.
 
-Do not treat `authcrunch.github.io/docs/` as authoritative for this skill; it
-may lag the parser and `go-authcrunch` behavior.
-
 ## Shape
 
 ```caddyfile

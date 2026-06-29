@@ -47,9 +47,10 @@ Selection rules:
   helping AI agents work with this repository.
 - Use `ops` for dependency or toolchain version bumps. Use `build` only
   when the build behavior itself changes.
-- Release automation creates subjects like `ops: released v1.1.62`; keep that
-  form for Makefile-generated release commits. For hand-written release
-  workflow changes, use `ops`.
+- The current Makefile release target creates subjects like `released v1.1.62`
+  without a change indicator. Treat that as existing automation behavior, not a
+  template for hand-written commit messages. For hand-written release workflow
+  changes, use `ops`.
 - Use `various` only when a commit intentionally spans unrelated surfaces and no
   more specific indicator is honest.
 - Normalize older repository labels when creating new messages: use
