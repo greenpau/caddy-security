@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration HTTP Integrations"
+  short_description: "Configure authenticate and authorize routes"
+  default_prompt: "Use $configuration-http-integrations to configure caddy-security authenticate and authorize HTTP routes."

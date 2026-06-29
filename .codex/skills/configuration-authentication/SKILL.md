@@ -10,6 +10,10 @@ description: "caddy-security authentication portal Caddyfile configuration. Use 
 Use this skill to configure `authentication portal <name>` blocks and the
 route-level `authenticate with <portal>` handler.
 
+Use `configuration-http-integrations` for route placement, matcher forms,
+same-host or split-host portal wiring, portal/protected route separation, and
+directive-order guardrails when attaching the portal to HTTP routes.
+
 Read these files when details matter:
 
 - `caddyfile_authn.go` for the portal block.

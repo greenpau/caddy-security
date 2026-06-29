@@ -10,6 +10,10 @@ description: "caddy-security authorization policy Caddyfile configuration. Use w
 Use this skill to configure `authorization policy <name>` blocks and the
 route-level `authorize [<matcher>] with <policy>` handler.
 
+Use `configuration-http-integrations` for route placement, matcher forms,
+same-host or split-host auth wiring, portal/protected route separation, and
+directive-order guardrails when attaching a policy to HTTP routes.
+
 Use `configuration-crypto` for detailed policy `crypto` key syntax, token
 verification material, token names and lifetimes, auto-generated key behavior,
 secret-backed key material, and System API `system` keys for remote Basic or
@@ -152,6 +156,11 @@ set token sources header query cookie
 set session_id cookie name AUTHP_SESSION_ID
 set access_token cookie name AUTHP_ACCESS_TOKEN ALT_ACCESS_TOKEN
 ```
+
+`set auth url` must match where the referenced authentication portal is served.
+Use the same-host portal path such as `/auth` or `/xauth`, or the full URL for
+a split-host or root-mounted dedicated auth host. Use
+`configuration-http-integrations` to choose and align the route shape.
 
 `set redirect status` accepts only 300 through 308. When `set forbidden url` is
 present, access-denied decisions redirect with status `303`; `{uri}`,

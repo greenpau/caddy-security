@@ -15,12 +15,20 @@ The authoritative parser entry point is `caddyfile.go`. The global block is
 `security { ... }`; route-level HTTP integrations reference configured objects
 with `authenticate with <portal>` and `authorize with <policy>`.
 
+Do not generate global Caddy directive-order overrides for caddy-security by
+default. `authenticate` and `authorize` register their own order in
+`plugin_authn.go` and `plugin_authz.go`. Only add global `order` directives
+when debugging a proven directive-order conflict with another third-party
+plugin, and explain why.
+
 ## Workflow
 
 1. Identify the requested auth flow: local login, LDAP, OAuth/OIDC, SAML, API
    keys, basic auth, registration, SSO app, or policy-only authorization.
 2. Load only the relevant `configuration-*` domain skills from the Domain Map
    before drafting the Caddyfile.
+   Load `configuration-http-integrations` whenever adding route-level
+   `authenticate` or `authorize` handlers.
    For `saml identity provider <name>` blocks, inspect
    `caddyfile_identity_provider.go` and local `go-authcrunch/pkg/idp/saml`
    directly until a dedicated SAML identity-provider skill exists; do not
@@ -77,6 +85,8 @@ authorize /api/* with api_policy
 
 ## Domain Map
 
+- HTTP integrations: `configuration-http-integrations`, parsed by
+  `plugin_authn.go` and `plugin_authz.go`.
 - Authentication portals: `configuration-authentication`, parsed by
   `caddyfile_authn.go` and `caddyfile_authn_*.go`.
 - Authorization policies: `configuration-authorization`, parsed by
