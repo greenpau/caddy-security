@@ -92,6 +92,34 @@ Transform values may use authcrunch claim replacements such as
 `{claims.realm}/user` or `{claims.email}`. These are authcrunch transform
 placeholders, not Caddy runtime replacer placeholders.
 
+## Sandbox And Challenges
+
+`require mfa` adds an MFA checkpoint to the portal sandbox. The sandbox session
+is separate from the final JWT session, uses its own sandbox cookie and secret,
+and expires after a short window. Login proceeds through checkpoints in order,
+usually password first and then MFA. If a user has no MFA tokens and a transform
+requires MFA, the portal can force MFA token registration before completing
+login.
+
+Useful runtime facts when troubleshooting:
+
+- Several failed password attempts terminate the current sandbox session.
+- MFA failures are tracked on the user record across sandbox sessions and can
+  temporarily lock MFA validation.
+- `/sandbox/{id}/terminate` ends a sandbox session early and returns the user to
+  login.
+- Programmatic clients must use the latest `sandbox_secret` returned by the
+  Portal API after each challenge; see `authentication-portal-api`.
+
+Authcrunch supports richer authentication challenge rules on user records, such
+as `u2f`, `password totp if u2f not available`, and rules that use `or` or
+`if ... not available`. They can be managed through `authdbctl` or Profile API
+paths in go-authcrunch. Do not generate Caddyfile examples with
+`require auth challenges ...` or local user `auth challenges ...` unless the
+current caddy-security parser supports and tests them; as of this skill update,
+`configuration-users` treats `auth_challenge_rules` as not exposed by the
+Caddyfile parser.
+
 ## Fixtures
 
 Use this fixture as the main example:
