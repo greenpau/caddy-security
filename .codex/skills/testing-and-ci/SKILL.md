@@ -1,6 +1,6 @@
 ---
 name: testing-and-ci
-description: caddy-security repository testing and CI workflow guidance, including Go test command selection, Makefile report targets, Caddyfile parser/adapt fixture tests, runtime resolution fixtures, coverage artifacts, and GitHub Actions build/release/CLA behavior. Use when choosing or running tests, adding or updating test coverage, interpreting CI failures, reproducing GitHub Actions locally, or documenting validation for this Go/Caddy module.
+description: caddy-security testing through pinned tested, Caddyfile parser/adapt and runtime resolution fixtures, automation tests, complete coverage artifacts, and reusable GitHub Actions gates. Use when choosing or running tests, updating coverage, interpreting CI failures, reproducing CI locally, or validating report and artifact workflows.
 ---
 
 # Testing and CI
@@ -16,6 +16,14 @@ The Go module is rooted at the repository top level. Most tests live in the
 root `security` package and cover Caddyfile parsing, Caddyfile adaptation, and
 runtime authcrunch config resolution.
 
+Follow the [repository scope](../coding-directives/SKILL.md#repository-scope).
+Create and run tests in this module only; never run sibling suites to validate
+work here or fix a failing test by editing the sibling. `TEST_DIR` and
+`QUICK_TEST_DIR` must select this module's packages, and `COVERAGE_DIR` must not
+point into another checkout. Existing local replacements are dependency inputs
+only. Keep compatibility fixtures and reports here and report required upstream
+test or implementation changes as separate work.
+
 ## Command Selection
 
 Use direct Go tests for quick feedback:
@@ -27,26 +35,38 @@ go test -run TestCaddyfileAdaptAuthenticationToJSON ./...
 go test -run TestResolveRuntimeAppConfig ./...
 ```
 
-Use `make test` for the full local workflow. It creates `.coverage`, installs
-test report tools if missing, runs `go test -json -v ./...` with a coverage
-profile, writes `.coverage/test_output.jsonl`, generates HTML reports, and
-fails if any JSON test action failed.
+Use `make test` for the repository report lifecycle. `go.mod` pins
+`github.com/greenpau/tested`, invoked as `go tool tested`; it owns `-json`,
+`-coverprofile`, child-process status, and coherent reports. Do not reintroduce
+`go test | tee`, log-grep success detection, richgo, tparse, or go-test-report.
 
-Use `make qtest` only when the Makefile's current `QUICK_TEST_PATTERN` is the
-intended scope. Prefer direct `go test -run ... ./...` for a different focused
-test instead of editing the Makefile just to run one command.
+```bash
+make test
+make test TEST='TestParseCaddyfileAuthorization' TEST_DIR='.'
+make qtest TEST='TestParseCaddyfileAuthorization'
+make run-reports
+make test-automation
+make ci-check
+```
 
-Use `make coverage` after `.coverage/coverage.out` exists, usually after
-`make test`. It writes `.coverage/coverage.html`, refreshes
-`.coverage/coverage.out`, and prints non-100% function coverage.
+Lifecycle runs use `-mod=readonly -race -count=1 -timeout 20m -v`.
+`TEST` is a regex (default `.`), `TEST_DIR` accepts package patterns (default
+`./...`), and `TEST_TIMEOUT` overrides the quoted per-package limit.
+`MINIMUM_COVERAGE` defaults to 1 percent as a nonzero-profile check, matching
+go-authcrunch; it is not a substantial coverage target.
 
-Use `make build` when validation needs the `bin/authcrunch` command binary or
-when Caddyfile fixture formatting may matter. Use `make fmtcfg` after a build
-to format Caddyfile fixtures under `testdata/caddyfile_adapt` and
-`assets/config`.
+Reports land in `.coverage`. `make qtest` defaults to the root package (`.`) with
+reports in `.coverage/quick`; override `QUICK_TEST_DIR` and `TEST` for another
+scope. Use `COVERAGE_DIR` to isolate independent concurrent runs. Let tested
+refresh its managed files without deleting other bundles or investigation
+notes. `make run-reports` regenerates presentations from recorded evidence
+and preserves failures; `make coverage` aliases it without rerunning tests.
 
-`make dep`, `make install-test-tools`, `go mod tidy`, `go mod verify`,
-`go mod download`, and `go install` may require network access.
+Use `make build` when validation needs `bin/authcrunch`. Formatting is separate:
+`make fmtcfg` formats fixtures under `testdata/caddyfile_adapt` and
+`assets/config`. Builds/tests do not rewrite licenses, version files, module
+manifests, or Caddyfiles. `make dep` downloads/verifies pinned dependencies and
+resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
 
@@ -111,26 +131,38 @@ wants debug artifacts kept.
 
 ## CI Workflow
 
-`.github/workflows/build.yml` runs on pushes and pull requests to `main` using
-Ubuntu and Go `1.25.x`. It installs `make` and `libnss3-tools`, sets `GOBIN` to
-the runner-local bin directory, runs `make dep`, `go mod tidy`,
-`go mod verify`, `go mod download`, runs `make test || true` followed by
-`make test`, then runs `make coverage` and uploads `.coverage/coverage.html`.
+`.github/workflows/build.yml` runs on pushes/PRs to `main`, manual dispatch,
+and reusable workflow calls. It selects Ubuntu 24.04 and Go `1.26.8` with
+`GOTOOLCHAIN=local`, plus Python 3 and NSS utilities. It resolves a versioned
+artifact identity, runs `make dep` and `make ci-check`, and checks that
+validation did not modify tracked source or add untracked source files.
+
+After the gate is attempted, it always uploads `.coverage/`, including hidden
+files and partial failure evidence, with 14-day retention. Missing artifacts
+fail the upload and test failures remain failures. Actions are pinned to
+immutable revisions and the test workflow has read-only contents permission.
 
 For local CI reproduction, use:
 
 ```bash
 make dep
-go mod tidy
-go mod verify
-go mod download
-make test
-make coverage
+make ci-check
 ```
 
-The release workflow runs GoReleaser on `v*` tags or manual dispatch with Go
-`~1.25`. Treat release workflows, tags, pushes, and chained release Makefile
-targets as human-operator actions unless the user explicitly requests them.
+Use [release-and-versioning](../release-and-versioning/SKILL.md) for release CI,
+tag selection, artifact naming, packaging checks, and publication scope. The
+release workflow calls this reusable gate before GoReleaser.
+
+`make ci-check` serializes version validation, Python automation fixtures, the
+full Go report lifecycle, and the binary build, even under `make -j`. It has no
+browser test step; this repository's wrapper does not own go-authcrunch's UI.
+The existing `make linter` remains a placeholder and is not a gate.
+
+When changing tested or its invocation, run `make test-automation`. It exercises
+real Make/tested processes in disposable repositories: filtering, full/quick/
+custom bundle isolation, assertion failures, compile failures, short timeouts,
+and failed offline reports. Version fixtures exercise the public artifact
+command and validated `GITHUB_OUTPUT` values without publishing remotely.
 
 The CLA workflow may update `assets/cla/signatures.json` through GitHub
 automation. Do not edit CLA signatures or consent files unless the user asks.
@@ -142,13 +174,26 @@ commit them:
 
 ```text
 bin/authcrunch
+.coverage/index.html
+.coverage/summary.json
+.coverage/junit.xml
 .coverage/coverage.html
 .coverage/coverage.out
 .coverage/test_output.jsonl
 .coverage/test_output.html
+.coverage/stderr.log
+.coverage/run.json
+.coverage/manifest.json
 testdata/caddyfile_adapt/*_tmp_input.json
 testdata/caddyfile_adapt/*_tmp_output.json
 ```
 
+The manifest is published last for a coherent generation; a failed run can
+leave only partial evidence. Inspect `run.json`, `stderr.log`, and
+`test_output.jsonl` before rerunning so failures are not overwritten without
+review. Test output and coverage sources are unredacted; use synthetic fixtures.
+
 Formatted Caddyfiles and JSON fixtures can be intentional source changes.
-Review the diff after running format, build, test, or coverage commands.
+Review the diff after explicit format or fixture updates. Skill-only edits use
+`skill-authoring-patterns` and the default skill-creator validator instead of
+running the Go suite.

@@ -16,6 +16,43 @@ Use the repo-local `testing-and-ci` skill when choosing or running tests. Use
 `scripts-and-automation` for Makefile targets, generated artifacts, dependency
 workflow, or local `go-authcrunch` replacement work.
 
+## Repository Scope
+
+Keep source changes inside `caddy-security`. Sibling repositories such as
+`../go-authcrunch` are read-only references and are updated separately.
+
+The sole sibling-write exception is `../xcaddy-caddy-security`, the integrated
+xcaddy build workspace. Creating, updating, building in, and cleaning that
+workspace is allowed when needed for the xcaddy workflow. The exception does
+not permit changes to sibling source modules referenced by the build, including
+go-authcrunch. No other sibling directory is a permitted write destination.
+
+This boundary covers creating, editing, deleting, restoring, staging, and
+committing files, including code, tests, fixtures, dependency files, skills,
+generated artifacts, and Git metadata. Outside the named xcaddy workspace,
+do not run sibling build, test, formatting, generation, license, dependency,
+or cleanup commands, or change those repositories' Git state through fetch,
+pull, checkout, reset, tag, or other Git mutations.
+
+Before a mutating command, confirm its repository root and working directory,
+inspect the invoked script's side effects, and resolve its output paths. A
+command launched from this repository can still write elsewhere. Do not bypass
+the boundary through symlinks, linked worktrees sharing a sibling's Git metadata,
+module replacement paths, or output-directory flags. Keep task files and chosen
+build/report destinations in this checkout's working areas, such as `tmp/`,
+`bin/`, and `.coverage/`, except for the named xcaddy build workspace. Resolve
+that workspace's physical path before cleanup so a symlink cannot redirect the
+exception into another sibling repository.
+
+Reading sibling source, skills, versions, and history is allowed. References to
+upstream APIs, tests, and integration wiring are context, not instructions to
+modify or run that project. A local Go replacement may select existing sibling
+source for tests of this module; it does not authorize sibling changes. If a
+fix requires an upstream change, document the affected contract and separate
+work needed, complete the work possible here, and state any validation blocker.
+Do not patch the sibling, duplicate its runtime here to avoid the boundary, or
+request to expand the current task into that repository.
+
 ## Architecture
 
 Treat `security` as the top-level Caddy app. Keep shared authcrunch

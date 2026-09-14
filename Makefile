@@ -1,3 +1,6 @@
+SHELL := /bin/bash
+.DEFAULT_GOAL := all
+
 PLUGIN_NAME="caddy-security"
 PLUGIN_VERSION:=$(shell cat VERSION | head -1)
 GIT_COMMIT:=$(shell git describe --dirty --always)
@@ -8,27 +11,30 @@ BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BUILD_DIR:=$(shell pwd)
 CADDY_VERSION="v2.11.4"
 
-VERBOSE:=-v
-ifdef TEST
-	TEST:="-run ${TEST}"
-endif
-TEST_DIR:="./..."
+PYTHON ?= python3
+TEST ?= .
+TEST_DIR ?= ./...
+TEST_TIMEOUT ?= 20m
+QUICK_TEST_DIR ?= .
+COVERAGE_DIR ?= .coverage
+MINIMUM_COVERAGE ?= 1
+export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
+export PLUGIN_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
+export PYTHONDONTWRITEBYTECODE := 1
 
 all: info build
 	@echo "$@: complete"
 
 .PHONY: info
 info:
-	@echo "DEBUG: Version: $(PLUGIN_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
-	@echo "DEBUG: Build on $(BUILD_DATE) by $(BUILD_USER)"
+	@echo "DEBUG: Version: $$PLUGIN_VERSION, Branch: $$GIT_BRANCH, Revision: $$GIT_COMMIT"
+	@echo "DEBUG: Build on $$BUILD_DATE by $$BUILD_USER"
 
 .PHONY: build
-build:
+build: version-check
 	@mkdir -p bin/
-	@rm -rf ./bin/authcrunch
-	@go build -v -o ./bin/authcrunch cmd/authcrunch/main.go;
+	@go build -mod=readonly -trimpath -v -o ./bin/authcrunch ./cmd/authcrunch
 	@./bin/authcrunch version
-	@for f in `find ./assets -type f -name 'Caddyfile'`; do bin/authcrunch fmt --overwrite $$f; done
 	@echo "$@: complete"
 
 .PHONY: devbuild
@@ -60,46 +66,25 @@ fmtcfg:
 
 .PHONY: install-test-tools
 install-test-tools:
-	@echo "$@: started"
-	@richgo version || go install github.com/kyoh86/richgo@latest
-	@tparse -v || go install github.com/mfridman/tparse@latest
-	@go-test-report version || go install github.com/vakenbolt/go-test-report@latest
-	@echo "$@: complete"
+	@go tool tested version
 
 .PHONY: run-tests
 run-tests:
-	@echo "$@: started"
-	@go test -json $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out $(TEST_DIR) | tee .coverage/test_output.jsonl
-	@echo "$@: complete"
+	@go tool tested run --output-dir "$$COVERAGE_DIR" \
+		--title "Caddy Security Go tests" --minimum-coverage "$$MINIMUM_COVERAGE" \
+		-- -mod=readonly -race -count=1 -timeout "$$TEST_TIMEOUT" -v -run "$$TEST" $$TEST_DIR
 
-QUICK_TEST_DIR="./..."
-QUICK_TEST_PATTERN_RUN="-run"
-#QUICK_TEST_PATTERN="Test(CaddyfileAdaptAuthenticationToJSON|ResolveRuntimeAppConfig)"
-#QUICK_TEST_PATTERN="Test(ParseCaddyfileIdentity)"
-#QUICK_TEST_PATTERN="Test(ParseCaddyfileAuthentication)"
-#QUICK_TEST_PATTERN="Test(ParseCaddyfileAuthenticationMisc)"
-QUICK_TEST_PATTERN="Test(ParseCaddyfileAuthorization)"
 .PHONY: run-quick-tests
 run-quick-tests:
-	@echo "$@: started"
-	@go test -json $(VERBOSE) -coverprofile=.coverage/coverage.out $(QUICK_TEST_PATTERN_RUN) $(QUICK_TEST_PATTERN) $(QUICK_TEST_DIR) | tee .coverage/test_output.jsonl
-	@echo "$@: complete"
+	@$(MAKE) run-tests TEST_DIR="$$QUICK_TEST_DIR" COVERAGE_DIR="$$COVERAGE_DIR/quick"
 
 .PHONY: run-reports
 run-reports:
-	@echo "$@: started"
-	@cat .coverage/test_output.jsonl | go-test-report -o .coverage/test_output.html
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@echo "$@: complete"
+	@go tool tested report --output-dir "$$COVERAGE_DIR" --title "Caddy Security Go tests"
 
 
 .PHONY: test
-test: covdir linter install-test-tools run-tests run-reports
-	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
-		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
-		exit 1; \
-	fi
-	@echo "$@: complete"
+test: run-tests
 
 .PHONY: covdir
 covdir:
@@ -114,12 +99,7 @@ bindir:
 	@echo "$@: complete"
 
 .PHONY: coverage
-coverage: covdir
-	@echo "$@: started"
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@go test -covermode=count -coverprofile=.coverage/coverage.out ./...
-	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
-	@echo "$@: complete"
+coverage: run-reports
 
 .PHONY: clean
 clean:
@@ -129,22 +109,30 @@ clean:
 	@echo "$@: complete"
 
 .PHONY: qtest
-qtest: covdir install-test-tools run-quick-tests run-reports
-	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
-		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
-		exit 1; \
-	fi
-	@echo "$@: complete"
+qtest: run-quick-tests
 
 .PHONY: dep
 dep:
-	@echo "$@: started"
-	@go install golang.org/x/lint/golint@latest
-	@go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-	@#go install github.com/goreleaser/goreleaser@latest
-	@go install github.com/greenpau/versioned/cmd/versioned@latest
-	@go install github.com/kyoh86/richgo@latest
-	@echo "$@: complete"
+	@go mod download
+	@go mod verify
+	@$(MAKE) install-test-tools
+
+.PHONY: test-automation ci-check version-check artifact-id
+test-automation:
+	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
+
+# Recursive invocations serialize gates even when the caller uses make -j.
+ci-check:
+	@$(MAKE) version-check
+	@$(MAKE) test-automation
+	@$(MAKE) test TEST=. TEST_DIR=./... COVERAGE_DIR=.coverage MINIMUM_COVERAGE=1
+	@$(MAKE) build
+
+version-check:
+	@$(PYTHON) assets/scripts/version.py check
+
+artifact-id:
+	@$(PYTHON) assets/scripts/version.py artifact
 
 
 .PHONY: sync

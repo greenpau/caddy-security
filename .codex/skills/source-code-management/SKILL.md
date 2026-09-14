@@ -47,10 +47,11 @@ Selection rules:
   helping AI agents work with this repository.
 - Use `ops` for dependency or toolchain version bumps. Use `build` only
   when the build behavior itself changes.
-- The current Makefile release target creates subjects like `released v1.1.62`
-  without a change indicator. Treat that as existing automation behavior, not a
-  template for hand-written commit messages. For hand-written release workflow
-  changes, use `ops`.
+- The Makefile release target creates the subject `ops: released v<VERSION>`.
+  For hand-written release workflow changes, use `ops`. Follow
+  [release-and-versioning](../release-and-versioning/SKILL.md) for the release
+  procedure and publication scope; an automated subject does not replace the
+  body requirements for hand-written commit messages.
 - Use `various` only when a commit intentionally spans unrelated surfaces and no
   more specific indicator is honest.
 - Normalize older repository labels when creating new messages: use
@@ -173,7 +174,10 @@ More info: added a focused contributor workflow and repository etiquette notes.
 
 ## Commit Message File Workflow
 
-When asked to "create commit message for the change", create a file in
-`tmp/commits` and place the commit message in that file. Commit message files in
-`tmp/commits` are working artifacts and should not be committed unless explicitly
-requested. Prefix the file name with `YYYYMMDD_HHMM_` prefix.
+For every request to create or generate a commit message, write it below
+`tmp/commits` with a `YYYYMMDD_HHMM_` prefix and always provide the corresponding
+`git commit -F ...` command. Do not require the user to ask separately for a
+message file. A review-only request does not create a file unless asked.
+
+Commit message files in `tmp/commits` are working artifacts and should not be
+committed unless explicitly requested.

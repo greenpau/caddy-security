@@ -19,6 +19,11 @@ Read these files when details matter:
   for browser versus JSON behavior.
 - `caddyfile_authn_misc.go` for `enable admin api`.
 
+Upstream handler paths are read-only references under the
+[repository scope](../coding-directives/SKILL.md#repository-scope). Keep client
+changes and integration tests here. If an API fix belongs to go-authcrunch,
+describe the separate upstream work instead of editing or testing that checkout.
+
 ## JSON Requests
 
 Portal endpoints return JSON when the request includes either:

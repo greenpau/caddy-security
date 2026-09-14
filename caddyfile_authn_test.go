@@ -180,6 +180,8 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
 						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
 						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+						"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+						"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
 						"cookie_name_prefix": "AUTHP",
 					  "insecure": true
 					},

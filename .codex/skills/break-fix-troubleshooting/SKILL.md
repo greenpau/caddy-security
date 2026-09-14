@@ -12,6 +12,12 @@ concrete fix or a high-quality break-fix report. Treat the repository skills in
 `.codex/skills` as the primary task documentation; `https://docs.authcrunch.com`
 is legacy context, not the source of truth.
 
+Follow the [repository scope](../coding-directives/SKILL.md#repository-scope)
+when reproducing or fixing a report. A failure traced to go-authcrunch or an
+external plugin does not permit sibling edits or sibling build/test commands.
+Keep reproductions and reports here, identify the required upstream fix as
+separate work, and continue any correction that can be completed in this module.
+
 ## Workflow
 
 1. Identify the intended auth flow, protected routes, observed symptom, expected

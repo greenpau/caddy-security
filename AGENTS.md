@@ -28,6 +28,23 @@ the `security.secrets` namespace, such as
 `github.com/greenpau/caddy-security-secrets-static-secrets-manager` and
 `github.com/greenpau/caddy-security-secrets-aws-secrets-manager`.
 
+## Repository Scope
+
+Keep all repository changes inside `caddy-security`. Sibling repositories,
+including `../go-authcrunch`, are read-only references and are updated
+separately. Do not edit their files or Git state, run their build/test/maintenance
+commands, or write generated output into them.
+
+The sole sibling-write exception is `../xcaddy-caddy-security`, the workspace
+for integrated xcaddy builds. It may be created, updated, and cleaned for that
+workflow. This exception does not extend to go-authcrunch or other modules
+used by the build. Compatibility work and local dependency replacements do not
+expand this boundary.
+
+Follow the [repository scope](.codex/skills/coding-directives/SKILL.md#repository-scope)
+for command and output-path checks. Report required upstream changes as separate
+work; do not perform them or seek to expand this task into sibling repositories.
+
 ## Project Structure
 
 Most production code lives in the root Go package,
@@ -108,6 +125,18 @@ for the workflow used when asked to create a commit message for a change.
 Use the repo-local `scripts-and-automation` skill when choosing, running, or
 documenting Makefile targets, repository scripts, build/test/report workflows,
 generated artifacts, dependency automation, or release/version procedures.
+
+## Versioning and Releases
+
+Use the repo-local `release-and-versioning` skill for `VERSION`, generated
+download links, versioned CI artifacts, release preparation and execution,
+release Make targets, GoReleaser packaging, and publication workflows.
+
+## Skill Authoring
+
+Use the repo-local `skill-authoring-patterns` skill with the default
+`skill-creator` when creating, porting, reviewing, or validating repo-local
+skills, `agents/openai.yaml` metadata, or `AGENTS.md` skill routing.
 
 ## Testing and CI
 

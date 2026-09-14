@@ -11,6 +11,12 @@ Use this skill as the entry point for generating caddy-security Caddyfile
 configuration. Keep the parent skill as a router: load only the domain skills
 needed for the requested configuration.
 
+The [repository scope](../coding-directives/SKILL.md#repository-scope) applies
+to every configuration domain. Upstream paths in these skills are read-only
+implementation references. Keep Caddyfiles, fixtures, custom assets, and local
+validation changes here; missing upstream behavior is separate work, not a
+reason to edit or run tests in `../go-authcrunch`.
+
 The authoritative parser entry point is `caddyfile.go`. The global block is
 `security { ... }`; route-level HTTP integrations reference configured objects
 with `authenticate with <portal>` and `authorize with <policy>`.

@@ -26,7 +26,7 @@ Read these files when details matter:
   `../go-authcrunch/pkg/authn/portal.go` for
   portal defaults and runtime behavior.
 
-Use focused sibling skills for specialized portal sub-blocks:
+Use focused repo-local skills for specialized portal sub-blocks:
 
 - `configuration-crypto` for portal `crypto` defaults, JWT signing keys,
   auto-generated keys, token names and lifetimes, secret-backed key material,

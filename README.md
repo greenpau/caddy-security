@@ -25,3 +25,19 @@ Documentation for this project was previously hosted at
 https://docs.authcrunch.com. As AI agents become part of the development
 workflow, this repository is moving to skill-based documentation that helps both
 humans and AI agents work with the codebase.
+
+## Tests and Reports
+
+Run `make dep` to download module dependencies and resolve the pinned `tested`
+tool, then `make test` for race-enabled Go tests and coverage. Open
+`.coverage/index.html` for the report dashboard. `make run-reports` rebuilds
+reports from recorded evidence without rerunning tests.
+
+`make ci-check` runs version checks, automation fixtures, the full Go suite,
+and the Caddy binary build. GitHub Actions uploads the complete report bundle
+with a versioned name, including failure evidence, and retains it for 14 days.
+Release publication requires the same CI gate.
+
+See [Testing and CI](.codex/skills/testing-and-ci/SKILL.md) for focused runs and
+report files, and [Release and Versioning](.codex/skills/release-and-versioning/SKILL.md)
+for artifact names and release procedures.

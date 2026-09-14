@@ -1,74 +1,60 @@
----
 name: build
 
 on:
+  workflow_call:
+  workflow_dispatch:
   push:
-    branches:
-    - main
+    branches: [main]
   pull_request:
-    branches:
-    - main
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
 jobs:
   core:
-    strategy:
-      matrix:
-        go-version: [1.25.x]
-        platform: [ubuntu-latest]
-    name: Build
-    runs-on: ${{ matrix.platform }}
+    name: Tests and coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
-      GOBIN: /home/runner/.local/bin
+      GOTOOLCHAIN: local
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-      id: go
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
-    - name: Amend Environment Path
-      run: |
-        mkdir -p /home/runner/.local/bin
-        echo "/home/runner/.local/bin" >> $GITHUB_PATH
-    - name: Setup Environment
-      run: |
-        mkdir -p .coverage
-        echo "*** Current Directory ***"
-        pwd
-        echo "*** Environment Variables ***"
-        env | sort
-        echo "*** Executable Path ***"
-        echo "$PATH" | tr ':' '\n'
-        echo "*** Workspace Files ***"
-        find .
-        which make
-    - name: Install prerequisites
-      run: |
-        sudo apt-get --assume-yes install make
-        sudo apt-get --assume-yes install libnss3-tools
-        sudo apt-get update
-    - name: Install Go modules
-      run: |
-        make dep
-        go mod tidy
-        go mod verify
-        go mod download
-    - name: Validate prerequisites
-      run: |
-        echo "*** Local binaries ***"
-        find /home/runner/.local/bin
-    - name: Run tests
-      run: |
-        make test || true
-        make test
-    - name: Generate coverage report
-      run: make coverage
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v4
-      with:
-        name: Test Coverage Report
-        path: .coverage/coverage.html
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.26.8'
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes make libnss3-tools python3
+      - name: Resolve versioned artifact identity
+        id: artifact
+        run: make artifact-id
+      - name: Install pinned test tool and module dependencies
+        run: make dep
+      - name: Run repository quality gates
+        id: tests
+        run: make ci-check
+      - name: Verify validation did not modify source
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+      - name: Upload test and coverage bundle
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caddy-security_coverage_${{ steps.artifact.outputs.artifact_id }}
+          path: .coverage/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

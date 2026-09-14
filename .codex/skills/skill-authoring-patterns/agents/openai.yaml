@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Authoring Patterns"
+  short_description: "Create maintainable caddy-security skills"
+  default_prompt: "Use $skill-authoring-patterns with $skill-creator to create or update a caddy-security repository skill and its routing."

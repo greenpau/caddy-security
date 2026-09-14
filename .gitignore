@@ -6,6 +6,8 @@ bin/**
 tmp/**
 .coverage/**
 .doc/**
+__pycache__/
+*.py[cod]
 *TODO*
 123*
 
