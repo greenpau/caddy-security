@@ -52,8 +52,9 @@ Use the existing ownership map when extending guidance:
 - `configuration` routes Caddyfile requests to the appropriate
   `configuration-*` skills. Keep its Domain Map and intermediate authentication
   routing synchronized when adding or moving a configuration skill.
-- `coding-directives` owns Caddy module boundaries and parser conventions;
-  `testing-and-ci` owns parser, adapt, and runtime-resolution test mechanics.
+- `coding-directives` owns Caddy module boundaries, runtime lifecycle, and parser
+  conventions; `testing-and-ci` owns unit and E2E coverage requirements and
+  parser, adapt, and runtime-resolution test mechanics.
 - `scripts-and-automation` owns general Make targets, generated outputs, and
   local go-authcrunch replacement/sync work. Route release-specific behavior
   to `release-and-versioning`.
@@ -64,10 +65,16 @@ Use the existing ownership map when extending guidance:
 Update `AGENTS.md` and the relevant parent routing whenever discoverability
 changes. Keep `AGENTS.md` to repository orientation, shared invariants, and
 routing; keep `README.md` and `CONTRIBUTING.md` useful for human onboarding.
-Keep durable configuration, integration, operational, and validation detail in
-the owning skill or linked references. This repository also has `assets/docs/`
-for documentation assets; do not relocate or delete those assets as part of
-skill maintenance without a task-specific reason.
+Keep repository documentation in the relevant repo-local skill under
+`.codex/skills` or its linked `references/` files. Do not create or retain
+Markdown documentation in `docs/` or `assets/docs/`. When moving existing
+guidance, preserve its useful content in the owning skill and update inbound
+links. Extend an existing skill when its scope fits; create a focused skill and
+update routing when no existing owner fits. Keep README/CONTRIBUTING onboarding
+and AGENTS routing brief, with links to the owning skills for details.
+
+`assets/docs/` may hold non-Markdown assets such as images. Preserve those assets
+unless their relocation or removal is part of the task.
 
 ## Ground Guidance in This Repository
 
@@ -88,9 +95,12 @@ runtime replacement support: verify `ResolveRuntimeAppConfig` in
 Anchor examples and checks in existing `caddyfile_*_test.go` tests and
 `testdata/caddyfile_adapt/` fixtures. Distinguish parsed JSON (`.json`) from
 runtime-resolved expectations (`_resolved.json`) and identify the tests that
-actually exercise the fixture. Do not imply integration/E2E coverage solely
-from an adapt fixture. Preserve the app/plugin boundary: `app.go` provisions
-shared authcrunch objects; the HTTP integrations delegate to them.
+actually exercise the fixture. Feature guidance must identify the unit and E2E
+test surfaces required by [testing-and-ci](../testing-and-ci/SKILL.md#required-coverage-for-code-changes),
+plus adaptation cases for Caddyfile directive changes. Do not imply E2E coverage
+solely from parser/adapt fixtures or sibling-module tests. Preserve the
+app/plugin boundary: `app.go` provisions shared authcrunch objects; the HTTP
+integrations delegate to them.
 
 For upstream behavior, inspect the version selected by `go.mod` and any active
 replacement. Treat `../go-authcrunch` as useful source context whose state may

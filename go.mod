@@ -10,6 +10,7 @@ require (
 	github.com/greenpau/go-authcrunch v1.2.2
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/zap v1.28.0
+	golang.org/x/text v0.42.0
 )
 
 require (
@@ -179,7 +180,6 @@ require (
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/api v0.298.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260911204522-f61a6ca850bd // indirect

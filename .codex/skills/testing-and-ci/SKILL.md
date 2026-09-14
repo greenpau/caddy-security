@@ -1,6 +1,6 @@
 ---
 name: testing-and-ci
-description: caddy-security testing through pinned tested, Caddyfile parser/adapt and runtime resolution fixtures, automation tests, complete coverage artifacts, and reusable GitHub Actions gates. Use when choosing or running tests, updating coverage, interpreting CI failures, reproducing CI locally, or validating report and artifact workflows.
+description: caddy-security unit and E2E coverage requirements, Caddyfile adaptation and runtime resolution fixtures, pinned tested reports, automation tests, and reusable GitHub Actions gates. Use when writing or changing code, choosing or running tests, updating coverage, interpreting CI failures, reproducing CI locally, or validating report and artifact workflows.
 ---
 
 # Testing and CI
@@ -23,6 +23,30 @@ work here or fix a failing test by editing the sibling. `TEST_DIR` and
 point into another checkout. Existing local replacements are dependency inputs
 only. Keep compatibility fixtures and reports here and report required upstream
 test or implementation changes as separate work.
+
+## Required Coverage for Code Changes
+
+When writing or changing code, ensure both unit tests and E2E tests exist and
+exercise the changed behavior. Add or amend tests where coverage is missing;
+existing tests count when they demonstrably verify that behavior. Run the
+relevant unit and E2E tests before considering the code change complete.
+
+Unit tests should check focused behavior and meaningful failure cases. E2E
+tests should exercise the affected user-visible flow through the assembled
+system. For authentication, authorization, and lifecycle changes, use actual
+Caddy provisioning, routes, and HTTP requests as appropriate. Bound network,
+process, and worker completion; clean up test-owned resources. Parser/adapt
+tests and sibling go-authcrunch tests do not replace this repository's E2E
+coverage. Report missing coverage or blocked validation explicitly.
+
+Every Caddyfile directive change also requires new or amended adaptation test
+cases in `testdata/caddyfile_adapt/`, even when the resulting JSON shape is
+unchanged. Register new cases in `TestCaddyfileAdaptAuthenticationToJSON` in
+`caddyfile_adapt_test.go` so the fixture is exercised. This is additional to
+unit and E2E coverage; use the fixture mechanics below.
+
+Documentation/skill-only edits use metadata, link, and source checks from
+`skill-authoring-patterns`; they do not require new runtime tests.
 
 ## Command Selection
 
@@ -70,6 +94,14 @@ resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
 
+Runtime ownership unit tests live in `app_lifecycle_test.go`.
+`TestCaddyLifecycleE2E` in `app_lifecycle_e2e_test.go` launches a bounded child
+process with real Caddy listeners and reloads; `TestCaddyLifecycleProcess` is
+its subprocess helper. Use these for app/plugin lifecycle changes, including
+drain ordering, abandoned candidates, shared providers, and worker disposal.
+Read the [runtime lifecycle reference](../coding-directives/references/runtime-lifecycle.md#validation)
+for the precise scenarios and host limitations.
+
 Parser tests use inline Caddyfile snippets and `caddyfile.NewTestDispenser`.
 They call parser functions, unpack generated JSON into maps, and compare with
 `cmp.Diff`. Whitespace in inline `want` JSON is not semantically important.
@@ -89,7 +121,8 @@ Adapt tests live in `TestCaddyfileAdaptAuthenticationToJSON` in
 `testdata/caddyfile_adapt/<prefix>.Caddyfile` as input and compares against
 `<prefix>.json`. Optional `<prefix>.env` files provide environment variables;
 blank lines and comments are ignored, and variables are cleaned up by the test.
-Use this path when a user-visible Caddyfile-to-JSON output changes.
+Use this path for every Caddyfile directive change, including syntax, defaults,
+validation, and config mapping.
 
 Runtime resolution tests live in `TestResolveRuntimeAppConfig` in
 `caddyfile_resolve_test.go`. Each case reads `<prefix>.json`, extracts the
@@ -109,9 +142,10 @@ When adding or changing a Caddyfile directive, add focused parser coverage in
 the nearest `caddyfile_*_test.go` file. Include both the successful config shape
 and a malformed input when the parser has a meaningful error path.
 
-When the change affects Caddy's adapted JSON, add or update a fixture triplet in
-`testdata/caddyfile_adapt`: `<prefix>.Caddyfile`, `<prefix>.json`, and
-optionally `<prefix>.env`. If runtime defaults, replacements, credentials, UI,
+For a Caddyfile directive change, add or amend adaptation cases in
+`testdata/caddyfile_adapt/`: `<prefix>.Caddyfile`, `<prefix>.json`, and
+optionally `<prefix>.env`, and update the test case registration as needed.
+If runtime defaults, replacements, credentials, UI,
 OAuth, registration, or cookie behavior changes after adaptation, also add or
 update `<prefix>_resolved.json` and include the prefix in
 `TestResolveRuntimeAppConfig`.

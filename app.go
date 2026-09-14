@@ -17,6 +17,8 @@ package security
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
@@ -30,13 +32,14 @@ var (
 	appName = "security"
 
 	// Interface guards
-	_ caddy.Provisioner = (*App)(nil)
-	_ caddy.Module      = (*App)(nil)
-	_ caddy.App         = (*App)(nil)
+	_ caddy.Provisioner  = (*App)(nil)
+	_ caddy.Module       = (*App)(nil)
+	_ caddy.App          = (*App)(nil)
+	_ caddy.CleanerUpper = (*App)(nil)
 )
 
 func init() {
-	caddy.RegisterModule(App{})
+	caddy.RegisterModule(&App{})
 }
 
 type SecretsManager interface {
@@ -55,18 +58,46 @@ type App struct {
 
 	server *authcrunch.Server
 	logger *zap.Logger
+
+	mu            sync.Mutex
+	provisioned   bool
+	disposing     bool
+	requests      sync.WaitGroup
+	cleanupOnce   sync.Once
+	cleanupErr    error
+	identityFiles []string
 }
 
 // CaddyModule returns the Caddy module information.
-func (App) CaddyModule() caddy.ModuleInfo {
+func (*App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "security",
 		New: func() caddy.Module { return new(App) },
 	}
 }
 
-// Provision sets up the repo manager.
+// Provision constructs the security runtime for this Caddy configuration.
 func (app *App) Provision(ctx caddy.Context) error {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if app.provisioned || app.disposing {
+		return fmt.Errorf("security app instance cannot be reprovisioned")
+	}
+	app.provisioned = true
+	if app.Config == nil {
+		return fmt.Errorf("security app config is nil")
+	}
+	// Validation, runtime replacement, and NewServer all mutate configuration.
+	// Keep the declarative input separate, including nested maps and slices.
+	data, err := json.Marshal(app.Config)
+	if err != nil {
+		return fmt.Errorf("copy security app config: %w", err)
+	}
+	var config authcrunch.Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("copy security app config: %w", err)
+	}
+
 	app.Name = appName
 	app.logger = ctx.Logger(app)
 
@@ -96,11 +127,11 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if err := ResolveRuntimeAppConfig(ctx, repl, app.secretsManagers, app.Config, app.logger); err != nil {
+	if err := ResolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.logger); err != nil {
 		return err
 	}
 
-	if err := app.Config.Validate(); err != nil {
+	if err := config.Validate(); err != nil {
 		app.logger.Error(
 			"app failed validating config",
 			zap.String("app_name", app.Name),
@@ -109,7 +140,15 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 
-	server, err := authcrunch.NewServer(app.Config, app.logger)
+	// Local stores cache independent database snapshots. Until AuthCrunch can
+	// coordinate those snapshots, overlapping owners must fail before NewServer
+	// can initialize or overwrite users in a file used by the live deployment.
+	app.identityFiles, err = reserveIdentityFiles(&config)
+	if err != nil {
+		return err
+	}
+
+	server, err := authcrunch.NewServer(&config, app.logger)
 	if err != nil {
 		app.logger.Error(
 			"failed provisioning app server instance",
@@ -129,7 +168,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 }
 
 // Start starts the App.
-func (app App) Start() error {
+func (app *App) Start() error {
 	app.logger.Debug(
 		"started app instance",
 		zap.String("app", app.Name),
@@ -137,8 +176,9 @@ func (app App) Start() error {
 	return nil
 }
 
-// Stop stops the App.
-func (app App) Stop() error {
+// Stop leaves disposal to Cleanup. Caddy stops apps in unspecified order;
+// HTTP handlers may still be using this app, even after the HTTP app's Stop.
+func (app *App) Stop() error {
 	app.logger.Debug(
 		"stopped app instance",
 		zap.String("app", app.Name),
@@ -146,10 +186,52 @@ func (app App) Stop() error {
 	return nil
 }
 
+// Cleanup prevents new AuthCrunch calls, drains calls already admitted, and
+// disposes the runtime once. Caddy invokes it for abandoned candidates as well
+// as retired configurations. HTTP shutdown is asynchronous during reload, so
+// cancellation of the Caddy module context is not a request-drain guarantee.
+// Only this app owns the server; individual route modules never close it.
+func (app *App) Cleanup() error {
+	app.cleanupOnce.Do(func() {
+		app.mu.Lock()
+		app.disposing = true
+		app.mu.Unlock()
+		app.requests.Wait()
+		app.cleanupErr = app.server.Close()
+		releaseIdentityFiles(app.identityFiles)
+	})
+	return app.cleanupErr
+}
+
+// acquireRequest pins the runtime for one portal/gatekeeper call. Admission and
+// WaitGroup.Add share the disposal lock, so no Add can race the cleanup Wait.
+func (app *App) acquireRequest() (release func(), ok bool) {
+	if app == nil {
+		return nil, false
+	}
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if app.disposing || app.server == nil {
+		return nil, false
+	}
+	app.requests.Add(1)
+	return app.requests.Done, true
+}
+
 func (app *App) getPortal(s string) (*authn.Portal, error) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if app.disposing || app.server == nil {
+		return nil, authcrunch.ErrServerClosed
+	}
 	return app.server.GetPortalByName(s)
 }
 
 func (app *App) getGatekeeper(s string) (*authz.Gatekeeper, error) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if app.disposing || app.server == nil {
+		return nil, authcrunch.ErrServerClosed
+	}
 	return app.server.GetGatekeeperByName(s)
 }

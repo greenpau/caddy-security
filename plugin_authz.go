@@ -48,6 +48,7 @@ type AuthzMiddleware struct {
 	RouteMatcher   string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
 	GatekeeperName string `json:"gatekeeper_name,omitempty" xml:"gatekeeper_name,omitempty" yaml:"gatekeeper_name,omitempty"`
 	gatekeeper     *authz.Gatekeeper
+	app            *App
 }
 
 // CaddyModule returns the Caddy module information.
@@ -85,6 +86,7 @@ func (m *AuthzMiddleware) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("security app erred with %q authorization policy: %v", m.GatekeeperName, err)
 	}
 	m.gatekeeper = gatekeeper
+	m.app = app
 
 	return nil
 }
@@ -128,6 +130,12 @@ func (m *AuthzMiddleware) Validate() error {
 // Authenticate authorizes access based on the presense and content of
 // authorization token.
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
+	release, ok := m.app.acquireRequest()
+	if !ok {
+		return caddyauth.User{}, false, caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
+	}
+	defer release()
+
 	ar := requests.NewAuthorizationRequest()
 	ar.ID = util.GetRequestID(r)
 	if err := m.gatekeeper.Authenticate(w, r, ar); err != nil {

@@ -16,6 +16,11 @@ Use the repo-local `testing-and-ci` skill when choosing or running tests. Use
 `scripts-and-automation` for Makefile targets, generated artifacts, dependency
 workflow, or local `go-authcrunch` replacement work.
 
+Document implementation and operational guidance in the relevant repo-local
+skill or its linked references. Do not add Markdown documentation to `docs/`
+or `assets/docs/`; use [skill-authoring-patterns](../skill-authoring-patterns/SKILL.md#ownership-and-routing)
+for documentation ownership and placement.
+
 ## Repository Scope
 
 Keep source changes inside `caddy-security`. Sibling repositories such as
@@ -69,6 +74,11 @@ Use `pkg/util` only for small reusable helpers that are truly package-external
 or shared across multiple root-package files.
 
 ## Caddy Modules
+
+For runtime construction, ownership, request draining, reload, or cleanup work,
+read [Runtime lifecycle](references/runtime-lifecycle.md). It traces Caddy's
+host ordering, the app's disposal contract, identity-file ownership restrictions,
+and the unit/E2E tests that verify those behaviors.
 
 Register Caddy modules and Caddyfile directives in `init` functions near the
 module implementation. Provide a `CaddyModule` method with the correct public
@@ -158,6 +168,10 @@ payloads.
 
 ## Style
 
+Do not import or use Go's `reflect` package in repository Go code, including
+tests and helpers. Use explicit types, type switches, interfaces, or generics.
+Keep configuration validation typed instead of building runtime field walkers.
+
 Keep the Apache license header on Go files. Use package `security` for root
 application files and package `main` only for `cmd/authcrunch`.
 
@@ -183,12 +197,19 @@ blocks. Avoid comments that merely restate the code.
 
 ## Tests And Fixtures
 
+Code changes require relevant unit tests and E2E tests that exercise the changed
+behavior. Follow [testing-and-ci](../testing-and-ci/SKILL.md#required-coverage-for-code-changes)
+to add or amend coverage and run the applicable checks in this repository.
+
 Add focused parser coverage in the closest `caddyfile_*_test.go` when changing
 Caddyfile syntax or validation. Include malformed cases when the parser has a
 meaningful error path.
 
-Update `testdata/caddyfile_adapt` fixtures when adapted Caddy JSON changes:
-`<prefix>.Caddyfile`, `<prefix>.json`, and optional `<prefix>.env`.
+For every Caddyfile directive change, add or amend adaptation cases in
+`testdata/caddyfile_adapt/` and register them in `caddyfile_adapt_test.go` as
+needed. Include `<prefix>.Caddyfile`, expected `<prefix>.json`, and optional
+`<prefix>.env`; this requirement also applies when the JSON shape stays the
+same. Adaptation coverage supplements unit and E2E tests.
 
 Update `<prefix>_resolved.json` and `TestResolveRuntimeAppConfig` coverage when
 runtime defaults, replacements, secrets, credentials, UI, OAuth, registration,

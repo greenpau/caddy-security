@@ -40,6 +40,7 @@ type AuthnMiddleware struct {
 	RouteMatcher string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
 	PortalName   string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
 	portal       *authn.Portal
+	app          *App
 }
 
 // CaddyModule returns the Caddy module information.
@@ -77,6 +78,7 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("security app erred with %q authentication portal: %v", m.PortalName, err)
 	}
 	m.portal = portal
+	m.app = app
 
 	return nil
 }
@@ -120,6 +122,12 @@ func (m *AuthnMiddleware) Validate() error {
 
 // ServeHTTP serves authentication portal.
 func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
+	release, ok := m.app.acquireRequest()
+	if !ok {
+		return caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
+	}
+	defer release()
+
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
 	return m.portal.ServeHTTP(r.Context(), w, r, rr)

@@ -50,12 +50,49 @@ contain another colon.
 
 `ResolveRuntimeAppConfig` mutates the authcrunch app config, then calls the
 affected authcrunch `Validate` methods so derived configs are rebuilt.
+The app supplies a fresh config copy for each runtime; never run resolution on
+a serving graph. JSON inputs can omit optional portal UI and cookie settings.
+Resolve those fields only when present and leave their defaults to AuthCrunch.
+Reject null entries in typed component collections, including nested ACL,
+redirect, credential, and registration objects, before calling validators or
+constructors. `app_config.go` uses explicit typed validators and generic slice
+and map helpers for those checks, following the coding skill's prohibition on
+`reflect`. When upstream adds a component collection, extend its typed validator
+and unit/E2E coverage. The checks permit omitted optional objects and leave
+flexible parameter maps to the resolver. After substitution, decode
+local/LDAP/OAuth/SAML parameter maps
+into AuthCrunch's exported config types and check decoding errors and null
+objects. Some dispatch validators ignore JSON decoding errors; do not let a
+partially decoded user or provider config reach construction. Reuse upstream
+types and semantic validation instead of maintaining field allowlists here.
+Object lists in those maps must contain objects throughout;
+do not silently skip a null or scalar entry after the first object. Return field
+paths so malformed replacements fail without disrupting the active deployment.
+The unit tests in `app_lifecycle_test.go` and actual Caddy reload tests in
+`app_lifecycle_e2e_test.go` cover these JSON provisioning cases.
+
+Guard raw instruction argument counts before calling AuthCrunch's dispatch
+parsers: a one-token `crypto` statement or messaging/registration `kind` statement
+can otherwise panic during provisioning. For crypto, credentials, messaging,
+and registration instructions, check resolved tokens before `cfgutil.EncodeArgs`,
+which trims trailing empty tokens. Reject empty arguments and report the
+field/statement index without including secret values.
+Keep command semantics in AuthCrunch. Include literal empty tokens and empty
+environment replacements in unit and Caddy reload rejection tests, verifying
+that the old deployment still authorizes requests.
 
 Resolve these app config areas:
 
 - `credentials.raw_credential_configs`, `messaging.raw_configs`, and
-  `user_registration.raw_configs`: replace each raw argument string, then let
-  authcrunch parse the raw directives during validation.
+  `user_registration.raw_configs`: decode each instruction, replace each
+  argument independently, then re-encode it for AuthCrunch validation. A resolved
+  value is one argument, including spaces, quotes, and newlines; it must not
+  inject instruction syntax. Resolve secret references at the argument level,
+  where the command word cannot hide them. Preserve single-token flags such as
+  messaging `passwordless`. Invoke these parsing
+  validators only when raw instructions are present. Empty sections and typed
+  configurations restored without raw instructions are preserved; values in
+  those typed sections must already be resolved.
 - `identity_stores[].params` and `identity_providers[].params`: recursively
   replace map keys, string values, string lists, lists of maps, and nested lists
   supported by `substitute`; non-string scalar values remain unchanged.
@@ -116,5 +153,12 @@ When adding a new placeholder-bearing field, check the authcrunch struct and
 validation path first. Raw encoded directive fields usually need
 `cfgutil.DecodeArgs`, replacement of each argument, `cfgutil.EncodeArgs`, and
 validation. Typed fields need explicit assignment in `caddyfile_resolve.go`.
+
+`caddyfile_resolve_instructions_test.go` checks encoded credentials, messaging,
+and registration values with environment and secret lookups. The credentials
+adapt/resolution fixture includes quoted literal and resolved passwords.
+The Caddy lifecycle E2E suite loads both kinds of replacement, checks the runtime
+values, performs login/authorization, and verifies a missing secret leaves the
+old deployment usable.
 
 Use `configuration-secrets` for secrets manager block syntax.

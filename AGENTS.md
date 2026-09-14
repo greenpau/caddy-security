@@ -81,8 +81,8 @@ modules register from package `init` hooks.
   modules, this module, and `caddy-trace`; build outputs land in
   `bin/authcrunch`.
 - `assets/config/` stores runnable/example Caddy configs and supporting files.
-  `assets/scripts/` stores documentation/release automation. `assets/docs/` and
-  `assets/cla/` contain project documentation assets and CLA materials.
+  `assets/scripts/` stores documentation/release automation. `assets/docs/`
+  holds non-Markdown assets such as images; `assets/cla/` holds CLA materials.
 - `go.mod` and `go.sum` define the module and dependencies. `Makefile` wraps
   local build, test, coverage, config formatting, dependency, and release
   workflows. `.goreleaser.yaml` contains release packaging configuration.
@@ -134,6 +134,10 @@ release Make targets, GoReleaser packaging, and publication workflows.
 
 ## Skill Authoring
 
+Keep repository documentation in the relevant repo-local skill or its linked
+references under `.codex/skills/`. Do not place Markdown documentation in
+`docs/` or `assets/docs/`.
+
 Use the repo-local `skill-authoring-patterns` skill with the default
 `skill-creator` when creating, porting, reviewing, or validating repo-local
 skills, `agents/openai.yaml` metadata, or `AGENTS.md` skill routing.
@@ -144,3 +148,7 @@ Use the repo-local `testing-and-ci` skill when choosing or running tests,
 adding or updating test coverage, maintaining Caddyfile adapt or runtime
 resolution fixtures, interpreting CI failures, reproducing GitHub Actions
 locally, or documenting validation for a change.
+
+Code changes must have unit and E2E coverage. Caddyfile directive changes also
+require new or amended adaptation cases in `testdata/caddyfile_adapt/`. Follow
+the skill's coverage requirements and validation workflow.

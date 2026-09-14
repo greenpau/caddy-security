@@ -26,6 +26,10 @@ https://docs.authcrunch.com. As AI agents become part of the development
 workflow, this repository is moving to skill-based documentation that helps both
 humans and AI agents work with the codebase.
 
+See [Runtime ownership and reload behavior](.codex/skills/coding-directives/references/runtime-lifecycle.md)
+for request draining, failed replacement cleanup, and the restriction on
+overlapping runtimes that use the same local identity file.
+
 ## Tests and Reports
 
 Run `make dep` to download module dependencies and resolve the pinned `tested`

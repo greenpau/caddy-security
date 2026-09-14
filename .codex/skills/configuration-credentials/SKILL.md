@@ -55,7 +55,10 @@ resolved `username` and `password`; include `domain` only when a downstream
 consumer expects it.
 
 All values are single tokens after Caddyfile parsing. Quote values containing
-spaces.
+spaces. Runtime environment and secret replacements also remain one argument;
+embedded spaces, quotes, and newlines must survive unchanged. Follow
+[runtime resolution](../configuration-runtime-resolution/SKILL.md#what-gets-resolved)
+when changing the encoded-instruction path.
 
 ## Guidance
 
