@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "named OAuth application credentials remain exact", inputFileNamePrefix: "testcase_security_oauth_applications"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
 		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},
 		{

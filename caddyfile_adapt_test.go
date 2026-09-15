@@ -64,6 +64,31 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "named OAuth applications", inputFileNamePrefix: "testcase_security_oauth_applications"},
+		{
+			name:                "quoted application value cannot close security block",
+			inputFileNamePrefix: "testcase_security_oauth_application_enclosing_malformed",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': unterminated security block, at Caddyfile:8"),
+		},
+		{
+			name:                "OAuth settings after closing brace are rejected",
+			inputFileNamePrefix: "testcase_security_oauth_application_boundary_malformed",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': oauth application closing brace must end its line, at Caddyfile:7"),
+		},
+		{
+			name:                "malformed OAuth application header redacts credentials",
+			inputFileNamePrefix: "testcase_security_oauth_application_header_malformed",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': expected oauth application or oauth identity provider header, at Caddyfile:3"),
+		},
+		{
+			name:                "empty OAuth application requires explicit credentials",
+			inputFileNamePrefix: "testcase_security_oauth_application_empty",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': oauth application requires an explicit or persisted client_id, at Caddyfile:4"),
+		},
 		{name: "portal and policy crypto algorithms and legacy defaults", inputFileNamePrefix: "testcase_authenticate_with_crypto"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
 		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},

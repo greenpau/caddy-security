@@ -1,0 +1,6 @@
+{
+	security {
+		oauth "application website" synthetic-application-secret-0123456789 {
+		}
+	}
+}

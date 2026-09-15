@@ -45,6 +45,7 @@ func init() {
 //			messaging <email|file> provider <name> { ... }
 //			<local|ldap> identity store <name> { ... }
 //			<oauth|saml> identity provider <name> { ... }
+//			oauth application <nickname> { ... }
 //			sso provider <name> { ... }
 //			user registration <name> { ... }
 //			authentication portal <name> { ... }
@@ -63,7 +64,44 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 		return nil, d.ArgErr()
 	}
 
+	// Collect registrations before resolving portals/providers, regardless of
+	// textual order. Each adaptation owns a fresh Config; previous or persisted
+	// registrations are never implicitly carried into this declaration set.
+	var declarations []*caddyfile.Dispenser
 	for d.NextBlock(0) {
+		if d.Val() == "oauth" {
+			if !d.NextArg() {
+				return nil, d.Errf("expected oauth application or oauth identity provider header")
+			}
+			kind := d.Val()
+			d.Prev()
+			switch kind {
+			case "application":
+				// Parse in place: NextSegment omits empty blocks, which would
+				// turn missing credentials into a misleading missing-block error.
+				if err := parseCaddyfileOAuthApplication(d, app.Config); err != nil {
+					return nil, err
+				}
+				continue
+			case "identity":
+				// Resolve identity providers after collecting applications.
+			default:
+				// A malformed/grouped header may contain a misplaced secret.
+				return nil, d.Errf("expected oauth application or oauth identity provider header")
+			}
+		}
+		declaration := d.NewFromNextSegment()
+		declaration.Next()
+		declarations = append(declarations, declaration)
+	}
+	// A child parser must not consume this block's closing brace and let EOF
+	// masquerade as a completed security block. Quoted brace-valued arguments
+	// can otherwise pass Caddy's initial brace counting with the wrong scopes.
+	if d.Nesting() != 0 {
+		return nil, d.Errf("unterminated security block")
+	}
+
+	for _, d := range declarations {
 		tld := d.Val()
 		switch tld {
 		case "credentials":
@@ -99,7 +137,8 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 				return nil, err
 			}
 		default:
-			return nil, d.ArgErr()
+			// Unknown tokens may be grouped headers containing credentials.
+			return nil, d.Errf("unsupported security directive")
 		}
 	}
 

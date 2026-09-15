@@ -1,0 +1,61 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	security {
+		authentication portal portal {
+			enable identity store localdb
+			crypto key sign-verify synthetic-application-portal-signing-key
+		}
+
+		oauth application website {
+			client_id website-protocol-id
+			client_name "Website Display Name"
+			client_secret synthetic-application-secret-0123456789
+			token_endpoint_auth_method client_secret_basic
+			redirect_uri https://App.example.test:443/a%2Fb?next=%2F&x=+
+			redirect_uri https://app.example.test/callback
+			scopes openid email profile
+			require_pkce yes
+			skip_consent no
+		}
+
+		local identity store localdb {
+			realm local
+			path :memory:
+			user alice {
+				email alice@example.com
+				password SyntheticPassword42!
+				roles authp/user
+			}
+		}
+
+		oauth application service {
+			client_id service-protocol-id
+			client_name "Service Display Name"
+			client_secret synthetic-application-secret-0123456789
+			token_endpoint_auth_method client_secret_post
+			redirect_uri https://service.example.test/callback
+			scopes openid
+			require_pkce off
+			skip_consent on
+		}
+
+		oauth application native {
+			client_id native-protocol-id
+			token_endpoint_auth_method none
+			redirect_uri http://127.0.0.1:49152/callback?next=%2F
+			redirect_uri http://[::1]/callback
+			scopes openid profile
+			require_pkce 1
+			skip_consent 0
+		}
+	}
+}
+
+http://127.0.0.1:9080 {
+	bind 127.0.0.1
+	route /auth/* {
+		authenticate with portal
+	}
+}

@@ -1,0 +1,6 @@
+{
+	security {
+		oauth application website {
+		}
+	}
+}

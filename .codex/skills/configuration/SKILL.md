@@ -131,6 +131,10 @@ authorize /api/* with api_policy
   `caddyfile_identity.go`, `caddyfile_identity_provider.go`, and
   `caddyfile_identity_provider_oauth.go`, delegated to
   `go-authcrunch/pkg/idp/parser` and `pkg/idp/oauth/parser`.
+- Named OAuth applications: `configuration-oauth-applications`, parsed by
+  `caddyfile_oauth_application.go`, delegated to `go-authcrunch/pkg/oidc/parser`
+  and `Config.AddOAuthApplication`. These register clients with explicit
+  credentials without enabling a public OpenID Provider.
 - SAML login identity providers: `configuration-saml-providers`, parsed by
   `caddyfile_identity.go` and `caddyfile_identity_provider.go`, implemented by
   local `go-authcrunch/pkg/idp/saml`.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration OAuth Applications"
+  short_description: "Configure named OAuth client registrations"
+  default_prompt: "Use $configuration-oauth-applications to configure named OAuth applications with explicit credentials in caddy-security."

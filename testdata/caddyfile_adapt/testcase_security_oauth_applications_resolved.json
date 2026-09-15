@@ -1,0 +1,120 @@
+{
+	"authentication_portals": [
+		{
+			"name": "portal",
+			"ui": {},
+			"cookie_config": {
+				"session_id_cookie_name": "AUTHP_SESSION_ID",
+				"referer_cookie_name": "AUTHP_REDIRECT_URL",
+				"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+				"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+				"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+				"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+				"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+				"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+				"cookie_name_prefix": "AUTHP"
+			},
+			"identity_stores": [
+				"localdb"
+			],
+			"token_validator_options": {},
+			"raw_crypto_key_store_config": [
+				"crypto key sign-verify synthetic-application-portal-signing-key"
+			],
+			"crypto_key_store_config": {
+				"raw_key_configs": [
+					"crypto key sign-verify synthetic-application-portal-signing-key"
+				],
+				"auto_generate_tag": "default",
+				"auto_generate_algo": "ES512"
+			},
+			"token_grantor_options": {},
+			"portal_admin_roles": {
+				"authp/admin": true
+			},
+			"portal_user_roles": {
+				"authp/user": true
+			},
+			"portal_guest_roles": {
+				"authp/guest": true
+			},
+			"api": {
+				"profile_enabled": true
+			}
+		}
+	],
+	"identity_stores": [
+		{
+			"name": "localdb",
+			"kind": "local",
+			"params": {
+				"path": ":memory:",
+				"realm": "local",
+				"users": [
+					{
+						"email_address": "alice@example.com",
+						"password": "SyntheticPassword42!",
+						"roles": [
+							"authp/user"
+						],
+						"username": "alice"
+					}
+				]
+			}
+		}
+	],
+	"oauth_applications": [
+		{
+			"name": "website",
+			"client": {
+				"client_id": "website-protocol-id",
+				"client_name": "Website Display Name",
+				"client_secret": "synthetic-application-secret-0123456789",
+				"token_endpoint_auth_method": "client_secret_basic",
+				"redirect_uris": [
+					"https://App.example.test:443/a%2Fb?next=%2F\u0026x=+",
+					"https://app.example.test/callback"
+				],
+				"scopes": [
+					"openid",
+					"email",
+					"profile"
+				],
+				"require_pkce": true
+			}
+		},
+		{
+			"name": "service",
+			"client": {
+				"client_id": "service-protocol-id",
+				"client_name": "Service Display Name",
+				"client_secret": "synthetic-application-secret-0123456789",
+				"token_endpoint_auth_method": "client_secret_post",
+				"redirect_uris": [
+					"https://service.example.test/callback"
+				],
+				"scopes": [
+					"openid"
+				],
+				"skip_consent": true
+			}
+		},
+		{
+			"name": "native",
+			"client": {
+				"client_id": "native-protocol-id",
+				"client_name": "native",
+				"token_endpoint_auth_method": "none",
+				"redirect_uris": [
+					"http://127.0.0.1:49152/callback?next=%2F",
+					"http://[::1]/callback"
+				],
+				"scopes": [
+					"openid",
+					"profile"
+				],
+				"require_pkce": true
+			}
+		}
+	]
+}

@@ -62,6 +62,8 @@ modules register from package `init` hooks.
   messaging, identity stores, OAuth and SAML identity providers, SSO app
   providers, local users, registrations, authentication portals, authorization
   policies, secrets, and runtime replacement behavior.
+- `caddyfile_oauth_application.go` registers named OAuth clients with explicit
+  credentials. `caddyfile.go` collects them before resolving other declarations.
 - `caddyfile_authn_*` files parse authentication portal subdirectives such as
   cookies, crypto, UI, transforms, and miscellaneous portal settings.
   `caddyfile_authz_*` files parse authorization policy subdirectives such as
@@ -111,6 +113,9 @@ When changing syntax or updating Caddy/go-authcrunch, follow
 [Syntax maintenance](.codex/skills/configuration/references/syntax-maintenance.md)
 to audit Caddyfiles, parser syntax comments, delegated upstream grammar, and
 the corresponding configuration skills together.
+
+Use `configuration-oauth-applications` for `oauth application <nickname>`
+registrations; `configuration-oauth-providers` owns external login providers.
 
 ## Break-Fix Troubleshooting
 

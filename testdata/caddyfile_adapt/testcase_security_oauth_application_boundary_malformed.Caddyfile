@@ -1,0 +1,9 @@
+{
+	security {
+		oauth application website {
+			client_id website-protocol-id
+			client_secret synthetic-application-secret-0123456789
+			redirect_uri https://app.example.test/callback
+		} skip_consent on
+	}
+}

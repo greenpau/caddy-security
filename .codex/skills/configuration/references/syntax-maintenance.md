@@ -56,6 +56,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | Policy options, bypass, headers, auth proxy | `caddyfile_authz_misc.go`, `caddyfile_authz_bypass.go`, `caddyfile_authz_inject.go` | `pkg/authz`, `pkg/authz/bypass`, `pkg/authz/injector`, `pkg/authproxy` |
 | Local/LDAP stores and static users | `caddyfile_identity_store.go` | `pkg/ids/config.go`, `pkg/ids/local`, `pkg/ids/ldap`, `pkg/authn/icons` |
 | Upstream OAuth | `caddyfile_identity_provider_oauth.go` | `pkg/idp/parser/oauth.go` → `pkg/idp/oauth/parser` → shared `pkg/idp/config.go`; runtime `pkg/idp/oauth` |
+| Named OAuth applications | `caddyfile_oauth_application.go`, collected first in `caddyfile.go` | `pkg/oidc/parser/application.go`, `client.go` → `Config.AddOAuthApplication`; explicit credentials, repeatable single-value `redirect_uri`, no provider routes |
 | Upstream SAML | `caddyfile_identity_provider.go` | `pkg/idp/config.go`, `pkg/idp/saml` |
 | SSO apps | `caddyfile_sso_provider.go` | `pkg/sso` |
 | Credentials | `caddyfile_credentials.go` | `pkg/credentials` |
@@ -135,7 +136,11 @@ Never require disabled TLS, nonce, PKCE, or signature checks for a syntax audit.
 Known fixture outcomes: `testcase_authenticate_malformed`,
 `testcase_authenticate_with_admin_api_malformed`,
 `testcase_authenticate_with_oauth_icon_malformed`, and
-`testcase_authenticate_with_redirect_trust_malformed` intentionally fail adaptation;
+`testcase_authenticate_with_redirect_trust_malformed`,
+`testcase_security_oauth_application_boundary_malformed`,
+`testcase_security_oauth_application_enclosing_malformed`,
+`testcase_security_oauth_application_header_malformed`, and
+`testcase_security_oauth_application_empty` intentionally fail adaptation;
 `testcase_security_with_secrets` requires an external module absent from the
 normal test binary; `testcase_authenticate_malformed_replacement` adapts but
 fails runtime resolution. Check test registrations if these outcomes change.
