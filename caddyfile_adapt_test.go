@@ -64,6 +64,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "portal and policy crypto algorithms and legacy defaults", inputFileNamePrefix: "testcase_authenticate_with_crypto"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
 		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},
 		{name: "OAuth driver defaults", inputFileNamePrefix: "testcase_authenticate_with_oauth"},

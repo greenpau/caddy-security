@@ -166,9 +166,25 @@ key ID from the filename, normalized to lowercase letters, digits, `_`, and
 
 Ed25519 uses PKCS#8 `PRIVATE KEY` PEM for signing and SPKI `PUBLIC KEY` PEM
 for verification. Both `EdDSA` and `Ed25519` JOSE labels are supported; imported
-private keys prefer `EdDSA`. A public Ed25519 key with `sign` or `sign-verify`
-usage is rejected. These KMS keys issue/verify portal tokens; upstream OAuth
-`jwks key` pins use a separate loader with different accepted key formats.
+private keys prefer `EdDSA`. A public Ed25519 key with `sign` usage is rejected.
+With `verify`, `sign-verify`, or `auto`, public PEM loads only a verifier and
+does not enable signing or public discovery. An Ed25519 private key configured
+with `verify` also contributes only a verifier. These KMS keys issue/verify
+portal tokens; upstream OAuth `jwks key` pins use a separate loader with
+different accepted key formats.
+
+There is no crypto directive to relabel an imported key as `Ed25519`. PEM
+persists material, not a JOSE preference: exporting a generated `Ed25519` key
+and reimporting it uses `EdDSA` for new tokens. Both exact labels verify with
+the same public key. Do not rewrite signed headers or extend OP ID-token
+signing algorithms to configure portal access tokens.
+
+Public signing-key discovery accepts `GET` or `HEAD` at
+`<mount>/.well-known/jwks.json` without an enable directive or admin access.
+See [public discovery](../authentication-portal-api/SKILL.md#public-signing-key-discovery)
+for selection and response rules, and
+[HTTP routing](../configuration-http-integrations/SKILL.md#public-jwks-routing)
+for exact mount boundaries ahead of a protected catch-all.
 
 Unsupported material includes certificates, malformed PEM, unsupported ECDSA
 curves, and DSA. See selected upstream `pkg/kms/ed25519.go`,
@@ -304,6 +320,16 @@ HTTPS and points at the portal base path, and the client sends the expected
 realm and API-key or Basic credentials headers.
 
 ## Fixtures
+
+`caddyfile_crypto_test.go` checks exact raw adapter forwarding, runtime
+algorithm replacement, legacy defaults/key attributes, and library-owned
+validation. `testcase_authenticate_with_crypto` covers both portal and policy
+adaptation. `TestCaddyJWKSE2E` in `jwks_e2e_test.go` runs real TLS Caddy login,
+independent signature verification from public JWKS, file/directory/env PEM
+loading, exact labels, public routing, gatekeeper trust, private export and
+reimport, and live discovery changes. `TestCaddyJWKSPersistenceE2E` in
+`jwks_persistence_e2e_test.go` checks restart, rotation, and retirement in fresh
+OS processes, plus live verifier retirement after cached authorization.
 
 Use these examples for orientation:
 

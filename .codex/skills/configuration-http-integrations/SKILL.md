@@ -89,6 +89,39 @@ For split-host deployments, put `authenticate` on the auth host and `authorize`
 only on the protected app or asset host. Use a full auth URL when the portal is
 on a different host.
 
+## Public JWKS Routing
+
+The portal serves access-token public keys at
+`<mount>/.well-known/jwks.json` through the existing `authenticate` handler.
+Place the portal before any protected catch-all and use path-segment
+boundaries when the deployment must keep neighboring prefixes private:
+
+```caddyfile
+example.com {
+	@portal path /auth /auth/*
+	route {
+		route @portal {
+			authenticate with myportal
+		}
+		route {
+			authorize with app_policy
+			reverse_proxy 127.0.0.1:8080
+		}
+	}
+}
+```
+
+This routes `/auth/.well-known/jwks.json` publicly while `/authentication/`
+stays under the policy. A `/tenant/auth` mount uses `/tenant/auth` and
+`/tenant/auth/*` in the matcher. A dedicated root portal exposes
+`/.well-known/jwks.json` with the existing root `authenticate` route.
+
+Do not put `authorize` before `authenticate` on the portal route or add a
+generic suffix-based bypass to the gatekeeper. Caddy owns mount selection;
+the library owns public discovery, method validation, and serialization.
+There is no discovery enable directive. See
+[the HTTP contract](../authentication-portal-api/SKILL.md#public-signing-key-discovery).
+
 ## Portal Path Selection
 
 The authorization policy's `set auth url` must align with the path where the

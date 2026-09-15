@@ -84,6 +84,46 @@ that match the portal's token validator configuration. If custom access-token
 cookie names are used, keep portal and authorization policy names aligned with
 `configuration-authentication-cookies` and `configuration-crypto`.
 
+## Public Signing-Key Discovery
+
+`GET <mount>/.well-known/jwks.json` returns the public keys used for portal
+access-token signing. `HEAD` returns the same headers and Content-Length with
+no body. No enable directive, session, admin API, or private-export setting is
+required. Requests with invalid credentials, JSON headers, or `format=json`
+still reach discovery before authentication and content negotiation.
+
+The first eligible non-system signer determines availability: an asymmetric
+signer enables discovery, while HMAC first returns 404 even when asymmetric
+signers follow. Verification-only keys never enable discovery. When available,
+the endpoint publishes RSA, EC, and Ed25519 signing public keys in signing
+order, excluding HMAC, verification-only, and System API keys. Success is an
+object with a `keys` array, including for one key, using
+`application/jwk-set+json`. All methods use `Cache-Control: no-store` and
+`nosniff`, without cookies or login redirects. Unsupported methods return 405
+with `Allow: GET, HEAD`.
+
+Ed25519 keys use `kty: OKP`, `crv: Ed25519`, and a 32-byte unpadded base64url
+`x`; no private `d` or EC `y` appears. Match the exact `alg` and `kid` to the
+signed JWT. Generated keys can advertise `EdDSA` or `Ed25519`; imported keys
+default to `EdDSA`. Default key ID `0` is omitted in both JWT and JWK. See
+[crypto settings](../configuration-crypto/SKILL.md) for key sources and labels.
+
+The embedding Caddy routes define the mount boundary. Use the complete path
+beneath that mount; trailing slashes, filename suffixes, and query-only matches
+are not discovery. See [public JWKS routing](../configuration-http-integrations/SKILL.md#public-jwks-routing)
+to keep it ahead of a protected catch-all. This endpoint is distinct from
+`/oidc/jwks` and the OP's dedicated RS256 ID-token signing keys.
+
+`TestCaddyJWKSE2E` verifies the HTTP contract over trusted TLS, reconstructs
+public keys from discovery to verify real login tokens independently, and
+checks gatekeeper rejection of wrong keys and tampered tokens. Its first request
+is HEAD, and negative-route checks inspect both headers and bodies.
+`TestCaddyJWKSPersistenceE2E` checks persisted rollover across fresh processes:
+retained verification keys continue accepting old tokens
+without publishing them; removing those keys on reload rejects cached old
+tokens. Discovery publishes current signing configuration and does not retain
+removed keys automatically.
+
 ## Admin Server API
 
 Add this inside `authentication portal <name>` to enable the server/admin API:

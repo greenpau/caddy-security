@@ -39,6 +39,9 @@ import (
 // Token lifetime is in seconds. Key attributes are order-sensitive. Portal
 // issuance requires a signing key; policies need verification material. PEM
 // loading supports RSA, ECDSA, and Ed25519; system keys serve the System API.
+// Omitted autogeneration algorithms retain ES512. EdDSA and Ed25519 generate the
+// same key family with distinct JOSE labels. Imported Ed25519 private keys use
+// EdDSA; this grammar has no imported-key algorithm override.
 // See .codex/skills/configuration-crypto/SKILL.md for material and usage details.
 func parseCaddyfileAuthPortalCrypto(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string, args []string) error {
 	if len(args) < 3 {

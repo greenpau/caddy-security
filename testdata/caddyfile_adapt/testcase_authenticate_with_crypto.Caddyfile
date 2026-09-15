@@ -1,0 +1,93 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		authentication portal default {
+			enable identity store localdb
+			crypto default autogenerate tag fixture-default
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authorization policy default {
+			allow roles authp/user
+			crypto default autogenerate tag fixture-default
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authentication portal legacy {
+			enable identity store localdb
+			crypto default autogenerate algorithm ES512
+			crypto default autogenerate tag fixture-legacy
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authorization policy legacy {
+			allow roles authp/user
+			crypto default autogenerate algorithm ES512
+			crypto default autogenerate tag fixture-legacy
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authentication portal eddsa {
+			enable identity store localdb
+			crypto default autogenerate algorithm EdDSA
+			crypto default autogenerate tag fixture-eddsa
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authorization policy eddsa {
+			allow roles authp/user
+			crypto default autogenerate algorithm EdDSA
+			crypto default autogenerate tag fixture-eddsa
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authentication portal ed25519 {
+			enable identity store localdb
+			crypto default autogenerate algorithm Ed25519
+			crypto default autogenerate tag fixture-ed25519
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authorization policy ed25519 {
+			allow roles authp/user
+			crypto default autogenerate algorithm Ed25519
+			crypto default autogenerate tag fixture-ed25519
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+		}
+		authentication portal hmac {
+			enable identity store localdb
+			crypto key shared sign-verify synthetic-crypto-fixture-key
+			crypto default autogenerate tag fixture-hmac
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+			crypto key shared token name legacy_token
+			crypto key shared token lifetime 600
+		}
+		authorization policy hmac {
+			allow roles authp/user
+			crypto key shared sign-verify synthetic-crypto-fixture-key
+			crypto default autogenerate tag fixture-hmac
+			crypto default token name portal_token
+			crypto default token lifetime 1200
+			crypto key shared token name legacy_token
+			crypto key shared token lifetime 600
+		}
+	}
+}
+
+:8443 {
+	@portal path /auth /auth/*
+	route {
+		route @portal {
+			authenticate with ed25519
+		}
+		route {
+			authorize with ed25519
+			respond allowed
+		}
+	}
+}
