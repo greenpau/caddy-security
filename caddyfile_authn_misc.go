@@ -30,8 +30,6 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalCo
 		switch {
 		case v == "source ip tracking":
 			portal.TokenGrantorOptions.EnableSourceAddress = true
-		case v == "admin api":
-			portal.API.AdminEnabled = true
 		case strings.HasPrefix(v, "identity provider"):
 			if len(args) < 3 {
 				return h.Errf("malformed directive for %s: %s", rootDirective, v)
@@ -56,7 +54,9 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalCo
 				portal.SingleSignOnProviders = append(portal.SingleSignOnProviders, providerName)
 			}
 		default:
-			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
+			// Misspelled admin keywords can reach this fallback. Do not echo
+			// argument values that the shared admin parser would redact.
+			return h.Errf("unsupported directive for %s", rootDirective)
 		}
 	case "validate":
 		switch v {

@@ -60,7 +60,8 @@ const (
 //	    validate source address
 //
 //	    enable source ip tracking
-//	    enable admin api
+//	    <enable|disable> admin api
+//	    <enable|disable> admin api private key export
 //	    enable identity store <name>
 //	    enable identity provider <name>
 //	    enable sso provider <name>
@@ -90,6 +91,7 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 			},
 		}
 		var cookieStatements []string
+		var adminStatements []string
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
 			v := d.RemainingArgs()
@@ -113,13 +115,37 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 				if err := parseCaddyfileAuthPortalTransform(d, p, rootDirective, v); err != nil {
 					return err
 				}
-			case "enable", "validate", "trust":
+			case "enable", "disable":
+				if k == "enable" && len(v) > 0 && !strings.HasPrefix(v[0], "admin") {
+					if err := parseCaddyfileAuthPortalMisc(d, p, rootDirective, k, v); err != nil {
+						return err
+					}
+					continue
+				}
+				statement, err := encodePortalAdminAPIDirective(k, v)
+				if err != nil {
+					return d.Errf("%s: %v", rootDirective, err)
+				}
+				// Admin settings are statements, never nested blocks.
+				if d.Next() {
+					hasBlock := d.Val() == "{"
+					d.Prev()
+					if hasBlock {
+						return d.Errf("%s: admin API directives do not accept blocks", rootDirective)
+					}
+				}
+				adminStatements = append(adminStatements, statement)
+			case "validate", "trust":
 				if err := parseCaddyfileAuthPortalMisc(d, p, rootDirective, k, v); err != nil {
 					return err
 				}
 			default:
 				return errors.ErrMalformedDirective.WithArgs(rootDirective, v)
 			}
+		}
+
+		if err := configurePortalAdminAPI(p, adminStatements); err != nil {
+			return d.Errf("%s.portal %q admin API: %v", authnPrefix, p.Name, err)
 		}
 
 		// Runtime placeholders must be expanded before the shared parser validates

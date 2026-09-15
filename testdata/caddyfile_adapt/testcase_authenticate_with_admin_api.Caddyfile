@@ -1,0 +1,42 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		authentication portal defaults {
+			enable identity store localdb
+			crypto key sign-verify synthetic-admin-signing-key
+		}
+		authentication portal both_off {
+			enable identity store localdb
+			crypto key sign-verify synthetic-admin-signing-key
+			disable admin api
+			disable admin api private key export
+		}
+		authentication portal admin_only {
+			enable identity store localdb
+			crypto key sign-verify synthetic-admin-signing-key
+			enable admin api
+			disable admin api private key export
+		}
+		authentication portal export_only {
+			enable identity store localdb
+			crypto key sign-verify synthetic-admin-signing-key
+			enable admin api private key export
+			disable admin api
+		}
+		authentication portal both_on {
+			enable identity store localdb
+			crypto key sign-verify synthetic-admin-signing-key
+			enable admin api
+			enable admin api private key export
+		}
+	}
+}
+
+:8443 {
+	route /auth/* {
+		authenticate with both_on
+	}
+}

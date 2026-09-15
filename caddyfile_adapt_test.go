@@ -89,6 +89,16 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			inputFileNamePrefix: "testcase_authenticate_with_cookie_domain",
 		},
 		{
+			name:                "independent admin API and private key export flags",
+			inputFileNamePrefix: "testcase_authenticate_with_admin_api",
+		},
+		{
+			name:                "malformed admin API directive redacts arguments",
+			inputFileNamePrefix: "testcase_authenticate_with_admin_api_malformed",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': unsupported directive for security.authentication.portal.enable, at Caddyfile:6"),
+		},
+		{
 			name:                "shared cookie directives and policy coordination",
 			inputFileNamePrefix: "testcase_authenticate_with_cookie_parser",
 		},

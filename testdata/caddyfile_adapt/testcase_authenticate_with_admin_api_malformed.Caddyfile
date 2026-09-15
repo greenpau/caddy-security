@@ -1,0 +1,9 @@
+{
+	security {
+		authentication portal portal {
+			enable admin api
+			enable admin api private key export
+			enable Admin api synthetic-sensitive-admin-value
+		}
+	}
+}
