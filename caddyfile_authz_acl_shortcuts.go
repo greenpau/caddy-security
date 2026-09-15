@@ -23,6 +23,15 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// parseCaddyfileAuthorizationACLShortcuts maps compact policy rules into ACLs.
+//
+// Syntax:
+//
+//	<allow|deny> <field> <value> [<value>...] [with <method>] [to <path>]
+//
+// any or * as a value checks field existence. Methods are uppercased and paths
+// use partial matching; either enables method/path validation. Allow adds log
+// debug; deny adds stop log warn. Full ACL semantics belong to go-authcrunch/pkg/acl.
 func parseCaddyfileAuthorizationACLShortcuts(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)

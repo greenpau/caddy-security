@@ -1,0 +1,7 @@
+{
+	security {
+		authentication portal portal {
+			trust login redirect uri domain example.test path
+		}
+	}
+}

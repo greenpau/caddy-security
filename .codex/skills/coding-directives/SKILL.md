@@ -118,7 +118,13 @@ Return `d.ArgErr()` for malformed top-level argument counts. Use `h.Errf` or
 them for malformed directive values.
 
 Keep syntax comments above parser functions current when adding or changing
-directives. Future agents rely on those comments to discover Caddyfile shape.
+directives **or updating a dependency that owns delegated grammar**. Document
+headers, body scope, argument counts, aliases, repetition, and the parser that
+owns deeper validation. Keep restricted forms visible with an explicit status;
+do not delete documented syntax merely because a shared validator rejects it.
+Update runnable examples and the owning configuration skill in the same change.
+Follow the [syntax maintenance workflow](../configuration/references/syntax-maintenance.md)
+for the source inventory and validation boundaries.
 
 When mapping Caddyfile input, prefer authcrunch config constructors and `Add*`
 methods over duplicating validation in this repository. Use

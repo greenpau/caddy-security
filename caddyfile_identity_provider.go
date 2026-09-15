@@ -19,75 +19,46 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-// parseCaddyfileIdentityProvider parses identity provider configuration.
+// parseCaddyfileIdentityProvider dispatches upstream OAuth and SAML providers.
+// OAuth body syntax, including logout_url <logout_url> and its shared-validation
+// restriction, is documented at parseCaddyfileOAuthIdentityProvider.
+// SAML fields pass through go-authcrunch/pkg/idp shared and typed validation.
 //
-// Syntax:
-//
-//	oauth identity provider <name> {
-//	  realm <name>
-//	  driver <name>
-//	  base_auth_url <base_url>
-//	  metadata_url <metadata_url>
-//	  logout_url <logout_url>
-//	  client_id <client_id>
-//	  client_secret <client_secret>
-//	  scopes openid email profile
-//	  disable metadata_discovery
-//	  authorization_url <authorization_url>
-//	  disable key verification
-//	  disable email claim check
-//	  region <name>
-//	  user_pool_id <name>
-//	  icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
-//	  enable accept header
-//	  enable js callback
-//	  enable id_token cookie [<cookie_name>]
-//	  enable logout
-//	  extract <field1> <fieldN> from userinfo
-//	  extract all from userinfo
-//	  user_info_roles_field_name role
-//	}
-//
-//	oauth identity provider <name> {
-//	  realm gitlab
-//	  driver gitlab
-//	  domain_name <domain>
-//	  client_id <client_id>
-//	  client_secret <client_secret>
-//	  user_group_filters <regex_pattern>
-//	}
+// Syntax (SAML):
 //
 //	saml identity provider <name> {
-//	  realm <name>
-//	  driver <name>
+//		realm <realm>
+//		driver <azure|generic>
+//		entity_id <entity_id>
+//		acs_url <url>
+//		idp_metadata_location <path_or_url>
+//		idp_sign_cert_location <path_or_url>
+//		idp_login_url <url>
+//		tenant_id <id>
+//		application_id <id>
+//		application_name <name>
+//		icon <text> [<class> [<color> [<background>]]] [text <color> [<background>]] [priority <integer>]
+//		disable tls verification
+//		disabled
 //	}
-func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
+//
+// Repeat acs_url for multiple callback URLs. Each scalar takes one value.
+// Optional fields depend on the driver. disabled omits registration. TLS
+// verification is enabled by default; disabling it is not required for SAML.
+func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, app *App, kind, name string, shortcuts []string) error {
+	if kind == "oauth" {
+		return parseCaddyfileOAuthIdentityProvider(d, app, name, shortcuts)
+	}
+	cfg := app.Config
 	var disabled bool
 
 	m := make(map[string]interface{})
 	if len(shortcuts) > 0 {
-		switch kind {
-		case "oauth":
-			switch name {
-			case "github", "google", "facebook":
-				if len(shortcuts) != 2 {
-					return d.Errf("invalid %q shortcut: %v", name, shortcuts)
-				}
-				m["realm"] = name
-				m["driver"] = name
-				m["client_id"] = shortcuts[0]
-				m["client_secret"] = shortcuts[1]
-			default:
-				return d.Errf("unsupported %q shortcut: %v", name, shortcuts)
-			}
-		default:
-			return d.Errf("unsupported %q shortcut for %q provider type: %v", name, kind, shortcuts)
-		}
+		return d.Errf("unsupported %q shortcut for %q provider type: %v", name, kind, shortcuts)
 	}
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {

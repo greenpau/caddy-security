@@ -1,0 +1,47 @@
+{
+  "apps": {
+    "security": {
+      "config": {
+        "identity_providers": [
+          {
+            "name": "upstream",
+            "kind": "oauth",
+            "params": {
+              "access_token_audience": "resource-api ",
+              "base_auth_url": "https://login.example/authorize-base",
+              "client_id": "client",
+              "client_secret": "synthetic-secret\t",
+              "driver": "generic",
+              "identity_token_field_name": "id_token",
+              "issuer": "https://Issuer.example/Exact/ ",
+              "login_icon": {
+                "background_color": "#324960",
+                "class_name": "lab la-codepen la-2x",
+                "color": "white",
+                "text": "SignIn ",
+                "text_color": "#37474f"
+              },
+              "metadata_url": "https://login.example/.well-known/openid-configuration",
+              "realm": "upstream",
+              "required_token_fields": [
+                "access_token",
+                "id_token"
+              ],
+              "response_type": [
+                "code"
+              ],
+              "scopes": [
+                "openid",
+                "email",
+                "profile"
+              ],
+              "user_info_fields": [
+                "roles\t"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

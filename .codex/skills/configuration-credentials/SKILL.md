@@ -30,11 +30,13 @@ for the manager block and lookup rules.
 ## Shape
 
 ```caddyfile
-security {
-	credentials smtp_root {
-		username root
-		password {env.SMTP_PASSWORD}
-		domain example.com
+{
+	security {
+		credentials smtp_root {
+			username root
+			password {env.SMTP_PASSWORD}
+			domain example.com
+		}
 	}
 }
 ```

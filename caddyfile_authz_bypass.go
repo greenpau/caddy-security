@@ -21,6 +21,14 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// parseCaddyfileAuthorizationBypass configures URI bypass through
+// go-authcrunch/pkg/authz/bypass validation.
+//
+// Syntax:
+//
+//	bypass uri <exact|partial|prefix|suffix|regex> <path>
+//
+// Rules match the request URL path.
 func parseCaddyfileAuthorizationBypass(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)

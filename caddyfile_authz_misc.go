@@ -24,6 +24,32 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// parseCaddyfileAuthorizationMisc parses policy options. Raw auth proxy lines
+// are validated by go-authcrunch/pkg/authproxy during policy validation.
+// Caddy does not resolve runtime placeholders in raw auth proxy statements.
+//
+// Syntax:
+//
+//	enable <js redirect|strip token|additional scopes>
+//	enable login hint [with <validator> [<validator>...]]
+//	disable <auth redirect query|auth redirect>
+//	validate <path acl|source address|bearer header>
+//	set session_id cookie name <name>
+//	set access_token cookie name <name> [<name>...]
+//	set token sources <cookie|header|query> [<cookie|header|query>...]
+//	set auth url <url>
+//	set forbidden url <url>
+//	set redirect query parameter <name>
+//	set redirect status <300-308>
+//	set user identity <field>
+//	with basic auth portal <name_or_url> realm <realm>
+//	with api key auth portal <name_or_url> realm <realm>
+//	with api key header name <header>
+//	with auth realm header name <header>
+//
+// A session cookie name setting takes one value; multiple access cookie names
+// belong on a single line. Cookie names and repeated settings must be unique.
+// Coordinate explicit names with portals using a custom cookie prefix.
 func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
 	v := strings.Join(args, " ")
 	v = strings.TrimSpace(v)

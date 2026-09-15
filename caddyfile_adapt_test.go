@@ -64,6 +64,21 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
+		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},
+		{name: "OAuth driver defaults", inputFileNamePrefix: "testcase_authenticate_with_oauth"},
+		{
+			name:                "missing redirect trust value returns an error",
+			inputFileNamePrefix: "testcase_authenticate_with_redirect_trust_malformed",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': security.authentication.portal.trust directive %q is malformed, at Caddyfile:4", "login redirect uri domain example.test path"),
+		},
+		{
+			name:                "legacy OAuth icon cannot hide duplicate fields",
+			inputFileNamePrefix: "testcase_authenticate_with_oauth_icon_malformed",
+			shouldErr:           true,
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': duplicate OAuth login icon text_color directive at line 7, at Caddyfile:9"),
+		},
 		{
 			name:                "authorize plugin config",
 			inputFileNamePrefix: "testcase_authorize_ok",

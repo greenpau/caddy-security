@@ -1,0 +1,231 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":8443"
+          ],
+          "routes": [
+            {
+              "match": [
+                {
+                  "path": [
+                    "/auth/*"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "authenticator",
+                          "portal_name": "upstreamportal",
+                          "route_matcher": "*"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "security": {
+      "config": {
+        "authentication_portals": [
+          {
+            "name": "upstreamportal",
+            "ui": {},
+            "cookie_config": {
+              "session_id_cookie_name": "AUTHP_SESSION_ID",
+              "referer_cookie_name": "AUTHP_REDIRECT_URL",
+              "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+              "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+              "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+              "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+              "oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+              "oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+              "cookie_name_prefix": "AUTHP"
+            },
+            "identity_providers": [
+              "upstream"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+              "crypto key sign-verify synthetic-oauth-parser-portal-key"
+            ],
+            "crypto_key_store_config": {
+              "raw_key_configs": [
+                "crypto key sign-verify synthetic-oauth-parser-portal-key"
+              ],
+              "auto_generate_tag": "default",
+              "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+              "authp/admin": true
+            },
+            "portal_user_roles": {
+              "authp/user": true
+            },
+            "portal_guest_roles": {
+              "authp/guest": true
+            },
+            "api": {
+              "profile_enabled": true
+            }
+          }
+        ],
+        "identity_providers": [
+          {
+            "name": "upstream",
+            "kind": "oauth",
+            "params": {
+              "accept_header_enabled": true,
+              "access_token_audience": "{env.OAUTH_PARSER_AUDIENCE}",
+              "authorization_url": "https://login.example/authorize",
+              "base_auth_url": "https://login.example/authorize-base",
+              "client_id": "{env.OAUTH_PARSER_CLIENT_ID}",
+              "client_secret": "{env.OAUTH_PARSER_CLIENT_SECRET}",
+              "delay_start": 2,
+              "driver": "generic",
+              "identity_token_cookie_enabled": true,
+              "identity_token_cookie_name": "EXTERNAL_ID_TOKEN",
+              "identity_token_field_name": "id_token",
+              "issuer": "{env.OAUTH_PARSER_ISSUER}",
+              "jwks_keys": {
+                "ed25519": "testdata/oauth/upstream_ed25519_pub.pem",
+                "rsa": "testdata/oauth/87329db33bf_pub.pem"
+              },
+              "login_icon": {
+                "background_color": "white",
+                "class_name": "custom company",
+                "color": "blue",
+                "priority": 20,
+                "text": "Company Login",
+                "text_background_color": "gray",
+                "text_color": "black"
+              },
+              "metadata_url": "https://login.example/.well-known/openid-configuration",
+              "realm": "upstream",
+              "required_token_fields": [
+                "id_token",
+                "access_token"
+              ],
+              "response_type": [
+                "code"
+              ],
+              "response_type_disabled": true,
+              "retry_attempts": 3,
+              "retry_interval": 4,
+              "scopes": [
+                "openid",
+                "email",
+                "profile"
+              ],
+              "token_url": "https://login.example/token",
+              "user_group_filters": [
+                "^example/",
+                "^team/"
+              ],
+              "user_info_fields": [
+                "email",
+                "roles"
+              ],
+              "user_info_roles_field_name": "custom_roles",
+              "user_org_filters": [
+                "^org$"
+              ]
+            }
+          },
+          {
+            "name": "google",
+            "kind": "oauth",
+            "params": {
+              "base_auth_url": "https://accounts.google.com/o/oauth2/v2/",
+              "client_id": "{env.OAUTH_PARSER_GOOGLE_CLIENT_ID}",
+              "client_secret": "{env.OAUTH_PARSER_CLIENT_SECRET}",
+              "driver": "google",
+              "identity_token_field_name": "id_token",
+              "login_icon": {
+                "background_color": "#e53935",
+                "class_name": "lab la-google la-2x",
+                "color": "white",
+                "text": "Google",
+                "text_color": "#37474f"
+              },
+              "metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
+              "realm": "google",
+              "required_token_fields": [
+                "access_token",
+                "id_token"
+              ],
+              "response_type": [
+                "code"
+              ],
+              "scopes": [
+                "openid",
+                "email",
+                "profile"
+              ]
+            }
+          }
+        ]
+      },
+      "oauth_provider_directives": {
+        "google": [
+          "realm google",
+          "driver google",
+          "client_id {env.OAUTH_PARSER_GOOGLE_CLIENT_ID}",
+          "client_secret {env.OAUTH_PARSER_CLIENT_SECRET}"
+        ],
+        "upstream": [
+          "realm upstream",
+          "driver generic",
+          "client_id {env.OAUTH_PARSER_CLIENT_ID}",
+          "client_secret {env.OAUTH_PARSER_CLIENT_SECRET}",
+          "base_auth_url https://login.example/authorize-base",
+          "metadata_url https://login.example/.well-known/openid-configuration",
+          "authorization_url https://login.example/authorize",
+          "token_url https://login.example/token",
+          "issuer {env.OAUTH_PARSER_ISSUER}",
+          "access token audience {env.OAUTH_PARSER_AUDIENCE}",
+          "scopes openid email profile",
+          "response_type code",
+          "required_token_fields id_token access_token",
+          "user_group_filters ^example/ ^team/",
+          "user_org_filters ^org$",
+          "delay_start 2",
+          "retry_attempts 3",
+          "retry_interval 4",
+          "identity token cookie enabled",
+          "identity_token_field_name id_token",
+          "identity_token_cookie_name EXTERNAL_ID_TOKEN",
+          "accept header enabled",
+          "response type parameter disabled",
+          "key verification enabled",
+          "tls verification enabled",
+          "nonce enabled",
+          "pkce enabled",
+          "user_info_fields email roles",
+          "user_info_roles_field_name custom_roles",
+          "login icon text \"Company Login\"",
+          "login icon class_name \"custom company\"",
+          "login icon color blue",
+          "login icon background_color white",
+          "login icon priority 20",
+          "login icon text_color black",
+          "login icon text_background_color gray",
+          "jwks key ed25519 testdata/oauth/upstream_ed25519_pub.pem",
+          "jwks key rsa testdata/oauth/87329db33bf_pub.pem"
+        ]
+      }
+    }
+  }
+}

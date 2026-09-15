@@ -1,0 +1,53 @@
+{
+	security {
+		oauth identity provider upstream {
+			realm upstream
+			driver generic
+			client_id {env.OAUTH_PARSER_CLIENT_ID}
+			client_secret {env.OAUTH_PARSER_CLIENT_SECRET}
+			base_auth_url https://login.example/authorize-base
+			metadata_url https://login.example/.well-known/openid-configuration
+			authorization_url https://login.example/authorize
+			token_url https://login.example/token
+			issuer {env.OAUTH_PARSER_ISSUER}
+			access token audience {env.OAUTH_PARSER_AUDIENCE}
+			scopes openid email
+			scopes profile
+			response_type code
+			required_token_fields id_token access_token
+			user_group_filters "^example/" "^team/"
+			user_org_filters "^org$"
+			delay_start 2
+			retry_attempts 3
+			retry_interval 4
+			enable id token cookie id_token EXTERNAL_ID_TOKEN
+			enable accept header
+			disable response type
+			key verification enabled
+			tls verification enabled
+			nonce enabled
+			pkce enabled
+			extract email roles from userinfo
+			user_info_roles_field_name custom_roles
+			icon "Company Login" "custom company" blue white priority 20 text black gray
+			jwks key ed25519 testdata/oauth/upstream_ed25519_pub.pem
+			jwks key rsa testdata/oauth/87329db33bf_pub.pem
+		}
+		oauth identity provider google {
+			realm google
+			driver google
+			client_id {env.OAUTH_PARSER_GOOGLE_CLIENT_ID}
+			client_secret {env.OAUTH_PARSER_CLIENT_SECRET}
+		}
+		authentication portal upstreamportal {
+			enable identity provider upstream
+			crypto key sign-verify synthetic-oauth-parser-portal-key
+		}
+	}
+}
+
+:8443 {
+	route /auth/* {
+		authenticate with upstreamportal
+	}
+}

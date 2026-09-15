@@ -15,6 +15,8 @@
 			crypto default token lifetime 3600
 			crypto key sign-verify {env.JWT_SHARED_KEY}
 			enable identity store localdb
+			trust login redirect uri domain example.test path "/logout redirect uri"
+			trust logout redirect uri domain example.test path "/login redirect uri"
 			cookie guess domain
 			ui {
 				links {

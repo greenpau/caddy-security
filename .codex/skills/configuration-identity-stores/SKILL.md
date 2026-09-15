@@ -22,10 +22,12 @@ Local stores require `realm` and `path` in the authcrunch config. The full
 Caddyfile form is:
 
 ```caddyfile
-security {
-	local identity store localdb {
-		realm local
-		path assets/config/users.json
+{
+	security {
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+		}
 	}
 }
 ```

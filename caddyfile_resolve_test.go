@@ -128,6 +128,8 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
+		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},
 		{
 			name:                "shared cookie directives and policy coordination",
 			inputFileNamePrefix: "testcase_authenticate_with_cookie_parser",
@@ -210,7 +212,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = ResolveRuntimeAppConfig(context.TODO(), repl, nil, config, logger)
+			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, logger)
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)

@@ -118,10 +118,14 @@ with caddy-security's portal route; mount the portal elsewhere and point the
 authorization policy's `set auth url` to that path:
 
 ```caddyfile
-authorization policy app_policy {
-	crypto key verify {env.JWT_SHARED_KEY}
-	set auth url /xauth
-	allow roles authp/user
+{
+	security {
+		authorization policy app_policy {
+			crypto key verify {env.JWT_SHARED_KEY}
+			set auth url /xauth
+			allow roles authp/user
+		}
+	}
 }
 
 app.example.com {
@@ -143,10 +147,14 @@ content of its own, mounting the portal at root keeps the login URL short and
 avoids reserving an unnecessary path prefix:
 
 ```caddyfile
-authorization policy app_policy {
-	crypto key verify {env.JWT_SHARED_KEY}
-	set auth url https://auth.myfiosgateway.com/
-	allow roles authp/user
+{
+	security {
+		authorization policy app_policy {
+			crypto key verify {env.JWT_SHARED_KEY}
+			set auth url https://auth.myfiosgateway.com/
+			allow roles authp/user
+		}
+	}
 }
 
 auth.myfiosgateway.com {
@@ -215,14 +223,20 @@ route /profile* {
 Prefer:
 
 ```caddyfile
-authorization policy app_policy {
-	crypto key verify {env.JWT_SHARED_KEY}
-	set auth url /xauth
-	allow roles authp/user
+{
+	security {
+		authorization policy app_policy {
+			crypto key verify {env.JWT_SHARED_KEY}
+			set auth url /xauth
+			allow roles authp/user
+		}
+	}
 }
 
-route /xauth* {
-	authenticate with app_portal
+app.example.com {
+	route /xauth* {
+		authenticate with app_portal
+	}
 }
 ```
 

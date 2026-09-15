@@ -23,6 +23,26 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// parseCaddyfileAuthPortalTransform collects go-authcrunch/pkg/acl matchers
+// and pkg/authn/transformer actions in an authentication portal.
+//
+// Syntax:
+//
+//	transform <user|users> {
+//		[no] [exact|partial|prefix|suffix|regex] match <field> <value> [<value>...]
+//		action add role <role>
+//		action overwrite role <role>
+//		action drop matched role
+//		require mfa
+//		<block|deny>
+//		ui link <title> <url> [icon <class>] [target_blank]
+//	}
+//
+// The action lines above are common forms; the upstream transformer owns the
+// complete action grammar. The Caddy collector classifies lines containing a
+// match token as matchers and makes bare match exact. It does not expose every
+// ACL condition form as a transform matcher (for example field ... exists).
+// See .codex/skills/configuration-authentication-user-transforms/SKILL.md.
 func parseCaddyfileAuthPortalTransform(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string, rootArgs []string) error {
 	args := strings.Join(rootArgs, " ")
 	switch args {

@@ -21,6 +21,13 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// parseCaddyfileAuthorizationHeaderInjection configures authorized claim headers
+// through go-authcrunch/pkg/authz/injector validation.
+//
+// Syntax:
+//
+//	inject headers with claims
+//	inject header <header_name> from <claim_field>
 func parseCaddyfileAuthorizationHeaderInjection(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)

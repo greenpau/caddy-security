@@ -57,6 +57,11 @@ type App struct {
 	// replacement, keyed by portal name. It replaces that portal's CookieConfig.
 	PortalCookieDirectives map[string][]string `json:"portal_cookie_directives,omitempty"`
 
+	// OAuthProviderDirectives retains complete, validated provider statements
+	// with runtime references, keyed by provider name. Reparse after replacement
+	// so driver defaults never become part of an unresolved secret lookup.
+	OAuthProviderDirectives map[string][]string `json:"oauth_provider_directives,omitempty"`
+
 	SecretsManagerConfigs []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
 	secretsManagers       []SecretsManager
 
@@ -131,7 +136,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if err := ResolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.logger); err != nil {
+	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.logger); err != nil {
 		return err
 	}
 	// Apply resolved snapshots last so substituted paths are not expanded twice.

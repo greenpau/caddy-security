@@ -6,8 +6,6 @@
 	#admin off
 	admin localhost:2026
 
-	# order trace before basicauth
-
 	on_demand_tls {
 		ask http://localhost:5556/
 	}

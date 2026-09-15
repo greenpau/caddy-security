@@ -16,7 +16,6 @@ package security
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
@@ -24,7 +23,15 @@ const (
 	identPrefix = "security.identity"
 )
 
-func parseCaddyfileIdentity(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind string) error {
+// parseCaddyfileIdentity dispatches store/provider headers inside security.
+//
+// Syntax:
+//
+//	<local|ldap> identity store <name> { ... }
+//	<oauth|saml> identity provider <name> { ... }
+//
+// Local-store and OAuth shortcuts are documented by their respective parsers.
+func parseCaddyfileIdentity(d *caddyfile.Dispenser, app *App, kind string) error {
 	args := d.RemainingArgs()
 	if len(args) < 3 {
 		return d.ArgErr()
@@ -34,14 +41,14 @@ func parseCaddyfileIdentity(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind
 		if args[1] != "store" {
 			return d.ArgErr()
 		}
-		if err := parseCaddyfileIdentityStore(d, cfg, kind, args[2], args[3:]); err != nil {
+		if err := parseCaddyfileIdentityStore(d, app.Config, kind, args[2], args[3:]); err != nil {
 			return err
 		}
 	case ((kind == "oauth" || kind == "saml") && (args[0] == "identity")):
 		if args[1] != "provider" {
 			return d.ArgErr()
 		}
-		if err := parseCaddyfileIdentityProvider(d, cfg, kind, args[2], args[3:]); err != nil {
+		if err := parseCaddyfileIdentityProvider(d, app, kind, args[2], args[3:]); err != nil {
 			return err
 		}
 	default:

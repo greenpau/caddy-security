@@ -22,21 +22,23 @@ Read these files when details matter:
 ## Shape
 
 ```caddyfile
-security {
-	saml identity provider azure {
-		realm azure
-		driver azure
-		idp_metadata_location /etc/caddy/saml/azure_metadata.xml
-		idp_sign_cert_location /etc/caddy/saml/azure_signing_cert.pem
-		tenant_id {env.AZURE_TENANT_ID}
-		application_id {env.AZURE_APP_ID}
-		application_name "Example Portal"
-		entity_id "urn:caddy:example-portal"
-		acs_url https://auth.example.com/auth/saml/azure
-	}
+{
+	security {
+		saml identity provider azure {
+			realm azure
+			driver azure
+			idp_metadata_location /etc/caddy/saml/azure_metadata.xml
+			idp_sign_cert_location /etc/caddy/saml/azure_signing_cert.pem
+			tenant_id {env.AZURE_TENANT_ID}
+			application_id {env.AZURE_APP_ID}
+			application_name "Example Portal"
+			entity_id "urn:caddy:example-portal"
+			acs_url https://auth.example.com/auth/saml/azure
+		}
 
-	authentication portal myportal {
-		enable identity provider azure
+		authentication portal myportal {
+			enable identity provider azure
+		}
 	}
 }
 ```

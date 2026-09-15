@@ -57,9 +57,9 @@
                         "ui": {
                             "templates": {
                                 "login": "{env.APP_FILES_DIR}/ui/login.template",
-                                "portal": "{env.APP_FILES_DIR}ui/portal.template",
-                                "sandbox": "{env.APP_FILES_DIR}ui/sandbox.template",
-                                "whoami": "{env.APP_FILES_DIR}ui/whoami.template"
+                                "portal": "{env.APP_FILES_DIR}/ui/portal.template",
+                                "sandbox": "{env.APP_FILES_DIR}/ui/sandbox.template",
+                                "whoami": "{env.APP_FILES_DIR}/ui/whoami.template"
                             },
                             "meta_title": "{env.APP_COMPANY_NAME} Authentication Portal",
                             "meta_description": "Authentication Portal for {env.APP_COMPANY_NAME} Users.",
@@ -76,17 +76,17 @@
                                 {
                                     "path": "assets/{env.APP_FILES_DIR}/images/banner.jpg",
                                     "fs_path": "ui/banner.jpg",
-                                    "content_type": "images/jpg"
+                                    "content_type": "image/jpeg"
                                 },
                                 {
                                     "path": "assets/{env.APP_FILES_DIR}/images/logo.png",
                                     "fs_path": "ui/logo.png",
-                                    "content_type": "images/png"
+                                    "content_type": "image/png"
                                 },
                                 {
                                     "path": "assets/{env.APP_FILES_DIR}/images/favicon.png",
                                     "fs_path": "ui/favicon.png",
-                                    "content_type": "images/png"
+                                    "content_type": "image/png"
                                 }
                             ]
                         },

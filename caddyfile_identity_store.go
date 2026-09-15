@@ -23,36 +23,60 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-// parseCaddyfileIdentityStore parses identity store configuration.
+// parseCaddyfileIdentityStore parses local and LDAP stores in security.
+// Store kind is selected in the header, not with a type directive. Parameters
+// are validated by go-authcrunch/pkg/ids and its local/ldap implementations.
 //
-// Syntax:
+// Syntax (local):
 //
-//	<local|ldap> identity store <name> {
-//	  type <local>
-//	  file <file_path>
-//	  realm <name>
-//	  disabled
-//
-//	  user <username> {
-//	    name <full_name>
-//	    email <address>
-//	    password <plain_text_password> [overwrite]
-//	    password bcrypt:<cost>:<hash> [overwrite]
-//	    roles <role_name> [<role_name>]
-//	    api key <key_id> <plain_text_api_key>
-//	    api key <key_id> bcrypt:<cost>:<hash>
-//	  }
-//
-//	  enable username recovery
-//	  enable password recovery
-//	  enable contact support
-//	  support link <url>
-//	  support email <email_address>
-//
-//	  fallback role <role_name> [<role_name>]
-//	  icon <text> [<icon_css_class_name> <icon_color> <icon_background_color>] [priority <number>]
-//	  enable <short|full> automatic group mapping
+//	local identity store <name> {
+//		realm <realm>
+//		path <database_path>
+//		user <username> {
+//			name <full_name>
+//			email <address>
+//			password <plaintext_or_bcrypt_value> [overwrite]
+//			roles <role> [<role>...]
+//			api key <24_character_key_id> <bcrypt_value>
+//		}
+//		enable username recovery
+//		enable password recovery
+//		enable contact support
+//		support link <url>
+//		support email <address>
 //	}
+//	local identity store <name> <database_path>
+//
+// Syntax (LDAP):
+//
+//	ldap identity store <name> {
+//		realm <realm>
+//		username <bind_dn>
+//		password <bind_password>
+//		search_base_dn <dn>
+//		search_user_filter <filter>
+//		search_group_filter <filter>
+//		trusted_authority <PEM_path>
+//		servers {
+//			<ldap_or_ldaps_url> [ignore_cert_errors] [posix_groups]
+//		}
+//		attributes {
+//			<name|surname|username|member_of|email> <LDAP_attribute>
+//		}
+//		groups {
+//			<group_dn> <role> [<role>...]
+//		}
+//		enable <short|full> automatic group mapping
+//	}
+//
+// search_filter aliases search_user_filter. Repeat trusted_authority for multiple
+// CA files. Both store kinds accept disabled and the common icon syntax:
+//
+//	icon <text> [<class> [<color> [<background>]]] [text <color> [<background>]] [priority <integer>]
+//
+// The legacy fallback <role|roles> <role> [<role>...] syntax is recognized, but
+// currently loses the first value when mapped here. Keep this limitation visible
+// and avoid runnable examples until the mapping is fixed and tested.
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 	m := make(map[string]interface{})

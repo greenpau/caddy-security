@@ -24,6 +24,13 @@ const (
 	userPrefix = "security.user"
 )
 
+// parseCaddyfileUser dispatches user registration inside security.
+//
+// Syntax:
+//
+//	user registration <name> { ... }
+//
+// Static user accounts belong in local identity store blocks, not here.
 func parseCaddyfileUser(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	args := d.RemainingArgs()
 	if len(args) < 2 {

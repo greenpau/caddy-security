@@ -20,13 +20,13 @@
 				meta title "{env.APP_COMPANY_NAME} Authentication Portal"
 				meta author {env.APP_COMPANY_NAME}
 				meta description "Authentication Portal for {env.APP_COMPANY_NAME} Users."
-				static_asset "assets/{env.APP_FILES_DIR}/images/banner.jpg" "images/jpg" ui/banner.jpg
-				static_asset "assets/{env.APP_FILES_DIR}/images/logo.png" "images/png" ui/logo.png
-				static_asset "assets/{env.APP_FILES_DIR}/images/favicon.png" "images/png" ui/favicon.png
+				static_asset "assets/{env.APP_FILES_DIR}/images/banner.jpg" "image/jpeg" ui/banner.jpg
+				static_asset "assets/{env.APP_FILES_DIR}/images/logo.png" "image/png" ui/logo.png
+				static_asset "assets/{env.APP_FILES_DIR}/images/favicon.png" "image/png" ui/favicon.png
 				template login {env.APP_FILES_DIR}/ui/login.template
-				template sandbox {env.APP_FILES_DIR}ui/sandbox.template
-				template portal {env.APP_FILES_DIR}ui/portal.template
-				template whoami {env.APP_FILES_DIR}ui/whoami.template
+				template sandbox {env.APP_FILES_DIR}/ui/sandbox.template
+				template portal {env.APP_FILES_DIR}/ui/portal.template
+				template whoami {env.APP_FILES_DIR}/ui/whoami.template
 				links {
 					"My Apps" https://apps.{env.GLOBAL_APP_DOMAIN}:8443/ icon "las la-sitemap"
 				}

@@ -20,26 +20,30 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// parseCaddyfileCredentials parses messaging configuration.
+// parseCaddyfileMessaging collects messaging statements in security.
+// Body grammar belongs to go-authcrunch/pkg/messaging and its email/file parsers;
+// name and kind are injected from the header. Deeper validation is deferred.
 //
 // Syntax:
 //
 //	messaging email provider <name> {
-//	  address <address>
-//	  protocol smtp
-//	  credentials <credential_name>
-//	  sender <email_address> [name]
-//	  template password_recovery <path>
-//	  template registration_confirmation <path>
-//	  template registration_ready <path>
-//	  template registration_verdict <path>
-//	  template mfa_otp <path>
-//	  bcc <email_address_1> <email_address2>
+//		address <host:port>
+//		protocol <smtp|smtps>
+//		credentials <credential_name>
+//		sender <email_address> [<display_name>]
+//		template <password_recovery|registration_confirmation|registration_ready|registration_verdict|mfa_otp> <path>
+//		bcc <email_address> [<email_address>...]
+//	}
+//	messaging file provider <name> {
+//		root_dir <path>
+//		sender <email_address> [<display_name>]
+//		template <template_name> <path>
+//		bcc <email_address> [<email_address>...]
 //	}
 //
-//	messaging file provider <name> {
-//	  rootdir <path>
-//	}
+// Use passwordless instead of credentials for an unauthenticated SMTP server.
+// File providers accept the same template names as email providers. Templates
+// are optional; sender is required for both kinds.
 func parseCaddyfileMessaging(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	args := d.RemainingArgs()
 	if len(args) < 3 {

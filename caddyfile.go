@@ -31,19 +31,30 @@ func init() {
 	httpcaddyfile.RegisterGlobalOption("security", parseCaddyfile)
 }
 
-// parseCaddyfile parses security app configuration.
+// parseCaddyfile parses the security app inside Caddy's global options block.
+// Syntax below lists block headers; their bodies are documented by each parser.
+// Angle brackets denote required values/alternatives, square brackets optional
+// arguments, and ... repetition. Syntax catalogues are not runnable configs.
 //
 // Syntax:
 //
-//	security {
-//		secrets ...
-//		credentials ...
-//		identity store <name>
-//		sso provider <name>
-//		[saml|oauth] identity provider <name>
-//		authentication ...
-//		authorization ...
+//	{
+//		security {
+//			secrets <module> <id> { ... }
+//			credentials <name> { ... }
+//			messaging <email|file> provider <name> { ... }
+//			<local|ldap> identity store <name> { ... }
+//			<oauth|saml> identity provider <name> { ... }
+//			sso provider <name> { ... }
+//			user registration <name> { ... }
+//			authentication portal <name> { ... }
+//			authorization policy <name> { ... }
+//		}
 //	}
+//
+// Delegated body syntax and validation remain part of the Caddyfile contract.
+// See .codex/skills/configuration/references/syntax-maintenance.md for ownership
+// and the audit workflow when local parsers or upstream dependencies change.
 func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
 	app := new(App)
 	app.Config = authcrunch.NewConfig()
@@ -64,7 +75,7 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 				return nil, err
 			}
 		case "local", "ldap", "oauth", "saml":
-			if err := parseCaddyfileIdentity(d, app.Config, tld); err != nil {
+			if err := parseCaddyfileIdentity(d, app, tld); err != nil {
 				return nil, err
 			}
 		case "user":

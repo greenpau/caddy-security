@@ -1,0 +1,17 @@
+{
+	security {
+		oauth identity provider upstream {
+			realm upstream
+			driver generic
+			client_id client
+			# These quoted values deliberately end with TAB, NBSP, and EM SPACE.
+			client_secret "synthetic-secret	"
+			issuer "https://Issuer.example/Exact/ "
+			access token audience "resource-api "
+			base_auth_url https://login.example/authorize-base
+			metadata_url https://login.example/.well-known/openid-configuration
+			user_info_fields "roles	"
+			icon "SignIn "
+		}
+	}
+}

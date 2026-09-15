@@ -20,23 +20,30 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// parseCaddyfileIdentityProvider parses identity provider configuration.
+// parseCaddyfileUserRegistration collects a user registry in security.
+// Body grammar belongs to go-authcrunch/pkg/registry; name and local kind are
+// injected from the header. Deeper validation occurs after runtime resolution.
 //
 // Syntax:
 //
 //	user registration <name> {
-//	  title <name>
-//	  code <name>
-//	  dropbox <path>
-//	  require accept terms
-//	  require domain mx
-//	  email provider <name>
-//	  admin email <email_address_1> <<email_address_N>
-//	  identity store <name>
-//	  link terms <url>
-//	  link privacy <url>
-//	  <allow|deny> [exact|partial|prefix|suffix|regex] domain <string>
+//		title <title>
+//		code <code>
+//		dropbox <path>
+//		require accept terms
+//		require domain mx
+//		email provider <name>
+//		admin email <email_address>
+//		identity store <name> [<realm>]
+//		link terms <url>
+//		link privacy <url>
+//		<allow|deny> [exact|partial|prefix|suffix|regex] domain <pattern>
 //	}
+//
+// admin emails is an alias for admin email; both take one address.
+// Repeated lines replace the earlier address.
+// Repeat domain rules for multiple patterns. Registration attaches to the named
+// store; it is not enabled with a directive inside an authentication portal.
 func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Config, name, kind string) error {
 	instructions := []string{}
 	instructions = append(instructions, cfgutil.EncodeArgs([]string{"name", name}))

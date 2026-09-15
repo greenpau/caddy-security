@@ -1,0 +1,11 @@
+{
+	security {
+		oauth identity provider upstream {
+			realm upstream
+			driver github
+			client_id client
+			client_secret synthetic-secret
+			icon SignIn text red text blue
+		}
+	}
+}

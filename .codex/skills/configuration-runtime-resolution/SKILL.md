@@ -125,6 +125,20 @@ cookie config. See [cookie configuration](../configuration-authentication-cookie
 After replacement, legacy translation treats braces in a resolved path as data;
 it must not defer that statement again.
 
+OAuth provider statements with runtime references are also retained separately,
+in `App.OAuthProviderDirectives` (`oauth_provider_directives` in Caddy JSON).
+They pass shared validation during adaptation. App provisioning then resolves
+each original argument once and reparses the whole provider, replacing the
+adapted Params instead of substituting that already-normalized map. This keeps
+Google client-ID suffixes and driver-derived URLs from changing secret lookup
+keys. Snapshot names must identify exactly one OAuth provider. Shared duplicate,
+state, key-file, and typed-only-field validation remains authoritative after
+replacement. Substituted strings are data and are not expanded again.
+See the [OAuth reference](../configuration-oauth-providers/references/shared-parser.md#runtime-references)
+for boundaries and the unit/TLS E2E coverage. Keep this app-level snapshot when
+copying adapted JSON; `ResolveRuntimeAppConfig` alone accepts an AuthCrunch config
+and does not carry app-level snapshots.
+
 The route plugins have separate runtime replacement: `authenticate ... with
 {env.PORTAL}` and `authorize ... with {env.POLICY}` resolve their portal or
 gatekeeper names during plugin provisioning, not in `ResolveRuntimeAppConfig`.
@@ -151,8 +165,8 @@ Adapt fixtures may include:
 
 `TestResolveRuntimeAppConfig` lists the fixtures that exercise runtime
 resolution. It extracts `apps.security.config` from `<prefix>.json`, loads `<prefix>.env`,
-runs typed resolution followed by any `apps.security.portal_cookie_directives`
-snapshot, and compares
+runs app-aware resolution (including `apps.security.oauth_provider_directives`)
+followed by any `apps.security.portal_cookie_directives` snapshot, and compares
 the dumped authcrunch config to `<prefix>_resolved.json`.
 
 For fixtures covered by `TestResolveRuntimeAppConfig`, the test fails when

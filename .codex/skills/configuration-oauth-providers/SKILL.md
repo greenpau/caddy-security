@@ -9,13 +9,17 @@ description: "caddy-security OAuth and OIDC identity provider Caddyfile configur
 
 Use this skill to configure `oauth identity provider <name>` blocks. The
 Caddyfile syntax is authoritative in `caddyfile_identity.go` and
-`caddyfile_identity_provider.go`; the provisioning behavior is authoritative in
+`caddyfile_identity_provider_oauth.go`; it delegates to the shared upstream
+OAuth parser. The provisioning behavior is authoritative in
 the local `go-authcrunch` source, especially `pkg/idp/oauth/config.go`.
 
 Do not use this skill for `sso provider <name>` blocks. Those configure the SSO
 app/SAML role-assumption feature and belong in `configuration-sso-app`. Also do
-not route `saml identity provider <name>` blocks here; they share the parser
-file but use the local `go-authcrunch/pkg/idp/saml` implementation.
+not route `saml identity provider <name>` blocks here; their headers share the dispatcher
+but SAML uses the local `go-authcrunch/pkg/idp/saml` implementation.
+
+Read [shared parsing, grammar compatibility, and trust](references/shared-parser.md)
+when changing OAuth directives, issuer/audience, keys, or parser validation.
 
 Use `assets/config/home.Caddyfile` as the nearest repository example for Azure,
 GitHub, and LinkedIn OAuth providers.
@@ -23,28 +27,30 @@ GitHub, and LinkedIn OAuth providers.
 ## Shape
 
 ```caddyfile
-security {
-	oauth identity provider azure {
-		realm azure
-		driver azure
-		tenant_id {env.AZURE_APP_TENANT_ID}
-		client_id {env.AZURE_APP_CLIENT_ID}
-		client_secret {env.AZURE_APP_CLIENT_SECRET}
-		scopes openid email profile
-		enable id token cookie id_token AZURE_ID_TOKEN
-	}
+{
+	security {
+		oauth identity provider azure {
+			realm azure
+			driver azure
+			tenant_id {env.AZURE_APP_TENANT_ID}
+			client_id {env.AZURE_APP_CLIENT_ID}
+			client_secret {env.AZURE_APP_CLIENT_SECRET}
+			scopes openid email profile
+			enable id token cookie id_token AZURE_ID_TOKEN
+		}
 
-	oauth identity provider github {
-		realm github
-		driver github
-		client_id {env.GITHUB_APP_CLIENT_ID}
-		client_secret {env.GITHUB_APP_CLIENT_SECRET}
-		icon github priority 100
-		disable pkce
-	}
+		oauth identity provider github {
+			realm github
+			driver github
+			client_id {env.GITHUB_APP_CLIENT_ID}
+			client_secret {env.GITHUB_APP_CLIENT_SECRET}
+			icon github priority 100
+			disable pkce
+		}
 
-	authentication portal myportal {
-		enable identity provider azure github
+		authentication portal myportal {
+			enable identity provider azure github
+		}
 	}
 }
 ```
@@ -71,7 +77,10 @@ nextcloud, okta
 
 Every OAuth provider needs `realm`, `driver`, `client_id`, and
 `client_secret`; the Caddyfile provider name becomes authcrunch's config
-`Name`. Use Caddy placeholders or secrets for client secrets.
+`Name`. Use Caddy placeholders or secrets for client secrets. For runtime
+references, retain the app's `oauth_provider_directives` snapshot in adapted
+JSON: it recalculates driver defaults after resolving the original arguments.
+See [runtime references](references/shared-parser.md#runtime-references).
 
 The shortcut form is supported only for `github`, `google`, and `facebook`:
 
@@ -113,9 +122,8 @@ When `scopes` is omitted, authcrunch defaults by driver:
   token URLs from it.
 - Generic: always set a parseable `base_auth_url`. Then either set
   `metadata_url` for discovery, or set `authorization_url`, `token_url`, and
-  `jwks key <kid> <pem_path>` together. The current repo fixtures pair the
-  static-key form with `disable key verification`; without metadata discovery,
-  authcrunch otherwise still attempts to fetch JWKS during provider setup.
+  `jwks key <kid> <pem_path>` together. Static and combined key sources retain
+  TLS, nonce, PKCE, and signature verification. Explicit static IDs override colliding discovery keys.
 
 ## Provider-Side Claim Notes
 
@@ -150,8 +158,21 @@ Caddyfile parser:
 The parser accepts single-value OAuth fields such as `realm`, `driver`,
 `tenant_id`, `domain_name`, `client_id`, `client_secret`, `server_id`,
 `base_auth_url`, `metadata_url`, `authorization_url`, `token_url`,
-`logout_url`, `region`, `user_pool_id`, `identity_token_field_name`, and
-`user_info_roles_field_name`.
+`issuer`, `access_token_audience`, `region`, `user_pool_id`,
+`identity_token_field_name`, `identity_token_cookie_name`, and
+`user_info_roles_field_name`. Shared keys also accept separate words.
+Recognized syntax with a shared-validation restriction:
+
+```caddyfile
+logout_url <logout_url>
+logout url <logout_url>
+```
+
+These are aliases for one scalar in upstream `pkg/idp/oauth/parser/fields.go`.
+The selected v1.2.3 shared validator in `pkg/idp/config.go` excludes that field,
+so Caddy adaptation rejects it. Keep both forms documented with that status;
+exclude them from runnable examples until shared validation supports them.
+`enable logout` / `logout enabled` remains a separate supported switch.
 
 It accepts numeric retry and delayed-start fields:
 
@@ -176,8 +197,8 @@ required_token_fields access_token id_token
 jwks key main testdata/oauth/87329db33bf_pub.pem
 ```
 
-It accepts userinfo extraction for generic OpenID providers with a discovered
-`userinfo_endpoint`:
+For generic OpenID providers with a discovered `userinfo_endpoint`, choose
+one extraction line below; optionally set the roles field:
 
 ```caddyfile
 extract email profile roles from userinfo
@@ -208,20 +229,11 @@ enable id token cookie id_token AZURE_ID_TOKEN
 not use that flag by itself to skip discovery. To avoid metadata fetching,
 configure explicit URLs as required by the driver and account for JWKS behavior.
 
-`logout_url` also enables external provider logout behavior even without
-`enable logout`.
+External logout is separate from local portal logout. `enable logout` enables
+provider-specific logout handling when the driver implements it. It does not
+make typed-only `logout_url` available through Caddy's shared dispatcher.
 
-External logout is separate from local portal logout. Without `enable logout`
-or a manual `logout_url`, the portal clears local cookies but may leave the
-upstream IdP session active. With `enable logout`, authcrunch uses
-provider-specific logout handling when implemented. Current docs describe
-redirect parameter behavior for Google (`continue`), Azure/GitLab/Okta
-(`post_logout_redirect_uri`), Cognito (`logout_uri` plus client context),
-GitHub (logout URL without redirect parameter), and generic providers (manual
-URL as-is). For Facebook, Discord, LinkedIn, and Nextcloud, verify current
-authcrunch source before promising provider-side session termination.
-
-For id token cookies, use the spaced Caddyfile form:
+For id token cookies, these are alternative spaced Caddyfile forms:
 
 ```caddyfile
 enable id token cookie
@@ -231,7 +243,7 @@ enable id token cookie id_token AZURE_ID_TOKEN
 
 The first optional value is the token response field to copy and must be
 `id_token` or `access_token`; the second optional value is the cookie name.
-When the cookie name is omitted, authcrunch uses `ID_TOKEN` for the provider
+When the cookie name is omitted, authcrunch uses `AUTHP_ID_TOKEN` for the provider
 identity-token cookie.
 
 ## Review Checklist
@@ -261,5 +273,6 @@ Use these examples:
 - `assets/config/home.Caddyfile` for Azure, GitHub, and LinkedIn.
 - `testdata/caddyfile_adapt/testcase_authenticate_with_oauth.Caddyfile` for
   OAuth plus portal and authorization wiring.
-- `caddyfile_identity_provider.go` for accepted Caddyfile subdirectives.
+- `caddyfile_identity_provider_oauth.go` for Caddy translations into the shared
+  parser, with grammar inventory and validation in the linked reference.
 - `go-authcrunch/pkg/idp/oauth/config.go` for driver defaults and validation.

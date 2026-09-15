@@ -125,20 +125,47 @@
             "kind": "oauth",
             "params": {
               "authorization_url": "https://discordapp.com/oauth2/authorize?prompt=none",
+              "base_auth_url": "https://discord.com/oauth2",
               "client_id": "{env.OAUTH_CLIENT_ID}",
               "client_secret": "{env.OAUTH_CLIENT_SECRET}",
               "driver": "discord",
+              "identity_token_field_name": "id_token",
+              "login_icon": {
+                "background_color": "#5865f2",
+                "class_name": "lab la-discord la-2x",
+                "color": "white",
+                "text": "Discord",
+                "text_color": "#37474f"
+              },
               "realm": "discord",
+              "required_token_fields": [
+                "access_token"
+              ],
+              "response_type": [
+                "code"
+              ],
               "scopes": [
                 "identify",
                 "email",
                 "guilds"
               ],
+              "token_url": "https://discord.com/api/oauth2/token",
               "user_group_filters": [
                 "{env.DISCORD_TEAMWHITELIST}"
               ]
             }
           }
+        ]
+      },
+      "oauth_provider_directives": {
+        "discord": [
+          "realm discord",
+          "driver discord",
+          "authorization_url https://discordapp.com/oauth2/authorize?prompt=none",
+          "client_id {env.OAUTH_CLIENT_ID}",
+          "client_secret {env.OAUTH_CLIENT_SECRET}",
+          "scopes identify email guilds",
+          "user_group_filters {env.DISCORD_TEAMWHITELIST}"
         ]
       }
     }

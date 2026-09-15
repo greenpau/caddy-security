@@ -107,6 +107,11 @@ app providers, local users, registration flows, messaging, credentials, secrets
 managers, runtime replacement, or the `authenticate` and `authorize` HTTP
 integrations.
 
+When changing syntax or updating Caddy/go-authcrunch, follow
+[Syntax maintenance](.codex/skills/configuration/references/syntax-maintenance.md)
+to audit Caddyfiles, parser syntax comments, delegated upstream grammar, and
+the corresponding configuration skills together.
+
 ## Break-Fix Troubleshooting
 
 Use the repo-local `break-fix-troubleshooting` skill when diagnosing reported

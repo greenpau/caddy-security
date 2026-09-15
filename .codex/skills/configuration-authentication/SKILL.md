@@ -19,6 +19,8 @@ Read these files when details matter:
 - `caddyfile_authn.go` for the portal block.
 - `caddyfile_authn_crypto.go` for crypto key directives.
 - `caddyfile_authn_misc.go` for `enable`, `validate`, and `trust`.
+- `caddyfile_authn_admin_api.go` and selected upstream
+  `pkg/authn/admin_api/parser` for the independent admin/API key-export switches.
 - `plugin_authn.go` for route-level `authenticate` syntax.
 - `../go-authcrunch/config.go` for portal
   validation, default backend attachment, and user registration wiring.
@@ -45,16 +47,18 @@ Use focused repo-local skills for specialized portal sub-blocks:
 ## Shape
 
 ```caddyfile
-security {
-	local identity store localdb {
-		realm local
-		path assets/config/users.json
-	}
+{
+	security {
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+		}
 
-	authentication portal myportal {
-		crypto default token lifetime 3600
-		crypto key sign-verify {env.JWT_SHARED_KEY}
-		enable identity store localdb
+		authentication portal myportal {
+			crypto default token lifetime 3600
+			crypto key sign-verify {env.JWT_SHARED_KEY}
+			enable identity store localdb
+		}
 	}
 }
 
@@ -96,8 +100,7 @@ User registration is global authcrunch config. A `user registration <name>`
 block names its target identity store; authcrunch validates that store, marks it
 registration-enabled, and attaches the registry to any portal that has that
 identity store enabled. Do not generate an `enable user registration <name>`
-portal line: the current `enable` parser does not accept it even though an old
-syntax comment still mentions it.
+portal line: the current `enable` parser does not accept it.
 
 ## Common Portal Options
 
@@ -121,7 +124,10 @@ trust logout redirect uri domain example.com path /
 ```
 
 The match type is optional and defaults to `exact`; supported match types are
-`exact`, `partial`, `prefix`, `suffix`, and `regex`.
+`exact`, `partial`, `prefix`, `suffix`, and `regex`. Both `domain` and `path`
+need values. Keep `login`/`logout`, `redirect`, and `uri` as separate header
+tokens. Quoted domain/path values remain data even when they contain those
+words; they cannot change which redirect trust list receives the rule.
 
 Enable admin/server API endpoints only when they are needed and protected by
 an authenticated admin session:
@@ -129,6 +135,11 @@ an authenticated admin session:
 ```caddyfile
 enable admin api
 ```
+
+Both `enable` and `disable` are supported for `admin api` and
+`admin api private key export`. Each setting occurs at most once in the portal;
+both default to disabled. Key export does not implicitly enable the API and
+requires both flags plus authenticated admin authorization at runtime.
 
 See `authentication-portal-api` for `/api/server/metadata`,
 `/api/server/realms`, `/api/server/info`, JSON login, `/beacon`, and `/whoami`
@@ -149,3 +160,10 @@ Use these fixtures as examples:
 
 - `testdata/caddyfile_adapt/testcase_security_authentication_portal.Caddyfile`
 - `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`
+
+`TestParseCaddyfileRedirectTrustMalformed` and
+`TestParseCaddyfileRedirectTrustValues` cover incomplete selectors and quoted
+values. `testcase_authenticate_with_redirect_trust_malformed` must fail adaptation
+with a parser error, not a panic. The redirect-trust subtest in
+`TestCaddyOAuthE2E` verifies separate login/logout behavior over TLS and confirms
+that rejected reconfiguration leaves the running portal usable.

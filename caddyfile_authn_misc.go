@@ -22,6 +22,19 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
+// parseCaddyfileAuthPortalMisc parses portal enablement and redirect trust.
+//
+// Syntax:
+//
+//	enable source ip tracking
+//	enable identity <store|provider> <name> [<name>...]
+//	enable sso provider <name> [<name>...]
+//	validate source address
+//	trust <login|logout> redirect uri domain [exact|partial|prefix|suffix|regex] <domain> path [exact|partial|prefix|suffix|regex] <path>
+//
+// Omitted redirect match types default to exact. Both domain and path are required.
+// Match keywords as separate tokens; quoted domain/path values do not select
+// login versus logout trust. Missing selector values return a parse error.
 func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective, k string, args []string) error {
 	v := strings.Join(args, " ")
 	v = strings.TrimSpace(v)
@@ -69,12 +82,15 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalCo
 		}
 	case "trust":
 		switch {
-		case strings.Contains(v, "logout redirect uri"), strings.Contains(v, "login redirect uri"):
+		case len(args) >= 3 && (args[0] == "login" || args[0] == "logout") && args[1] == "redirect" && args[2] == "uri":
 			var domainMatchType, domain, pathMatchType, path string
 			argp := 3
 			for argp < len(args) {
 				switch args[argp] {
 				case "domain", "path":
+					if !arrayElementExists(args, argp+1) {
+						return h.Errf("%s directive %q is malformed", rootDirective, v)
+					}
 					if hasMatchTypeKeywords(args[argp+1]) {
 						if !arrayElementExists(args, argp+2) {
 							return h.Errf("%s directive %q is malformed", rootDirective, v)
@@ -106,7 +122,7 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalCo
 			if err != nil {
 				return h.Errf("%s directive %q erred: %v", rootDirective, v, err)
 			}
-			if strings.Contains(v, "logout redirect uri") {
+			if args[0] == "logout" {
 				portal.TrustedLogoutRedirectURIConfigs = append(portal.TrustedLogoutRedirectURIConfigs, redirectURIConfig)
 			} else {
 				portal.TrustedLoginRedirectURIConfigs = append(portal.TrustedLoginRedirectURIConfigs, redirectURIConfig)

@@ -5,9 +5,9 @@
             "ui": {
                 "templates": {
                     "login": "tmp/bar/ui/login.template",
-                    "portal": "tmp/barui/portal.template",
-                    "sandbox": "tmp/barui/sandbox.template",
-                    "whoami": "tmp/barui/whoami.template"
+                    "portal": "tmp/bar/ui/portal.template",
+                    "sandbox": "tmp/bar/ui/sandbox.template",
+                    "whoami": "tmp/bar/ui/whoami.template"
                 },
                 "meta_title": "\"Contoso Inc.\" Authentication Portal",
                 "meta_description": "Authentication Portal for \"Contoso Inc.\" Users.",
@@ -24,17 +24,17 @@
                     {
                         "path": "assets/tmp/bar/images/banner.jpg",
                         "fs_path": "ui/banner.jpg",
-                        "content_type": "images/jpg"
+                        "content_type": "image/jpeg"
                     },
                     {
                         "path": "assets/tmp/bar/images/logo.png",
                         "fs_path": "ui/logo.png",
-                        "content_type": "images/png"
+                        "content_type": "image/png"
                     },
                     {
                         "path": "assets/tmp/bar/images/favicon.png",
                         "fs_path": "ui/favicon.png",
-                        "content_type": "images/png"
+                        "content_type": "image/png"
                     }
                 ]
             },

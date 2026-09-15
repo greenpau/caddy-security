@@ -190,6 +190,14 @@ func getAuthorizationDetails(r *http.Request, ar *requests.AuthorizationRequest)
 	return strings.Join(details, ", ")
 }
 
+// parseAuthzCaddyfile attaches a named policy to a Caddy HTTP route.
+//
+// Syntax:
+//
+//	authorize [<matcher>] with <policy>
+//
+// The policy is defined in security. This directive takes arguments only;
+// configure its internals in the corresponding security block.
 func parseAuthzCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	m := &AuthzMiddleware{}
 	if err := m.UnmarshalCaddyfile(h.Dispenser); err != nil {

@@ -126,6 +126,12 @@ repository's dependency, remove its local replacement, and test here.
 `make sync` removes local go-authcrunch replacements after updating references;
 it must not be used as a reason to edit or release the sibling first.
 
+After changing the selected Caddy or go-authcrunch version, audit delegated
+Caddyfile grammar and examples using
+[Syntax maintenance](../configuration/references/syntax-maintenance.md).
+A dependency update can change accepted directives even when no local parser
+switch changes. Refresh the owning configuration skills and syntax comments.
+
 ## Asset and Documentation Scripts
 
 `assets/scripts/generate_downloads.sh` rewrites Caddy download links in

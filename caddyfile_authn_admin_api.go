@@ -23,6 +23,16 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// encodePortalAdminAPIDirective encodes portal admin API statements for
+// go-authcrunch/pkg/authn/admin_api/parser. Each setting has independent state.
+//
+// Syntax:
+//
+//	<enable|disable> admin api
+//	<enable|disable> admin api private key export
+//
+// Both settings default to disabled. Export at runtime also requires the admin API enabled.
+// Duplicate or conflicting statements fail shared validation across the portal.
 func encodePortalAdminAPIDirective(keyword string, args []string) (string, error) {
 	for _, arg := range args {
 		// EncodeArgs can trim trailing empty fields. Preserve token boundaries

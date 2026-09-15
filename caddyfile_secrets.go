@@ -25,6 +25,9 @@ const (
 
 // parseCaddyfileSecrets parses secrets configuration.
 //
+// The registered security.secrets.<module> plugin owns its body grammar.
+// Consult that plugin's parser; JSON fields alone do not expose directives.
+//
 // Syntax:
 //
 //	secrets <secrets_plugin_name> <secret_id> {

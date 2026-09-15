@@ -22,18 +22,23 @@ import (
 	//"strings"
 )
 
-// parseCaddyfileSingleSignOnProvider parses single sign-on provider configuration.
+// parseCaddyfileSingleSignOnProvider parses app-side SAML SSO in security.
+// This is distinct from a saml identity provider used for upstream login.
+// The mapped parameters are validated by go-authcrunch/pkg/sso.
 //
 // Syntax:
 //
 //	sso provider <name> {
-//	  disabled
-//	  entity_id <name>
-//	  driver [aws]
-//	  private key <path/to/pem/file>
-//	  location https://url1/
-//	  location https://url2/
+//		entity_id <entity_id>
+//		driver aws
+//		cert <certificate_PEM_path>
+//		private key <PKCS8_private_PEM_path>
+//		location <url>
+//		disabled
 //	}
+//
+// Repeat location for multiple URLs. At least one location is required even
+// when disabled is present. disabled is optional and omits registration.
 func parseCaddyfileSingleSignOnProvider(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	var locations []string
 	var disabled bool

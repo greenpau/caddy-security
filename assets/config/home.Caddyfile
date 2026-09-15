@@ -188,14 +188,14 @@
 			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			enable identity store localdb
 			#cookie domain myfiosgateway.com
-			cookie guess domain
-			# set session_id cookie name CONTOSO_SESSION_ID
-			# set redirect_url cookie name CONTOSO_REDIRECT_URL
-			# set sandbox_id cookie name CONTOSO_SANDBOX_ID
-			# set id_token cookie name CONTOSO_ID_TOKEN
-			# set access_token cookie name CONTOSO_ACCESS_TOKEN
-			# set refresh_token cookie name CONTOSO_REFRESH_TOKEN
-			set cookie name prefix CONTOSO
+			cookie guess domain enabled
+			# cookie session id name CONTOSO_SESSION_ID
+			# cookie referer name CONTOSO_REDIRECT_URL
+			# cookie sandbox id name CONTOSO_SANDBOX_ID
+			# cookie identity token name CONTOSO_ID_TOKEN
+			# cookie access token name CONTOSO_ACCESS_TOKEN
+			# cookie refresh token name CONTOSO_REFRESH_TOKEN
+			cookie prefix CONTOSO
 			ui {
 				#language fr
 				#language zh
@@ -255,8 +255,8 @@
 			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
 			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			allow roles authp/admin authp/user
-			# set session_id cookie name CONTOSO_SESSION_ID
-			# set access_token cookie name CONTOSO_ACCESS_TOKEN
+			set session_id cookie name CONTOSO_SESSION_ID
+			set access_token cookie name CONTOSO_ACCESS_TOKEN
 		}
 
 		authorization policy api_access_policy {
@@ -264,6 +264,7 @@
 			crypto key r7xc8y6 verify "{env.JWT_SECRET_1}"
 			crypto key j163xe system "{env.SYSTEM_API_SECRET}"
 			allow roles authp/admin authp/user
+			set access_token cookie name CONTOSO_ACCESS_TOKEN
 			with api key auth portal myportal realm local
 			with basic auth portal myportal realm local
 			validate bearer header
@@ -272,7 +273,7 @@
 			# with basic auth portal myportal realm userpool1.localdomain
 			# with basic auth portal myportal realm userpool2.localdomain
 			# with auth realm header name X-My-Auth-Realm
-			# set session_id cookie name CONTOSO_SESSION_ID
+			set session_id cookie name CONTOSO_SESSION_ID
 		}
 	}
 }

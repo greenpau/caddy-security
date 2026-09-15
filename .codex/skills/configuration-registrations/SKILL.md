@@ -23,28 +23,30 @@ portal instead.
 ## Shape
 
 ```caddyfile
-security {
-	user registration signup {
-		title "User Registration"
-		code {env.REGISTER_CODE}
-		dropbox assets/config/registrations_local.json
-		require accept terms
-		require domain mx
-		email provider smtp
-		admin email admin@example.com
-		identity store localdb
-		link terms https://example.com/terms
-		link privacy https://example.com/privacy
-		allow domain example.com
-	}
+{
+	security {
+		user registration signup {
+			title "User Registration"
+			code {env.REGISTER_CODE}
+			dropbox assets/config/registrations_local.json
+			require accept terms
+			require domain mx
+			email provider smtp
+			admin email admin@example.com
+			identity store localdb
+			link terms https://example.com/terms
+			link privacy https://example.com/privacy
+			allow domain example.com
+		}
 
-	local identity store localdb {
-		realm local
-		path assets/config/users.json
-	}
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+		}
 
-	authentication portal myportal {
-		enable identity store localdb
+		authentication portal myportal {
+			enable identity store localdb
+		}
 	}
 }
 ```

@@ -26,22 +26,25 @@ const (
 	cryptoKeyword string = "crypto"
 )
 
-// parseCaddyfileAuthorization parses authorization policy configuration.
+// parseCaddyfileAuthorization parses a policy in security. The caddyfile_authz_*
+// helpers document the full grammar and delegated validation of each directive.
 //
 // Syntax:
 //
-//		authorization policy <name> {
-//	   crypto
-//	   acl
-//	   <allow|deny>
-//	   bypass
-//	   enable
-//	   disable
-//	   validate
-//	   set
-//	   with
-//	   inject
-//		}
+//	authorization policy <name> {
+//		crypto key verify <shared_secret>
+//		set auth url <url>
+//		allow roles <role> [<role>...]
+//		deny <field> <value> [<value>...]
+//		acl rule { ... }
+//		acl default <allow|deny>
+//		bypass uri <exact|partial|prefix|suffix|regex> <path>
+//		validate bearer header
+//		inject headers with claims
+//	}
+//
+// At least one ACL rule is required. Additional enable, disable, validate, set,
+// and with forms are documented at parseCaddyfileAuthorizationMisc.
 func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
 	var rootDirective string
 	args := d.RemainingArgs()

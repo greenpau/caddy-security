@@ -25,13 +25,15 @@ client secret, SMTP password, or crypto shared secret.
 ## Shape
 
 ```caddyfile
-security {
-	secrets static_secrets_manager access_token {
-		shared_secret {env.JWT_SHARED_KEY}
-	}
+{
+	security {
+		secrets static_secrets_manager access_token {
+			shared_secret {env.JWT_SHARED_KEY}
+		}
 
-	authentication portal myportal {
-		crypto key sign-verify "secrets:access_token:shared_secret"
+		authentication portal myportal {
+			crypto key sign-verify "secrets:access_token:shared_secret"
+		}
 	}
 }
 ```
@@ -55,12 +57,14 @@ Use `static_secrets_manager` only when the Caddy binary is built with
 `github.com/greenpau/caddy-security-secrets-static-secrets-manager`.
 
 ```caddyfile
-security {
-	secrets static_secrets_manager users/jsmith {
-		name "John Smith"
-		email "jsmith@localhost.localdomain"
-		password "bcrypt:10:$2a$10$iqq53VjdCwknBSBrnyLd9OH1Mfh6kqPezMMy6h6F41iLdVDkj13I6"
-		api_key "bcrypt:10:$2a$10$TEQ7ZG9cAdWwhQK36orCGOlokqQA55ddE0WEsl00oLZh567okdcZ6"
+{
+	security {
+		secrets static_secrets_manager users/jsmith {
+			name "John Smith"
+			email "jsmith@localhost.localdomain"
+			password "bcrypt:10:$2a$10$iqq53VjdCwknBSBrnyLd9OH1Mfh6kqPezMMy6h6F41iLdVDkj13I6"
+			api_key "bcrypt:10:$2a$10$TEQ7ZG9cAdWwhQK36orCGOlokqQA55ddE0WEsl00oLZh567okdcZ6"
+		}
 	}
 }
 ```
@@ -79,10 +83,12 @@ Use `aws_secrets_manager` only when the Caddy binary is built with
 `github.com/greenpau/caddy-security-secrets-aws-secrets-manager`.
 
 ```caddyfile
-security {
-	secrets aws_secrets_manager access_token {
-		region us-east-1
-		path authcrunch/caddy/access_token
+{
+	security {
+		secrets aws_secrets_manager access_token {
+			region us-east-1
+			path authcrunch/caddy/access_token
+		}
 	}
 }
 ```

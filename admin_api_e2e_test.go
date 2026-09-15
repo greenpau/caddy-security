@@ -184,7 +184,7 @@ func (f *caddyAdminFixture) reload(directives string) error {
 	}
 	// Profile access also has an independent JSON configuration surface.
 	portal.API.ProfileEnabled = f.profile
-	config.AppsRaw["security"], err = json.Marshal(app)
+	config.AppsRaw["security"], err = json.Marshal(&app)
 	if err != nil {
 		return err
 	}

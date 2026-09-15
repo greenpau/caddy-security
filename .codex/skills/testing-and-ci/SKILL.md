@@ -48,6 +48,24 @@ unit and E2E coverage; use the fixture mechanics below.
 Documentation/skill-only edits use metadata, link, and source checks from
 `skill-authoring-patterns`; they do not require new runtime tests.
 
+## Syntax and Example Audits
+
+Follow [Syntax maintenance](../configuration/references/syntax-maintenance.md)
+when parser grammar or a dependency changes. Inventory standalone Caddyfiles,
+Go syntax comments, skill examples, and inline positive/negative tests. Adapt
+runnable examples with a binary built from the selected dependencies. Wrap
+fragments in their actual global/portal/policy/site scope; do not run syntax
+catalogues or intentionally invalid examples as complete configurations.
+
+Adaptation verifies only the validation reached by that parser. Raw crypto,
+messaging, registration, ACL, and other deferred settings also need focused
+resolution/validation checks when their examples change. Do not provision a
+real deployment, contact an external provider, or change machine trust merely
+to audit syntax. Preserve intentional failure fixtures and legacy alias tests.
+Report external-module requirements and runtime checks separately from adapt
+success. Comment-only edits do not change parser behavior; use source review,
+formatting, and relevant existing tests instead of adding tests that mirror prose.
+
 ## Command Selection
 
 Use direct Go tests for quick feedback:

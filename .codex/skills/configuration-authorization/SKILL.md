@@ -40,11 +40,13 @@ Read these files when details matter:
 ## Shape
 
 ```caddyfile
-security {
-	authorization policy app_policy {
-		crypto key verify {env.JWT_SHARED_KEY}
-		set auth url /auth
-		allow roles authp/admin authp/user
+{
+	security {
+		authorization policy app_policy {
+			crypto key verify {env.JWT_SHARED_KEY}
+			set auth url /auth
+			allow roles authp/admin authp/user
+		}
 	}
 }
 

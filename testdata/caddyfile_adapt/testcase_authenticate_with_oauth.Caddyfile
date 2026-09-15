@@ -1,7 +1,5 @@
 {
 	debug
-	order authenticate before respond
-	order authorize before basicauth
 
 	# TODO: look at https://github.com/enum-gg/caddy-discord
 	security {

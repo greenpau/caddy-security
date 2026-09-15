@@ -38,7 +38,7 @@ authentication portal myportal {
 		meta author "Example"
 		meta description "Example sign-in portal"
 		template login ui/login.template
-		static_asset "assets/images/logo.png" "images/png" ui/logo.png
+		static_asset "assets/images/logo.png" "image/png" ui/logo.png
 		logo url "/auth/assets/images/logo.png"
 		logo description "Example"
 		auto_redirect_url /auth/portal
@@ -59,7 +59,7 @@ Optional keys are `target_blank`, `icon <class>`, and `disabled`.
 through as provided, and authcrunch loads the file from the filesystem path:
 
 ```caddyfile
-static_asset "assets/images/banner.jpg" "images/jpg" ui/banner.jpg
+static_asset "assets/images/banner.jpg" "image/jpeg" ui/banner.jpg
 ```
 
 Custom CSS and JavaScript are registered at fixed asset paths:

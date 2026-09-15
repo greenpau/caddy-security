@@ -27,6 +27,10 @@ const (
 
 // parseCaddyfileCredentials parses credentials configuration.
 //
+// The header supplies the name; username, password, and optional domain each
+// take one value. go-authcrunch/pkg/credentials validates the encoded body
+// after runtime replacement.
+//
 // Syntax:
 //
 //	credentials <label> {

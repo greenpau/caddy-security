@@ -20,18 +20,20 @@ for example, file providers use `root_dir`, not `rootdir`.
 ## Email Provider
 
 ```caddyfile
-security {
-	messaging email provider localhost-smtp-server {
-		address 127.0.0.1:1025
-		protocol smtp
-		credentials smtp_root
-		sender root@example.com "Example Auth Portal"
-		bcc admin@example.com audit@example.com
-		template password_recovery templates/password_recovery.tmpl
-		template registration_confirmation templates/registration_confirmation.tmpl
-		template registration_ready templates/registration_ready.tmpl
-		template registration_verdict templates/registration_verdict.tmpl
-		template mfa_otp templates/mfa_otp.tmpl
+{
+	security {
+		messaging email provider localhost-smtp-server {
+			address 127.0.0.1:1025
+			protocol smtp
+			credentials smtp_root
+			sender root@example.com "Example Auth Portal"
+			bcc admin@example.com audit@example.com
+			template password_recovery templates/password_recovery.tmpl
+			template registration_confirmation templates/registration_confirmation.tmpl
+			template registration_ready templates/registration_ready.tmpl
+			template registration_verdict templates/registration_verdict.tmpl
+			template mfa_otp templates/mfa_otp.tmpl
+		}
 	}
 }
 ```

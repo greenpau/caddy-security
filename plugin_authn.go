@@ -133,6 +133,14 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	return m.portal.ServeHTTP(r.Context(), w, r, rr)
 }
 
+// parseAuthnCaddyfile attaches a named portal to a Caddy HTTP route.
+//
+// Syntax:
+//
+//	authenticate [<matcher>] with <portal>
+//
+// The portal is defined in security. This directive takes arguments only;
+// configure its internals in the corresponding security block.
 func parseAuthnCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	m := &AuthnMiddleware{}
 	if err := m.UnmarshalCaddyfile(h.Dispenser); err != nil {

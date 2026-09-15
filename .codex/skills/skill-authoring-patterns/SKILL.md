@@ -85,8 +85,15 @@ parser and into the authcrunch config constructor, field, raw instruction, or
 in `plugin_authn.go` and `plugin_authz.go`. Identify concrete grammar/defaults,
 argument errors, Caddy JSON shape, and provisioning behavior as relevant.
 
-Use `coding-directives` for shared parser conventions. Cookie configuration delegates to AuthCrunch's shared parser and public
-`ConfigureCookies` snapshot API; other surfaces still use their local parsers.
+Use `coding-directives` for parser conventions and the
+[syntax maintenance workflow](../configuration/references/syntax-maintenance.md)
+for grammar ownership. Cookie, admin API, and OAuth configuration use shared
+parsers; crypto, messaging, registration, ACLs, transforms, and auth proxy
+settings also delegate grammar or validation. Inspect both the Caddy wrapper
+and the selected upstream parser, shared dispatcher, and runtime consumer.
+Do not infer all syntax from a local switch or an upstream struct. Preserve
+recognized-but-restricted syntax with a precise status and source; keep it out
+of runnable examples until the full validation path accepts it.
 An upstream config field or HTTP handler alone does not prove that a matching
 Caddyfile directive exists. Likewise, an adapted placeholder does not prove
 runtime replacement support: verify `ResolveRuntimeAppConfig` in

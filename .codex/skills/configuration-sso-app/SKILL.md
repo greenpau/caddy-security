@@ -26,17 +26,25 @@ especially `pkg/sso/config.go`, `pkg/sso/provider.go`, `pkg/sso/request.go`,
 ## Shape
 
 ```caddyfile
-security {
-	sso provider aws {
-		entity_id caddy-authp-idp
-		driver aws
-		cert assets/sso/authp_saml.crt
-		private key assets/sso/authp_saml.key
-		location https://example.com/auth/apps/sso/aws
-	}
+{
+	security {
+		local identity store localdb {
+			realm local
+			path assets/config/users.json
+		}
 
-	authentication portal myportal {
-		enable sso provider aws
+		sso provider aws {
+			entity_id caddy-authp-idp
+			driver aws
+			cert assets/sso/authp_saml.crt
+			private key assets/sso/authp_saml.key
+			location https://example.com/auth/apps/sso/aws
+		}
+
+		authentication portal myportal {
+			enable identity store localdb
+			enable sso provider aws
+		}
 	}
 }
 ```

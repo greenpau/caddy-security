@@ -21,6 +21,10 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+// parseCaddyfileAuthorizationCrypto forwards policy crypto statements to
+// go-authcrunch/pkg/kms after runtime replacement. Syntax is identical to
+// parseCaddyfileAuthPortalCrypto; policy verification keys must match the portal's
+// signing material. See .codex/skills/configuration-crypto/SKILL.md.
 func parseCaddyfileAuthorizationCrypto(h *caddyfile.Dispenser, policy *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) < 3 {
 		return h.Errf("%v", errors.ErrConfigDirectiveShort.WithArgs(rootDirective, args))

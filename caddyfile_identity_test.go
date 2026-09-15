@@ -125,6 +125,14 @@ func TestParseCaddyfileIdentity(t *testing.T) {
                       "client_id": "foo",
                       "client_secret": "bar",
                       "driver": "github",
+                      "authorization_url":"https://github.com/login/oauth/authorize",
+                      "base_auth_url":"https://github.com/login/oauth/",
+                      "identity_token_field_name":"id_token",
+                      "login_icon":{"background_color":"#24292f","class_name":"lab la-github la-2x","color":"#f6f8fa","text":"Github","text_color":"#37474f"},
+                      "required_token_fields":["access_token"],
+                      "response_type":["code"],
+                      "scopes":["read:user"],
+                      "token_url":"https://github.com/login/oauth/access_token",
                       "realm": "github"
                     }
                   },
@@ -137,6 +145,9 @@ func TestParseCaddyfileIdentity(t *testing.T) {
 					  "client_id": "foo",
 					  "client_secret": "bar",
 					  "driver": "generic",
+					  "identity_token_field_name": "id_token",
+					  "scopes": ["openid", "email", "profile"],
+					  "login_icon": {"background_color":"#324960","class_name":"lab la-codepen la-2x","color":"white","text_color":"#37474f"},
 					  "jwks_keys": {
 						"87329db33bf": "testdata/oauth/87329db33bf_pub.pem"
 					  },

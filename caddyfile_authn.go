@@ -28,48 +28,31 @@ const (
 	authnPrefix = "security.authentication"
 )
 
-// parseCaddyfileAuthentication parses authentication configuration.
+// parseCaddyfileAuthentication parses an authentication portal in security.
+// See the caddyfile_authn_* helpers for the full grammar of each subdirective.
+// Cookie and admin API statements are collected across the complete portal and
+// validated by their shared go-authcrunch parsers, including alias collisions.
 //
 // Syntax:
 //
-//	  authentication portal <name> {
-//
+//	authentication portal <name> {
 //		crypto key sign-verify <shared_secret>
-//
-//		ui {
-//			template <login|portal> <file_path>
-//			logo_url <file_path|url_path>
-//			logo_description <value>
-//			custom css path <path>
-//			custom js path <path>
-//			custom html header path <path>
-//			static_asset <uri> <content_type> <path>
-//			allow settings for role <role>
-//		}
-//
-//	    cookie prefix <prefix>
-//	    cookie <session id|referer|sandbox id|identity token|access token|refresh token|oidc session id|oidc request id> name <name>
-//	    cookie <insecure|strip domain|guess domain> <enabled|disabled>
-//	    cookie domain <name> [<attribute> <value>]
-//	    cookie path <name>
-//	    cookie lifetime <seconds>
-//	    cookie samesite <lax|strict|none>
-//	    cookie insecure <on|off>
-//	    set <session_id|redirect_url|sandbox_id|id_token|access_token|refresh_token> cookie name <name>
-//
-//	    validate source address
-//
-//	    enable source ip tracking
-//	    <enable|disable> admin api
-//	    <enable|disable> admin api private key export
-//	    enable identity store <name>
-//	    enable identity provider <name>
-//	    enable sso provider <name>
-//	    enable user registration <name>
-//
-//		trust [login|logout] redirect uri domain [exact|partial|prefix|suffix|regex] <domain_name> path [exact|partial|prefix|suffix|regex] <path>
-//
+//		ui { ... }
+//		transform user { ... }
+//		cookie prefix <prefix>
+//		cookie access token name <name>
+//		validate source address
+//		enable source ip tracking
+//		<enable|disable> admin api
+//		<enable|disable> admin api private key export
+//		enable identity store <name> [<name>...]
+//		enable identity provider <name> [<name>...]
+//		enable sso provider <name> [<name>...]
+//		trust <login|logout> redirect uri domain [exact|partial|prefix|suffix|regex] <domain> path [exact|partial|prefix|suffix|regex] <path>
 //	}
+//
+// Registration is configured with user registration in security and attached to
+// an identity store; there is no enable user registration portal directive.
 func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 	// rootDirective is config key prefix.
 	var rootDirective string

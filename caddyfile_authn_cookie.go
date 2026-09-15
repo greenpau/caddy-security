@@ -23,8 +23,36 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// encodePortalCookieDirective only translates legacy Caddy spellings. The shared
-// parser owns grammar, aliases, duplicate detection, defaults, and validation.
+// encodePortalCookieDirective translates legacy Caddy spellings. The shared
+// go-authcrunch/pkg/authn/cookie/parser owns grammar, aliases, duplicate detection,
+// defaults, and validation. All statements belong inside an authentication portal.
+//
+// Syntax:
+//
+//	cookie prefix <prefix>
+//	cookie <session id|referer|sandbox id|identity token|access token|refresh token|oidc session id|oidc request id> name <name>
+//	cookie path <path>
+//	cookie lifetime <seconds>
+//	cookie <same site|samesite> <lax|strict|none>
+//	cookie <insecure|strip domain|guess domain> <enabled|disabled>
+//	cookie domain <hostname> [<attribute> <value>]
+//
+// Domain attributes are path, lifetime, same site (or samesite), insecure, and
+// strip domain; guess domain is global only. redirect url aliases referer;
+// id token aliases identity token. Prefix/name duplicates are detected across
+// aliases; attributes may occur once per global/domain scope.
+//
+// Compatible legacy forms:
+//
+//	set cookie name prefix <prefix>
+//	set <session_id|redirect_url|sandbox_id|id_token|access_token|refresh_token> cookie name <name>
+//	cookie <hostname|default> <path|lifetime|samesite|insecure> <value>
+//	cookie <strip|guess> domain
+//	cookie insecure <boolean>
+//
+// Legacy set cookie name prefix uppercases its value; cookie prefix preserves
+// case. Explicit role names take precedence over the prefix regardless of order.
+// See .codex/skills/configuration-authentication-cookies/SKILL.md for details.
 func encodePortalCookieDirective(keyword string, args []string, deferPlaceholders bool) (string, error) {
 	args = append([]string(nil), args...)
 	for _, arg := range args {

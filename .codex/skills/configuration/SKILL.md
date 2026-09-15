@@ -17,15 +17,34 @@ implementation references. Keep Caddyfiles, fixtures, custom assets, and local
 validation changes here; missing upstream behavior is separate work, not a
 reason to edit or run tests in `../go-authcrunch`.
 
-The authoritative parser entry point is `caddyfile.go`. The global block is
-`security { ... }`; route-level HTTP integrations reference configured objects
-with `authenticate with <portal>` and `authorize with <policy>`.
+The parser entry point is `caddyfile.go`. Put `security { ... }` inside Caddy's
+outer global options block, `{ ... }`. Route-level HTTP integrations reference
+configured objects with `authenticate with <portal>` and `authorize with <policy>`.
 
 Do not generate global Caddy directive-order overrides for caddy-security by
 default. `authenticate` and `authorize` register their own order in
 `plugin_authn.go` and `plugin_authz.go`. Only add global `order` directives
 when debugging a proven directive-order conflict with another third-party
 plugin, and explain why.
+
+## Syntax Currency
+
+Use [Syntax maintenance](references/syntax-maintenance.md) when auditing syntax,
+changing directives, or consuming a Caddy/go-authcrunch dependency update.
+The Caddy wrappers and the selected upstream parsers jointly define the syntax.
+Maintain Go syntax comments, standalone Caddyfiles, fixtures, and domain skills
+together, including grammar delegated to upstream libraries or external modules.
+
+Keep recognized-but-restricted forms visible with their validation status.
+For example, document `logout_url <logout_url>` and the shared OAuth validator's
+rejection; do not erase it or silently filter it from input. Upstream typed
+fields alone do not establish Caddyfile support.
+
+Examples containing only inner blocks or individual directives are fragments
+for the enclosing scope described by the domain skill. Complete configurations
+need the outer global block and site routes. `<value>` denotes a required value,
+`<a|b>` a required choice, `[value]` an optional argument, and `...` repetition;
+syntax catalogues with these placeholders are not runnable examples.
 
 ## Workflow
 
@@ -43,7 +62,8 @@ plugin, and explain why.
    that reference the configured portal or policy by name.
 4. Prefer environment placeholders or secret lookups for passwords, API keys,
    client secrets, signing keys, and private material.
-5. Check generated syntax against the parser files and the fixtures under
+5. Check generated syntax against the local wrappers, selected upstream grammar
+   and validators, and the fixtures under
    `testdata/caddyfile_adapt/`. Use the `testing-and-ci` skill if validation
    requires running tests or updating fixtures.
 
@@ -108,7 +128,9 @@ authorize /api/* with api_policy
 - Messaging providers: `configuration-messaging`, parsed by
   `caddyfile_messaging.go`.
 - OAuth/OIDC identity providers: `configuration-oauth-providers`, parsed by
-  `caddyfile_identity.go` and `caddyfile_identity_provider.go`.
+  `caddyfile_identity.go`, `caddyfile_identity_provider.go`, and
+  `caddyfile_identity_provider_oauth.go`, delegated to
+  `go-authcrunch/pkg/idp/parser` and `pkg/idp/oauth/parser`.
 - SAML login identity providers: `configuration-saml-providers`, parsed by
   `caddyfile_identity.go` and `caddyfile_identity_provider.go`, implemented by
   local `go-authcrunch/pkg/idp/saml`.

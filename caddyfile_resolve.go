@@ -286,6 +286,12 @@ func resolveConfigInstructions(ctx context.Context, repl *caddy.Replacer, secret
 
 // ResolveRuntimeAppConfig uses caddy.Replacer to replace strings in App config.
 func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, log *zap.Logger) error {
+	return resolveRuntimeAppConfig(ctx, repl, secretManagers, config, nil, log)
+}
+
+// resolveRuntimeAppConfig also consumes the original Caddy OAuth statements when
+// available. JSON-only AuthCrunch configurations retain map-based replacement.
+func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives map[string][]string, log *zap.Logger) error {
 	if config == nil {
 		return fmt.Errorf("security app config is nil")
 	}
@@ -359,8 +365,35 @@ func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 			return err
 		}
 	}
+	// A snapshot must identify exactly one OAuth provider. Do not permit JSON
+	// snapshots to silently target a missing, duplicate, or different-kind entry.
+	for name := range oauthDirectives {
+		matches := 0
+		for _, cfg := range config.IdentityProviders {
+			if cfg.Name == name {
+				if cfg.Kind != "oauth" {
+					return fmt.Errorf("OAuth directives target a non-OAuth provider %q", name)
+				}
+				matches++
+			}
+		}
+		if matches != 1 {
+			return fmt.Errorf("OAuth directives require exactly one provider named %q", name)
+		}
+	}
 	for _, cfg := range config.IdentityProviders {
-		if err := substitute(ctx, repl, secretManagers, cfg.Params, "", log); err != nil {
+		if statements, ok := oauthDirectives[cfg.Name]; ok {
+			// Snapshots recompute defaults, not the shared dispatcher's allowlist.
+			// A JSON snapshot must not hide unsupported fields in its target map.
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("invalid OAuth snapshot target %q", cfg.Name)
+			}
+			resolved, err := resolveOAuthProviderDirectives(ctx, repl, secretManagers, cfg.Name, statements, log)
+			if err != nil {
+				return err
+			}
+			cfg.Params = resolved.Params
+		} else if err := substitute(ctx, repl, secretManagers, cfg.Params, "", log); err != nil {
 			return err
 		}
 		if err := validateIdentityParameters(cfg.Kind, cfg.Params); err != nil {

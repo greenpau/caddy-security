@@ -6,8 +6,6 @@
 	#admin off
 	admin localhost:2026
 
-	# order trace before basicauth
-
 	on_demand_tls {
 		ask http://localhost:5556/
 	}
@@ -55,11 +53,11 @@
 
 		authentication portal myportal_8443 {
 			crypto default token lifetime 3600
-			crypto key aEA81C verify key8443
+			crypto key aEA81C sign-verify key8443
 			enable identity store localdb8443
-			# cookie guess domain
+			# cookie guess domain enabled
 			# cookie domain myfiosgateway.com
-			set cookie name prefix CONTOSO8443
+			cookie prefix CONTOSO8443
 			ui {
 				links {
 					"Version" "/version" icon "las la-star"
@@ -78,11 +76,11 @@
 
 		authentication portal myportal_8444 {
 			crypto default token lifetime 3600
-			crypto key b1D6sX verify key8444
+			crypto key b1D6sX sign-verify key8444
 			enable identity store localdb8444
-			# cookie guess domain
+			# cookie guess domain enabled
 			# cookie domain myfiosgateway.com
-			set cookie name prefix CONTOSO8444
+			cookie prefix CONTOSO8444
 			ui {
 				links {
 					"Version" "/version" icon "las la-star"
