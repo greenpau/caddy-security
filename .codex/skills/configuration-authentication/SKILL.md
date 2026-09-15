@@ -30,6 +30,8 @@ Read these files when details matter:
 
 Use focused repo-local skills for specialized portal sub-blocks:
 
+- `configuration-oauth-applications` for portal `oidc provider` blocks, named
+  client selection, private registrations, and dedicated provider signing keys.
 - `configuration-crypto` for portal `crypto` defaults, JWT signing keys,
   auto-generated keys, token names and lifetimes, secret-backed key material,
   and System API `system` keys.
@@ -72,6 +74,11 @@ example.com {
 The portal name must match the `authenticate with <portal>` reference.
 Route-level syntax also allows a matcher: `authenticate @matcher with
 <portal>`.
+
+Use `myportal` or a descriptive name such as `employee_portal` in examples,
+fixtures, and tests. Avoid naming a portal `portal`: the repeated words in
+`authentication portal portal` are confusing. Keep references consistent, for
+example `authentication portal myportal` and `authenticate with myportal`.
 
 ## Portal Wiring
 

@@ -3,7 +3,7 @@
 	persist_config off
 	auto_https off
 	security {
-		authentication portal portal {
+		authentication portal myportal {
 			enable identity store localdb
 			crypto key sign-verify synthetic-application-portal-signing-key
 		}
@@ -56,6 +56,6 @@
 http://127.0.0.1:9080 {
 	bind 127.0.0.1
 	route /auth/* {
-		authenticate with portal
+		authenticate with myportal
 	}
 }

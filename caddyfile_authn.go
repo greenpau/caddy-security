@@ -37,6 +37,7 @@ const (
 //
 //	authentication portal <name> {
 //		crypto key sign-verify <shared_secret>
+//		oidc provider { ... }
 //		ui { ... }
 //		transform user { ... }
 //		cookie prefix <prefix>
@@ -53,6 +54,15 @@ const (
 //
 // Registration is configured with user registration in security and attached to
 // an identity store; there is no enable user registration portal directive.
+//
+// The oidc provider body delegates to Config.ConfigureOIDCProvider. It accepts
+// standalone enabled/disabled, issuer <https-url>, realms <realm...>, applications
+// <nickname...>, signing key files <absolute-private-pem...>, session lifetime
+// <seconds>, token lifetime <seconds>, max sessions <count>, max pending requests
+// <count>, and max grants <count>. Each occurs once; state defaults to enabled.
+// First signing key signs, all keys publish. Key files require clean absolute
+// paths, private 0700 parents, and 0600 ownership at provisioning. No keys are
+// created on this path.
 func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 	// rootDirective is config key prefix.
 	var rootDirective string
@@ -80,6 +90,25 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 			v := d.RemainingArgs()
 			rootDirective = mkcp(authnPrefix, args[0], k)
 			switch k {
+			case "oidc":
+				if len(v) != 1 || v[0] != "provider" {
+					return d.Errf("expected oidc provider block")
+				}
+				body, err := readRegistrationBlock(d)
+				if err != nil {
+					return err
+				}
+				var statements []string
+				for _, args := range body {
+					statements = append(statements, encodeOAuthDirective(args))
+				}
+				if err := app.Config.ConfigureOIDCProvider(p, statements); err != nil {
+					return d.Errf("%v", err)
+				}
+				if app.OIDCProviderDirectives == nil {
+					app.OIDCProviderDirectives = make(map[string][]string)
+				}
+				app.OIDCProviderDirectives[p.Name] = statements
 			case "crypto":
 				if err := parseCaddyfileAuthPortalCrypto(d, p, rootDirective, v); err != nil {
 					return err

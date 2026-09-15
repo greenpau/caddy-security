@@ -133,7 +133,7 @@ func TestCaddyOAuthApplicationsProcess(t *testing.T) {
 		if app == previous {
 			t.Fatal("forced reload reused security app instance")
 		}
-		if _, err := app.getPortal("portal"); err != nil {
+		if _, err := app.getPortal("myportal"); err != nil {
 			t.Fatal(err)
 		}
 		if i == 0 {
@@ -154,7 +154,7 @@ func TestCaddyOAuthApplicationsProcess(t *testing.T) {
 	// A rejected Caddyfile adaptation must leave the live registration usable.
 	// Include global header dispatch, which runs before the application parser.
 	for _, tc := range []struct{ name, declaration, want string }{
-		{"grouped kind", `oauth "application website" ` + applicationTestSecret + " {\n}\n", "expected oauth application or oauth identity provider header"},
+		{"grouped kind", `oauth "application website" ` + applicationTestSecret + " {\n}\n", "expected oauth application, oauth registration store, or oauth identity provider header"},
 		{"grouped header", `"oauth application ` + applicationTestSecret + `" website {` + "\n}\n", "unsupported security directive"},
 		{"empty application", "oauth application empty {\n}\n", "explicit or persisted client_id"},
 		{"quoted opening brace", strings.Replace(applicationTestBlock("quoted", ""), " {", ` "{"`, 1), "requires a block"},

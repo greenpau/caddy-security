@@ -1,0 +1,7 @@
+{
+	security {
+		registration store {
+			path /private/registrations
+		}
+	}
+}

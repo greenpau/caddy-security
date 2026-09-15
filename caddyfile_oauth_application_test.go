@@ -270,10 +270,10 @@ func TestCaddyfileOAuthApplicationHeaderErrors(t *testing.T) {
 	// Exercise the global dispatcher as well as the application parser: grouped
 	// headers must not fall through to errors that echo a misplaced credential.
 	for _, tc := range []struct{ name, declaration, want string }{
-		{"missing kind", "oauth\n", "expected oauth application or oauth identity provider header"},
-		{"grouped kind and nickname", `oauth "application web" ` + applicationTestSecret + " {\n}\n", "expected oauth application or oauth identity provider header"},
+		{"missing kind", "oauth\n", "expected oauth application, oauth registration store, or oauth identity provider header"},
+		{"grouped kind and nickname", `oauth "application web" ` + applicationTestSecret + " {\n}\n", "expected oauth application, oauth registration store, or oauth identity provider header"},
 		{"grouped header", `"oauth application ` + applicationTestSecret + `" web {` + "\n}\n", "unsupported security directive"},
-		{"grouped kind and secret", `oauth "application ` + applicationTestSecret + `" {` + "\n}\n", "expected oauth application or oauth identity provider header"},
+		{"grouped kind and secret", `oauth "application ` + applicationTestSecret + `" {` + "\n}\n", "expected oauth application, oauth registration store, or oauth identity provider header"},
 		{"extra argument", "oauth application web " + applicationTestSecret + " {\n}\n", "header with one nickname"},
 		{"empty block", "oauth application web {\n}\n", "explicit or persisted client_id"},
 		{"missing block", "oauth application web\n", "requires a block"},
@@ -351,7 +351,7 @@ func TestCaddyfileOAuthApplicationDuplicatesAndImports(t *testing.T) {
 }
 
 func TestCaddyfileOAuthApplicationAssembly(t *testing.T) {
-	portal := "authentication portal portal {\nenable identity store localdb\n}\n"
+	portal := "authentication portal myportal {\nenable identity store localdb\n}\n"
 	store := "local identity store localdb {\nrealm local\npath :memory:\n}\n"
 	application := applicationTestBlock("web", "")
 	first := adaptApplicationTestConfig(t, application+portal+store)

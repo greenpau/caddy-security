@@ -192,3 +192,19 @@ same gate. Follow `testing-and-ci` for local reproduction and
 
 The CLA workflow may update `assets/cla/signatures.json` through GitHub
 automation. Do not edit CLA signatures or consent files unless the user asks.
+
+## Local OAuth Provisioning
+
+The built binary registers the `security` command group through Caddy's command
+extension API. It is separate from adapt, validate, run, reload, and Make maintenance.
+Use nested command words for the domain, action, and resource, such as
+`bin/authcrunch security oauth create application`. Follow this pattern for future
+security commands.
+Use `oauth init provisioning store` for storage of OAuth application credentials and
+OIDC provider signing keys; reserve user-registration terminology for user sign-up.
+Use [Private provisioning and activation](../configuration-oauth-applications/references/private-provisioning.md)
+for the private input grammar and `oauth init provisioning store`,
+`oauth create application`, `oauth rotate secret`, and `oidc create signing key`
+subcommands, explicit revision activation, and interrupted-writer recovery.
+Each provisioning command prints only the resulting path; it never prints client
+secrets or private keys.

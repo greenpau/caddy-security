@@ -63,7 +63,10 @@ modules register from package `init` hooks.
   providers, local users, registrations, authentication portals, authorization
   policies, secrets, and runtime replacement behavior.
 - `caddyfile_oauth_application.go` registers named OAuth clients with explicit
-  credentials. `caddyfile.go` collects them before resolving other declarations.
+  or persisted credentials. `command_provision.go` owns explicit local creation
+  and rotation; `command_security.go` registers the CLI namespace.
+  `oauth_registration_store.go` owns private immutable revisions.
+  `caddyfile.go` collects applications before resolving other declarations.
 - `caddyfile_authn_*` files parse authentication portal subdirectives such as
   cookies, crypto, UI, transforms, and miscellaneous portal settings.
   `caddyfile_authz_*` files parse authorization policy subdirectives such as
@@ -115,7 +118,9 @@ to audit Caddyfiles, parser syntax comments, delegated upstream grammar, and
 the corresponding configuration skills together.
 
 Use `configuration-oauth-applications` for `oauth application <nickname>`
-registrations; `configuration-oauth-providers` owns external login providers.
+registrations, private `oauth registration store` configuration, the local
+`security` CLI commands, and portal `oidc provider` blocks;
+`configuration-oauth-providers` owns external login providers.
 
 ## Break-Fix Troubleshooting
 

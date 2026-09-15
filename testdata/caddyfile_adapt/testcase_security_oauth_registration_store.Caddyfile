@@ -1,0 +1,35 @@
+{
+	admin off
+	persist_config off
+	security {
+		authentication portal myportal {
+			enable identity store localdb
+			crypto key sign-verify synthetic-registration-access-token-key
+			oidc provider {
+				issuer https://auth.example.test/auth
+				realms local
+				signing key files {$SECURITY_TEST_REGISTRATION_PATH}/provider.pem
+				applications website
+			}
+		}
+		oauth application website {
+			registration v1
+			redirect_uri https://rp.example.test/callback
+			scopes openid email
+			skip_consent on
+		}
+		oauth registration store {
+			path {$SECURITY_TEST_REGISTRATION_PATH}
+		}
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+	}
+}
+
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

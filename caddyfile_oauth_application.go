@@ -20,12 +20,13 @@ import (
 	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
 )
 
-// parseCaddyfileOAuthApplication registers a named client using the upstream
-// named-registration parser, which validates without generating credentials.
+// readOAuthApplication collects a named client for the upstream named parser,
+// which validates without generating credentials during normal adaptation.
 //
 // Syntax (inside security; only redirect_uri may repeat):
 //
 //	oauth application <nickname> {
+//		registration <immutable-revision>
 //		client_id <id>
 //		client_name <display_name>
 //		client_secret <secret>
@@ -42,47 +43,51 @@ import (
 // are unsupported. Quote multiword display names. Nickname, protocol client_id, and
 // client_name are independent; client_name defaults to nickname. Authentication
 // defaults to client_secret_basic, PKCE to true, and consent skipping to false.
-// Public clients use none, require PKCE, and must omit client_secret. All clients
-// require an explicit client_id and confidential clients an explicit secret.
+// Public clients use none, require PKCE, and must omit client_secret. The optional
+// registration selects a previously provisioned revision in oauth registration store.
+// Without it, client_id and confidential client_secret must be explicit. With it,
+// only omitted credentials inherit; current statements own all policy fields.
+// Explicit credential changes must match a new revision persisted by the local
+// security provisioning commands before adaptation. Revisions never overwrite.
 // Block delimiters must be unquoted, and no tokens may follow the closing brace
 // on the same line. Otherwise Caddy's NextBlock can read those tokens as body.
-// Persisted records may only be supplied by a future private storage integration.
-// Adaptation does not enable a provider or change existing provider snapshots.
-func parseCaddyfileOAuthApplication(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+// Adaptation does not enable a provider unless a portal selects applications in
+// an oidc provider block, and never changes existing provider snapshots.
+func readOAuthApplication(d *caddyfile.Dispenser) ([]string, []string, error) {
 	header, err := oauthApplicationArgs(d)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if len(header) != 3 || header[0] != "oauth" || header[1] != "application" {
 		// ArgErr includes the current token, which may be a misplaced secret.
-		return d.Errf("expected oauth application header with one nickname")
+		return nil, nil, d.Errf("expected oauth application header with one nickname")
 	}
 	if err := validateOAuthDirectiveTokens(header); err != nil {
-		return d.Errf("invalid oauth application header")
+		return nil, nil, d.Errf("invalid oauth application header")
 	}
 	// Require a block, even for public clients. Peek without consuming it so
 	// NextBlock remains responsible for nesting and source locations.
 	if !d.Next() || d.Val() != "{" || d.Token().Quoted() {
-		return d.Errf("oauth application requires a block")
+		return nil, nil, d.Errf("oauth application requires a block")
 	}
 	d.Prev()
 	var body []string
 	nesting := d.Nesting()
 	for d.NextBlock(nesting) {
 		if d.Nesting() != nesting+1 {
-			return d.Errf("nested oauth application blocks are unsupported")
+			return nil, nil, d.Errf("nested oauth application blocks are unsupported")
 		}
 		args, err := oauthApplicationArgs(d)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		if d.Next() {
 			if d.Val() == "{" {
-				return d.Errf("nested oauth application blocks are unsupported")
+				return nil, nil, d.Errf("nested oauth application blocks are unsupported")
 			}
 			if d.Val() == "}" {
 				if d.Token().Quoted() {
-					return d.Errf("oauth application closing brace must be unquoted")
+					return nil, nil, d.Errf("oauth application closing brace must be unquoted")
 				}
 				// NextBlock skips a closing brace when another token follows on
 				// the same line, potentially moving that setting into this block.
@@ -90,27 +95,31 @@ func parseCaddyfileOAuthApplication(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 				if d.NextLine() {
 					d.Prev()
 				} else if d.Next() {
-					return d.Errf("oauth application closing brace must end its line")
+					return nil, nil, d.Errf("oauth application closing brace must end its line")
 				}
 			}
 			d.Prev()
 		}
 		if err := validateOAuthDirectiveTokens(args); err != nil {
-			return d.Errf("empty or invalid oauth application directive argument")
+			return nil, nil, d.Errf("empty or invalid oauth application directive argument")
 		}
 		body = append(body, encodeOAuthDirective(args))
 	}
 	if d.Nesting() != nesting {
-		return d.Errf("unterminated oauth application block")
+		return nil, nil, d.Errf("unterminated oauth application block")
 	}
-	// Encode the header separately; never flatten it into body directives or
-	// use the credential-generating client constructor during adaptation.
+	return header, body, nil
+}
+
+func parseCaddyfileOAuthApplication(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+	header, body, err := readOAuthApplication(d)
+	if err != nil {
+		return err
+	}
 	application, err := oidcparser.NewOAuthApplicationConfigFromDirectives(encodeOAuthDirective(header), body, nil)
 	if err != nil {
 		return d.Errf("%v", err)
 	}
-	// AddOAuthApplication rejects duplicate nicknames (even identical clients)
-	// before insertion and retains an independent validated client snapshot.
 	if err := cfg.AddOAuthApplication(application); err != nil {
 		return d.Errf("%v", err)
 	}

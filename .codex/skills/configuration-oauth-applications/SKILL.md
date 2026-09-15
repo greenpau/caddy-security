@@ -1,6 +1,6 @@
 ---
 name: configuration-oauth-applications
-description: Configure named OAuth applications in caddy-security with explicit client credentials, authentication methods, callback URIs, scopes, PKCE, and consent settings. Use for oauth application blocks and their native JSON registrations; external login providers belong to configuration-oauth-providers.
+description: Configure and provision named OAuth applications, durable private registration storage, and portal OIDC providers in caddy-security. Use for oauth application blocks, security CLI commands, credential rotation, and provider key rollover; external login providers belong to configuration-oauth-providers.
 ---
 
 # Configuration OAuth Applications
@@ -36,10 +36,17 @@ when changing the selected version.
 Follow the [repository scope](../coding-directives/SKILL.md#repository-scope)
 when consulting or selecting sibling source.
 
-An application registers a client for future provider configuration. This
-Caddyfile feature does not enable an OpenID Provider (OP) or attach public OP
-routes. External login through `oauth identity provider` uses
+An application declares a client. A portal enables an OpenID Provider (OP) by
+selecting those clients in an `oidc provider` block. See
+[Private provisioning and activation](references/private-provisioning.md) for
+the tested create/load/rotate workflow, storage security, candidate activation,
+and provider grammar. External login through `oauth identity provider` uses
 [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md).
+
+Keep host storage names scoped to OAuth: `oauth registration store` in Caddyfiles,
+`oauth_registration_store` in app JSON, and `oauth_registration_*` source files.
+Use `oauth_store.Caddyfile`, `oauth_client.Caddyfile`, and `oauth_rotate.Caddyfile`
+for standalone provisioning inputs. User registration remains a separate domain.
 
 ## Grammar
 
@@ -47,6 +54,7 @@ This is a catalogue of fields inside `security`; only `redirect_uri` may repeat:
 
 ```caddyfile
 oauth application <nickname> {
+	registration <immutable-revision>
 	client_id <id>
 	client_name <display_name>
 	client_secret <secret>
@@ -58,6 +66,10 @@ oauth application <nickname> {
 }
 ```
 
+- Optional `registration` selects a previously provisioned revision from the
+  single `oauth registration store` in `security`. Without it, credentials are explicit.
+  Revisions are 1–64 ASCII letters/digits/hyphens/underscores, starting with a
+  letter or digit. Only declared nicknames become registered.
 - Nickname identifies the declaration. `client_id` identifies the protocol
   client; `client_name` is its display name and defaults to nickname. Keep
   these separate, including in native JSON and lookup keys.
@@ -75,7 +87,7 @@ oauth application <nickname> {
 - Booleans retain the application parser's true/yes/on/1 and false/no/off/0
   spellings. Provider/refresh enabled/disabled state syntax is unsupported here.
 - Authentication defaults to `client_secret_basic`; confidential clients may
-  choose `client_secret_post`. Both require an explicit client ID and a secret
+  choose `client_secret_post`. Both require an explicit or stored client ID and a secret
   of 32–1024 bytes. IDs must be nonempty, at most 256 bytes, and have no leading
   or trailing whitespace, tabs, or newlines.
 - Public clients choose `none`, omit the secret, and require PKCE. PKCE defaults
@@ -108,24 +120,40 @@ keeps one directive form and unambiguous one-value arity. The serialized
 
 ## Credentials and Snapshots
 
-Adaptation never generates credentials and currently passes no persisted
-record. Missing credentials return a value-redacted error. Persisted records
-must come through the private storage integration when it is implemented;
-prior Caddy config, removed declarations, and stored records are not implicit
-registrations. Build a fresh declaration set on every adaptation/reload.
+Normal adaptation never generates or persists credentials. `registration v1`
+loads the validated named record from the explicit private store. Only omitted
+ID and secret inherit; callbacks, scopes, display name, authentication method,
+consent, and PKCE come from the current declaration and parser defaults. Public
+clients inherit no secret. Moving to confidential authentication requires an
+explicit secret through the provisioning command. Changing IDs never borrows
+another ID's secret. Secret rotation retains the ID; use a new nickname to
+create a different stored client identity.
 
-Supply complete explicit credentials. Caddy's `{$VARIABLE}` substitution runs
-before adaptation and can supply them from the environment; this feature does
-not add runtime `{env.*}` or `secrets:*` replacement for application fields.
-Quoted names and credentials survive Caddy tokenization and the upstream CSV
-codec. Errors and routine logging must never include client secrets.
+An explicit ID/secret in a stored declaration must match its selected durable
+revision. First stage any credential change with `security oauth rotate secret`, then
+select that revision. A mismatched, missing, corrupt, unreadable, or nonprivate
+record fails closed. Changes to a file between adaptation and activation are
+rejected by a digest of the validated registration. Never edit published records.
 
-Native JSON stores registrations at `apps.security.config.oauth_applications`
-as a list of `{ "name": "nickname", "client": { ... } }` objects. This JSON
-contains credentials; it is configuration data for private storage, not a
-logging representation. Registry lookups return independent named/client
-copies. Provider clients remain independent snapshots; later registration or
-reload must not silently mutate an existing provider.
+Stored application references serialize in `apps.security.oauth_application_sources`
+with nickname, revision, digest, and current noncredential directives. The
+`oauth_registration_store.path` is absolute. Provider statements serialize in
+`oidc_provider_directives`, keyed by portal name. Loaded credentials and copied
+provider clients are removed before serializing the Caddy configuration; `App`
+reconstructs them only in its private runtime copy. This protects the saved
+credentials from adapted JSON, Caddy autosave, and admin configuration views.
+
+Without `registration`, existing native JSON remains supported at
+`apps.security.config.oauth_applications`, as `{ "name": ..., "client": ... }`
+objects. Explicit credentials remain secret-bearing configuration. Caddy's
+`{$VARIABLE}` substitution runs before adaptation; application fields do not
+implement runtime `{env.*}` or `secrets:*` expansion. The separate provisioning
+file does not expand variables or imports. Its `client_secret` is literal.
+
+Protect all configurations, diagnostics, and backups because other settings can
+still contain passwords or keys. Generic configuration dumping is not credential
+storage. See the private provisioning reference for filesystem permissions,
+protected RP handoff, and recovery after interrupted writes.
 
 ## Examples and Validation
 
@@ -145,8 +173,36 @@ Header-error tests cover inline and imported declarations through the real
 adapter, including empty blocks and grouped headers with misplaced credentials.
 Block-boundary tests reject quoted delimiters and settings after a closing brace.
 The E2E test also verifies login remains available after those adaptations fail.
-It verifies that no OP endpoints are enabled. Full OP exchanges belong to the
-later provider integration; parser and JSON tests do not establish that flow.
+It verifies that application declarations alone enable no OP endpoints.
+`TestCaddyRegistrationE2E` exercises the registered CLI in independent processes,
+real Caddy restart/reload and validation, RP code exchange and ID-token signature
+verification, old-secret rejection after activation, failed activation, key
+rollover, and redaction of actual admin/autosave/log surfaces.
+`TestCaddyRegistrationInterruptedWriterE2E` kills a writer during a partial write,
+checks that the actual CLI times out on the retained lock while adaptation still
+reads the prior registration, and verifies rotation after deliberate recovery.
+`oauth_registration_store_test.go` covers atomic failure paths, concurrency, permissions,
+invalid lock entries, read-only adaptation with a failing randomness source, bounded publication,
+ambiguous/corrupt JSON, and revision integrity. `oauth_registration_config_test.go`
+checks provider key path identity and permissions for Caddyfile and native JSON
+providers; `command_provision_test.go` checks private
+input filename identity. The process E2E tests reject malformed input and records
+without creating credentials or replacing the active deployment. They also verify
+that unsafe keys in native JSON are rejected without changing the active provider
+or autosave, and that private keys work in explicit configurations without a store.
+`command_security_test.go` covers Caddy command-group registration, descriptive
+subcommand help, flags specific to each action, and rejection of positional
+secrets. Keep the namespace's inherited Cobra flag-error handler: flag parsing
+runs before command handlers, and default errors echo unknown flag names and
+invalid values. Help must perform no provisioning. `TestCaddySecurityCommandE2E`
+and `TestCaddySecurityCommandFlagErrorsE2E` check help, dispatch, and error
+redaction through the actual Caddy CLI in separate processes.
+`testcase_security_oauth_registration_store`, `testcase_security_oauth_registration_malformed`,
+and `testcase_security_oauth_registration_legacy`
+cover the new adaptation syntax; the positive fixture provisions deterministic
+synthetic credentials in a temporary private directory. Runtime reference
+resolution is tested through the complete App and Caddy lifecycle, since the
+older root-config-only resolution helper does not load host-owned references.
 
 Follow [testing-and-ci](../testing-and-ci/SKILL.md) for validation commands and
 [syntax maintenance](../configuration/references/syntax-maintenance.md) when

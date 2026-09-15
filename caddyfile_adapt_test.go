@@ -65,6 +65,11 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		err                 error
 	}{
 		{name: "named OAuth applications", inputFileNamePrefix: "testcase_security_oauth_applications"},
+		{name: "private registration store and provider", inputFileNamePrefix: "testcase_security_oauth_registration_store"},
+		{name: "OAuth registration store requires its namespace", inputFileNamePrefix: "testcase_security_oauth_registration_legacy", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': unsupported security directive, at Caddyfile:3")},
+		{name: "malformed registration reference", inputFileNamePrefix: "testcase_security_oauth_registration_malformed", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': registration requires one revision and occurs once, at Caddyfile:6")},
 		{
 			name:                "quoted application value cannot close security block",
 			inputFileNamePrefix: "testcase_security_oauth_application_enclosing_malformed",
@@ -81,7 +86,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			name:                "malformed OAuth application header redacts credentials",
 			inputFileNamePrefix: "testcase_security_oauth_application_header_malformed",
 			shouldErr:           true,
-			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': expected oauth application or oauth identity provider header, at Caddyfile:3"),
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': expected oauth application, oauth registration store, or oauth identity provider header, at Caddyfile:3"),
 		},
 		{
 			name:                "empty OAuth application requires explicit credentials",
@@ -208,6 +213,12 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 
 			got := strings.TrimSpace(string(inputData)) + "\n"
 			want := strings.TrimSpace(string(outputData))
+			if tc.inputFileNamePrefix == "testcase_security_oauth_registration_store" {
+				cfg, _ := registrationTestStore(t)
+				registrationTestCreate(t, cfg, "client_id persisted-website-id", "client_secret "+registrationTestSecret)
+				t.Setenv("SECURITY_TEST_REGISTRATION_PATH", cfg.Path)
+				want = strings.ReplaceAll(want, "__REGISTRATION_STORE__", cfg.Path)
+			}
 			var prettyBuf bytes.Buffer
 			err = json.Indent(&prettyBuf, []byte(want), "", "\t")
 			if err != nil {

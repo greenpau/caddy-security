@@ -53,6 +53,10 @@ type App struct {
 	Name   string             `json:"-"`
 	Config *authcrunch.Config `json:"config,omitempty"`
 
+	OAuthRegistrationStore  *OAuthRegistrationStoreConfig `json:"oauth_registration_store,omitempty"`
+	OAuthApplicationSources []*OAuthApplicationSource     `json:"oauth_application_sources,omitempty"`
+	OIDCProviderDirectives  map[string][]string           `json:"oidc_provider_directives,omitempty"`
+
 	// PortalCookieDirectives holds complete cookie snapshots awaiting runtime
 	// replacement, keyed by portal name. It replaces that portal's CookieConfig.
 	PortalCookieDirectives map[string][]string `json:"portal_cookie_directives,omitempty"`
@@ -105,6 +109,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	var config authcrunch.Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return fmt.Errorf("copy security app config: %w", err)
+	}
+	if err := app.resolveOAuthRegistrationConfig(ctx, &config); err != nil {
+		return fmt.Errorf("resolve OAuth registrations: %w", err)
 	}
 
 	app.Name = appName

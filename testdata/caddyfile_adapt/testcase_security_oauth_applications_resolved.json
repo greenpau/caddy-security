@@ -1,7 +1,7 @@
 {
 	"authentication_portals": [
 		{
-			"name": "portal",
+			"name": "myportal",
 			"ui": {},
 			"cookie_config": {
 				"session_id_cookie_name": "AUTHP_SESSION_ID",

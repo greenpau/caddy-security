@@ -546,7 +546,7 @@ func TestCaddyLifecycleProcess(t *testing.T) {
 	})
 
 	t.Run("persistent_files_and_writer_exclusion", func(t *testing.T) {
-		dir := t.TempDir()
+		dir := registrationTestDirectory(t)
 		keyFile, registrationFile := filepath.Join(dir, "oidc.pem"), filepath.Join(dir, "applications.json")
 		if err := oidc.GenerateSigningKeyFile(keyFile); err != nil {
 			t.Fatal(err)

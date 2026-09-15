@@ -1,0 +1,8 @@
+{
+	security {
+		oauth application website {
+			registration v1 extra
+			redirect_uri https://rp.example.test/callback
+		}
+	}
+}

@@ -99,6 +99,11 @@ Caddyfile directive exists. Likewise, an adapted placeholder does not prove
 runtime replacement support: verify `ResolveRuntimeAppConfig` in
 `caddyfile_resolve.go` or the route plugin's provisioning path.
 
+Use `myportal` or a descriptive portal name in configuration examples, fixtures,
+and tests. Avoid the confusing repetition in `authentication portal portal`;
+write `authentication portal myportal` and match its `authenticate with myportal`
+reference. Preserve this convention when porting upstream examples.
+
 Anchor examples and checks in existing `caddyfile_*_test.go` tests and
 `testdata/caddyfile_adapt/` fixtures. Distinguish parsed JSON (`.json`) from
 runtime-resolved expectations (`_resolved.json`) and identify the tests that

@@ -134,7 +134,12 @@ authorize /api/* with api_policy
 - Named OAuth applications: `configuration-oauth-applications`, parsed by
   `caddyfile_oauth_application.go`, delegated to `go-authcrunch/pkg/oidc/parser`
   and `Config.AddOAuthApplication`. These register clients with explicit
-  credentials without enabling a public OpenID Provider.
+  or persisted credentials; the same skill owns private provisioning and the
+  portal `oidc provider` block that selects clients.
+- OAuth registration storage: `configuration-oauth-applications`, parsed by
+  `caddyfile_oauth_registration_store.go` as `oauth registration store`; app JSON
+  uses `oauth_registration_store`. This holds application credentials and provider
+  keys independently of user registration and sessions.
 - SAML login identity providers: `configuration-saml-providers`, parsed by
   `caddyfile_identity.go` and `caddyfile_identity_provider.go`, implemented by
   local `go-authcrunch/pkg/idp/saml`.

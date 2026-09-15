@@ -21,6 +21,10 @@ as `myportal` or `local_portal` for portals and `app_policy` or `local_policy`
 for policies. Policy names are not required to end in `_policy`, but the suffix
 makes `authorize with <policy>` intent clear.
 
+Use `authentication portal myportal` with `authenticate with myportal`, or choose
+a descriptive portal name. Avoid `authentication portal portal` in examples,
+fixtures, and tests; the repeated word obscures the declaration's name.
+
 Read these files when details matter:
 
 - `plugin_authn.go` for `authenticate` syntax and directive order.
