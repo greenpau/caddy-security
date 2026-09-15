@@ -70,8 +70,9 @@ AUTHP_ADMIN_SECRET
 The local database stores password and username policy fields. The default
 password policy requires length 8-128, and the default username policy requires
 length 3-50. Users with non-guest portal access can change their password from
-the portal profile/settings UI; administrators can also update hashes with
-`authdbctl` or by editing the local database carefully.
+the portal profile/settings UI; administrators can reset passwords and manage
+users through [`security local`](../scripts-and-automation/references/local-user-commands.md)
+or `authdbctl`. These commands use the running portal's admin API.
 
 ## LDAP Stores
 

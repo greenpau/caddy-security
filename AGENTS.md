@@ -67,6 +67,9 @@ modules register from package `init` hooks.
   and rotation; `command_security.go` registers the CLI namespace.
   `oauth_registration_store.go` owns private immutable revisions.
   `caddyfile.go` collects applications before resolving other declarations.
+- `command_local*.go` implements `security local` administration through the
+  portal admin API; `command_credentials.go` provides offline password/API-key
+  generation and private terminal input.
 - `caddyfile_authn_*` files parse authentication portal subdirectives such as
   cookies, crypto, UI, transforms, and miscellaneous portal settings.
   `caddyfile_authz_*` files parse authorization policy subdirectives such as
@@ -118,8 +121,8 @@ to audit Caddyfiles, parser syntax comments, delegated upstream grammar, and
 the corresponding configuration skills together.
 
 Use `configuration-oauth-applications` for `oauth application <nickname>`
-registrations, private `oauth registration store` configuration, the local
-`security` CLI commands, and portal `oidc provider` blocks;
+registrations, private `oauth registration store` configuration, the
+`security oauth` and `security oidc` CLI commands, and portal `oidc provider` blocks;
 `configuration-oauth-providers` owns external login providers.
 
 ## Break-Fix Troubleshooting
@@ -140,6 +143,9 @@ for the workflow used when asked to create a commit message for a change.
 Use the repo-local `scripts-and-automation` skill when choosing, running, or
 documenting Makefile targets, repository scripts, build/test/report workflows,
 generated artifacts, dependency automation, or release/version procedures.
+
+Use its [local user command reference](.codex/skills/scripts-and-automation/references/local-user-commands.md)
+for `security local` user-store administration and offline credential generation.
 
 ## Versioning and Releases
 

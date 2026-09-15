@@ -24,8 +24,8 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "security",
-		Short: "Manage security application credentials and provider signing keys",
-		Long:  "Local security administration commands. Use oauth to initialize private provisioning storage, create applications, or rotate client secrets. Use oidc to create provider signing keys. Run security <group> --help to explore its commands.",
+		Short: "Manage security users, credentials, and provider signing keys",
+		Long:  "Security administration commands. Use local to manage local user stores through a portal or generate password hashes and API keys offline. Use oauth to initialize private provisioning storage, create applications, or rotate client secrets. Use oidc to create provider signing keys. Run security <group> --help to explore its commands.",
 		CobraFunc: func(cmd *cobra.Command) {
 			// Cobra parses flags before running our handlers. Its default errors
 			// include raw values and unknown flag names, which may contain secrets.
@@ -34,6 +34,7 @@ func init() {
 				return fmt.Errorf("invalid flags for %s; use --help", cmd.CommandPath())
 			})
 			addSecurityProvisioningCommands(cmd)
+			addSecurityLocalCommands(cmd)
 		},
 	})
 }

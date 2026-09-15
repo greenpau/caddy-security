@@ -54,7 +54,9 @@ func TestRegistrationCommandProcess(t *testing.T) {
 		if arg == "--" {
 			os.Args = append([]string{os.Args[0]}, os.Args[i+1:]...)
 			caddycmd.Main()
-			return
+			// Match the real executable: keep Go's test PASS trailer out of
+			// machine-readable command output.
+			os.Exit(0)
 		}
 	}
 	t.Fatal("missing command arguments")

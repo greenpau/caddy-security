@@ -126,6 +126,12 @@ removed keys automatically.
 
 ## Admin Server API
 
+For the built-in administration client, use
+[`security local`](../scripts-and-automation/references/local-user-commands.md).
+It delegates login to `go-authcrunch/pkg/authclient` and exposes realm/user
+inspection, account CRUD, password reset, role/challenge updates, and reload
+through the admin endpoints.
+
 Add this inside `authentication portal <name>` to enable the server/admin API:
 
 ```caddyfile

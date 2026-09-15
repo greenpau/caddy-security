@@ -1,6 +1,6 @@
 ---
 name: scripts-and-automation
-description: caddy-security repository automation, Makefile target selection, local build/test/report/coverage commands, local go-authcrunch replacement and sync workflows, asset scripts, and generated artifact handling. Use when choosing, running, documenting, or updating repository scripts and Make targets; troubleshooting build automation; consuming existing local go-authcrunch changes; refreshing fixtures; or routing release/version tasks to release-and-versioning.
+description: caddy-security repository automation, Makefile targets, build/test/report workflows, and security local CLI administration. Use for local-user, password, and API-key commands; repository scripts; local go-authcrunch replacement workflows; generated artifacts; or routing release tasks to release-and-versioning.
 ---
 
 # Scripts and Automation
@@ -208,3 +208,11 @@ for the private input grammar and `oauth init provisioning store`,
 subcommands, explicit revision activation, and interrupted-writer recovery.
 Each provisioning command prints only the resulting path; it never prints client
 secrets or private keys.
+
+## Local User Administration
+
+Use [Local user commands](references/local-user-commands.md) for
+`security local` client configuration, login, local realm/user inspection,
+account creation/deletion, password resets, roles/challenges, realm reload,
+and offline password/API-key generation. Remote operations use the portal's
+admin API; generators work offline and never modify database files.
