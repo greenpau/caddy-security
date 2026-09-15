@@ -15,6 +15,7 @@
 package security
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -77,17 +78,30 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, p *authz.PolicyConf
 		}
 	case "set":
 		switch {
-		case strings.Contains(v, "cookie name") && len(args) >= 4:
-			if args[3] == "" {
-				return h.Errf("%s directive %s has empty name", rootDirective, v)
+		case len(args) >= 3 && args[1] == "cookie" && args[2] == "name":
+			if len(args) < 4 {
+				return h.Errf("%s cookie name requires a value", rootDirective)
+			}
+			seen := make(map[string]bool)
+			for _, name := range args[3:] {
+				if (&http.Cookie{Name: name}).Valid() != nil || seen[name] {
+					return h.Errf("%s has an invalid or duplicate cookie name", rootDirective)
+				}
+				seen[name] = true
 			}
 			switch args[0] {
 			case "session_id":
+				if len(args) != 4 || p.SessionIDCookieName != "" {
+					return h.Errf("%s requires one session cookie name setting", rootDirective)
+				}
 				p.SessionIDCookieName = args[3]
 			case "access_token":
+				if len(p.AccessTokenCookieNames) != 0 {
+					return h.Errf("%s has duplicate access cookie name settings", rootDirective)
+				}
 				p.AccessTokenCookieNames = args[3:]
 			default:
-				return h.Errf("%s directive %s has unsupported %s name", rootDirective, v, args[0])
+				return h.Errf("%s has unsupported cookie role", rootDirective)
 			}
 		case strings.HasPrefix(v, "token sources "):
 			p.AllowedTokenSources = strings.Split(strings.TrimPrefix(v, "token sources "), " ")

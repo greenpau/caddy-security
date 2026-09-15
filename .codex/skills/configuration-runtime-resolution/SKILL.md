@@ -104,8 +104,26 @@ Resolve these app config areas:
   and JS paths, template paths, private link titles/links, static asset path,
   content type, and filesystem path), cookie path, cookie domain map keys, and
   per-domain domain/path values.
+  Resolve domain-map keys into a fresh map and reject collisions before replacing
+  the map; in-place key updates can silently overwrite settings or process a newly
+  inserted key twice.
 - `authorization_policies[]`: replace raw crypto key-store lines only; the
-  subsequent validation rebuilds `crypto_key_store_config`.
+  subsequent validation rebuilds `crypto_key_store_config`. Pin absent cookie
+  names to `AUTHP_SESSION_ID` and the default access-cookie list before server
+  construction, preventing implicit cross-portal discovery.
+
+Cookie Caddyfile statements containing runtime placeholders are held separately
+in `App.PortalCookieDirectives` (`portal_cookie_directives` in Caddy JSON), keyed
+by portal name. After `ResolveRuntimeAppConfig`, app provisioning resolves
+that portal's entire statement collection and applies one validated snapshot
+through the shared cookie parser and `PortalConfig.ConfigureCookies`. This
+supports runtime names, prefixes, domains, and attributes without partially
+validating an unresolved cookie config. The deferred snapshot replaces any
+existing typed cookie config and is applied after other replacement to avoid expanding substituted
+paths a second time. Literal-only statements adapt directly to typed
+cookie config. See [cookie configuration](../configuration-authentication-cookies/SKILL.md#placeholders-and-json).
+After replacement, legacy translation treats braces in a resolved path as data;
+it must not defer that statement again.
 
 The route plugins have separate runtime replacement: `authenticate ... with
 {env.PORTAL}` and `authorize ... with {env.POLICY}` resolve their portal or
@@ -117,8 +135,8 @@ fixture instead of assuming the existing recursive helper will reach it.
 
 Unsupported app fields currently include portal and policy names, portal enabled
 identity store/provider/SSO references, trusted redirect configs, portal role
-sets and patterns, most token options, cookie names set with `set ... cookie
-name`, authorization policy ACL rules, bypass configs, header injection configs,
+sets and patterns, most token options, cookie names in typed portal JSON (use deferred cookie
+statements instead), authorization policy ACL rules, bypass configs, header injection configs,
 auth proxy raw config, auth URL and forbidden URL fields, and access-token or
 session-cookie name fields.
 
@@ -132,8 +150,9 @@ Adapt fixtures may include:
 - `<prefix>_resolved.json` for expected JSON after runtime resolution.
 
 `TestResolveRuntimeAppConfig` lists the fixtures that exercise runtime
-resolution. It extracts the nested `apps.http.servers...security.config`
-object from `<prefix>.json`, loads `<prefix>.env`, runs resolution, and compares
+resolution. It extracts `apps.security.config` from `<prefix>.json`, loads `<prefix>.env`,
+runs typed resolution followed by any `apps.security.portal_cookie_directives`
+snapshot, and compares
 the dumped authcrunch config to `<prefix>_resolved.json`.
 
 For fixtures covered by `TestResolveRuntimeAppConfig`, the test fails when

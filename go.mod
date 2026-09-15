@@ -7,9 +7,10 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.2.2
+	github.com/greenpau/go-authcrunch v1.2.3
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/zap v1.28.0
+	golang.org/x/net v0.59.0
 	golang.org/x/text v0.42.0
 )
 
@@ -175,7 +176,6 @@ require (
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20260908180501-3f62bf119e84 // indirect
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // indirect
-	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect

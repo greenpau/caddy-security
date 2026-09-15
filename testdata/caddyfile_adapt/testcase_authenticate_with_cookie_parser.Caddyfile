@@ -1,0 +1,75 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		authentication portal myportal {
+			enable identity store localdb
+			crypto key sign-verify synthetic-cookie-signing-key
+			cookie session id name AUTHP_SESSION_ID
+			cookie prefix AUTHP
+			cookie oidc session id name AUTHP_LOGIN_SESSION
+			cookie oidc request id name AUTHP_LOGIN_REQUEST
+			cookie refresh token name AUTHP_LOGIN_REFRESH
+			cookie access token name AUTHP_LOGIN_ACCESS
+			set redirect_url cookie name AUTHP_LOGIN_REDIRECT
+			cookie sandbox id name AUTHP_LOGIN_SANDBOX
+			cookie id token name AUTHP_LOGIN_IDENTITY
+			cookie path "/app with spaces"
+			cookie lifetime 3600
+			cookie same site lax
+			cookie insecure disabled
+			cookie guess domain disabled
+			cookie strip domain enabled
+			cookie domain example.com
+			cookie domain sub.example.com path /sub
+			cookie example.com path /app
+			cookie domain example.com lifetime 600
+			cookie domain example.com same site strict
+			cookie domain example.com insecure disabled
+			cookie domain example.com strip domain enabled
+		}
+		authentication portal prefixed {
+			enable identity store localdb
+			crypto key sign-verify synthetic-cookie-signing-key
+			set cookie name prefix PORTAL
+		}
+		authentication portal host_prefixed {
+			enable identity store localdb
+			crypto key sign-verify synthetic-cookie-signing-key
+			cookie prefix __Host-PORTAL
+			cookie identity token name __Secure-PORTAL_ID_TOKEN
+		}
+		authentication portal legacy_path {
+			enable identity store localdb
+			crypto key sign-verify synthetic-cookie-signing-key
+			cookie prefix LEGACY
+			cookie default path {env.COOKIE_ADAPTER_PATH}
+		}
+		authorization policy prefixed_policy {
+			crypto key verify synthetic-cookie-signing-key
+			set session_id cookie name PORTAL_SESSION_ID
+			set access_token cookie name PORTAL_ACCESS_TOKEN
+			set token sources cookie
+			allow roles authp/user
+		}
+		authorization policy app_policy {
+			crypto key verify synthetic-cookie-signing-key
+			set session_id cookie name AUTHP_SESSION_ID
+			set access_token cookie name AUTHP_LOGIN_ACCESS
+			set token sources cookie
+			allow roles authp/user
+		}
+	}
+}
+
+:8443 {
+	route /auth/* {
+		authenticate with myportal
+	}
+	route /app/* {
+		authorize with app_policy
+		respond ok
+	}
+}

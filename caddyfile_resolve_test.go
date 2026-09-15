@@ -129,6 +129,10 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		err                 error
 	}{
 		{
+			name:                "shared cookie directives and policy coordination",
+			inputFileNamePrefix: "testcase_authenticate_with_cookie_parser",
+		},
+		{
 			name:                "authenticate plugin config with cookie multi domain",
 			inputFileNamePrefix: "testcase_authenticate_with_cookie_multi_domain",
 		},
@@ -193,6 +197,19 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 				t.Fatalf("failed to load config %s: %s", tmpInputFilePath, err)
 			}
 
+			input, err := os.ReadFile(inputFilePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var document struct {
+				Apps struct {
+					Security App `json:"security"`
+				} `json:"apps"`
+			}
+			if err := json.Unmarshal(input, &document); err != nil {
+				t.Fatal(err)
+			}
+
 			err = ResolveRuntimeAppConfig(context.TODO(), repl, nil, config, logger)
 			if err != nil {
 				if !tc.shouldErr {
@@ -205,6 +222,9 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 			}
 			if tc.shouldErr {
 				t.Fatalf("unexpected success, want: %v", tc.err)
+			}
+			if err := resolvePortalCookieDirectives(t.Context(), repl, nil, config, document.Apps.Security.PortalCookieDirectives, logger); err != nil {
+				t.Fatal(err)
 			}
 
 			if err := config.DumpToJSONFile(tmpOutputFilePath); err != nil {

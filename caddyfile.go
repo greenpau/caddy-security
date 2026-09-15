@@ -72,7 +72,7 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 				return nil, err
 			}
 		case "authentication":
-			if err := parseCaddyfileAuthentication(d, app.Config); err != nil {
+			if err := parseCaddyfileAuthentication(d, app); err != nil {
 				return nil, err
 			}
 		case "authorization":

@@ -1,0 +1,269 @@
+{
+    "authentication_portals": [
+        {
+            "name": "myportal",
+            "ui": {},
+            "cookie_config": {
+                "domains": {
+                    "example.com": {
+                        "domain": "example.com",
+                        "path": "/app",
+                        "lifetime": 600,
+                        "same_site": "Strict",
+                        "strip_domain_enabled": true
+                    },
+                    "sub.example.com": {
+                        "seq": 1,
+                        "domain": "sub.example.com",
+                        "path": "/sub"
+                    }
+                },
+                "path": "/app with spaces",
+                "lifetime": 3600,
+                "same_site": "Lax",
+                "strip_domain_enabled": true,
+                "session_id_cookie_name": "AUTHP_SESSION_ID",
+                "referer_cookie_name": "AUTHP_LOGIN_REDIRECT",
+                "sandbox_id_cookie_name": "AUTHP_LOGIN_SANDBOX",
+                "identity_token_cookie_name": "AUTHP_LOGIN_IDENTITY",
+                "access_token_cookie_name": "AUTHP_LOGIN_ACCESS",
+                "refresh_token_cookie_name": "AUTHP_LOGIN_REFRESH",
+                "oidc_session_id_cookie_name": "AUTHP_LOGIN_SESSION",
+                "oidc_request_id_cookie_name": "AUTHP_LOGIN_REQUEST",
+                "cookie_name_prefix": "AUTHP"
+            },
+            "identity_stores": [
+                "localdb"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+                "crypto key sign-verify synthetic-cookie-signing-key"
+            ],
+            "crypto_key_store_config": {
+                "raw_key_configs": [
+                    "crypto key sign-verify synthetic-cookie-signing-key"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+                "authp/admin": true
+            },
+            "portal_user_roles": {
+                "authp/user": true
+            },
+            "portal_guest_roles": {
+                "authp/guest": true
+            },
+            "api": {
+                "profile_enabled": true
+            }
+        },
+        {
+            "name": "prefixed",
+            "ui": {},
+            "cookie_config": {
+                "session_id_cookie_name": "PORTAL_SESSION_ID",
+                "referer_cookie_name": "PORTAL_REDIRECT_URL",
+                "sandbox_id_cookie_name": "PORTAL_SANDBOX_ID",
+                "identity_token_cookie_name": "PORTAL_ID_TOKEN",
+                "access_token_cookie_name": "PORTAL_ACCESS_TOKEN",
+                "refresh_token_cookie_name": "PORTAL_REFRESH_TOKEN",
+                "oidc_session_id_cookie_name": "PORTAL_OIDC_SESSION_ID",
+                "oidc_request_id_cookie_name": "PORTAL_OIDC_REQUEST_ID",
+                "cookie_name_prefix": "PORTAL"
+            },
+            "identity_stores": [
+                "localdb"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+                "crypto key sign-verify synthetic-cookie-signing-key"
+            ],
+            "crypto_key_store_config": {
+                "raw_key_configs": [
+                    "crypto key sign-verify synthetic-cookie-signing-key"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+                "authp/admin": true
+            },
+            "portal_user_roles": {
+                "authp/user": true
+            },
+            "portal_guest_roles": {
+                "authp/guest": true
+            },
+            "api": {
+                "profile_enabled": true
+            }
+        },
+        {
+            "name": "host_prefixed",
+            "ui": {},
+            "cookie_config": {
+                "session_id_cookie_name": "__Host-PORTAL_SESSION_ID",
+                "referer_cookie_name": "__Host-PORTAL_REDIRECT_URL",
+                "sandbox_id_cookie_name": "__Host-PORTAL_SANDBOX_ID",
+                "identity_token_cookie_name": "__Secure-PORTAL_ID_TOKEN",
+                "access_token_cookie_name": "__Host-PORTAL_ACCESS_TOKEN",
+                "refresh_token_cookie_name": "__Host-PORTAL_REFRESH_TOKEN",
+                "oidc_session_id_cookie_name": "__Host-PORTAL_OIDC_SESSION_ID",
+                "oidc_request_id_cookie_name": "__Host-PORTAL_OIDC_REQUEST_ID",
+                "cookie_name_prefix": "__Host-PORTAL"
+            },
+            "identity_stores": [
+                "localdb"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+                "crypto key sign-verify synthetic-cookie-signing-key"
+            ],
+            "crypto_key_store_config": {
+                "raw_key_configs": [
+                    "crypto key sign-verify synthetic-cookie-signing-key"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+                "authp/admin": true
+            },
+            "portal_user_roles": {
+                "authp/user": true
+            },
+            "portal_guest_roles": {
+                "authp/guest": true
+            },
+            "api": {
+                "profile_enabled": true
+            }
+        },
+        {
+            "name": "legacy_path",
+            "ui": {},
+            "cookie_config": {
+                "path": "/app {literal}",
+                "session_id_cookie_name": "LEGACY_SESSION_ID",
+                "referer_cookie_name": "LEGACY_REDIRECT_URL",
+                "sandbox_id_cookie_name": "LEGACY_SANDBOX_ID",
+                "identity_token_cookie_name": "LEGACY_ID_TOKEN",
+                "access_token_cookie_name": "LEGACY_ACCESS_TOKEN",
+                "refresh_token_cookie_name": "LEGACY_REFRESH_TOKEN",
+                "oidc_session_id_cookie_name": "LEGACY_OIDC_SESSION_ID",
+                "oidc_request_id_cookie_name": "LEGACY_OIDC_REQUEST_ID",
+                "cookie_name_prefix": "LEGACY"
+            },
+            "identity_stores": [
+                "localdb"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+                "crypto key sign-verify synthetic-cookie-signing-key"
+            ],
+            "crypto_key_store_config": {
+                "raw_key_configs": [
+                    "crypto key sign-verify synthetic-cookie-signing-key"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+                "authp/admin": true
+            },
+            "portal_user_roles": {
+                "authp/user": true
+            },
+            "portal_guest_roles": {
+                "authp/guest": true
+            },
+            "api": {
+                "profile_enabled": true
+            }
+        }
+    ],
+    "authorization_policies": [
+        {
+            "name": "prefixed_policy",
+            "auth_url_path": "/auth",
+            "auth_redirect_query_param": "redirect_url",
+            "auth_redirect_status_code": 302,
+            "access_list_rules": [
+                {
+                    "conditions": [
+                        "match roles authp/user"
+                    ],
+                    "action": "allow log debug"
+                }
+            ],
+            "raw_crypto_key_store_config": [
+                "crypto key verify synthetic-cookie-signing-key"
+            ],
+            "crypto_key_store_config": {
+                "raw_key_configs": [
+                    "crypto key verify synthetic-cookie-signing-key"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "allowed_token_sources": [
+                "cookie"
+            ],
+            "api_key_header_name": "X-Api-Key",
+            "auth_realm_header_name": "X-Auth-Realm",
+            "session_id_cookie_name": "PORTAL_SESSION_ID",
+            "access_token_cookie_names": [
+                "PORTAL_ACCESS_TOKEN"
+            ]
+        },
+        {
+            "name": "app_policy",
+            "auth_url_path": "/auth",
+            "auth_redirect_query_param": "redirect_url",
+            "auth_redirect_status_code": 302,
+            "access_list_rules": [
+                {
+                    "conditions": [
+                        "match roles authp/user"
+                    ],
+                    "action": "allow log debug"
+                }
+            ],
+            "raw_crypto_key_store_config": [
+                "crypto key verify synthetic-cookie-signing-key"
+            ],
+            "crypto_key_store_config": {
+                "raw_key_configs": [
+                    "crypto key verify synthetic-cookie-signing-key"
+                ],
+                "auto_generate_tag": "default",
+                "auto_generate_algo": "ES512"
+            },
+            "allowed_token_sources": [
+                "cookie"
+            ],
+            "api_key_header_name": "X-Api-Key",
+            "auth_realm_header_name": "X-Auth-Realm",
+            "session_id_cookie_name": "AUTHP_SESSION_ID",
+            "access_token_cookie_names": [
+                "AUTHP_LOGIN_ACCESS"
+            ]
+        }
+    ],
+    "identity_stores": [
+        {
+            "name": "localdb",
+            "kind": "local",
+            "params": {
+                "path": ":memory:",
+                "realm": "local"
+            }
+        }
+    ]
+}

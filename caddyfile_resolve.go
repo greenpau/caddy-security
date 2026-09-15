@@ -22,6 +22,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"go.uber.org/zap"
 )
@@ -525,28 +527,28 @@ func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 				return err
 			}
 
-			for domainKey, domain := range cfg.CookieConfig.Domains {
-				if value, err := substituteString(ctx, repl, secretManagers, "CookieConfig.Domains[].Key", domainKey, log); err == nil {
-					if value != domainKey {
-						cfg.CookieConfig.Domains[value] = domain
-						delete(cfg.CookieConfig.Domains, domainKey)
+			if cfg.CookieConfig.Domains != nil {
+				// Rebuild once: rewriting keys during iteration can overwrite another
+				// domain or expand newly inserted keys a second time.
+				domains := make(map[string]*cookie.DomainConfig, len(cfg.CookieConfig.Domains))
+				for domainKey, domain := range cfg.CookieConfig.Domains {
+					key, err := substituteString(ctx, repl, secretManagers, "CookieConfig.Domains[].Key", domainKey, log)
+					if err != nil {
+						return err
 					}
-				} else {
-					return err
+					if _, exists := domains[key]; exists {
+						return fmt.Errorf("portal %q: duplicate resolved cookie domain", cfg.Name)
+					}
+					next := *domain
+					if next.Domain, err = substituteString(ctx, repl, secretManagers, "CookieConfig.Domains[].Domain", domain.Domain, log); err != nil {
+						return err
+					}
+					if next.Path, err = substituteString(ctx, repl, secretManagers, "CookieConfig.Domains[].Path", domain.Path, log); err != nil {
+						return err
+					}
+					domains[key] = &next
 				}
-			}
-
-			for domainKey, domain := range cfg.CookieConfig.Domains {
-				if value, err := substituteString(ctx, repl, secretManagers, "CookieConfig.Domains["+domainKey+"].Domain", domain.Domain, log); err == nil {
-					domain.Domain = value
-				} else {
-					return err
-				}
-				if value, err := substituteString(ctx, repl, secretManagers, "CookieConfig.Domains["+domainKey+"].Path", domain.Path, log); err == nil {
-					domain.Path = value
-				} else {
-					return err
-				}
+				cfg.CookieConfig.Domains = domains
 			}
 		}
 
@@ -556,6 +558,15 @@ func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 	}
 
 	for _, cfg := range config.AuthorizationPolicies {
+		// Pin gatekeeper defaults before NewServer can discover names from
+		// unrelated portals. Custom names require an explicit policy list.
+		defaults := cookie.NewConfig()
+		if cfg.SessionIDCookieName == "" {
+			cfg.SessionIDCookieName = defaults.SessionIDCookieName
+		}
+		if len(cfg.AccessTokenCookieNames) == 0 {
+			cfg.AccessTokenCookieNames = []string{defaults.AccessTokenCookieName, "access_token", "jwt_access_token"}
+		}
 		entries, err := resolveConfigInstructions(ctx, repl, secretManagers, "RawCryptoKeyStoreConfigs", cfg.GetRawCryptoKeyStoreConfig(), 2, log)
 		if err != nil {
 			return fmt.Errorf("policy %q: %w", cfg.Name, err)
@@ -566,5 +577,45 @@ func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		}
 	}
 
+	return nil
+}
+
+func resolvePortalCookieDirectives(ctx context.Context, repl *caddy.Replacer, managers []SecretsManager, config *authcrunch.Config, directives map[string][]string, log *zap.Logger) error {
+	if err := validateConfigObjects(config); err != nil {
+		return err
+	}
+	for name, statements := range directives {
+		var portal *authn.PortalConfig
+		for _, candidate := range config.AuthenticationPortals {
+			if candidate.Name == name {
+				if portal != nil {
+					return fmt.Errorf("duplicate cookie portal %q", name)
+				}
+				portal = candidate
+			}
+		}
+		if portal == nil {
+			return fmt.Errorf("cookie portal %q not found", name)
+		}
+		// Each replacement stays one argument, even when it contains spaces/quotes.
+		resolved, err := resolveConfigInstructions(ctx, repl, managers, "PortalCookieDirectives", statements, 2, log)
+		if err != nil {
+			return fmt.Errorf("portal %q cookies: %w", name, err)
+		}
+		// Translation runs after replacement too, for legacy prefixes and switches.
+		for i, statement := range resolved {
+			args, err := cfgutil.DecodeArgs(statement)
+			if err != nil || (args[0] != "cookie" && args[0] != "set") {
+				return fmt.Errorf("portal %q: invalid cookie directive", name)
+			}
+			resolved[i], err = encodePortalCookieDirective(args[0], args[1:], false)
+			if err != nil {
+				return fmt.Errorf("portal %q cookies: %w", name, err)
+			}
+		}
+		if err := configurePortalCookies(portal, resolved); err != nil {
+			return fmt.Errorf("portal %q cookies: %w", name, err)
+		}
+	}
 	return nil
 }

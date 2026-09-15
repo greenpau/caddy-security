@@ -76,8 +76,10 @@ Defaults applied by `PolicyConfig.Validate()` and `Gatekeeper.configure()`:
 - auth redirect query parameter: `redirect_url`
 - auth redirect status: `302`
 - token source priority: `cookie`, `header`, `query`
-- token names in cookies, auth headers, and query params: `access_token`,
-  `jwt_access_token`
+- session cookie: `AUTHP_SESSION_ID`
+- access cookies: `AUTHP_ACCESS_TOKEN`, `access_token`, `jwt_access_token`
+- named auth headers and query params retain the AuthCrunch defaults; explicit
+  access cookie names also enter those lists in lowercase
 - API key header: `X-Api-Key`
 - auth realm header: `X-Auth-Realm`
 
@@ -156,6 +158,16 @@ set token sources header query cookie
 set session_id cookie name AUTHP_SESSION_ID
 set access_token cookie name AUTHP_ACCESS_TOKEN ALT_ACCESS_TOKEN
 ```
+
+Cookie name settings map to `PolicyConfig.SessionIDCookieName` and
+`AccessTokenCookieNames`. Explicit access lists replace defaults. Caddy pins
+absent settings during runtime resolution so AuthCrunch cannot discover custom
+names from unrelated portals. Coordinate both names explicitly when a portal
+uses `set cookie name prefix PORTAL`; see
+[portal cookie precedence and policy coordination](../configuration-authentication-cookies/SKILL.md#coordinate-gatekeepers-explicitly).
+Session IDs are correlation values, not access credentials. Multiple access
+names belong on one line; empty names, duplicate names, repeated settings, and
+extra session-name arguments are rejected.
 
 `set auth url` must match where the referenced authentication portal is served.
 Use the same-host portal path such as `/auth` or `/xauth`, or the full URL for

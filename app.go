@@ -53,6 +53,10 @@ type App struct {
 	Name   string             `json:"-"`
 	Config *authcrunch.Config `json:"config,omitempty"`
 
+	// PortalCookieDirectives holds complete cookie snapshots awaiting runtime
+	// replacement, keyed by portal name. It replaces that portal's CookieConfig.
+	PortalCookieDirectives map[string][]string `json:"portal_cookie_directives,omitempty"`
+
 	SecretsManagerConfigs []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
 	secretsManagers       []SecretsManager
 
@@ -128,6 +132,10 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 	repl := caddy.NewReplacer()
 	if err := ResolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.logger); err != nil {
+		return err
+	}
+	// Apply resolved snapshots last so substituted paths are not expanded twice.
+	if err := resolvePortalCookieDirectives(ctx, repl, app.secretsManagers, &config, app.PortalCookieDirectives, app.logger); err != nil {
 		return err
 	}
 

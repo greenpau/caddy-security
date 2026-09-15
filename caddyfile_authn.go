@@ -18,9 +18,7 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
-	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -49,7 +47,10 @@ const (
 //			allow settings for role <role>
 //		}
 //
-//	    cookie domain <name>
+//	    cookie prefix <prefix>
+//	    cookie <session id|referer|sandbox id|identity token|access token|refresh token|oidc session id|oidc request id> name <name>
+//	    cookie <insecure|strip domain|guess domain> <enabled|disabled>
+//	    cookie domain <name> [<attribute> <value>]
 //	    cookie path <name>
 //	    cookie lifetime <seconds>
 //	    cookie samesite <lax|strict|none>
@@ -68,7 +69,7 @@ const (
 //		trust [login|logout] redirect uri domain [exact|partial|prefix|suffix|regex] <domain_name> path [exact|partial|prefix|suffix|regex] <path>
 //
 //	}
-func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 	// rootDirective is config key prefix.
 	var rootDirective string
 	args := d.RemainingArgs()
@@ -82,13 +83,13 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config
 			UI: &ui.Parameters{
 				Templates: make(map[string]string),
 			},
-			CookieConfig:          cookie.NewConfig(),
 			TokenValidatorOptions: &options.TokenValidatorOptions{},
 			TokenGrantorOptions:   &options.TokenGrantorOptions{},
 			API: &authn.APIConfig{
 				ProfileEnabled: true,
 			},
 		}
+		var cookieStatements []string
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
 			v := d.RemainingArgs()
@@ -98,10 +99,12 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config
 				if err := parseCaddyfileAuthPortalCrypto(d, p, rootDirective, v); err != nil {
 					return err
 				}
-			case "cookie":
-				if err := parseCaddyfileAuthPortalCookie(d, p, rootDirective, v); err != nil {
-					return err
+			case "cookie", "set":
+				statement, err := encodePortalCookieDirective(k, v, true)
+				if err != nil {
+					return d.Errf("%s: %v", rootDirective, err)
 				}
+				cookieStatements = append(cookieStatements, statement)
 			case "ui":
 				if err := parseCaddyfileAuthPortalUI(d, p, rootDirective); err != nil {
 					return err
@@ -110,7 +113,7 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config
 				if err := parseCaddyfileAuthPortalTransform(d, p, rootDirective, v); err != nil {
 					return err
 				}
-			case "enable", "validate", "trust", "set":
+			case "enable", "validate", "trust":
 				if err := parseCaddyfileAuthPortalMisc(d, p, rootDirective, k, v); err != nil {
 					return err
 				}
@@ -119,7 +122,20 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, cfg *authcrunch.Config
 			}
 		}
 
-		if err := cfg.AddAuthenticationPortal(p); err != nil {
+		// Runtime placeholders must be expanded before the shared parser validates
+		// names and domains. Preserve the complete snapshot across Caddy JSON.
+		if cookieDirectivesNeedResolution(cookieStatements) {
+			if app.PortalCookieDirectives == nil {
+				app.PortalCookieDirectives = make(map[string][]string)
+			}
+			if _, exists := app.PortalCookieDirectives[p.Name]; exists {
+				return d.Errf("duplicate cookie portal %q", p.Name)
+			}
+			app.PortalCookieDirectives[p.Name] = cookieStatements
+		} else if err := configurePortalCookies(p, cookieStatements); err != nil {
+			return d.Errf("%s.portal %q cookies: %v", authnPrefix, p.Name, err)
+		}
+		if err := app.Config.AddAuthenticationPortal(p); err != nil {
 			return err
 		}
 	default:

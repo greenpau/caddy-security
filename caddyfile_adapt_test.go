@@ -89,6 +89,10 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			inputFileNamePrefix: "testcase_authenticate_with_cookie_domain",
 		},
 		{
+			name:                "shared cookie directives and policy coordination",
+			inputFileNamePrefix: "testcase_authenticate_with_cookie_parser",
+		},
+		{
 			name:                "authenticate plugin config with cookie multi domain",
 			inputFileNamePrefix: "testcase_authenticate_with_cookie_multi_domain",
 		},

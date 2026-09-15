@@ -15,12 +15,10 @@
 package security
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
-	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
@@ -59,47 +57,6 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalCo
 			}
 		default:
 			return h.Errf("unsupported directive for %s: %s", rootDirective, v)
-		}
-	case "set":
-		switch {
-		case strings.Contains(v, "cookie name prefix") && len(args) == 4:
-			if args[3] == "" {
-				return h.Errf("%s directive %s has empty name", rootDirective, v)
-			}
-			portal.CookieConfig.CookieNamePrefix = strings.ToUpper(args[3])
-			portal.CookieConfig.SessionIDCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultSessionIDCookieName)
-			portal.CookieConfig.SandboxIDCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultSandboxIDCookieName)
-			portal.CookieConfig.RefererCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultRefererCookieName)
-			portal.CookieConfig.IdentityTokenCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultIdentityTokenCookieName)
-			portal.CookieConfig.AccessTokenCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultAccessTokenCookieName)
-			portal.TokenValidatorOptions.AuthorizationCookieNames = []string{fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultAccessTokenCookieName)}
-			portal.TokenGrantorOptions.AccessTokenCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultAccessTokenCookieName)
-			portal.CookieConfig.RefreshTokenCookieName = fmt.Sprintf("%s_%s", strings.ToUpper(args[3]), cookie.DefaultRefreshTokenCookieName)
-
-		case strings.Contains(v, "cookie name") && len(args) == 4:
-			if args[3] == "" {
-				return h.Errf("%s directive %s has empty name", rootDirective, v)
-			}
-			switch args[0] {
-			case "session_id":
-				portal.CookieConfig.SessionIDCookieName = args[3]
-			case "sandbox_id":
-				portal.CookieConfig.SandboxIDCookieName = args[3]
-			case "redirect_url":
-				portal.CookieConfig.RefererCookieName = args[3]
-			case "id_token":
-				portal.CookieConfig.IdentityTokenCookieName = args[3]
-			case "access_token":
-				portal.CookieConfig.AccessTokenCookieName = args[3]
-				portal.TokenValidatorOptions.AuthorizationCookieNames = []string{args[3]}
-				portal.TokenGrantorOptions.AccessTokenCookieName = args[3]
-			case "refresh_token":
-				portal.CookieConfig.RefreshTokenCookieName = args[3]
-			default:
-				return h.Errf("%s directive %s has unsupported %s name", rootDirective, v, args[0])
-			}
-		default:
-			return h.Errf("%s directive %q is unsupported", rootDirective, v)
 		}
 	case "validate":
 		switch v {

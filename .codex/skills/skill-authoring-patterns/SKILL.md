@@ -85,8 +85,8 @@ parser and into the authcrunch config constructor, field, raw instruction, or
 in `plugin_authn.go` and `plugin_authz.go`. Identify concrete grammar/defaults,
 argument errors, Caddy JSON shape, and provisioning behavior as relevant.
 
-Use `coding-directives` for shared parser conventions. This adapter does not
-use go-authcrunch's dedicated parser-package/exported-constructor layout.
+Use `coding-directives` for shared parser conventions. Cookie configuration delegates to AuthCrunch's shared parser and public
+`ConfigureCookies` snapshot API; other surfaces still use their local parsers.
 An upstream config field or HTTP handler alone does not prove that a matching
 Caddyfile directive exists. Likewise, an adapted placeholder does not prove
 runtime replacement support: verify `ResolveRuntimeAppConfig` in

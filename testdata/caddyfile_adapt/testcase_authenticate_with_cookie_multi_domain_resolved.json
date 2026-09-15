@@ -6,11 +6,10 @@
             "cookie_config": {
                 "domains": {
                     "caddy.rocks": {
-                        "seq": 2,
+                        "seq": 1,
                         "domain": "caddy.rocks"
                     },
                     "contoso.com": {
-                        "seq": 1,
                         "domain": "contoso.com"
                     }
                 },

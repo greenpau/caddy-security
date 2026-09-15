@@ -82,7 +82,13 @@
 			"forbidden_url": "https://test.com/forbidden",
 			"user_identity_field": "id",
 			"api_key_header_name": "X-Api-Key",
-			"auth_realm_header_name": "X-Auth-Realm"
+			"auth_realm_header_name": "X-Auth-Realm",
+			"session_id_cookie_name": "AUTHP_SESSION_ID",
+			"access_token_cookie_names": [
+				"AUTHP_ACCESS_TOKEN",
+				"access_token",
+				"jwt_access_token"
+			]
 		}
 	],
 	"identity_providers": [
