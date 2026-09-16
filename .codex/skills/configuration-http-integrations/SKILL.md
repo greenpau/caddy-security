@@ -126,6 +126,21 @@ the library owns public discovery, method validation, and serialization.
 There is no discovery enable directive. See
 [the HTTP contract](../authentication-portal-api/SKILL.md#public-signing-key-discovery).
 
+## Browser Refresh Routing
+
+Keep POST `<mount>/api/refresh_token`, `/api/refresh_session`, and `/api/logout`
+on the complete, unstripped portal route before any protected catch-all.
+`Portal.ServeHTTP` authenticates these operations using their own credentials,
+so expired access can renew or log out; other APIs stay protected. Forward the
+refresh/session headers, Origin/Fetch Metadata, cookies and body unchanged.
+Do not add retries, CORS allowances or gatekeeper suffix bypasses.
+
+Serve `<mount>/assets/js/refresh.js`, continuation, fresh login and logout
+confirmation through that same portal. Use top-level portal navigation for
+external application continuation; a GET link to `/api/refresh_token` is invalid.
+The embedded client does not renew arbitrary cross-origin applications.
+See the [browser HTTP/UI contract](../authentication-portal-api/references/browser-refresh.md).
+
 ## Portal Path Selection
 
 For a portal with `oidc provider`, the issuer's path is also the HTTP mount.

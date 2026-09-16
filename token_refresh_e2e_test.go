@@ -56,7 +56,7 @@ type caddyTokenRefreshFixture struct {
 
 // Every runtime field comes from the Caddyfile parser, including root mounts and
 // placeholders. No refresh configuration or authentication evidence is injected.
-func newCaddyTokenRefreshFixture(t *testing.T, mount, body, cookies string, lifetime int, cert, key string, roots *x509.CertPool) *caddyTokenRefreshFixture {
+func newCaddyTokenRefreshFixture(t *testing.T, mount, body, cookies string, lifetime int, cert, key string, roots *x509.CertPool, adapters ...func([]byte) []byte) *caddyTokenRefreshFixture {
 	t.Helper()
 	base := "https://" + lifecycleAddress(t)
 	crypto := newJWKSKeyFiles(t, "RSA", "refresh")
@@ -76,6 +76,7 @@ func newCaddyTokenRefreshFixture(t *testing.T, mount, body, cookies string, life
 	}
 	body = strings.ReplaceAll(body, "PUBLIC_ORIGIN", base)
 	body = strings.ReplaceAll(body, "BASE_PATH", mount)
+	cookies = strings.ReplaceAll(cookies, "PUBLIC_HOST", strings.TrimPrefix(base, "https://"))
 	input := fmt.Sprintf(`{
  admin off
  persist_config off
@@ -103,6 +104,9 @@ func newCaddyTokenRefreshFixture(t *testing.T, mount, body, cookies string, life
 	data, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte(input), nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, adapt := range adapters {
+		data = adapt(data)
 	}
 	if err := caddy.Load(data, true); err != nil {
 		t.Fatal(err)

@@ -64,7 +64,12 @@ choose `make test`, `make qtest`, or direct `go test` instead.
 
 Read the module's Go minimum and Caddy dependency from `go.mod`; inspect
 `Makefile` separately for the Caddy version used by `devbuild`. CI explicitly
-selects Go `1.26.8` with `GOTOOLCHAIN=local`; Python 3.9+ runs automation.
+selects Go `1.26.8` with `GOTOOLCHAIN=local` and Node 24; Python 3.9+ runs
+automation. The default Go suite requires Chrome/Chromium for Caddy browser
+refresh E2E. Set `AUTHCRUNCH_TEST_BROWSER` when autodetection cannot find the
+executable. Missing browser/Node prerequisites fail the test; no sibling UI
+build or npm dependency installation is needed. See
+[browser validation](../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository).
 
 `go.mod` and `go.sum` pin `github.com/greenpau/tested`; invoke `go tool tested`
 instead of a global executable. `make dep` downloads/verifies module

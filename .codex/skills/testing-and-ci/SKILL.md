@@ -155,6 +155,12 @@ Add or update these tests when directive parsing behavior changes:
   caps, native opt-in/off, capacity/replay/rotation limits and rejected mounts.
   Its adaptation/resolution fixture is `testcase_authenticate_with_token_refresh`.
   See [portal refresh](../configuration-authentication/references/token-refresh.md#validation).
+- `TestAuthnTokenRefreshDelegation` covers strict HTTP dispatch, protected APIs,
+  the exact embedded refresh asset and continuation pages. The normal Go suite
+  also runs `TestCaddyTokenRefreshBrowserE2E` with real Chrome/Chromium and Node 24;
+  `TestCaddyRefreshBrowserStartup` covers process readiness/cleanup failures.
+  See [browser validation](../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository)
+  for two-tab coordination, committed-response loss and prerequisite overrides.
 - `caddyfile_authn_misc_test.go`: authentication misc/cookie/crypto/UI paths.
 - `caddyfile_authz_test.go`: authorization policy parsing.
 - `caddyfile_identity*_test.go`: identity stores and providers.
@@ -214,7 +220,8 @@ wants debug artifacts kept.
 
 `.github/workflows/build.yml` runs on pushes/PRs to `main`, manual dispatch,
 and reusable workflow calls. It selects Ubuntu 24.04 and Go `1.26.8` with
-`GOTOOLCHAIN=local`, plus Python 3 and NSS utilities. It resolves a versioned
+`GOTOOLCHAIN=local`, plus Node 24, Python 3 and NSS utilities. It checks the
+runner's Google Chrome installation for browser E2E. It resolves a versioned
 artifact identity, runs `make dep` and `make ci-check`, and checks that
 validation did not modify tracked source or add untracked source files.
 
@@ -235,8 +242,10 @@ tag selection, artifact naming, packaging checks, and publication scope. The
 release workflow calls this reusable gate before GoReleaser.
 
 `make ci-check` serializes version validation, Python automation fixtures, the
-full Go report lifecycle, and the binary build, even under `make -j`. It has no
-browser test step; this repository's wrapper does not own go-authcrunch's UI.
+full Go report lifecycle, and the binary build, even under `make -j`. The full
+Go suite includes real-browser refresh E2E through Caddy. It serves the selected
+go-authcrunch embedded UI rather than building or running tests in the sibling
+checkout.
 The existing `make linter` remains a placeholder and is not a gate.
 
 When changing tested or its invocation, run `make test-automation`. It exercises

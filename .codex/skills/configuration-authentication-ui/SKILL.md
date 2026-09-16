@@ -77,6 +77,44 @@ Do not invent UI directives from authcrunch struct fields unless
 `caddyfile_authn_ui.go` parses them. The Caddyfile parser does not currently
 support a top-level `ui title` or `allow settings for role` subdirective.
 
+## Refresh-Aware Custom Templates
+
+The built-in portal and session templates already load the matching embedded
+client. Custom portal templates must retain its conditional inclusion:
+
+```gotemplate
+{{ if .Data.refresh_enabled }}
+<script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}"
+        data-base="{{ .ActionEndpoint }}"
+        data-session="{{ .Data.refresh_session }}"
+        data-expires="{{ .Data.refresh_expires }}"></script>
+{{ end }}
+```
+
+Custom session continuation/confirmation templates use the action metadata:
+
+```gotemplate
+<p id="session-message">{{ .Message }}</p>
+{{ if eq .Data.session_action "logout" }}
+<button id="session-logout" type="button">Sign out</button>
+{{ end }}
+<a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">Sign in</a>
+<script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}"
+        data-base="{{ .ActionEndpoint }}"
+        data-action="{{ .Data.session_action }}"
+        data-next="{{ .Data.session_next }}"></script>
+```
+
+These are fragments inside the corresponding HTML template, not Caddyfile
+syntax. Keep the served `refresh.js` name stable and use the library's
+`AuthCrunchSession.refresh()`/`.logout()` for custom controls. Do not substitute
+an independent client, inline credentials or mark untrusted return URLs safe.
+Session/expiry attributes are hints; the coordinator verifies signed access
+state before using them. Preserve the continuation page's CSP and no-store
+headers and offer fresh login when browser coordination is unavailable.
+See [browser refresh](../authentication-portal-api/references/browser-refresh.md)
+for Web Locks, pending-state recovery, top-level navigation and Caddy TLS tests.
+
 ## Languages
 
 Use `language <id>` inside the `ui` block for portal localization:

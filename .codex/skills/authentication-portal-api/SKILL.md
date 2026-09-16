@@ -81,6 +81,11 @@ or `<base>/api/refresh_session` with the cookie jar, exact configured HTTPS
 `Origin`, and `X-Authcrunch-Refresh: 1`. Disallowed fetch metadata, origins or
 mixed transports fail closed. Responses preserve `Cache-Control: no-store`.
 A valid refresh cookie can rotate despite an expired or malformed access token.
+The browser coordinator also sends the optional rotation precondition
+`X-Authcrunch-Refresh-Session`; forward it unchanged. Session lookup is
+browser-only and must never recover an uncertain rotation. See
+[browser refresh through Caddy](references/browser-refresh.md) for continuation,
+coordination, strict request parsing, fresh-login recovery and real Chrome tests.
 
 Native clients require `body transport enabled` and send
 `refresh_transport: body` at every login checkpoint. Send no Cookie, Origin or

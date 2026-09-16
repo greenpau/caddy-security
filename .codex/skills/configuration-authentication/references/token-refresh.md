@@ -222,6 +222,10 @@ revokes the whole family. Serialize rotations and do not automatically retry an
 ambiguous refresh response. API-key, Basic, upstream OAuth/OIDC/SAML, and LDAP
 logins remain access-only; native body credentials require explicit opt-in.
 
+For browser continuation, Web Locks/storage coordination, SID preconditions,
+GET confirmation and POST logout, use the
+[browser HTTP/UI contract](../../authentication-portal-api/references/browser-refresh.md).
+
 ## Validation
 
 - `caddyfile_authn_token_refresh_test.go`: all fields, defaults/disabled behavior,

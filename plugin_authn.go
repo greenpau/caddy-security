@@ -130,9 +130,11 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
-	// Preserve the canonical issuer path and the portal's response. ServeHTTP
-	// owns OIDC dispatch before access-token checks/content negotiation and
-	// completes OP login only after the portal's authentication checkpoints.
+	// Preserve the complete mount, body, cookies and headers. ServeHTTP owns
+	// OIDC dispatch and refresh/session/logout authentication before ordinary
+	// access-token gates, so expired access can renew or log out. It also serves
+	// the matching browser coordinator and continuation UI. Do not preauthorize,
+	// rewrite, retry or broaden CORS for these requests in Caddy middleware.
 	return m.portal.ServeHTTP(r.Context(), w, r, rr)
 }
 

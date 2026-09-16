@@ -175,6 +175,13 @@ reconstruct authentication evidence in Caddy middleware. Preserve the portal's
 status, headers and body; see the
 [OIDC HTTP contract](../configuration-oauth-applications/references/oidc-provider.md#http-mount-and-protocol-contract).
 
+The same dispatch owns refresh/session/logout credential authentication before
+access-token gates and serves the matching embedded browser client. Preserve
+headers (including the SID precondition), strict JSON failures, cookie deletion,
+no-store and continuation CSP. Never add automatic rotation retries or recover
+uncertainty with session lookup. See the
+[browser refresh contract](../authentication-portal-api/references/browser-refresh.md).
+
 When adding metadata, check presence before type assertions unless the upstream
 authcrunch contract guarantees the field. Keep metadata values string-based for
 Caddy compatibility.
