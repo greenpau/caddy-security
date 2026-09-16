@@ -130,6 +130,9 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
+	// Preserve the canonical issuer path and the portal's response. ServeHTTP
+	// owns OIDC dispatch before access-token checks/content negotiation and
+	// completes OP login only after the portal's authentication checkpoints.
 	return m.portal.ServeHTTP(r.Context(), w, r, rr)
 }
 

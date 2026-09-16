@@ -133,6 +133,21 @@ Add or update these tests when directive parsing behavior changes:
   realms and an unselected realm, realm identity and session revocation when
   switching realms in one browser, independent issuers/cookies, signed token
   exchanges, refresh alignment, and continued service after rejected reloads.
+- `plugin_authn_test.go`: `TestAuthnOIDCDelegation` compares the middleware's
+  response and canonical URL with direct portal dispatch. `oidc_rp_test.go`
+  checks the independent RSA relying-party verifier against corrupted signatures,
+  claims and public key sets. `oidc_rp_response_test.go` checks the RP's callback
+  and form parsing against ambiguous parameters, incorrect POST forms and
+  weakened CSP; the E2E client submits the returned consent action and controls.
+- `TestCaddyOIDCRelyingPartyE2E`: bounded real Caddy TLS at root/nested mounts,
+  discovery, password/TOTP, consent, client authentication, prompts/max_age,
+  code+S256, form-post CSP, UserInfo, replay, revocation/logout, token purposes,
+  CORS and unsigned request objects. `oidc_loopback_e2e_test.go` is exercised
+  by this parent and requires actual IPv4/IPv6 ephemeral callback listeners.
+  `TestCaddyRegistrationE2E` covers process restart at the same issuer URL,
+  stable client/key identity, secret rotation and retained rollover verification.
+  Use the [OIDC validation map](../configuration-oauth-applications/references/oidc-provider.md#validation-surfaces)
+  for the full test group and limits; local E2E is not Foundation certification.
 - `caddyfile_authn_misc_test.go`: authentication misc/cookie/crypto/UI paths.
 - `caddyfile_authz_test.go`: authorization policy parsing.
 - `caddyfile_identity*_test.go`: identity stores and providers.

@@ -40,7 +40,8 @@ An application declares a client. A portal enables an OpenID Provider (OP) by
 selecting those clients in an `oidc provider` block. See
 [Portal OpenID Provider](references/oidc-provider.md) for the one-block contract,
 all settings/defaults, deferred attachment, realm selection, issuer/cookie
-isolation, JSON restoration, and Caddy unit/E2E coverage. See
+isolation, HTTP mounting, protocol capabilities, native callbacks, JSON
+restoration, and Caddy TLS relying-party coverage. See
 [Private provisioning and activation](references/private-provisioning.md) for
 the tested create/load/rotate workflow, storage security, candidate activation,
 and key rollover. External login through `oauth identity provider` uses
@@ -102,8 +103,11 @@ oauth application <nickname> {
   case, percent encoding, query ordering, and explicit ports. HTTPS is required
   except for public native clients using HTTP with literal `127.0.0.1` or
   `[::1]`. Hostname loopback and private URI schemes are not supported. The
-  provider's native-loopback port exception does not normalize registration
-  strings; full protocol exchanges are separate integration work.
+  provider's native-loopback port exception changes only the authorization
+  port for these literal HTTP addresses; token redemption must repeat the exact
+  actual redirect. It does not authorize new CORS origins. Real IPv4/IPv6
+  listener coverage lives in `oidc_loopback_e2e_test.go`, exercised by
+  `TestCaddyOIDCRelyingPartyE2E`.
 
 ## Why One Callback per Statement
 

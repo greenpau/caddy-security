@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
@@ -26,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -41,7 +39,6 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 )
 
@@ -195,10 +192,11 @@ func TestCaddyRegistrationE2E(t *testing.T) {
 	}
 	// Keep the RP's original credentials in the same private store across actual
 	// process restarts. The first process stages/activates v2; the second loads it.
+	address := lifecycleAddress(t)
 	for _, stage := range []string{"initial", "restart"} {
 		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Second)
 		cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyRegistrationProcess$", "-test.v", "-test.timeout=90s")
-		cmd.Env = append(os.Environ(), "SECURITY_REGISTRATION_STAGE="+stage, "SECURITY_REGISTRATION_STORE="+cfg.Path,
+		cmd.Env = append(os.Environ(), "SECURITY_REGISTRATION_STAGE="+stage, "SECURITY_REGISTRATION_STORE="+cfg.Path, "SECURITY_REGISTRATION_ADDRESS="+address,
 			"XDG_DATA_HOME="+dir, "XDG_CONFIG_HOME="+dir)
 		cmd.WaitDelay = 5 * time.Second
 		output, err := cmd.CombinedOutput()
@@ -484,7 +482,10 @@ func TestCaddyRegistrationProcess(t *testing.T) {
 	}
 	keyName, _ := registrationFilename("key", "login", "k1")
 	certFile, tlsKeyFile, roots := cookieTLSCertificate(t)
-	address, admin := lifecycleAddress(t), lifecycleAddress(t)
+	address, admin := os.Getenv("SECURITY_REGISTRATION_ADDRESS"), lifecycleAddress(t)
+	if address == "" {
+		t.Fatal("missing persistent issuer address")
+	}
 	base := "https://" + address
 	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}, DisableKeepAlives: true}
 	defer transport.CloseIdleConnections()
@@ -546,6 +547,7 @@ https://%s {
 	}
 	keyFiles := fmt.Sprintf("%q", filepath.Join(cfg.Path, keyName))
 	data := config(currentRevision, keyFiles)
+	var lastRP registrationRPResult
 	checkExchange := func(revision, rejectedSecret string) string {
 		client.Jar, _ = cookiejar.New(nil)
 		if lifecycleLogin(t, client, base) == "" {
@@ -555,7 +557,11 @@ https://%s {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return registrationRPExchange(t, client, base+"/auth", registration.Client, rejectedSecret).keyID
+		if registration.Client.ClientID != first.Client.ClientID {
+			t.Fatal("rotation or restart changed the relying party's client identity")
+		}
+		lastRP = registrationRPExchange(t, client, base+"/auth", registration.Client, rejectedSecret)
+		return lastRP.keyID
 	}
 	before, _ := json.Marshal(registrationSnapshot(t, cfg.Path))
 	var kid string
@@ -604,8 +610,22 @@ https://%s {
 	if !bytes.Equal(before, after) {
 		t.Fatal("adapt/validate/reload wrote private storage")
 	}
+	// Compare the public RP-observed identity across distinct OS processes at
+	// the same issuer URL, in addition to checking immutable backing files.
+	evidencePath := filepath.Join(filepath.Dir(cfg.Path), "rp-persistence.json")
+	evidence, err := json.Marshal(map[string]string{"issuer": base + "/auth", "kid": kid, "client_id": first.Client.ClientID})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if stage == "restart" {
+		previous, err := os.ReadFile(evidencePath)
+		if err != nil || !bytes.Equal(previous, evidence) {
+			t.Fatal("restart changed RP-observed issuer, key or client identity")
+		}
 		return
+	}
+	if err := os.WriteFile(evidencePath, evidence, 0600); err != nil {
+		t.Fatal(err)
 	}
 	// Duplicate members could decode to the same normalized digest as the
 	// original registration. The raw persisted record must still fail closed.
@@ -813,6 +833,7 @@ https://%s {
 	if got := checkExchange("v2", first.Client.ClientSecret); got != kid {
 		t.Fatal("secret rotation changed provider key")
 	}
+	beforeRollover := lastRP
 	// Explicit key rollover creates a new provider-owned key. First signs; both
 	// keys remain in JWKS until the operator deliberately retires the previous key.
 	if _, err := provisionRegistration(t.Context(), &provisioningInput{store: cfg}, "key", "login", "k2", ""); err != nil {
@@ -827,8 +848,12 @@ https://%s {
 		t.Fatal("deliberate key rollover did not change signer")
 	}
 	_, _, keys := registrationHTTP(t, client, "GET", base+"/auth/oidc/jwks", nil, nil)
-	if !bytes.Contains(keys, []byte(kid)) {
-		t.Fatal("rollover removed old public verification key")
+	var rolloverKeys oidcRPKeys
+	if json.Unmarshal(keys, &rolloverKeys) != nil || len(rolloverKeys.Keys) != 2 {
+		t.Fatal("rollover JWKS must retain both keys")
+	}
+	if _, oldKid, err := verifyOIDCRPToken(beforeRollover.idToken, beforeRollover.accessToken, base+"/auth", first.Client.ClientID, "rp-nonce", rolloverKeys, time.Now()); err != nil || oldKid != kid {
+		t.Fatal("retained rollover key no longer verifies an already issued ID token")
 	}
 	// Return to k1 for the second process, proving selection is configuration-owned.
 	if err := caddy.Load(candidate, true); err != nil {
@@ -869,6 +894,7 @@ func registrationHTTP(t *testing.T, client *http.Client, method, target string, 
 
 type registrationRPResult struct {
 	keyID, subject, email string
+	idToken, accessToken  string
 }
 
 func registrationRPExchange(t *testing.T, client *http.Client, issuer string, registration *oidc.ClientConfig, rejectedSecret string) registrationRPResult {
@@ -876,15 +902,12 @@ func registrationRPExchange(t *testing.T, client *http.Client, issuer string, re
 	const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 	challenge := sha256.Sum256([]byte(verifier))
 	query := url.Values{"client_id": {registration.ClientID}, "response_type": {"code"}, "redirect_uri": {registration.RedirectURIs[0]}, "scope": {"openid profile email"}, "state": {"rp-state"}, "nonce": {"rp-nonce"}, "code_challenge_method": {"S256"}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}}
-	status, headers, _ := registrationHTTP(t, client, "GET", issuer+"/oidc/authorize?"+query.Encode(), nil, nil)
-	if status != 302 && status != 303 {
-		t.Fatalf("RP authorization status %d", status)
+	status, headers, body := registrationHTTP(t, client, "GET", issuer+"/oidc/authorize?"+query.Encode(), nil, nil)
+	code, err := verifyOIDCRPCallback(oidcRPResponse{status: status, header: headers, body: body}, query, issuer, "")
+	if err != nil {
+		t.Fatal(err)
 	}
-	callback, err := url.Parse(headers.Get("Location"))
-	if err != nil || callback.Host != "rp.example.test" || callback.Query().Get("state") != "rp-state" || callback.Query().Get("code") == "" {
-		t.Fatal("RP did not receive the authorization code/state")
-	}
-	form := url.Values{"grant_type": {"authorization_code"}, "code": {callback.Query().Get("code")}, "redirect_uri": {registration.RedirectURIs[0]}, "code_verifier": {verifier}}
+	form := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {registration.RedirectURIs[0]}, "code_verifier": {verifier}}
 	auth := func(secret string) http.Header {
 		return http.Header{"Authorization": {"Basic " + base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(registration.ClientID)+":"+url.QueryEscape(secret)))}}
 	}
@@ -892,7 +915,7 @@ func registrationRPExchange(t *testing.T, client *http.Client, issuer string, re
 	if status != 401 {
 		t.Fatalf("old/incorrect secret was not rejected: %d", status)
 	}
-	status, _, body := registrationHTTP(t, client, "POST", issuer+"/oidc/token", form, auth(registration.ClientSecret))
+	status, _, body = registrationHTTP(t, client, "POST", issuer+"/oidc/token", form, auth(registration.ClientSecret))
 	if status != 200 {
 		t.Fatalf("RP code exchange status %d", status)
 	}
@@ -907,47 +930,19 @@ func registrationRPExchange(t *testing.T, client *http.Client, issuer string, re
 	if status != 200 {
 		t.Fatalf("JWKS status %d", status)
 	}
-	var jwks struct {
-		Keys []struct {
-			Kid string `json:"kid"`
-			N   string `json:"n"`
-			E   string `json:"e"`
-		} `json:"keys"`
-	}
-	if err := json.Unmarshal(body, &jwks); err != nil {
+	var keys oidcRPKeys
+	if err := json.Unmarshal(body, &keys); err != nil {
 		t.Fatal(err)
 	}
-	var kid string
-	parsed, err := jwt.Parse(tokens.IDToken, func(token *jwt.Token) (any, error) {
-		kid, _ = token.Header["kid"].(string)
-		for _, key := range jwks.Keys {
-			if key.Kid == kid {
-				n, err := base64.RawURLEncoding.DecodeString(key.N)
-				if err != nil {
-					return nil, err
-				}
-				e, err := base64.RawURLEncoding.DecodeString(key.E)
-				if err != nil {
-					return nil, err
-				}
-				return &rsa.PublicKey{N: new(big.Int).SetBytes(n), E: int(new(big.Int).SetBytes(e).Int64())}, nil
-			}
-		}
-		return nil, fmt.Errorf("missing RP signing key")
-	}, jwt.WithIssuer(issuer), jwt.WithAudience(registration.ClientID), jwt.WithValidMethods([]string{"RS256"}), jwt.WithExpirationRequired())
-	if err != nil || !parsed.Valid {
-		t.Fatal("RP rejected ID-token signature or claims")
-	}
-	claims := parsed.Claims.(jwt.MapClaims)
-	subject, ok := claims["sub"].(string)
-	if claims["nonce"] != "rp-nonce" || !ok || subject == "" {
-		t.Fatal("RP ID-token nonce/subject missing")
+	claims, kid, err := verifyOIDCRPToken(tokens.IDToken, tokens.AccessToken, issuer, registration.ClientID, "rp-nonce", keys, time.Now())
+	if err != nil {
+		t.Fatal(err)
 	}
 	status, _, body = registrationHTTP(t, client, "GET", issuer+"/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + tokens.AccessToken}})
 	var userinfo map[string]any
-	if status != 200 || json.Unmarshal(body, &userinfo) != nil || userinfo["sub"] != claims["sub"] {
+	if status != 200 || json.Unmarshal(body, &userinfo) != nil || userinfo["sub"] != claims.Subject {
 		t.Fatal("RP userinfo failed or subject differs")
 	}
 	email, _ := userinfo["email"].(string)
-	return registrationRPResult{keyID: kid, subject: subject, email: email}
+	return registrationRPResult{keyID: kid, subject: claims.Subject, email: email, idToken: tokens.IDToken, accessToken: tokens.AccessToken}
 }

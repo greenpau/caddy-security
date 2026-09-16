@@ -214,6 +214,7 @@ func TestCaddyOIDCProviderProcess(t *testing.T) {
 	for _, scenario := range []string{"fresh browser", "same browser"} {
 		newJar(t)
 		var previousSession string
+		var previousGrant string
 		for _, realm := range []string{"employees", "contractors", "guests"} {
 			t.Run("realm/"+scenario+"/"+realm, func(t *testing.T) {
 				if scenario == "fresh browser" {
@@ -230,6 +231,8 @@ func TestCaddyOIDCProviderProcess(t *testing.T) {
 					if value == previousSession {
 						t.Fatal("realm switch retained the previous OIDC session")
 					}
+					status, headers, body := registrationHTTP(t, client, "GET", base+"/auth/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + previousGrant}})
+					oidcRPResponse{status: status, header: headers, body: body}.failure(t, 401, "invalid_token")
 				}
 				previousSession = value
 				if realm == "guests" {
@@ -247,6 +250,7 @@ func TestCaddyOIDCProviderProcess(t *testing.T) {
 					t.Fatal("OIDC session cookie has unsafe scope/attributes")
 				}
 				identity := checkExchange(t, "/auth", "website")
+				previousGrant = identity.accessToken
 				if identity.email != "alice@"+realm+".example.test" {
 					t.Fatal("OIDC userinfo returned an identity from the wrong realm")
 				}
@@ -426,9 +430,65 @@ oauth identity provider upstream {
 	if jarCookie(t, client.Jar, base+"/auth", "SECOND_OIDC_SESSION_ID") != "" || jarCookie(t, client.Jar, base+"/auth", "FIRST_OIDC_SESSION_ID") != firstCookie {
 		t.Fatal("second provider login changed first provider session")
 	}
-	if first, second := checkExchange(t, "/auth", "website"), checkExchange(t, "/other", "otherapp"); first.keyID == second.keyID {
+	first, second := checkExchange(t, "/auth", "website"), checkExchange(t, "/other", "otherapp")
+	if first.keyID == second.keyID {
 		t.Fatal("independent issuers shared signing keys")
 	}
+	for _, tc := range []struct {
+		mount, clientID, cookie, foreignSession string
+		foreign                                 registrationRPResult
+	}{
+		{"/other", "otherapp-client", "SECOND_OIDC_SESSION_ID", firstCookie, first},
+		{"/auth", "website-client", "FIRST_OIDC_SESSION_ID", jarCookie(t, client.Jar, base+"/other", "SECOND_OIDC_SESSION_ID"), second},
+	} {
+		status, _, _ := registrationHTTP(t, client, "GET", base+tc.mount+"/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + tc.foreign.accessToken}})
+		if status != 401 {
+			t.Fatal("one issuer accepted the other issuer's grant")
+		}
+		status, _, data := registrationHTTP(t, client, "GET", base+tc.mount+"/oidc/jwks", nil, nil)
+		var keys oidcRPKeys
+		if status != 200 || json.Unmarshal(data, &keys) != nil {
+			t.Fatal("issuer JWKS unavailable")
+		}
+		for _, key := range keys.Keys {
+			if key["kid"] == tc.foreign.keyID {
+				t.Fatal("issuer published another portal's key")
+			}
+		}
+		query := url.Values{"client_id": {tc.clientID}, "redirect_uri": {"https://rp.example.test/callback"}, "response_type": {"code"}, "scope": {"openid"}, "prompt": {"none"}, "code_challenge_method": {"S256"}, "code_challenge": {strings.Repeat("A", 43)}}
+		replay := *client
+		replay.Jar = nil
+		status, headers, _ := registrationHTTP(t, &replay, "GET", base+tc.mount+"/oidc/authorize?"+query.Encode(), nil, http.Header{"Cookie": {tc.cookie + "=" + tc.foreignSession}})
+		location, err := url.Parse(headers.Get("Location"))
+		if err != nil || status != 302 || location.Query().Get("error") != "login_required" || location.Query().Get("code") != "" {
+			t.Fatal("foreign session was accepted under the target issuer's cookie name")
+		}
+	}
+	// A code from the first provider is unknown to the second even when the
+	// caller authenticates with the second provider's own selected credentials.
+	rp := &oidcRPFixture{client: client, base: base, mount: "/auth", issuer: base + "/auth"}
+	rp.discover(t)
+	params := rp.authorization("website-client")
+	params.Set("redirect_uri", "https://rp.example.test/callback")
+	code := rp.callback(t, rp.authorize(t, params), params, "")
+	form := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {params.Get("redirect_uri")}, "code_verifier": {oidcRPVerifier}}
+	rp.request(t, "POST", base+"/other/oidc/token", form, oidcRPAuth("otherapp-client", form)).failure(t, 400, "invalid_grant")
+	rp.tokens(t, rp.exchange(t, "website-client", code, params.Get("redirect_uri"), oidcRPVerifier), params)
+	// Logging out one portal must not revoke the other's existing access grant.
+	status, _, _ := registrationHTTP(t, client, "GET", base+"/other/logout", nil, nil)
+	if status != 302 {
+		t.Fatalf("second portal logout status %d", status)
+	}
+	status, _, _ = registrationHTTP(t, client, "GET", base+"/other/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + second.accessToken}})
+	if status != 401 {
+		t.Fatal("second portal logout did not revoke its own grant")
+	}
+	status, _, _ = registrationHTTP(t, client, "GET", base+"/auth/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + first.accessToken}})
+	if status != 200 {
+		t.Fatal("second portal logout revoked first portal grant")
+	}
+	checkExchange(t, "/auth", "website")
+	login(t, "/other", "contractors")
 	for _, tc := range []struct{ mount, clientID string }{{"/auth", "otherapp-client"}, {"/other", "website-client"}} {
 		query := url.Values{"client_id": {tc.clientID}, "redirect_uri": {"https://rp.example.test/callback"}, "response_type": {"code"}, "scope": {"openid"}, "code_challenge_method": {"S256"}, "code_challenge": {strings.Repeat("A", 43)}}
 		status, headers, _ := registrationHTTP(t, client, "GET", base+tc.mount+"/oidc/authorize?"+query.Encode(), nil, nil)
@@ -477,7 +537,41 @@ oauth identity provider upstream {
 	}
 	newJar(t)
 	login(t, "/auth", "employees")
-	checkExchange(t, "/auth", "website")
+	t.Run("refresh browser logout", func(t *testing.T) {
+		grant := checkExchange(t, "/auth", "website")
+		oldSession := jarCookie(t, client.Jar, base+"/auth", "FIRST_OIDC_SESSION_ID")
+		status, _, body := registrationHTTP(t, client, "GET", base+"/auth/logout", nil, nil)
+		if status != 200 || !bytes.Contains(body, []byte("Sign out")) || oldSession == "" {
+			t.Fatal("refresh browser logout did not require confirmation")
+		}
+		headers := http.Header{"Authorization": {"Bearer " + grant.accessToken}}
+		status, _, _ = registrationHTTP(t, client, "GET", base+"/auth/oidc/userinfo", nil, headers)
+		if status != 200 {
+			t.Fatal("viewing logout confirmation revoked the OP grant")
+		}
+		req, err := http.NewRequestWithContext(t.Context(), "POST", base+"/auth/api/logout", strings.NewReader("{}"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header = http.Header{"Content-Type": {"application/json"}, "Origin": {base}, "X-Authcrunch-Refresh": {"1"}}
+		response, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		var result map[string]bool
+		if response.StatusCode != 200 || json.NewDecoder(response.Body).Decode(&result) != nil || !result["logged_out"] {
+			t.Fatal("refresh browser logout failed")
+		}
+		status, _, _ = registrationHTTP(t, client, "GET", base+"/auth/oidc/userinfo", nil, headers)
+		if status != 401 {
+			t.Fatal("completed refresh browser logout retained the OP grant")
+		}
+		loginRequired(t, client, nil)
+		replay := *client
+		replay.Jar = nil
+		loginRequired(t, &replay, http.Header{"Cookie": {"FIRST_OIDC_SESSION_ID=" + oldSession}})
+	})
 	discover(t, "/other")
 	// Restore native JSON snapshots through real Caddy construction as well.
 	native := mutate(t, two, func(app *App) {

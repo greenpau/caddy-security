@@ -156,6 +156,13 @@ object, attach `util.GetRequestID(r)`, and delegate to the portal. For
 `authorize`, delegate to the gatekeeper and only translate successful
 authcrunch authorization data into Caddy `caddyauth.User` metadata.
 
+For OP integration, retain the complete canonical request URL when calling
+`Portal.ServeHTTP`. It owns OIDC dispatch and completed-login evidence. Do not
+strip the issuer mount, preauthorize OP endpoints, call `CompleteLogin`, or
+reconstruct authentication evidence in Caddy middleware. Preserve the portal's
+status, headers and body; see the
+[OIDC HTTP contract](../configuration-oauth-applications/references/oidc-provider.md#http-mount-and-protocol-contract).
+
 When adding metadata, check presence before type assertions unless the upstream
 authcrunch contract guarantees the field. Keep metadata values string-based for
 Caddy compatibility.

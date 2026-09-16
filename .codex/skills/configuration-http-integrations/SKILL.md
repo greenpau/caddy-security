@@ -128,6 +128,23 @@ There is no discovery enable directive. See
 
 ## Portal Path Selection
 
+For a portal with `oidc provider`, the issuer's path is also the HTTP mount.
+Route its exact path and descendants through `authenticate`, before a protected
+catch-all, using the same segment-boundary pattern above. For example, an issuer
+`https://login.example.com/tenant/auth` requires `/tenant/auth` and
+`/tenant/auth/*`; a dedicated root issuer uses a root `authenticate` route.
+Use `route` or a non-stripping `handle`, never `handle_path`, `uri strip_prefix`,
+or a generic path handler that removes the issuer mount.
+
+Discovery at `<mount>/.well-known/openid-configuration` and all `<mount>/oidc/*`
+endpoints, including `/oidc/continue` for login/consent, belong to the portal.
+Do not add gatekeeper bypass rules or manually dispatch an OP adapter. AuthCrunch
+handles OP requests before its ordinary access-token gates and HTML negotiation.
+`<mount>/.well-known/jwks.json` publishes portal access-token keys;
+`<mount>/oidc/jwks` publishes separate OP ID-token keys. See the
+[OIDC protocol contract](../configuration-oauth-applications/references/oidc-provider.md#http-mount-and-protocol-contract)
+for capabilities, native callbacks, and TLS relying-party tests.
+
 The authorization policy's `set auth url` must align with the path where the
 authentication portal is actually served:
 
