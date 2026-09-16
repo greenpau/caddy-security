@@ -37,7 +37,7 @@ are runtime authentication/transport contracts, not identity-store capabilities.
 
 `caddyfile_authn_token_refresh.go` forwards encoded body statements to
 `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives` from the
-pinned go-authcrunch v1.2.4. Its result is `*authn.TokenRefreshConfig`, assigned to
+pinned go-authcrunch v1.2.5. Its result is `*authn.TokenRefreshConfig`, assigned to
 `PortalConfig.RefreshTokens` before portal validation. The engine package's Go
 identifier is `tokenrefresh`; `authn.RefreshConfig` and `pkg/authn/refresh` are
 obsolete. Keep refresh consumer filenames qualified with `token_refresh`.

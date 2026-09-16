@@ -147,10 +147,20 @@ Known fixture outcomes: `testcase_authenticate_malformed`,
 `testcase_security_oauth_application_boundary_malformed`,
 `testcase_security_oauth_application_enclosing_malformed`,
 `testcase_security_oauth_application_header_malformed`, and
-`testcase_security_oauth_application_empty` intentionally fail adaptation;
+`testcase_security_oauth_application_empty`,
+`testcase_authenticate_with_oidc_noncanonical_issuer`,
+`testcase_authenticate_with_oidc_unterminated`,
+`testcase_security_oauth_registration_legacy`, and
+`testcase_security_oauth_registration_malformed` intentionally fail adaptation;
 `testcase_security_with_secrets` requires an external module absent from the
 normal test binary; `testcase_authenticate_malformed_replacement` adapts but
 fails runtime resolution. Check test registrations if these outcomes change.
+`testcase_security_oauth_registration_store` needs
+`SECURITY_TEST_REGISTRATION_PATH` set to an isolated private store containing
+the `website` application's `v1` revision. Its registered Go test provisions
+that fixture automatically; a standalone binary audit must prepare the same
+input with the private provisioning commands. Missing fixture data is not a
+grammar rejection.
 
 Run the skill-creator validator for each changed skill, verify relative links
 and `agents/openai.yaml`, then format changed Go comments and Caddyfiles.
@@ -191,3 +201,10 @@ The following were verified with go-authcrunch v1.2.3:
   repeating it replaces the prior address. SSO apps require `cert`, a private
   key, and a supported driver at validation; Caddy requires a location even
   for disabled SSO definitions.
+
+The v1.2.4 → v1.2.5 source comparison leaves delegated Caddyfile grammar,
+authclient, refresh and OIDC implementations unchanged. It changes authorization
+path interpretation and token path wildcard matching. Follow
+[authorization path behavior](../../configuration-authorization/SKILL.md#policy-options)
+and its provider/TLS regressions when upgrading: successful adaptation alone
+cannot establish the stricter request-time authorization contract.

@@ -59,6 +59,18 @@ before login. Decoded strings must be valid UTF-8, including YAML binary values;
 credentials are never silently converted when sent as JSON. No imports,
 environment expansion, or `~` expansion occur.
 
+Authentication fields are encoded and passed to the dedicated
+`pkg/authclient/parser.NewAuthenticationClientConfigFromDirectives`; its typed
+config owns defaults and semantic validation. Nonempty whitespace-only and
+multiline authentication values fail with redacted errors. Empty optional YAML
+scalars and zero TOTP integers retain defaults. Nonempty string values are always
+CSV-quoted at the shared parser boundary to preserve trailing tabs and Unicode
+whitespace; the host must neither corrupt raw secrets nor repair invalid options
+by trimming them. CLI filesystem fields stay
+separate. See [JSON/native interoperability](../../authentication-portal-api/references/native-client.md)
+for cookie-mode wire compatibility, native opt-in, response metadata and explicit
+renewal; this is separate from an OAuth public relying party.
+
 For API-key login, use `base_url`, `realm`, and `api_key`; omit username,
 password, and TOTP settings. Missing password/TOTP input uses a hidden terminal
 prompt; automation supplies it in the private config. Prompts and HTTP

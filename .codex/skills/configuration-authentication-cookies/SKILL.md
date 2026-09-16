@@ -10,7 +10,7 @@ description: "caddy-security authentication portal cookie Caddyfile configuratio
 Portal cookie statements are collected in `caddyfile_authn.go`. The thin
 translation in `caddyfile_authn_cookie.go` preserves legacy Caddy spellings;
 `pkg/authn/cookie/parser.NewCookieConfigFromDirectives` in the pinned
-AuthCrunch v1.2.4 owns grammar, normalization, duplicates, and validation.
+AuthCrunch v1.2.5 owns grammar, normalization, duplicates, and validation.
 `PortalConfig.ConfigureCookies` installs one complete validated snapshot.
 It replaces previous cookie settings, rather than merging individual lines.
 Portal construction wires the final access name into its grantor and validator.

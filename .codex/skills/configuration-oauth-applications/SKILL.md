@@ -29,7 +29,7 @@ After collection, also require the enclosing `security` dispenser's nesting
 to return to zero. Caddy's initial brace counting treats quoted `"}"` values
 as structural, so a child parser can consume the enclosing closing brace;
 EOF must not turn that incomplete security block into a valid configuration.
-The published go-authcrunch v1.2.4 selected in `go.mod` supports these APIs and
+The published go-authcrunch v1.2.5 selected in `go.mod` supports these APIs and
 repeated singular `redirect_uri` statements. No local replacement is required;
 follow the [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development)
 when changing the selected version.

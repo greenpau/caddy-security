@@ -102,6 +102,15 @@ task.
 
 ## Local go-authcrunch Development
 
+For an explicitly requested published version, use a targeted upgrade from this
+repository, for example `go get github.com/greenpau/go-authcrunch@v1.2.5`, then
+`go mod tidy` and `go mod verify`. Inspect the dependency diff and keep the
+versioned replacement examples in `CONTRIBUTING.md` and the xcaddy argument in
+`Makefile` aligned. Do not use `make upgrade` for a single-module request: it
+updates all dependencies. `make sync` takes its version from the sibling's
+`VERSION`, which may differ from the requested release. Confirm the selected
+module's `Dir` and absence of an unintended `Replace` before validation.
+
 Development in `caddy-security` often connects this module to a local
 `github.com/greenpau/go-authcrunch` checkout that sits next to the
 `caddy-security` directory in the filesystem tree. If `caddy-security` is at

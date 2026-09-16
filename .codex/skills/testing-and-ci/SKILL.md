@@ -112,6 +112,25 @@ resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
 
+`TestAuthzPathDelegation` and `TestCaddyAuthorizationPathE2E` cover the v1.2.5
+authorization path contract through the provider and real Caddy TLS. Run them
+when changing gatekeeper delegation, bypasses, path claims or the selected
+dependency. They check decoded/cleaned paths before and after identity caching,
+literal wildcard grants, downstream reachability and unchanged request URIs
+over HTTP/1.1 and HTTP/2; see
+[authorization behavior](../configuration-authorization/SKILL.md#policy-options).
+
+`TestAuthenticationClientConfigAdapter` covers the existing outbound YAML adapter
+and the dedicated public authclient parser. `TestAuthenticationClientConfigWhitespace`
+checks exact credential preservation and prevents silently repaired options;
+`TestAuthenticationClientLegacyWire`
+checks omission of the refresh extension with a strict legacy schema.
+`TestCaddyAuthenticationClientE2E` covers password/MFA and API-key JSON login
+through actual Caddy TLS with admin/profile APIs disabled, private credential
+reopening, independent resource authorization, explicit native refresh/logout,
+and the existing CLI consumer. See the
+[native interoperability test map](../authentication-portal-api/references/native-client.md#caddy-validation).
+
 Runtime ownership unit tests live in `app_lifecycle_test.go`.
 `TestCaddyLifecycleE2E` in `app_lifecycle_e2e_test.go` launches a bounded child
 process with real Caddy listeners and reloads; `TestCaddyLifecycleProcess` is

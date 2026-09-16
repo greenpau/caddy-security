@@ -62,7 +62,7 @@ try:
             time.sleep(0.05)
             process.send_signal(signal.SIGINT)
         elif interactive_mfa:
-            wait_prompt(b"MFA method (totp or webauthn): ")
+            wait_prompt(b"MFA method (totp): ")
             if mode == "login-mfa-terminate":
                 process.send_signal(signal.SIGTERM)
             else:

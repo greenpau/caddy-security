@@ -50,6 +50,11 @@ import (
 // A session cookie name setting takes one value; multiple access cookie names
 // belong on a single line. Cookie names and repeated settings must be unique.
 // Coordinate explicit names with portals using a custom cookie prefix.
+// validate path acl checks both policy rules and token path claims at every
+// decoded/cleaned path interpretation. Claims use literal paths with * and **
+// wildcards, not regular expressions; * stays in one segment, ** spans slashes,
+// and both require at least one allowed character. The library rejects ambiguous
+// encodings instead of rewriting the downstream request to grant access.
 func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective, k string, args []string) error {
 	v := strings.Join(args, " ")
 	v = strings.TrimSpace(v)

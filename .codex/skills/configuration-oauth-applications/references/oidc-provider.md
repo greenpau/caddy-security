@@ -12,7 +12,7 @@ independent of declaration order and Caddy file/snippet imports.
 values with the shared directive codec. `caddyfile_authn.go` attaches it with
 `Config.ConfigureOIDCProvider` after collecting the complete portal and before
 `AddAuthenticationPortal` validates it. Do not add a second field parser or
-validate the portal before attaching OIDC. AuthCrunch v1.2.4, pinned in `go.mod`,
+validate the portal before attaching OIDC. AuthCrunch v1.2.5, pinned in `go.mod`,
 provides `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives` and
 `PortalConfig.ConfigureOIDCProvider`.
 
@@ -209,7 +209,7 @@ above when changing this integration.
 ## HTTP mount and protocol contract
 
 The existing Caddy `AuthnMiddleware.ServeHTTP` acquires the app request reference
-and delegates to `Portal.ServeHTTP` with the original URL. AuthCrunch v1.2.4's
+and delegates to `Portal.ServeHTTP` with the original URL. AuthCrunch v1.2.5's
 `pkg/authn/serve_http.go` invokes its OP adapter before ordinary access-token
 checks, API dispatch, or HTML/JSON negotiation. Route the canonical issuer mount
 through that handler; do not strip the prefix with `handle_path` or rewrite the

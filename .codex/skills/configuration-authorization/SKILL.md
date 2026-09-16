@@ -195,11 +195,34 @@ disable auth redirect query
 disable auth redirect
 ```
 
-`validate path acl` also enables method/path ACL evaluation. Path ACL claims are
-matched against the request path using exact matching or `*` and `**`
-wildcards. `validate source address` compares the token address claim to the
-request source address. `enable strip token` removes only cookie-sourced auth
-tokens from the upstream request.
+`validate path acl` also enables method/path ACL evaluation. Token path claims
+use exact matching or `*` and `**` wildcards, not regular expressions. `*`
+matches one or more ASCII letters, digits, underscores, dots, tildes or hyphens;
+`**` also spans slashes. Punctuation is literal: `/tenant.v1/**` cannot grant
+`/tenantXv1/file`, and parentheses or `|` cannot expand a token's authority.
+This differs from explicit `regex match path` policy conditions.
+`validate source address` compares the token address claim to the request
+source address. `enable strip token` removes only cookie-sourced auth tokens
+from the upstream request.
+
+The selected go-authcrunch v1.2.5 checks every original, decoded and cleaned
+path interpretation whenever method/path or token path-claim validation is
+enabled. Every interpretation must satisfy the policy and any required claim;
+this also applies to cached identities. Cleaning must not turn
+`/admin/../public/file` into a new grant. Repeated encoding cannot hide a
+protected intermediate path before ending at an allowed path.
+
+The library considers cleaning before and after decoding, preserves trailing
+slashes, and allows at most four additional decoding passes after Go's initial
+URL parsing. Remaining encoded bytes at that limit, mixed valid/invalid escapes,
+invalid UTF-8 and initially encoded slashes fail closed. Encoded slashes are
+ambiguous because routers disagree about whether they delimit segments.
+Literal percent text such as `/public/100%25` remains usable when every
+interpretation is allowed. Query strings do not participate in path checks.
+These checks leave the request URL unchanged for downstream handlers. Keep
+`authorize` ahead of application rewrites or prefix stripping so it sees the
+original target; the library cannot recover a path that earlier middleware
+already discarded. Ordinary role-only policies do not enable path validation.
 
 For API key or basic auth proxying, configure a portal and realm:
 
@@ -248,8 +271,11 @@ bypass uri prefix /assets/
 bypass uri regex ^/public/.*
 ```
 
-Bypass match types are `exact`, `partial`, `prefix`, `suffix`, and `regex`, and
-they match `r.URL.Path`.
+Bypass match types are `exact`, `partial`, `prefix`, `suffix`, and `regex`.
+The same decoding/cleaning checks above apply even without path-validation
+options: each interpretation must match some configured bypass rule. An
+ambiguous target receives normal authentication/authorization instead of a
+bypass. A bypass grants no authenticated identity or claim metadata.
 
 Inject claims only when an upstream explicitly expects them:
 
@@ -269,3 +295,10 @@ Use these examples:
 - `caddyfile_authz_test.go` for detailed ACL and misc behavior.
 - `testdata/caddyfile_adapt/testcase_authorize_ok.Caddyfile`.
 - `testdata/caddyfile_adapt/testcase_authenticate_with_oauth.Caddyfile`.
+
+`TestAuthzPathDelegation` checks the Caddy authentication provider's decisions,
+identity metadata and preservation of the original URL. `TestCaddyAuthorizationPathE2E`
+adapts policies and exercises real Caddy TLS over HTTP/1.1 and HTTP/2: bypasses,
+method/path rules, token path claims, cached identities, encoded traversal,
+invalid UTF-8 and concurrent literal wildcard grants. Denials assert that the
+downstream handler was never reached; successful requests retain their URI.

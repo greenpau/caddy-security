@@ -29,11 +29,14 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
+	authclientparser "github.com/greenpau/go-authcrunch/pkg/authclient/parser"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -109,9 +112,39 @@ func parseSecurityLocalConfig(data []byte) (*securityLocalConfig, error) {
 			return nil, fmt.Errorf("authentication client values must be valid UTF-8")
 		}
 	}
-	if err := cfg.Validate(); err != nil {
+	// Keep the CLI's YAML/file layout, while the reusable parser owns login
+	// settings and defaults. Always CSV-quote string values for the shared
+	// decoder: EncodeArgs trims its output and can silently truncate an unquoted
+	// trailing tab or Unicode whitespace. Double embedded quotes to keep them
+	// inside the value. Empty optional YAML scalars retain their defaults.
+	var directives []string
+	for _, field := range []struct{ key, value string }{
+		{"base url", cfg.BaseURL}, {"username", cfg.Username},
+		{"realm", cfg.Realm}, {"password", cfg.Password},
+		{"api key", cfg.APIKey}, {"totp secret", cfg.TOTPSecret},
+		{"access token name", cfg.AccessTokenName},
+		{"refresh transport", cfg.RefreshTransport},
+	} {
+		if field.value != "" {
+			directives = append(directives, field.key+` "`+strings.ReplaceAll(field.value, `"`, `""`)+`"`)
+		}
+	}
+	for _, field := range []struct {
+		key   string
+		value int
+	}{
+		{"totp code length", cfg.TOTPCodeLength},
+		{"totp code lifetime", cfg.TOTPCodeLifetime},
+	} {
+		if field.value != 0 {
+			directives = append(directives, cfgutil.EncodeArgs(append(strings.Fields(field.key), strconv.Itoa(field.value))))
+		}
+	}
+	parsed, err := authclientparser.NewAuthenticationClientConfigFromDirectives(directives)
+	if err != nil {
 		return nil, err
 	}
+	cfg.Config = *parsed
 	return cfg, nil
 }
 
@@ -222,7 +255,7 @@ func newSecurityLocalClient(ctx context.Context, cmd *cobra.Command) (*securityL
 			case authclient.PromptTOTP:
 				label = "Authenticator code: "
 			case authclient.PromptMFA:
-				label = "MFA method (totp or webauthn): "
+				label = "MFA method (totp): "
 			default:
 				return "", authclient.ErrUnsupportedChallenge
 			}

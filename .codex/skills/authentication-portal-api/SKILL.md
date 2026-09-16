@@ -46,6 +46,10 @@ served at `/auth`, then `/login` means `/auth/login`, `/whoami` means
 
 ## Login Challenge Sequence
 
+For the public Go client, native transport, API-key login and private credential
+files, use [JSON/native interoperability](references/native-client.md).
+`Authenticate` performs fresh login; renewal is a separate explicit operation.
+
 Programmatic login is challenge-based:
 
 1. `POST <base>/login` with `username` and `realm`.
@@ -70,7 +74,7 @@ portal. Sandbox sessions are temporary and separate from the final JWT session.
 
 Use the [token refresh configuration](../configuration-authentication/references/token-refresh.md)
 for explicit participating local realms, origin, mount, cookie naming and limits.
-The selected go-authcrunch v1.2.4 implements real rotation; `/api/refresh_token`
+The selected go-authcrunch v1.2.5 implements real rotation; `/api/refresh_token`
 is no longer a timestamp probe. No enabled block means access-only behavior and
 404 at the refresh/session API routes.
 
