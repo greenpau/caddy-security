@@ -1,0 +1,87 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	security {
+		authentication portal myportal {
+			oidc provider {
+				enabled
+				issuer https://auth.example.test/auth
+				realms employees contractors
+				signing key files "/private/provider keys/current.pem" "/private/provider keys/previous.pem"
+				applications native website
+				session lifetime 7200
+				token lifetime 600
+				max sessions 42
+				max pending requests 43
+				max grants 44
+			}
+			enable identity store employeesdb contractorsdb guestsdb
+			crypto key sign-verify synthetic-oidc-portal-signing-key
+			cookie prefix FIRST
+			cookie path /auth
+		}
+
+		authentication portal defaults {
+			enable identity store employeesdb
+			crypto key sign-verify synthetic-oidc-portal-signing-key
+			cookie prefix SECOND
+			cookie path /other
+			oidc provider {
+				issuer https://auth.example.test/other
+				realms employees
+				signing key files "/private/provider keys/second.pem"
+				applications website
+				session lifetime 0
+				token lifetime 0
+				max sessions 0
+				max pending requests 0
+				max grants 0
+			}
+		}
+
+		authentication portal disabled {
+			enable identity store employeesdb
+			oidc provider {
+				disabled
+			}
+		}
+
+		authentication portal absent {
+			enable identity store employeesdb
+		}
+
+		local identity store employeesdb {
+			realm employees
+			path :memory:
+		}
+		local identity store contractorsdb {
+			realm contractors
+			path :memory:
+		}
+		local identity store guestsdb {
+			realm guests
+			path :memory:
+		}
+
+		oauth application website {
+			client_id website-client
+			client_secret synthetic-application-secret-0123456789
+			redirect_uri https://rp.example.test/callback
+		}
+		oauth application native {
+			client_id native-client
+			token_endpoint_auth_method none
+			redirect_uri http://127.0.0.1:8400/callback
+		}
+	}
+}
+
+http://127.0.0.1:9080 {
+	route /auth/* {
+		authenticate with myportal
+	}
+	route /other/* {
+		authenticate with defaults
+	}
+}

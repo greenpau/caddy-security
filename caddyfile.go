@@ -183,6 +183,9 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 		}
 	}
 
+	if err := validateOIDCProviderMounts(app.Config); err != nil {
+		return nil, d.Errf("%v", err)
+	}
 	app.omitStoredOAuthRegistrationSnapshots()
 	return httpcaddyfile.App{
 		Name:  appName,

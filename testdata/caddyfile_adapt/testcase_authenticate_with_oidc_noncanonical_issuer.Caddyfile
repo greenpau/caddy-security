@@ -1,0 +1,17 @@
+{
+	security {
+		authentication portal myportal {
+			oidc provider {
+				issuer https://auth.example.test:0443/auth
+				realms employees
+				signing key files /private/provider.pem
+				applications website
+			}
+		}
+		oauth application website {
+			client_id website-client
+			client_secret synthetic-client-secret-at-least-32-bytes
+			redirect_uri https://rp.example.test/callback
+		}
+	}
+}

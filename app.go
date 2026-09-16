@@ -55,7 +55,11 @@ type App struct {
 
 	OAuthRegistrationStore  *OAuthRegistrationStoreConfig `json:"oauth_registration_store,omitempty"`
 	OAuthApplicationSources []*OAuthApplicationSource     `json:"oauth_application_sources,omitempty"`
-	OIDCProviderDirectives  map[string][]string           `json:"oidc_provider_directives,omitempty"`
+
+	// OIDCProviderDirectives preserves complete provider bodies across Caddy JSON.
+	// Reattach them after all explicit/stored applications are available, before
+	// validating the runtime portal. Declarative JSON omits copied client snapshots.
+	OIDCProviderDirectives map[string][]string `json:"oidc_provider_directives,omitempty"`
 
 	// PortalCookieDirectives holds complete cookie snapshots awaiting runtime
 	// replacement, keyed by portal name. It replaces that portal's CookieConfig.
@@ -157,6 +161,11 @@ func (app *App) Provision(ctx caddy.Context) error {
 			zap.String("app_name", app.Name),
 			zap.Error(err),
 		)
+		return err
+	}
+
+	// Check issuer isolation on the completed config, before construction.
+	if err := validateOIDCProviderMounts(&config); err != nil {
 		return err
 	}
 

@@ -555,7 +555,7 @@ https://%s {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return registrationRPExchange(t, client, base+"/auth", registration.Client, rejectedSecret)
+		return registrationRPExchange(t, client, base+"/auth", registration.Client, rejectedSecret).keyID
 	}
 	before, _ := json.Marshal(registrationSnapshot(t, cfg.Path))
 	var kid string
@@ -867,7 +867,11 @@ func registrationHTTP(t *testing.T, client *http.Client, method, target string, 
 	return response.StatusCode, response.Header, data
 }
 
-func registrationRPExchange(t *testing.T, client *http.Client, issuer string, registration *oidc.ClientConfig, rejectedSecret string) string {
+type registrationRPResult struct {
+	keyID, subject, email string
+}
+
+func registrationRPExchange(t *testing.T, client *http.Client, issuer string, registration *oidc.ClientConfig, rejectedSecret string) registrationRPResult {
 	t.Helper()
 	const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 	challenge := sha256.Sum256([]byte(verifier))
@@ -935,7 +939,8 @@ func registrationRPExchange(t *testing.T, client *http.Client, issuer string, re
 		t.Fatal("RP rejected ID-token signature or claims")
 	}
 	claims := parsed.Claims.(jwt.MapClaims)
-	if claims["nonce"] != "rp-nonce" || claims["sub"] == "" {
+	subject, ok := claims["sub"].(string)
+	if claims["nonce"] != "rp-nonce" || !ok || subject == "" {
 		t.Fatal("RP ID-token nonce/subject missing")
 	}
 	status, _, body = registrationHTTP(t, client, "GET", issuer+"/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + tokens.AccessToken}})
@@ -943,5 +948,6 @@ func registrationRPExchange(t *testing.T, client *http.Client, issuer string, re
 	if status != 200 || json.Unmarshal(body, &userinfo) != nil || userinfo["sub"] != claims["sub"] {
 		t.Fatal("RP userinfo failed or subject differs")
 	}
-	return kid
+	email, _ := userinfo["email"].(string)
+	return registrationRPResult{keyID: kid, subject: subject, email: email}
 }

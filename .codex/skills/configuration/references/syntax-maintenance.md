@@ -58,7 +58,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | Upstream OAuth | `caddyfile_identity_provider_oauth.go` | `pkg/idp/parser/oauth.go` → `pkg/idp/oauth/parser` → shared `pkg/idp/config.go`; runtime `pkg/idp/oauth` |
 | Named OAuth applications | `caddyfile_oauth_application.go`, collected first in `caddyfile.go` | `pkg/oidc/parser/application.go`, `client.go` → `Config.AddOAuthApplication`; explicit or stored credentials, repeatable single-value `redirect_uri`, no generation during adaptation |
 | `oauth registration store` | `caddyfile_oauth_registration_store.go`, `oauth_registration_config.go`, `command_provision.go` | Host-owned immutable revisions, `pkg/oidc/provisioning.go` only on explicit creation |
-| Portal OIDC provider | `caddyfile_authn.go` | `Config.ConfigureOIDCProvider` → `pkg/oidc/parser/provider.go`; stored application references resolved before runtime construction |
+| Portal OIDC provider | `caddyfile_authn_oidc.go`, `caddyfile_authn.go`, `oidc_config.go` | `Config.ConfigureOIDCProvider` → `pkg/oidc/parser/provider.go` → `PortalConfig.ConfigureOIDCProvider`; collect all applications first, attach before portal validation, reject overlapping issuer mounts across portals |
 | Upstream SAML | `caddyfile_identity_provider.go` | `pkg/idp/config.go`, `pkg/idp/saml` |
 | SSO apps | `caddyfile_sso_provider.go` | `pkg/sso` |
 | Credentials | `caddyfile_credentials.go` | `pkg/credentials` |

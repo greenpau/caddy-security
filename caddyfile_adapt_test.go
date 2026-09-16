@@ -64,6 +64,11 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "OIDC provider settings, defaults, disabled and absent blocks", inputFileNamePrefix: "testcase_authenticate_with_oidc_provider"},
+		{name: "OIDC issuer must preserve its browser origin", inputFileNamePrefix: "testcase_authenticate_with_oidc_noncanonical_issuer", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': portal \"myportal\" oidc issuer requires a canonical HTTPS origin: omit port 443 and leading zeroes, at Caddyfile:16")},
+		{name: "quoted provider value cannot close portal block", inputFileNamePrefix: "testcase_authenticate_with_oidc_unterminated", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': unterminated authentication portal block, at Caddyfile:7")},
 		{name: "named OAuth applications", inputFileNamePrefix: "testcase_security_oauth_applications"},
 		{name: "private registration store and provider", inputFileNamePrefix: "testcase_security_oauth_registration_store"},
 		{name: "OAuth registration store requires its namespace", inputFileNamePrefix: "testcase_security_oauth_registration_legacy", shouldErr: true,

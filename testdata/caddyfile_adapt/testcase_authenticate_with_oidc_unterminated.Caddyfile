@@ -1,0 +1,9 @@
+{
+	security {
+		authentication portal myportal {
+			oidc provider {
+				disabled
+				issuer "}"
+		}
+	}
+}

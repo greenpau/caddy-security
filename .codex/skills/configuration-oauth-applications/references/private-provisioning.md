@@ -246,30 +246,10 @@ failure after publication, including continued use of the prior active credentia
 
 ## Provider settings and key rollover
 
-Inside `authentication portal myportal`, `oidc provider` accepts each setting once:
-
-| Setting | Arguments |
-| --- | --- |
-| `enabled` / `disabled` | Standalone, mutually exclusive; enabled by default. |
-| `issuer` | One canonical HTTPS URL including the portal mount. |
-| `realms` | One or more distinct local identity realms. |
-| `applications` | One or more distinct declared nicknames. |
-| `signing key files` | One or more clean absolute paths to dedicated RSA PEM files in private directories. |
-| `session lifetime`, `token lifetime` | One decimal integer in seconds; zero selects the upstream default. |
-| `max sessions`, `max pending requests`, `max grants` | One decimal capacity; zero selects the upstream default. |
-
-Validation/defaults come from `Config.ConfigureOIDCProvider` and the upstream
-`pkg/oidc/parser` and `pkg/oidc.Config`. Unknown/grouped keywords, duplicates,
-nested blocks, missing references, and duplicate selected client IDs fail. An
-absent block leaves OIDC disabled. A standalone `disabled` needs no keys or clients.
-Every enabled provider checks dedicated key ownership/permissions and loads its
-keys at runtime; it never generates them. These checks apply to Caddyfile providers
-and native JSON `authentication_portals[].oidc_provider` configurations, including
-configurations without an OAuth registration store. Explicit JSON credentials remain
-secret-bearing configuration. Authentication remains owned by the portal and
-`authenticate` routes.
-Key paths must not contain `.`/`..` components, redundant separators, or symlinks;
-the host must validate exactly the file that the provider will open.
+See [Portal OpenID Provider](oidc-provider.md) for the complete grammar, disabled
+validation, realm selection, safe issuer routes/cookie scope, JSON restoration,
+and runtime key requirements. Adaptation never generates credentials or keys;
+the explicit commands below stage durable material for later activation.
 
 For rollover, create a new provider key using the same store file:
 

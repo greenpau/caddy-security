@@ -38,9 +38,12 @@ when consulting or selecting sibling source.
 
 An application declares a client. A portal enables an OpenID Provider (OP) by
 selecting those clients in an `oidc provider` block. See
+[Portal OpenID Provider](references/oidc-provider.md) for the one-block contract,
+all settings/defaults, deferred attachment, realm selection, issuer/cookie
+isolation, JSON restoration, and Caddy unit/E2E coverage. See
 [Private provisioning and activation](references/private-provisioning.md) for
 the tested create/load/rotate workflow, storage security, candidate activation,
-and provider grammar. External login through `oauth identity provider` uses
+and key rollover. External login through `oauth identity provider` uses
 [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md).
 
 Keep host storage names scoped to OAuth: `oauth registration store` in Caddyfiles,

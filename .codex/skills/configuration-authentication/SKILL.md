@@ -32,6 +32,9 @@ Use focused repo-local skills for specialized portal sub-blocks:
 
 - `configuration-oauth-applications` for portal `oidc provider` blocks, named
   client selection, private registrations, and dedicated provider signing keys.
+  Its [provider reference](../configuration-oauth-applications/references/oidc-provider.md)
+  covers explicit realm participation and separate issuers/cookie scopes across
+  portals; attaching a store for portal login does not enable its realm for OIDC.
 - `configuration-crypto` for portal `crypto` defaults, JWT signing keys,
   auto-generated keys, token names and lifetimes, secret-backed key material,
   and System API `system` keys.

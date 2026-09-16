@@ -126,6 +126,13 @@ They call parser functions, unpack generated JSON into maps, and compare with
 Add or update these tests when directive parsing behavior changes:
 
 - `caddyfile_authn_test.go`: authentication portal parsing.
+- `caddyfile_authn_oidc_test.go`: provider grammar, forward/imported application
+  references, disabled validation, and JSON restoration. `oidc_config_test.go`
+  covers conflicts across portal issuers. `TestCaddyOIDCProviderE2E` in
+  `oidc_e2e_test.go` covers actual TLS provisioning, discovery, two selected local
+  realms and an unselected realm, realm identity and session revocation when
+  switching realms in one browser, independent issuers/cookies, signed token
+  exchanges, refresh alignment, and continued service after rejected reloads.
 - `caddyfile_authn_misc_test.go`: authentication misc/cookie/crypto/UI paths.
 - `caddyfile_authz_test.go`: authorization policy parsing.
 - `caddyfile_identity*_test.go`: identity stores and providers.
