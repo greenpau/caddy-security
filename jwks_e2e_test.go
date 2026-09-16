@@ -318,7 +318,7 @@ func assertNoCaddyJWKS(t *testing.T, headers http.Header, body []byte, keys []ma
 
 // Reconstruct the verifier solely from the fetched JWKS and verify the original
 // compact signing input with the standard library, without KMS or JWT methods.
-func verifyCaddyJWKSToken(t *testing.T, keys []map[string]string, signed, alg, kid string) map[string]any {
+func verifyCaddyJWKSSignature(t *testing.T, keys []map[string]string, signed, alg, kid string) map[string]any {
 	t.Helper()
 	decode := func(value string) []byte {
 		data, err := base64.RawURLEncoding.Strict().DecodeString(value)
@@ -396,6 +396,12 @@ func verifyCaddyJWKSToken(t *testing.T, keys []map[string]string, signed, alg, k
 	if !valid {
 		t.Fatal("independent JWT signature verification failed")
 	}
+	return claims
+}
+
+func verifyCaddyJWKSToken(t *testing.T, keys []map[string]string, signed, alg, kid string) map[string]any {
+	t.Helper()
+	claims := verifyCaddyJWKSSignature(t, keys, signed, alg, kid)
 	exp, expOK := claims["exp"].(float64)
 	iat, iatOK := claims["iat"].(float64)
 	if claims["sub"] != "keyadmin" || !expOK || !iatOK || exp <= float64(time.Now().Unix()) || exp-iat != 900 {

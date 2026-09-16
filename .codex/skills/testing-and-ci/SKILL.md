@@ -148,6 +148,13 @@ Add or update these tests when directive parsing behavior changes:
   stable client/key identity, secret rotation and retained rollover verification.
   Use the [OIDC validation map](../configuration-oauth-applications/references/oidc-provider.md#validation-surfaces)
   for the full test group and limits; local E2E is not Foundation certification.
+- `caddyfile_authn_token_refresh_test.go`: complete readable refresh grammar,
+  opt-out/defaults, imports/duplicates, placeholders and native/deferred JSON.
+  `TestCaddyTokenRefreshE2E` verifies real TLS password login and rotation at
+  parsed root/nested mounts, realm participation, cookie overrides, lifetime
+  caps, native opt-in/off, capacity/replay/rotation limits and rejected mounts.
+  Its adaptation/resolution fixture is `testcase_authenticate_with_token_refresh`.
+  See [portal refresh](../configuration-authentication/references/token-refresh.md#validation).
 - `caddyfile_authn_misc_test.go`: authentication misc/cookie/crypto/UI paths.
 - `caddyfile_authz_test.go`: authorization policy parsing.
 - `caddyfile_identity*_test.go`: identity stores and providers.

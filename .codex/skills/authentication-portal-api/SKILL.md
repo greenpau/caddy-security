@@ -53,10 +53,10 @@ Programmatic login is challenge-based:
 3. The client posts the same identity plus `sandbox_id`, current
    `sandbox_secret`, `challenge_kind`, and `challenge_response`.
 4. The portal may rotate `sandbox_secret` and return another challenge.
-5. When all checkpoints pass, the current JSON login path returns
-   `authenticated: true`, `access_token_name`, and `access_token`. The
-   `AuthResponse` struct has refresh-token fields, but the current
-   `handleIssueTokens` path in local go-authcrunch does not populate them.
+5. When all checkpoints pass, access-only JSON login returns
+   `authenticated: true`, `access_token_name`, and `access_token`. An enabled,
+   participating local refresh login instead uses the transport contract below:
+   browser tokens arrive in cookies; opted-in native clients receive JSON tokens.
 
 Common challenge kinds are `password`, `totp`, and `mfa`. For WebAuthn/U2F,
 the client first answers `challenge_kind: mfa` with
@@ -65,6 +65,42 @@ WebAuthn payload. The final response must contain the signed WebAuthn result.
 
 Do not reuse an old `sandbox_secret`; use the latest value returned by the
 portal. Sandbox sessions are temporary and separate from the final JWT session.
+
+## Portal Refresh Transports
+
+Use the [token refresh configuration](../configuration-authentication/references/token-refresh.md)
+for explicit participating local realms, origin, mount, cookie naming and limits.
+The selected go-authcrunch v1.2.4 implements real rotation; `/api/refresh_token`
+is no longer a timestamp probe. No enabled block means access-only behavior and
+404 at the refresh/session API routes.
+
+Browser login uses the default `cookie` transport. Tokens arrive in HttpOnly
+cookies and JSON contains session/expiry metadata without bearer credentials.
+After login, POST `{}` as JSON to `<base>/api/refresh_token`, `<base>/api/logout`,
+or `<base>/api/refresh_session` with the cookie jar, exact configured HTTPS
+`Origin`, and `X-Authcrunch-Refresh: 1`. Disallowed fetch metadata, origins or
+mixed transports fail closed. Responses preserve `Cache-Control: no-store`.
+A valid refresh cookie can rotate despite an expired or malformed access token.
+
+Native clients require `body transport enabled` and send
+`refresh_transport: body` at every login checkpoint. Send no Cookie, Origin or
+Sec-Fetch headers. Login and rotation return `access_token`, `refresh_token`,
+names, session ID, and expiry metadata in JSON without cookies. Subsequent POSTs
+use `{"refresh_token":"<credential>"}`. Omitting explicit native opt-in selects
+browser transport; enabling the feature alone does not opt clients in.
+
+Successful rotation changes the refresh credential and access-token `jti`,
+retains the session binding and absolute deadline, and reloads current local
+identity attributes. Replaying an old refresh token revokes the family. Serialize
+rotations and avoid automatic retries when delivery is ambiguous. Invalid/revoked
+credentials return 401, origin/transport violations 403, admission exhaustion
+503. A family's rotation-limit exhaustion revokes it and reclaims capacity.
+
+With a refresh cookie, GET `<base>/logout` displays confirmation; the session API
+POST completes revocation and cookie deletion, including an associated OP
+session. Portal refresh grants are unrelated to OIDC refresh or upstream provider
+refresh. API-key and other unsupported login kinds remain access-only.
+`TestCaddyTokenRefreshE2E` covers these transports through verified Caddy TLS.
 
 ## Status And Identity Endpoints
 
@@ -209,7 +245,8 @@ flags, and malformed configurations leave the active portal unchanged.
   auth challenge rules stored in the local user database.
 - `/whoami` omits upstream ID token: verify the OAuth provider uses
   `enable id token cookie ...` and the browser/client sends the ID-token cookie.
-- `/api/refresh_token` surprises: the current endpoint is an authenticated JSON
-  endpoint that returns a timestamp; it does not mint a replacement token value.
+- `/api/refresh_token` failures: check explicit realm participation, configured
+  origin/mount, the required browser header, native opt-in, and replay/capacity
+  limits using the transport contract above.
 - Admin endpoint returns unauthorized: verify `enable admin api`, active portal
   session, and `authp/admin` or equivalent portal admin role.

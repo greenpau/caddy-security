@@ -55,16 +55,16 @@ import (
 // See .codex/skills/configuration-authentication-cookies/SKILL.md for details.
 func encodePortalCookieDirective(keyword string, args []string, deferPlaceholders bool) (string, error) {
 	args = append([]string(nil), args...)
-	for _, arg := range args {
-		// EncodeArgs trims trailing empty fields; reject them before encoding.
-		if strings.TrimSpace(arg) == "" || strings.ContainsAny(arg, "\r\n") {
-			return "", fmt.Errorf("empty or multiline cookie argument")
-		}
+	// Validate before encoding and preserve record-edge whitespace. Otherwise an
+	// invalid name ending in a tab/NBSP can become valid before shared validation
+	// or an enabled refresh override hides the original value.
+	if err := validateOAuthDirectiveTokens(args); err != nil {
+		return "", fmt.Errorf("empty or invalid cookie argument")
 	}
 	// After runtime replacement, braces can be literal data in a path. Always
 	// translate the resolved statement instead of treating its value as syntax.
 	if deferPlaceholders && cookieDirectivesNeedResolution(args) {
-		return cfgutil.EncodeArgs(append([]string{keyword}, args...)), nil
+		return encodeOAuthDirective(append([]string{keyword}, args...)), nil
 	}
 	if keyword == "set" {
 		if len(args) != 4 || args[1] != "cookie" || args[2] != "name" {
@@ -123,10 +123,14 @@ func encodePortalCookieDirective(keyword string, args []string, deferPlaceholder
 			}
 		}
 	}
-	return cfgutil.EncodeArgs(append([]string{"cookie"}, args...)), nil
+	return encodeOAuthDirective(append([]string{"cookie"}, args...)), nil
 }
 
 func configurePortalCookies(portal *authn.PortalConfig, statements []string) error {
+	statements, err := tokenRefreshCookieDirectives(portal.RefreshTokens, statements)
+	if err != nil {
+		return err
+	}
 	config, err := cookieparser.NewCookieConfigFromDirectives(statements)
 	if err != nil {
 		return err

@@ -38,6 +38,7 @@ const (
 //	authentication portal <name> {
 //		crypto key sign-verify <shared_secret>
 //		oidc provider { ... }
+//		token refresh { ... }
 //		ui { ... }
 //		transform user { ... }
 //		cookie prefix <prefix>
@@ -82,12 +83,22 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 		var cookieStatements []string
 		var adminStatements []string
 		var oidcStatements []string
+		var tokenRefreshStatements []string
 		nesting := d.Nesting()
 		for d.NextBlock(nesting) {
 			k := d.Val()
 			v := d.RemainingArgs()
 			rootDirective = mkcp(authnPrefix, args[0], k)
 			switch k {
+			case "token":
+				if tokenRefreshStatements != nil {
+					return d.Errf("token refresh is already configured for portal %q", p.Name)
+				}
+				statements, err := readCaddyfileTokenRefresh(d, v)
+				if err != nil {
+					return err
+				}
+				tokenRefreshStatements = statements
 			case "oidc":
 				if oidcStatements != nil {
 					return d.Errf("oidc provider is already configured for portal %q", p.Name)
@@ -154,9 +165,24 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 			return d.Errf("%s.portal %q admin API: %v", authnPrefix, p.Name, err)
 		}
 
-		// Runtime placeholders must be expanded before the shared parser validates
-		// names and domains. Preserve the complete snapshot across Caddy JSON.
-		if cookieDirectivesNeedResolution(cookieStatements) {
+		if tokenRefreshStatements != nil {
+			if cookieDirectivesNeedResolution(tokenRefreshStatements) {
+				if app.PortalTokenRefreshDirectives == nil {
+					app.PortalTokenRefreshDirectives = make(map[string][]string)
+				}
+				if _, exists := app.PortalTokenRefreshDirectives[p.Name]; exists {
+					return d.Errf("duplicate token refresh portal %q", p.Name)
+				}
+				app.PortalTokenRefreshDirectives[p.Name] = tokenRefreshStatements
+			} else if err := configurePortalTokenRefresh(p, tokenRefreshStatements); err != nil {
+				return d.Errf("portal %q token refresh: %v", p.Name, err)
+			}
+		}
+		// Refresh may override the shared refresh cookie name. Resolve that choice
+		// before the shared cookie parser checks the effective names for collisions.
+		// Preserve both complete snapshots across Caddy JSON when refresh is deferred,
+		// even if the cookie directives themselves contain no placeholders.
+		if cookieDirectivesNeedResolution(cookieStatements) || cookieDirectivesNeedResolution(tokenRefreshStatements) {
 			if app.PortalCookieDirectives == nil {
 				app.PortalCookieDirectives = make(map[string][]string)
 			}

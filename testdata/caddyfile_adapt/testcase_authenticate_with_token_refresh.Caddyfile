@@ -1,0 +1,75 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	security {
+		local identity store employeesdb {
+			realm employees
+			path :memory:
+		}
+		local identity store contractorsdb {
+			realm contractors
+			path :memory:
+		}
+		authentication portal myportal {
+			enable identity store employeesdb contractorsdb
+			cookie prefix LOGIN
+			cookie refresh token name SHARED_REFRESH
+			cookie access token name SHARED_REFRESH
+			token refresh {
+				enabled
+				realms employees contractors
+				public origin https://auth.example.test
+				base path /auth
+				cookie name CUSTOM_REFRESH
+				access lifetime 45
+				idle timeout 90
+				absolute timeout 240
+				body transport enabled
+				max sessions 2
+				max rotations 3
+			}
+		}
+		authentication portal defaults {
+			enable identity store employeesdb
+			token refresh {
+				realms employees
+				public origin https://auth.example.test
+				base path /
+				access lifetime 0
+				idle timeout 0
+				absolute timeout 0
+				body transport disabled
+				max sessions 0
+				max rotations 0
+			}
+		}
+		authentication portal disabled {
+			enable identity store employeesdb
+			token refresh {
+				disabled
+				cookie name UNUSED_REFRESH
+			}
+		}
+		authentication portal absent {
+			enable identity store employeesdb
+		}
+		authentication portal deferred {
+			enable identity store employeesdb
+			cookie access token name AUTHP_REFRESH_TOKEN
+			token refresh {
+				realms employees
+				public origin {env.TOKEN_REFRESH_ORIGIN}
+				base path {env.TOKEN_REFRESH_MOUNT}
+				cookie name {env.TOKEN_REFRESH_COOKIE}
+				access lifetime {env.TOKEN_REFRESH_ACCESS}
+				body transport {env.TOKEN_REFRESH_BODY}
+			}
+		}
+	}
+}
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

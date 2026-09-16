@@ -62,8 +62,13 @@ type App struct {
 	OIDCProviderDirectives map[string][]string `json:"oidc_provider_directives,omitempty"`
 
 	// PortalCookieDirectives holds complete cookie snapshots awaiting runtime
-	// replacement, keyed by portal name. It replaces that portal's CookieConfig.
+	// replacement or a deferred refresh override, keyed by portal name. It replaces
+	// that portal's CookieConfig after resolving token refresh configuration.
 	PortalCookieDirectives map[string][]string `json:"portal_cookie_directives,omitempty"`
+
+	// PortalTokenRefreshDirectives preserves complete token refresh bodies with
+	// runtime references. Resolve and attach before validating runtime portals.
+	PortalTokenRefreshDirectives map[string][]string `json:"portal_token_refresh_directives,omitempty"`
 
 	// OAuthProviderDirectives retains complete, validated provider statements
 	// with runtime references, keyed by provider name. Reparse after replacement
@@ -147,7 +152,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.logger); err != nil {
+	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.logger); err != nil {
 		return err
 	}
 	// Apply resolved snapshots last so substituted paths are not expanded twice.

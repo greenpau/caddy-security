@@ -126,6 +126,18 @@ Update runnable examples and the owning configuration skill in the same change.
 Follow the [syntax maintenance workflow](../configuration/references/syntax-maintenance.md)
 for the source inventory and validation boundaries.
 
+Explain behavior alongside the syntax when a setting's name is insufficient.
+Include units/defaults, the meaning of omission/zero/disabled values, the scope
+of limits (per user, session, portal or process), inheritance and precedence,
+and consequential interactions or failure behavior. Explain the operational
+reason for a restriction or tradeoff when supported by the implementation:
+for example, whether a timeout slides, what consumes a session slot, or why
+native body transport requires explicit opt-in. Verify these details against
+the selected parser **and runtime**; field names alone do not establish them.
+Keep the grammar easy to scan, follow it with focused explanatory paragraphs,
+and link to the owning feature reference for longer protocol examples. Scale
+the detail to the feature instead of repeating a checklist for trivial options.
+
 When mapping Caddyfile input, prefer authcrunch config constructors and `Add*`
 methods over duplicating validation in this repository. Use
 `cfgutil.EncodeArgs` for raw instruction strings that authcrunch later decodes.

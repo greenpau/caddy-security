@@ -123,7 +123,22 @@ existing typed cookie config and is applied after other replacement to avoid exp
 paths a second time. Literal-only statements adapt directly to typed
 cookie config. See [cookie configuration](../configuration-authentication-cookies/SKILL.md#placeholders-and-json).
 After replacement, legacy translation treats braces in a resolved path as data;
-it must not defer that statement again.
+it must not defer that statement again. Keep cookie values as tokens until that
+translation and lossless encoding; an intermediate `EncodeArgs` roundtrip can
+silently trim an invalid name's trailing whitespace. Reject CR/LF in saved cookie
+statements before decoding so additional records cannot hide settings. See the
+cookie skill for the exact argument-preservation checks and reload regressions.
+
+Token refresh blocks with runtime references are preserved in
+`App.PortalTokenRefreshDirectives` (`portal_token_refresh_directives`). Resolve
+each argument once and attach the shared parser's `*authn.TokenRefreshConfig`
+before portal validation; do not also supply typed `refresh_tokens` for that
+portal. Defer that portal's complete cookie statements too, including literal
+ones, until the enabled refresh override is known: collision checks must use
+the effective names. Literal refresh blocks need no snapshot. Native JSON origin, base path, cookie
+name and individual realm values support replacement. See
+[token refresh placeholders](../configuration-authentication/references/token-refresh.md#placeholders-and-json)
+for numeric/state values, duplicate checks, and JSON restoration coverage.
 
 OAuth provider statements with runtime references are also retained separately,
 in `App.OAuthProviderDirectives` (`oauth_provider_directives` in Caddy JSON).
@@ -165,7 +180,8 @@ Adapt fixtures may include:
 
 `TestResolveRuntimeAppConfig` lists the fixtures that exercise runtime
 resolution. It extracts `apps.security.config` from `<prefix>.json`, loads `<prefix>.env`,
-runs app-aware resolution (including `apps.security.oauth_provider_directives`)
+runs app-aware resolution (including `apps.security.oauth_provider_directives` and
+`apps.security.portal_token_refresh_directives`)
 followed by any `apps.security.portal_cookie_directives` snapshot, and compares
 the dumped authcrunch config to `<prefix>_resolved.json`.
 

@@ -81,7 +81,7 @@ func TestOAuthRuntimeDriverDefaults(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: tc.values}}, app.Config, app.OAuthProviderDirectives, zap.NewNop()); err != nil {
+			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: tc.values}}, app.Config, app.OAuthProviderDirectives, nil, zap.NewNop()); err != nil {
 				t.Fatal(err)
 			}
 			after, err := json.Marshal(app.OAuthProviderDirectives)
@@ -132,7 +132,7 @@ func TestOAuthRuntimeSnapshotValidation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"secret": "synthetic-secret"}}}, app.Config, app.OAuthProviderDirectives, zap.NewNop()); err == nil {
+			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"secret": "synthetic-secret"}}}, app.Config, app.OAuthProviderDirectives, nil, zap.NewNop()); err == nil {
 				t.Fatal("invalid OAuth snapshot accepted")
 			}
 			after, err := json.Marshal(app.Config.IdentityProviders)
@@ -149,7 +149,7 @@ func TestOAuthRuntimeSnapshotValidation(t *testing.T) {
 func TestOAuthRuntimeExactValues(t *testing.T) {
 	for _, value := range []string{"  exact value\t", `literal-{env.DO_NOT_EXPAND}`, `quote " and comma,`, "issuer\u2003"} {
 		app := oauthRuntimeTestApp(t, oauthParserBase+"issuer secrets:oauth:issuer")
-		if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"issuer": value}}}, app.Config, app.OAuthProviderDirectives, zap.NewNop()); err != nil {
+		if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"issuer": value}}}, app.Config, app.OAuthProviderDirectives, nil, zap.NewNop()); err != nil {
 			t.Fatal(err)
 		}
 		if app.Config.IdentityProviders[0].Params["issuer"] != value {
@@ -158,7 +158,7 @@ func TestOAuthRuntimeExactValues(t *testing.T) {
 	}
 	for _, value := range []string{"", " ", "bad\nvalue", "bad\x00value", "bad\xffvalue"} {
 		app := oauthRuntimeTestApp(t, oauthParserBase+"issuer secrets:oauth:issuer")
-		if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"issuer": value}}}, app.Config, app.OAuthProviderDirectives, zap.NewNop()); err == nil {
+		if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"issuer": value}}}, app.Config, app.OAuthProviderDirectives, nil, zap.NewNop()); err == nil {
 			t.Fatal("invalid replacement accepted")
 		}
 	}

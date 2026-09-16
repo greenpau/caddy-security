@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "portal token refresh settings, defaults, disabled and deferred", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},
+		{name: "refresh override preserves invalid shared cookie whitespace", inputFileNamePrefix: "testcase_authenticate_with_token_refresh_cookie_whitespace", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': security.authentication.portal \"myportal\" cookies: invalid refresh cookie name at line 1, at Caddyfile:12")},
 		{name: "OIDC provider settings, defaults, disabled and absent blocks", inputFileNamePrefix: "testcase_authenticate_with_oidc_provider"},
 		{name: "OIDC issuer must preserve its browser origin", inputFileNamePrefix: "testcase_authenticate_with_oidc_noncanonical_issuer", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': portal \"myportal\" oidc issuer requires a canonical HTTPS origin: omit port 443 and leading zeroes, at Caddyfile:16")},

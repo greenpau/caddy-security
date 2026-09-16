@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "token refresh snapshots and typed config", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},
 		{name: "named OAuth application credentials remain exact", inputFileNamePrefix: "testcase_security_oauth_applications"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
 		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},
@@ -213,7 +214,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, logger)
+			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, logger)
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)

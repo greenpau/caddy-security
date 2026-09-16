@@ -1,6 +1,6 @@
 ---
 name: configuration-authentication
-description: "caddy-security authentication portal Caddyfile configuration. Use when creating, reviewing, or modifying security authentication portal blocks, route-level authenticate directives, portal crypto, enabled identity stores, OAuth or SAML identity providers, SSO app providers, trusted redirects, source address validation, or portal wiring. For cookies, UI, and user transforms use the focused authentication subskills."
+description: "caddy-security authentication portal Caddyfile configuration. Use when creating, reviewing, or modifying security authentication portal blocks, route-level authenticate directives, portal crypto, token refresh blocks, enabled identity stores, OAuth or SAML identity providers, SSO app providers, trusted redirects, source address validation, or portal wiring. For cookies, UI, and user transforms use the focused authentication subskills."
 ---
 
 # Configuration Authentication
@@ -17,6 +17,9 @@ directive-order guardrails when attaching the portal to HTTP routes.
 Read these files when details matter:
 
 - `caddyfile_authn.go` for the portal block.
+- `caddyfile_authn_token_refresh.go` and [token refresh](references/token-refresh.md)
+  for readable portal refresh configuration, explicit local realms, transports,
+  bounded lifetimes and stores, cookies, placeholders and TLS validation.
 - `caddyfile_authn_crypto.go` for crypto key directives.
 - `caddyfile_authn_misc.go` for `enable`, `validate`, and `trust`.
 - `caddyfile_authn_admin_api.go` and selected upstream

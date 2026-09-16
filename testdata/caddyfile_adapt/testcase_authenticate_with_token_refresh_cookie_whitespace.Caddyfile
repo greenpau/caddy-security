@@ -1,0 +1,14 @@
+{
+	security {
+		authentication portal myportal {
+			# The quoted shared cookie name ends in a tab; an override must not hide it.
+			cookie refresh token name "SHARED_REFRESH	"
+			token refresh {
+				realms employees
+				public origin https://auth.example.test
+				base path /auth
+				cookie name CUSTOM_REFRESH
+			}
+		}
+	}
+}

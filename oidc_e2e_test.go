@@ -527,10 +527,11 @@ oauth identity provider upstream {
 		checkExchange(t, "/auth", "website")
 		checkExchange(t, "/other", "otherapp")
 	}
-	// Explicit refresh configuration uses native JSON until its own Caddyfile
-	// surface is implemented. Matching canonical origins and mounts must work.
+	// Refresh configuration comes from the Caddyfile block. Matching canonical
+	// origins and mounts must work with the restored OIDC provider.
 	matching := mutate(t, two, func(app *App) {
-		app.Config.AuthenticationPortals[0].RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, Realms: []string{"employees", "contractors"}, PublicOrigin: base, BasePath: "/auth"}
+		parsed := tokenRefreshTestApp(t, tokenRefreshTestBlock("realms employees contractors\npublic origin "+base+"\nbase path /auth"))
+		app.Config.AuthenticationPortals[0].RefreshTokens = parsed.Config.AuthenticationPortals[0].RefreshTokens
 	})
 	if err := caddy.Load(matching, true); err != nil {
 		t.Fatal(err)

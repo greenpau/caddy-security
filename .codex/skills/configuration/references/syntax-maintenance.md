@@ -48,6 +48,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | HTTP `authenticate` / `authorize` | `plugin_authn.go`, `plugin_authz.go` | Caddy route matching; provisioned portal/policy |
 | Portal body and backend enablement | `caddyfile_authn.go`, `caddyfile_authn_misc.go` | `pkg/authn/config.go`, redirect validation, backend attachment |
 | Portal cookies | `caddyfile_authn_cookie.go` | `pkg/authn/cookie/parser`, `PortalConfig.ConfigureCookies` |
+| Portal token refresh | `caddyfile_authn_token_refresh.go`, `caddyfile_resolve_token_refresh.go` | `pkg/authn/token_refresh/parser` → `authn.TokenRefreshConfig`; attach before validation, then library cookie factory and local-realm checks |
 | Portal admin API and private-key export | `caddyfile_authn_admin_api.go` | `pkg/authn/admin_api/parser`, `PortalConfig.ConfigureAdminAPI` |
 | Portal UI | `caddyfile_authn_ui.go` | `pkg/authn/ui`, `pkg/translate`, portal asset/template loading |
 | User transforms | `caddyfile_authn_transform.go` | `pkg/acl`, `pkg/authn/transformer` |
@@ -87,7 +88,10 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
    credential suffixes must not modify a secret key before lookup.
 4. Update Go comments and the owning domain skill together. Include all exposed
    fields, or link to the precise delegated grammar and a complete domain
-   reference. Keep recognized-but-restricted forms visible, with the rejecting
+   reference. Apply the [parser documentation guidance](../../coding-directives/SKILL.md#caddyfile-parsers)
+   to explain operational meaning, defaults, scope, interactions and reasoning
+   beside the grammar; verify those claims against the runtime consumer.
+   Keep recognized-but-restricted forms visible, with the rejecting
    layer and version. Keep unsupported typed-only fields distinct from usable
    Caddy syntax; never filter them away to make validation pass.
 5. Use required `<value>` / `<a|b>`, optional `[value]`, and repetition `...`
@@ -137,6 +141,7 @@ Never require disabled TLS, nonce, PKCE, or signature checks for a syntax audit.
 
 Known fixture outcomes: `testcase_authenticate_malformed`,
 `testcase_authenticate_with_admin_api_malformed`,
+`testcase_authenticate_with_token_refresh_cookie_whitespace`,
 `testcase_authenticate_with_oauth_icon_malformed`, and
 `testcase_authenticate_with_redirect_trust_malformed`,
 `testcase_security_oauth_application_boundary_malformed`,

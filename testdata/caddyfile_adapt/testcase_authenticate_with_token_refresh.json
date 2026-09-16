@@ -1,0 +1,310 @@
+{
+	"admin": {
+		"disabled": true,
+		"config": {
+			"persist": false
+		}
+	},
+	"apps": {
+		"http": {
+			"servers": {
+				"srv0": {
+					"listen": [
+						":443"
+					],
+					"routes": [
+						{
+							"match": [
+								{
+									"host": [
+										"auth.example.test"
+									]
+								}
+							],
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"handler": "subroute",
+													"routes": [
+														{
+															"handle": [
+																{
+																	"handler": "authenticator",
+																	"portal_name": "myportal",
+																	"route_matcher": "*"
+																}
+															]
+														}
+													]
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/auth/*"
+													]
+												}
+											]
+										}
+									]
+								}
+							],
+							"terminal": true
+						}
+					],
+					"tls_connection_policies": [
+						{}
+					],
+					"automatic_https": {
+						"disable": true
+					}
+				}
+			}
+		},
+		"security": {
+			"config": {
+				"authentication_portals": [
+					{
+						"name": "myportal",
+						"ui": {},
+						"cookie_config": {
+							"session_id_cookie_name": "LOGIN_SESSION_ID",
+							"referer_cookie_name": "LOGIN_REDIRECT_URL",
+							"sandbox_id_cookie_name": "LOGIN_SANDBOX_ID",
+							"identity_token_cookie_name": "LOGIN_ID_TOKEN",
+							"access_token_cookie_name": "SHARED_REFRESH",
+							"refresh_token_cookie_name": "CUSTOM_REFRESH",
+							"oidc_session_id_cookie_name": "LOGIN_OIDC_SESSION_ID",
+							"oidc_request_id_cookie_name": "LOGIN_OIDC_REQUEST_ID",
+							"cookie_name_prefix": "LOGIN"
+						},
+						"identity_stores": [
+							"employeesdb",
+							"contractorsdb"
+						],
+						"token_validator_options": {},
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"token_grantor_options": {},
+						"portal_admin_roles": {
+							"authp/admin": true
+						},
+						"portal_user_roles": {
+							"authp/user": true
+						},
+						"portal_guest_roles": {
+							"authp/guest": true
+						},
+						"api": {
+							"profile_enabled": true
+						},
+						"refresh_tokens": {
+							"enabled": true,
+							"realms": [
+								"employees",
+								"contractors"
+							],
+							"public_origin": "https://auth.example.test",
+							"base_path": "/auth",
+							"cookie_name": "CUSTOM_REFRESH",
+							"access_lifetime_seconds": 45,
+							"idle_timeout_seconds": 90,
+							"absolute_timeout_seconds": 240,
+							"body_transport_enabled": true,
+							"max_sessions": 2,
+							"max_rotations": 3
+						}
+					},
+					{
+						"name": "defaults",
+						"ui": {},
+						"cookie_config": {
+							"session_id_cookie_name": "AUTHP_SESSION_ID",
+							"referer_cookie_name": "AUTHP_REDIRECT_URL",
+							"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+							"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+							"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"cookie_name_prefix": "AUTHP"
+						},
+						"identity_stores": [
+							"employeesdb"
+						],
+						"token_validator_options": {},
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"token_grantor_options": {},
+						"portal_admin_roles": {
+							"authp/admin": true
+						},
+						"portal_user_roles": {
+							"authp/user": true
+						},
+						"portal_guest_roles": {
+							"authp/guest": true
+						},
+						"api": {
+							"profile_enabled": true
+						},
+						"refresh_tokens": {
+							"enabled": true,
+							"realms": [
+								"employees"
+							],
+							"public_origin": "https://auth.example.test",
+							"base_path": "/",
+							"access_lifetime_seconds": 300,
+							"idle_timeout_seconds": 1800,
+							"absolute_timeout_seconds": 28800,
+							"max_sessions": 10000,
+							"max_rotations": 1024
+						}
+					},
+					{
+						"name": "disabled",
+						"ui": {},
+						"cookie_config": {
+							"session_id_cookie_name": "AUTHP_SESSION_ID",
+							"referer_cookie_name": "AUTHP_REDIRECT_URL",
+							"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+							"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+							"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"cookie_name_prefix": "AUTHP"
+						},
+						"identity_stores": [
+							"employeesdb"
+						],
+						"token_validator_options": {},
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"token_grantor_options": {},
+						"portal_admin_roles": {
+							"authp/admin": true
+						},
+						"portal_user_roles": {
+							"authp/user": true
+						},
+						"portal_guest_roles": {
+							"authp/guest": true
+						},
+						"api": {
+							"profile_enabled": true
+						},
+						"refresh_tokens": {
+							"cookie_name": "UNUSED_REFRESH"
+						}
+					},
+					{
+						"name": "absent",
+						"ui": {},
+						"cookie_config": {
+							"session_id_cookie_name": "AUTHP_SESSION_ID",
+							"referer_cookie_name": "AUTHP_REDIRECT_URL",
+							"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+							"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+							"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"cookie_name_prefix": "AUTHP"
+						},
+						"identity_stores": [
+							"employeesdb"
+						],
+						"token_validator_options": {},
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"token_grantor_options": {},
+						"portal_admin_roles": {
+							"authp/admin": true
+						},
+						"portal_user_roles": {
+							"authp/user": true
+						},
+						"portal_guest_roles": {
+							"authp/guest": true
+						},
+						"api": {
+							"profile_enabled": true
+						}
+					},
+					{
+						"name": "deferred",
+						"ui": {},
+						"identity_stores": [
+							"employeesdb"
+						],
+						"token_validator_options": {},
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"token_grantor_options": {},
+						"portal_admin_roles": {
+							"authp/admin": true
+						},
+						"portal_user_roles": {
+							"authp/user": true
+						},
+						"portal_guest_roles": {
+							"authp/guest": true
+						},
+						"api": {
+							"profile_enabled": true
+						}
+					}
+				],
+				"identity_stores": [
+					{
+						"name": "employeesdb",
+						"kind": "local",
+						"params": {
+							"path": ":memory:",
+							"realm": "employees"
+						}
+					},
+					{
+						"name": "contractorsdb",
+						"kind": "local",
+						"params": {
+							"path": ":memory:",
+							"realm": "contractors"
+						}
+					}
+				]
+			},
+			"portal_cookie_directives": {
+				"deferred": [
+					"cookie access token name AUTHP_REFRESH_TOKEN"
+				]
+			},
+			"portal_token_refresh_directives": {
+				"deferred": [
+					"realms employees",
+					"public origin {env.TOKEN_REFRESH_ORIGIN}",
+					"base path {env.TOKEN_REFRESH_MOUNT}",
+					"cookie name {env.TOKEN_REFRESH_COOKIE}",
+					"access lifetime {env.TOKEN_REFRESH_ACCESS}",
+					"body transport {env.TOKEN_REFRESH_BODY}"
+				]
+			}
+		}
+	}
+}

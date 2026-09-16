@@ -43,43 +43,5 @@ func parseCaddyfileOAuthRegistrationStore(d *caddyfile.Dispenser) (*OAuthRegistr
 // readRegistrationBlock keeps structural tokens separate from directive values.
 // It also serves the provider block, which uses the same flat statement grammar.
 func readRegistrationBlock(d *caddyfile.Dispenser) ([][]string, error) {
-	if !d.Next() || d.Val() != "{" || d.Token().Quoted() {
-		return nil, d.Errf("expected unquoted registration/provider block")
-	}
-	d.Prev()
-	nesting := d.Nesting()
-	var body [][]string
-	for d.NextBlock(nesting) {
-		if d.Nesting() != nesting+1 {
-			return nil, d.Errf("nested registration/provider blocks are unsupported")
-		}
-		args, err := oauthApplicationArgs(d)
-		if err != nil {
-			return nil, err
-		}
-		if err := validateOAuthDirectiveTokens(args); err != nil {
-			return nil, d.Errf("invalid registration/provider argument")
-		}
-		body = append(body, args)
-		if d.Next() {
-			if d.Val() == "{" {
-				return nil, d.Errf("nested registration/provider blocks are unsupported")
-			}
-			if d.Val() == "}" {
-				if d.Token().Quoted() {
-					return nil, d.Errf("registration/provider closing brace must be unquoted")
-				}
-				if d.NextLine() {
-					d.Prev()
-				} else if d.Next() {
-					return nil, d.Errf("registration/provider closing brace must end its line")
-				}
-			}
-			d.Prev()
-		}
-	}
-	if d.Nesting() != nesting {
-		return nil, d.Errf("unterminated registration/provider block")
-	}
-	return body, nil
+	return readFlatDirectiveBlock(d, "registration/provider")
 }

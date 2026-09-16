@@ -10,7 +10,7 @@ description: "caddy-security authentication portal cookie Caddyfile configuratio
 Portal cookie statements are collected in `caddyfile_authn.go`. The thin
 translation in `caddyfile_authn_cookie.go` preserves legacy Caddy spellings;
 `pkg/authn/cookie/parser.NewCookieConfigFromDirectives` in the pinned
-AuthCrunch v1.2.3 owns grammar, normalization, duplicates, and validation.
+AuthCrunch v1.2.4 owns grammar, normalization, duplicates, and validation.
 `PortalConfig.ConfigureCookies` installs one complete validated snapshot.
 It replaces previous cookie settings, rather than merging individual lines.
 Portal construction wires the final access name into its grantor and validator.
@@ -81,6 +81,16 @@ once. Duplicate statements are errors even when the values agree. Final
 names must be valid HTTP cookie names and distinct across all eight roles.
 Names may be explicitly unprefixed. `__Host-` and `__Secure-` remain optional
 compatibility cases; a name alone does not establish the required attributes.
+
+For enabled [portal token refresh](../configuration-authentication/references/token-refresh.md),
+an explicit `token refresh { cookie name ... }` overrides the shared refresh
+name before shared-parser collision checks and cookie factory construction.
+An override may free the old name for another role; duplicate shared settings
+still fail. Deferred refresh also defers cookie parsing, even for literal cookies.
+Without that override, the shared name/prefix wins. Disabled refresh does not
+rename cookies. Active refresh cookies use the configured portal mount with
+host-only, Secure, HttpOnly, SameSite=Lax attributes; the legacy refresh subpath
+below only describes retired-cookie cleanup.
 
 ### Reserved-Prefix Compatibility
 
@@ -185,6 +195,15 @@ portal are deferred together, so duplicate aliases, colliding resolved names,
 and domains that resolve to the same value are checked together. Deferred
 validation happens during provisioning; adaptation alone cannot validate it.
 
+Preserve argument values through every encode/decode step, including trailing
+tabs and Unicode whitespace. The shared CSV codec trims record-edge whitespace;
+use the lossless directive encoder so an invalid cookie name cannot become valid
+before validation or be hidden by an enabled refresh-name override. Resolve into
+tokens and translate legacy syntax before re-encoding, with no lossy intermediate
+statement. Reject CR/LF in saved statements before decoding: the decoder consumes
+one record and would otherwise ignore subsequent settings. Replacements must
+also reject empty, multiline, NUL and invalid UTF-8 arguments before encoding.
+
 The deferred snapshot replaces any typed `cookie_config` supplied for that
 portal in JSON. Unknown or ambiguous portal references fail. Literal-only
 Caddyfiles emit typed `cookie_config` directly. JSON roundtrips preserve both
@@ -266,5 +285,10 @@ Run focused checks with:
 go test -mod=readonly -race -count=1 -run 'TestPortalCookie|TestPolicyCookie|TestAppCookie|TestCaddyCookiesE2E|TestCaddyfileAdaptAuthenticationToJSON|TestResolveRuntimeAppConfig' .
 ```
 
-Later OIDC/refresh tasks must extend the TLS fixture with their stricter cookie
-scope, origin, rotation, and deletion requirements.
+`TestCaddyTokenRefreshE2E` and `TestCaddyOIDCProviderE2E` exercise the stricter
+refresh/OP cookie scopes, origin checks, rotation, and logout requirements.
+The refresh E2E also rejects malformed shared-cookie names and saved multiline
+statements during reload, then rotates the original session to verify that the
+failed candidate preserved its store. The registered
+`testcase_authenticate_with_token_refresh_cookie_whitespace` fixture covers
+literal whitespace rejection before a refresh-name override.

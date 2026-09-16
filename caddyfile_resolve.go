@@ -286,16 +286,19 @@ func resolveConfigInstructions(ctx context.Context, repl *caddy.Replacer, secret
 
 // ResolveRuntimeAppConfig uses caddy.Replacer to replace strings in App config.
 func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, log *zap.Logger) error {
-	return resolveRuntimeAppConfig(ctx, repl, secretManagers, config, nil, log)
+	return resolveRuntimeAppConfig(ctx, repl, secretManagers, config, nil, nil, log)
 }
 
-// resolveRuntimeAppConfig also consumes the original Caddy OAuth statements when
-// available. JSON-only AuthCrunch configurations retain map-based replacement.
-func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives map[string][]string, log *zap.Logger) error {
+// resolveRuntimeAppConfig also consumes deferred Caddy OAuth and token refresh
+// statements. JSON-only AuthCrunch configurations retain typed replacement.
+func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives, tokenRefreshDirectives map[string][]string, log *zap.Logger) error {
 	if config == nil {
 		return fmt.Errorf("security app config is nil")
 	}
 	if err := validateConfigObjects(config); err != nil {
+		return err
+	}
+	if err := resolvePortalTokenRefresh(ctx, repl, secretManagers, config, tokenRefreshDirectives, log); err != nil {
 		return err
 	}
 	// These Validate methods parse raw instructions. Empty or already-parsed
@@ -630,15 +633,23 @@ func resolvePortalCookieDirectives(ctx context.Context, repl *caddy.Replacer, ma
 		if portal == nil {
 			return fmt.Errorf("cookie portal %q not found", name)
 		}
-		// Each replacement stays one argument, even when it contains spaces/quotes.
-		resolved, err := resolveConfigInstructions(ctx, repl, managers, "PortalCookieDirectives", statements, 2, log)
-		if err != nil {
-			return fmt.Errorf("portal %q cookies: %w", name, err)
-		}
-		// Translation runs after replacement too, for legacy prefixes and switches.
-		for i, statement := range resolved {
+		// Reject extra CSV records before decoding; DecodeArgs reads only the first.
+		// Keep replacements as tokens until legacy translation and lossless encoding
+		// validate them, so invalid trailing whitespace cannot disappear in between.
+		resolved := make([]string, len(statements))
+		for i, statement := range statements {
+			if strings.ContainsAny(statement, "\r\n") {
+				return fmt.Errorf("portal %q: invalid cookie statement %d", name, i)
+			}
 			args, err := cfgutil.DecodeArgs(statement)
-			if err != nil || (args[0] != "cookie" && args[0] != "set") {
+			if err != nil || len(args) < 2 {
+				return fmt.Errorf("portal %q: invalid cookie statement %d", name, i)
+			}
+			args, err = substituteStrings(ctx, repl, managers, "PortalCookieDirectives", args, log)
+			if err != nil {
+				return fmt.Errorf("portal %q cookies: %w", name, err)
+			}
+			if args[0] != "cookie" && args[0] != "set" {
 				return fmt.Errorf("portal %q: invalid cookie directive", name)
 			}
 			resolved[i], err = encodePortalCookieDirective(args[0], args[1:], false)

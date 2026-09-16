@@ -114,9 +114,10 @@ so accepting spellings that browsers rewrite can replace a working provider
 with one that rejects its own discovery and login requests. Reject these
 configurations before construction; never silently rewrite an issuer.
 
-If refresh is enabled through native JSON `refresh_tokens`, its canonical HTTPS
-`public_origin` and `base_path` must agree with the OIDC issuer origin and mount.
-There is no refresh Caddyfile block in this wrapper yet; do not invent one.
+When [portal token refresh](../../configuration-authentication/references/token-refresh.md)
+is enabled by a `token refresh` block or native JSON `refresh_tokens`, its
+canonical HTTPS public origin and base path must agree with the OIDC issuer
+origin and mount. This does not enable OIDC refresh grants.
 
 ## Keys and saved JSON
 
