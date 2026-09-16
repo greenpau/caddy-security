@@ -25,14 +25,31 @@ GoReleaser uses the pinned v6.3.0 action with tool version `v2.18.1` and
 configuration declares schema version 2. Keep action and tool upgrades explicit
 and qualify the config against the selected version.
 
-`.goreleaser.yaml` uses project name `authcrunch`, publishes to
-`greenpau/caddy-security`, and builds `./cmd/authcrunch` as `./bin/authcrunch`
-for Linux, Windows, and Darwin on `amd64` and `arm64`. It sets `CGO_ENABLED=0`,
-uses `-mod=readonly` and trimpath flags, and strips symbols with `-s -w`.
-The configured checksum name is `authcrunch_<Version>_SHA256SUMS`. The config
-contains an `nfpms` section; verify actual generated artifacts before promising
-specific package formats. It does not inject custom version/branch/commit
-fallbacks into the Caddy wrapper.
+`.goreleaser.yaml` uses project name `authcrunch` and publishes both commands to
+`greenpau/caddy-security`. Both build IDs target Linux, Windows and Darwin on
+`amd64` and `arm64`, with `CGO_ENABLED=0`, `-mod=readonly`, trimpath and `-s -w`:
+
+- `authcrunch` builds `./cmd/authcrunch` as `./bin/authcrunch`. Its archive keeps
+  the existing GoReleaser name/format defaults and includes only this build.
+  The `nfpms` configuration is also explicitly scoped to this build. No nFPM
+  output formats are configured, so it currently produces no Linux packages.
+- `caddy-authenticator` builds `./cmd/caddy-authenticator` as
+  `caddy-authenticator` (with `.exe` on Windows). Its six standalone archives are
+  `caddy-authenticator_<Version>_<Os>_<Arch>.tar.gz`, using `.zip` for Windows.
+  They contain the executable, LICENSE and the CLI's README at the archive root.
+  Preserve the separate build/archive IDs and explicit archive `ids` selectors;
+  omitting selectors bundles both binaries together. The CLI does not belong in
+  the existing Caddy nFPM package.
+
+Both archive sets share `authcrunch_<Version>_SHA256SUMS`. The authenticator's
+linker flags set `main.appVersion`, `main.gitCommit`, `main.buildUser` and
+`main.buildDate` from GoReleaser metadata. Snapshots must report their snapshot
+version, not the source fallback. The Caddy wrapper has no custom version linker
+flags. Do not change release tags or bump VERSION merely to add a build.
+Keep the [CLI download guide](../../../../cmd/caddy-authenticator/README.md#download-a-release)
+aligned with the archive names, target matrix and checksum filename.
+GoReleaser's [archive documentation](https://goreleaser.com/customization/package/archives/)
+describes build selectors, file placement and Windows format overrides.
 
 Coverage is a separate diagnostic artifact. The reusable build workflow uploads
 the complete `.coverage/` bundle as `caddy-security_coverage_<artifact-id>`,
@@ -88,6 +105,18 @@ directory and no publishing token. Check required
 template environment values, including `GOPATH` and `GO_AUTHCRUNCH_CHANGELOG`.
 Report any schema incompatibility before changing configuration or the selected
 tool.
-Snapshot builds validate compilation; inspect archives/checksums/package output
-separately when those formats change. Do not use a live release as a packaging
-test.
+Snapshot builds validate compilation. For archive changes, run
+`goreleaser release --snapshot --skip=publish --clean --config <snapshot-config>`
+using a copy of the repository configuration with only `dist` changed to a chosen
+ignored directory. Snapshot mode disables publication; remove publishing tokens
+from the test environment as well. Avoid replacing any unrelated `dist/` output.
+
+Run `python3 assets/scripts/check_authenticator_archives.py <snapshot-dist>` to
+verify all six standalone archives, executable names/permissions, the exact
+usage guide/license, separation from the Caddy binary and SHA-256 entries.
+`make test-automation` covers missing targets, corruption, mixed contents,
+incorrect documents and non-executable Unix binaries. Inspect each generated
+executable with `go version -m` for its target and toolchain; run the host-compatible
+packaged authenticator's `version` and `--help` to verify release metadata and
+command availability. Also inspect the existing authcrunch archives for regressions.
+Do not use a live release as a packaging test.

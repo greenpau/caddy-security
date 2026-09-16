@@ -35,6 +35,8 @@ build: version-check
 	@mkdir -p bin/
 	@go build -mod=readonly -trimpath -v -o ./bin/authcrunch ./cmd/authcrunch
 	@./bin/authcrunch version
+	@go build -mod=readonly -trimpath -v -ldflags "-X main.appVersion=$$PLUGIN_VERSION" -o ./bin/caddy-authenticator ./cmd/caddy-authenticator
+	@./bin/caddy-authenticator version
 	@echo "$@: complete"
 
 .PHONY: devbuild
@@ -117,7 +119,7 @@ dep:
 	@go mod verify
 	@$(MAKE) install-test-tools
 
-.PHONY: test-automation ci-check version-check artifact-id
+.PHONY: test-automation ci-check version-check version-sync artifact-id
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 
@@ -130,6 +132,9 @@ ci-check:
 
 version-check:
 	@$(PYTHON) assets/scripts/version.py check
+
+version-sync:
+	@$(PYTHON) assets/scripts/version.py sync
 
 artifact-id:
 	@$(PYTHON) assets/scripts/version.py artifact
@@ -153,8 +158,10 @@ release-git-check:
 release-update-version:
 	@echo "DEBUG: started $@"
 	@versioned -patch
+	@$(MAKE) version-sync
+	@$(MAKE) version-check
 	@assets/scripts/generate_downloads.sh
-	@git add VERSION README.md CONTRIBUTING.md Makefile
+	@git add VERSION README.md CONTRIBUTING.md Makefile cmd/caddy-authenticator/main.go
 
 .PHONY: release-git-commit
 release-git-commit:

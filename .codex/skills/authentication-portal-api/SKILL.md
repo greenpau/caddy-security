@@ -11,6 +11,12 @@ Use this skill for HTTP/JSON interactions with a configured authentication
 portal. Use `configuration-authentication` for the surrounding portal
 Caddyfile and `configuration-http-integrations` for route mounting.
 
+For the standalone `caddy-authenticator` CLI, profile configuration, terminal
+input and private storage, use the
+[command maintenance reference](../scripts-and-automation/references/caddy-authenticator.md).
+Keep fresh login delegated to the public authclient package; the command owns
+cached-token scheduling and its explicit native refresh request.
+
 Read these files when details matter:
 
 - `../go-authcrunch/pkg/authn/handle_json_*.go`

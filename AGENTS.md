@@ -64,7 +64,8 @@ modules register from package `init` hooks.
   policies, secrets, and runtime replacement behavior.
 - `caddyfile_oauth_application.go` registers named OAuth clients with explicit
   or persisted credentials. `command_provision.go` owns explicit local creation
-  and rotation; `command_security.go` registers the CLI namespace.
+  and rotation; `command_security.go` registers the CLI namespace and reports
+  the linked go-authcrunch dependency through `security version`.
   `oauth_registration_store.go` owns private immutable revisions.
   `caddyfile.go` collects applications before resolving other declarations.
 - `command_local*.go` implements `security local` administration through the
@@ -88,6 +89,10 @@ modules register from package `init` hooks.
 - `cmd/authcrunch/` builds the local Caddy binary that imports standard Caddy
   modules, this module, and `caddy-trace`; build outputs land in
   `bin/authcrunch`.
+- `cmd/caddy-authenticator/` builds a standalone, go-installable portal login
+  client using authclient, with named profiles and private token/log storage.
+  `make build` outputs `bin/caddy-authenticator`; its `README.md` owns user-facing
+  CLI usage, including interactive opt-in and version reporting.
 - `assets/config/` stores runnable/example Caddy configs and supporting files.
   `assets/scripts/` stores documentation/release automation. `assets/docs/`
   holds non-Markdown assets such as images; `assets/cla/` holds CLA materials.
@@ -146,6 +151,10 @@ generated artifacts, dependency automation, or release/version procedures.
 
 Use its [local user command reference](.codex/skills/scripts-and-automation/references/local-user-commands.md)
 for `security local` user-store administration and offline credential generation.
+
+Use its [standalone authenticator reference](.codex/skills/scripts-and-automation/references/caddy-authenticator.md)
+for `cmd/caddy-authenticator` implementation, profiles, storage and validation.
+Keep the utility's user-facing usage in `cmd/caddy-authenticator/README.md`.
 
 ## Versioning and Releases
 

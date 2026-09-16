@@ -16,8 +16,11 @@ package security
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -43,7 +46,7 @@ func TestSecurityCommandHelp(t *testing.T) {
 	for _, tc := range []struct {
 		path, children string
 	}{
-		{"", "oauth oidc"},
+		{"", "local oauth oidc version"},
 		{"oauth init", "provisioning"},
 		{"oauth init provisioning", "store"},
 		{"oauth", "create init rotate"},
@@ -176,7 +179,7 @@ func TestSecurityCommandFlagErrors(t *testing.T) {
 	if err := os.WriteFile(input, []byte("oauth registration store {\npath "+store+"\n}\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"", "oauth", "oauth init provisioning store", "oauth rotate secret", "oidc create signing key"} {
+	for _, path := range []string{"", "version", "oauth", "oauth init provisioning store", "oauth rotate secret", "oidc create signing key"} {
 		t.Run(path, func(t *testing.T) {
 			for _, flag := range []string{"--help=" + registrationTestSecret, "-h" + registrationTestSecret, "--" + registrationTestSecret, "-" + registrationTestSecret} {
 				cmd, output := securityTestCommand(t)
@@ -198,7 +201,7 @@ func TestSecurityCommandFlagErrors(t *testing.T) {
 }
 
 func TestCaddySecurityCommandFlagErrorsE2E(t *testing.T) {
-	for _, path := range []string{"", "oauth init provisioning store", "oauth rotate secret"} {
+	for _, path := range []string{"", "version", "oauth init provisioning store", "oauth rotate secret"} {
 		t.Run(path, func(t *testing.T) {
 			for _, flag := range []string{"--help=" + registrationTestSecret, "-h" + registrationTestSecret, "--" + registrationTestSecret} {
 				args := append([]string{"security"}, strings.Fields(path)...)
@@ -208,5 +211,52 @@ func TestCaddySecurityCommandFlagErrorsE2E(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSecurityAuthcrunchVersion(t *testing.T) {
+	const path = "github.com/greenpau/go-authcrunch"
+	for _, tc := range []struct {
+		name string
+		info *debug.BuildInfo
+		want string
+	}{
+		{"unavailable", nil, "go-authcrunch unknown"},
+		{"missing dependency", &debug.BuildInfo{Main: debug.Module{Path: "github.com/greenpau/caddy-security", Version: "v1.0.0"}}, "go-authcrunch unknown"},
+		{"release", &debug.BuildInfo{Deps: []*debug.Module{{Path: "unrelated", Version: "v2.0.0"}, {Path: path, Version: "v1.2.3"}}}, "go-authcrunch v1.2.3"},
+		{"pseudo-version", &debug.BuildInfo{Deps: []*debug.Module{{Path: path, Version: "v1.2.4-0.20260916000000-abcdef123456"}}}, "go-authcrunch v1.2.4-0.20260916000000-abcdef123456"},
+		{"unversioned", &debug.BuildInfo{Deps: []*debug.Module{{Path: path}}}, "go-authcrunch (devel)"},
+		{"local replacement", &debug.BuildInfo{Deps: []*debug.Module{{Path: path, Version: "v1.2.3", Replace: &debug.Module{Path: "../go-authcrunch"}}}}, "go-authcrunch v1.2.3 => ../go-authcrunch (devel)"},
+		{"versioned replacement", &debug.BuildInfo{Deps: []*debug.Module{{Path: path, Version: "v1.2.3", Replace: &debug.Module{Path: "example.com/fork", Version: "v1.3.0"}}}}, "go-authcrunch v1.2.3 => example.com/fork v1.3.0"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := securityAuthcrunchVersion(tc.info); got != tc.want {
+				t.Fatalf("version = %q; want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSecurityVersionCommand(t *testing.T) {
+	cmd, output := securityTestCommand(t)
+	cmd.SetArgs([]string{"version"})
+	if err := cmd.Execute(); err != nil || !strings.HasPrefix(output.String(), "go-authcrunch ") {
+		t.Fatalf("version command failed: %q, %v", output.String(), err)
+	}
+	cmd, output = securityTestCommand(t)
+	cmd.SetArgs([]string{"version", "--help"})
+	if err := cmd.Execute(); err != nil || !strings.Contains(output.String(), "security version") || strings.Contains(output.String(), "--config") {
+		t.Fatalf("version help failed: %q, %v", output.String(), err)
+	}
+	cmd, output = securityTestCommand(t)
+	cmd.SetArgs([]string{"version", registrationTestSecret})
+	if err := cmd.Execute(); err == nil || strings.Contains(err.Error(), registrationTestSecret) || output.Len() != 0 {
+		t.Fatal("version accepted or exposed a positional argument")
+	}
+	cmd, _ = securityTestCommand(t)
+	cmd.SetArgs([]string{"version"})
+	cmd.SetOut(securityFailedWriter{})
+	if err := cmd.Execute(); !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("version lost stdout failure: %v", err)
 	}
 }

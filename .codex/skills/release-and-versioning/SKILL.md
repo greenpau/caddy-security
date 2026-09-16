@@ -33,15 +33,30 @@ Keep these version surfaces distinct:
   `make sync` updates dependency references and removes local replacements; it
   is a separate dependency refresh, not caddy-security version synchronization.
 - `cmd/authcrunch/main.go` delegates to Caddy. It has no application version
-  fallback declarations to synchronize. The Makefile does not inject
+  fallback declarations to synchronize. The Makefile does not inject its
   `PLUGIN_VERSION` with linker flags, so `bin/authcrunch version` alone does not
   establish this module's release identity.
+- `bin/authcrunch security version` reads the linked go-authcrunch module from
+  embedded Go build metadata. It retains pseudo-versions and shows replacements,
+  including `(devel)` for unversioned local paths. This is dependency identity,
+  distinct from Caddy's version and this repository's release number; see
+  [security dependency version](../scripts-and-automation/SKILL.md#security-dependency-version).
+- `cmd/caddy-authenticator/main.go` initializes `*versioned.PackageManager` with
+  a literal fallback for ordinary `go install` builds. `make build` injects
+  `VERSION` into `main.appVersion`; `caddy-authenticator version` prints its
+  banner. GoReleaser builds separate platform archives and injects release/snapshot
+  version, commit and build metadata; see [CI and packaging](references/ci-and-packaging.md).
+  Keep the fallback synchronized using `make version-sync` after an
+  explicit VERSION change. Sync validates VERSION first and changes only the
+  existing fallback; it neither bumps the release nor stages files.
 
 `make version-check` validates the fixed-major namespace through
 `assets/scripts/version.py` without rewriting files. It accepts a single
 optional trailing newline, rejects leading zeros and prerelease/build suffixes,
 and bounds components for `versioned`. `check --tag` additionally requires the
 exact `v<VERSION>` tag. It does not validate README link placement or contents.
+The check also rejects a missing, ambiguous or stale authenticator fallback;
+artifact identity validation enforces the same consistency without rewriting it.
 
 `make artifact-id` validates the version and produces
 `v<VERSION>_<UTC YYYYMMDDTHHMMSSZ>_<12-character SHA>` for branch/PR/manual builds.
@@ -49,10 +64,8 @@ An exact `v<VERSION>` tag produces `v<VERSION>`; another tag fails. `GITHUB_SHA`
 provides the checked CI revision (including PR merge commits), with local HEAD
 as fallback. Validated `version` and `artifact_id` values go to `GITHUB_OUTPUT`.
 
-The publishing automation still offers a patch release only. It has no
-`minor-release` or `version-sync` target and no Go fallback projections. Do not
-infer those facilities from go-authcrunch; implement and validate any requested
-addition before documenting it as available.
+The publishing automation offers a patch release only; it has no `minor-release`
+target. `version-sync` projects VERSION into the authenticator fallback only.
 
 ## Existing Release Targets
 
@@ -62,7 +75,7 @@ have different side effects:
 | Target | Actual behavior |
 | --- | --- |
 | `make release-git-check` | Runs `go mod tidy` and `go mod verify`, checks `main`, then checks tracked changes with `git diff-index --quiet HEAD --`. It can modify module files and does not check untracked files or remote divergence. |
-| `make release-update-version` | Runs `versioned -patch`, regenerates README download links, and stages `VERSION`, `README.md`, `CONTRIBUTING.md`, and `Makefile`. It does not commit or publish. |
+| `make release-update-version` | Runs `versioned -patch`, synchronizes and validates the authenticator fallback, regenerates README download links, and stages `VERSION`, `README.md`, `CONTRIBUTING.md`, `Makefile`, and `cmd/caddy-authenticator/main.go`. It does not commit or publish. |
 | `make release-git-commit` | Commits the index with `ops: released v<VERSION>`, creates an annotated tag, runs `git push`, then runs `git push --tags`. These pushes are separate and the latter includes every local tag. |
 | `make release` | Declares `release-git-check`, `build`, `release-update-version`, and `release-git-commit` as prerequisites. It includes no test target and builds before bumping. |
 
@@ -72,7 +85,7 @@ does serialize its gates, but that does not serialize the legacy release target.
 
 The release recipes invoke `versioned` from `PATH`; `make dep` resolves only the
 pinned test tool and module dependencies, so versioned must already be installed.
-An indirect `versioned` requirement in `go.mod` does not pin that executable.
+The `versioned` library requirement in `go.mod` does not pin that executable.
 Inspect `command -v versioned` and `versioned -version` before a bump. A change
 to tool pinning is an automation/dependency change, not a documentation fix.
 

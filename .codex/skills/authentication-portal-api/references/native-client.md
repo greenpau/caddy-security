@@ -9,6 +9,17 @@ not renew credentials, read configuration files, manage terminal input, or call
 admin/profile APIs. Caddy continues to forward the request to `Portal.ServeHTTP`.
 Keep terminal/configuration/management code out of server handlers.
 
+`cmd/caddy-authenticator` is the standalone profile-based consumer of this API.
+It reuses the shared config parser, client, credentials and FileTokenStore.
+Its `profiles/<name>/token.jwt` is the same JSON credential representation,
+including native metadata. See the
+[command maintenance reference](../../scripts-and-automation/references/caddy-authenticator.md)
+for storage, input, documentation and its real-Caddy E2E coverage.
+The command reuses unexpired tokens, requests native refresh within three minutes
+of expiry, and uses `login --force` for explicit fresh authentication. That
+scheduling and its persistent refresh-uncertainty marker belong to the command;
+`authclient.Authenticate` itself still always performs fresh authentication.
+
 This is direct portal login with password/TOTP or an independent API key. An
 [OAuth public relying party](../../configuration-oauth-applications/references/oidc-provider.md)
 instead uses browser authorization, authorization code plus PKCE, and its

@@ -1,6 +1,6 @@
 ---
 name: scripts-and-automation
-description: caddy-security repository automation, Makefile targets, build/test/report workflows, and security local CLI administration. Use for local-user, password, and API-key commands; repository scripts; local go-authcrunch replacement workflows; generated artifacts; or routing release tasks to release-and-versioning.
+description: caddy-security repository automation, Makefile targets, build/test/report workflows, caddy-authenticator profile login, and security local CLI administration. Use for standalone portal authentication, local-user, password, and API-key commands; repository scripts; local go-authcrunch replacement workflows; generated artifacts; or routing release tasks to release-and-versioning.
 ---
 
 # Scripts and Automation
@@ -12,6 +12,12 @@ repository builds a Caddy command binary at `bin/authcrunch` from
 `cmd/authcrunch/main.go`; the binary registers the `security` app, the
 `authenticate` and `authorize` integrations, Caddy standard modules, and
 `caddy-trace`.
+
+For the independently installable `cmd/caddy-authenticator`, use the
+[standalone authenticator reference](references/caddy-authenticator.md). It owns
+profile-based portal login, private credentials/token/log storage, and the
+command's user guide. Its implementation reuses `go-authcrunch/pkg/authclient`;
+it does not load Caddy server modules or require the portal admin API.
 
 Use [release-and-versioning](../release-and-versioning/SKILL.md) for version
 authority, release target side effects, release CI, and publication. Use
@@ -32,8 +38,10 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
 
 - Use `go test ./...` for a fast all-package check without coverage reports.
 - Use `go test -run <TestName> ./...` for focused validation.
-- Use `make build` to validate `VERSION`, compile `cmd/authcrunch` into
-  `bin/authcrunch` with `-mod=readonly -trimpath`, and print the binary version.
+- Use `make build` to validate `VERSION` and the authenticator fallback, compile
+  `cmd/authcrunch` and `cmd/caddy-authenticator` into their corresponding `bin/`
+  executables with `-mod=readonly -trimpath`, and print both versions. It injects
+  `VERSION` into the authenticator's `main.appVersion` linker variable.
 - Use `make` when the user asks for the default build; it runs `info` and
   `build`.
 - Use `make test` for uncached, race-enabled Go tests and complete reports
@@ -51,6 +59,8 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   and build gates, including under `make -j`.
 - Use `make version-check` for read-only version validation and
   `make artifact-id` for version/timestamp/commit identity and CI outputs.
+  After an explicit VERSION edit, `make version-sync` updates the authenticator's
+  Go install fallback without bumping or staging a release.
 - Use `make fmtcfg` to format Caddyfile fixtures under
   `testdata/caddyfile_adapt` and `assets/config`; it requires an existing
   `bin/authcrunch`.
@@ -178,7 +188,8 @@ commands, builds, and tests run in `caddy-security`.
 Do not treat generated outputs as source changes unless the user explicitly asks
 to update or commit them.
 
-- `bin/authcrunch` is produced by build/devbuild targets.
+- `bin/authcrunch` is produced by build/devbuild targets; `make build` also
+  produces `bin/caddy-authenticator`.
 - `.coverage/` contains the tested HTML/JSON/JUnit reports, raw test output,
   coverage profile, stderr, run metadata, and generation manifest. Start at
   `.coverage/index.html`; see `testing-and-ci` for the complete evidence layout.
@@ -206,6 +217,22 @@ same gate. Follow `testing-and-ci` for local reproduction and
 
 The CLA workflow may update `assets/cla/signatures.json` through GitHub
 automation. Do not edit CLA signatures or consent files unless the user asks.
+
+## Security Dependency Version
+
+Run `bin/authcrunch security version` to print the go-authcrunch module linked
+into the executable, for example `go-authcrunch v1.2.5`. This uses
+`runtime/debug.ReadBuildInfo` and works without a config, server, credentials,
+Go installation or source checkout. Do not substitute the caddy-security
+`VERSION`, a working-directory go.mod, or the authdb package's version banner.
+`bin/authcrunch version` continues to report Caddy's version.
+
+Preserve pseudo-versions and module replacements in diagnostics. A replacement
+prints `go-authcrunch <required-version> => <replacement-path> <replacement-version>`;
+an unversioned local replacement uses `(devel)`, so the required release is not
+mistaken for the actual checkout. Missing build metadata prints
+`go-authcrunch unknown`. `command_security.go` owns registration and formatting;
+its unit tests and `TestCaddySecurityVersionE2E` cover the command contract.
 
 ## Local OAuth Provisioning
 

@@ -124,7 +124,7 @@ func authenticationClientDatabase(t *testing.T) (string, map[string]string) {
 	return path, keys
 }
 
-func newAuthenticationClientFixture(t *testing.T, mount, database, cert, key string, roots *x509.CertPool, refresh, body, custom, oidc bool) *authenticationClientFixture {
+func newAuthenticationClientFixture(t *testing.T, mount, database, cert, key string, roots *x509.CertPool, refresh, body, custom, oidc bool, accessLifetimeSeconds ...int) *authenticationClientFixture {
 	t.Helper()
 	f := &authenticationClientFixture{base: "https://" + lifecycleAddress(t), mount: mount, refresh: refresh, body: body, oidc: oidc, accessName: "authp_access_token", refreshName: "AUTHP_REFRESH_TOKEN"}
 	accessKey := newJWKSKeyFiles(t, "RSA", "access")
@@ -142,7 +142,11 @@ func newAuthenticationClientFixture(t *testing.T, mount, database, cert, key str
 		if basePath == "" {
 			basePath = "/"
 		}
-		refreshBlock = fmt.Sprintf("token refresh {\nrealms local\npublic origin %s\nbase path %s\nbody transport %s\naccess lifetime 60\n}\n", f.base, basePath, state)
+		lifetime := 60
+		if len(accessLifetimeSeconds) > 0 {
+			lifetime = accessLifetimeSeconds[0]
+		}
+		refreshBlock = fmt.Sprintf("token refresh {\nrealms local\npublic origin %s\nbase path %s\nbody transport %s\naccess lifetime %d\n}\n", f.base, basePath, state, lifetime)
 	}
 	if oidc {
 		opKey := newOIDCRPKey(t, "op")

@@ -205,7 +205,10 @@ tests and helpers. Use explicit types, type switches, interfaces, or generics.
 Keep configuration validation typed instead of building runtime field walkers.
 
 Keep the Apache license header on Go files. Use package `security` for root
-application files and package `main` only for `cmd/authcrunch`.
+application files and package `main` for executable entrypoints under `cmd/`,
+including `cmd/authcrunch` and `cmd/caddy-authenticator`. The standalone
+authenticator reuses the public authclient package; see its
+[maintenance reference](../scripts-and-automation/references/caddy-authenticator.md).
 
 Run `gofmt` on Go changes. Let Go tooling group imports into standard library,
 third-party packages, and local module packages. Use side-effect imports only

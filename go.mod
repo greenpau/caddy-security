@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
 	github.com/greenpau/go-authcrunch v1.2.5
+	github.com/greenpau/versioned v1.0.36
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/tidwall/gjson v1.18.0
@@ -82,7 +83,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.22 // indirect
 	github.com/googleapis/gax-go/v2 v2.24.1 // indirect
 	github.com/greenpau/tested v1.0.2 // indirect
-	github.com/greenpau/versioned v1.0.36 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/huandu/xstrings v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

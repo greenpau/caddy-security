@@ -104,13 +104,40 @@ refresh its managed files without deleting other bundles or investigation
 notes. `make run-reports` regenerates presentations from recorded evidence
 and preserves failures; `make coverage` aliases it without rerunning tests.
 
-Use `make build` when validation needs `bin/authcrunch`. Formatting is separate:
+Use `make build` when validation needs `bin/authcrunch` or
+`bin/caddy-authenticator`; it builds both and prints their versions. Formatting is separate:
 `make fmtcfg` formats fixtures under `testdata/caddyfile_adapt` and
 `assets/config`. Builds/tests do not rewrite licenses, version files, module
 manifests, or Caddyfiles. `make dep` downloads/verifies pinned dependencies and
 resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
+
+`TestSecurityAuthcrunchVersion` and `TestSecurityVersionCommand` cover embedded
+dependency versions, replacements, missing metadata, command dispatch and output
+failures. `TestCaddySecurityVersionE2E` compiles the real Caddy wrapper with
+trimpath and stripped symbols, compares `security version` with Go's selected
+dependency, and runs outside the checkout without Go on PATH or user-state writes.
+Run these and the `TestSecurityCommand*`/`TestCaddySecurityCommand*` registration,
+help and redacted-error tests when changing `security version`.
+
+`cmd/caddy-authenticator/*_test.go` covers profile/configuration parsing, command
+selection, private persistence, logging and transport/input failure behavior.
+`TestCaddyAuthenticatorE2E` builds the standalone command and checks password,
+MFA, API keys, native metadata, independent authorization and profile isolation
+through actual Caddy TLS with admin/profile APIs disabled. On Unix it also runs
+the Python 3 PTY broker for pasted setup, hidden input and terminal restoration
+at password and TOTP prompts. Regressions cover symlink-sensitive CA paths,
+explicit empty home overrides and state preservation when logging rejects an
+operation. Unit tests verify the 45s default and overridden command deadlines;
+PTY tests verify non-interactive defaults and `--interactive` prompt opt-in.
+`TestCaddyAuthenticatorVersionE2E` verifies actual Go install naming, fallback
+version and linker metadata without user-state access. Automation fixtures
+check Make builds, failure propagation and fallback synchronization. Run these
+along with cached-token/expiry/forced-login and native-refresh tests, including
+lost committed responses and prevention of replay across commands,
+when changing the standalone CLI or the authclient dependency; see the
+[command validation map](../scripts-and-automation/references/caddy-authenticator.md#validation).
 
 `TestAuthzPathDelegation` and `TestCaddyAuthorizationPathE2E` cover the v1.2.5
 authorization path contract through the provider and real Caddy TLS. Run them
@@ -272,6 +299,11 @@ real Make/tested processes in disposable repositories: filtering, full/quick/
 custom bundle isolation, assertion failures, compile failures, short timeouts,
 and failed offline reports. Version fixtures exercise the public artifact
 command and validated `GITHUB_OUTPUT` values without publishing remotely.
+Archive-checker unit fixtures cover missing targets, checksum failures, mixed
+binaries, incorrect documents and Unix executable permissions. For GoReleaser
+packaging changes, also run a real snapshot release and the archive checker per
+the [packaging workflow](../release-and-versioning/references/ci-and-packaging.md#toolchain-and-packaging-checks);
+fixture tests cannot establish cross-compilation or actual archive assembly.
 
 The CLA workflow may update `assets/cla/signatures.json` through GitHub
 automation. Do not edit CLA signatures or consent files unless the user asks.
@@ -283,6 +315,7 @@ commit them:
 
 ```text
 bin/authcrunch
+bin/caddy-authenticator
 .coverage/index.html
 .coverage/summary.json
 .coverage/junit.xml

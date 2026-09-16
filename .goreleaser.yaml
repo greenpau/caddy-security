@@ -13,7 +13,8 @@ checksum:
   name_template: "{{.ProjectName}}_{{.Version}}_SHA256SUMS"
 
 builds:
-  - env:
+  - id: authcrunch
+    env:
       - CGO_ENABLED=0
       - GO111MODULE=on
     goos:
@@ -34,9 +35,52 @@ builds:
       - all=-trimpath={{.Env.GOPATH}}
     ldflags: -s -w
 
+  - id: caddy-authenticator
+    main: ./cmd/caddy-authenticator
+    binary: caddy-authenticator
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+      - -mod=readonly
+    ldflags:
+      - >-
+        -s -w
+        -X main.appVersion={{ .Version }}
+        -X main.gitCommit={{ .Commit }}
+        -X main.buildUser=goreleaser
+        -X main.buildDate={{ .Date }}
+
+archives:
+  - id: authcrunch
+    ids:
+      - authcrunch
+  - id: caddy-authenticator
+    ids:
+      - caddy-authenticator
+    name_template: "caddy-authenticator_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+      - src: cmd/caddy-authenticator/README.md
+        strip_parent: true
 
 nfpms:
   - id: authcrunch
+    ids:
+      - authcrunch
     maintainer: "Paul Greenberg <greenpau@outlook.com>"
     file_name_template: >-
       {{ .ProjectName }}_

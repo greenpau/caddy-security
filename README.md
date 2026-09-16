@@ -30,6 +30,15 @@ See [Runtime ownership and reload behavior](.codex/skills/coding-directives/refe
 for request draining, failed replacement cleanup, and the restriction on
 overlapping runtimes that use the same local identity file.
 
+For standalone command-line portal login with named profiles, see
+[`caddy-authenticator`](cmd/caddy-authenticator/README.md) for release downloads,
+Go installation and usage. Its release archives support Linux, macOS and Windows
+on amd64 and arm64.
+
+Run `bin/authcrunch security version` to display the linked go-authcrunch version.
+See [version diagnostics](.codex/skills/scripts-and-automation/SKILL.md#security-dependency-version)
+for module replacement details.
+
 ## Tests and Reports
 
 Run `make dep` to download module dependencies and resolve the pinned `tested`

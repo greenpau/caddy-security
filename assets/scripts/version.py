@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the release version and compute versioned CI artifact identities."""
+"""Validate/synchronize the release version and compute CI artifact identities."""
 
 import argparse
 from datetime import datetime, timezone
@@ -12,6 +12,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION_PATTERN = re.compile(r"1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
+AUTHENTICATOR_MAIN = Path("cmd/caddy-authenticator/main.go")
+FALLBACK_PATTERN = re.compile(r'(app\.SetVersion\(appVersion, ")([^"\n]*)("\))')
 
 
 def read_version(root=ROOT):
@@ -29,6 +31,26 @@ def check_version(root=ROOT, tag=None):
     version = read_version(root)
     if tag is not None and tag != f"v{version}":
         raise ValueError(f"release tag must equal v{version}")
+    _, fallback = authenticator_fallback(root)
+    if fallback.group(2) != version:
+        raise ValueError("caddy-authenticator fallback differs from VERSION; run make version-sync")
+    return version
+
+
+def authenticator_fallback(root):
+    source = (root / AUTHENTICATOR_MAIN).read_text(encoding="utf-8")
+    matches = list(FALLBACK_PATTERN.finditer(source))
+    if len(matches) != 1:
+        raise ValueError("expected one caddy-authenticator app.SetVersion fallback")
+    return source, matches[0]
+
+
+def sync_version(root=ROOT):
+    version = read_version(root)
+    source, fallback = authenticator_fallback(root)
+    if fallback.group(2) != version:
+        updated = source[:fallback.start(2)] + version + source[fallback.end(2):]
+        (root / AUTHENTICATOR_MAIN).write_text(updated, encoding="utf-8")
     return version
 
 
@@ -51,10 +73,15 @@ def artifact_identity(version, sha, ref_type, ref_name, timestamp=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("check", "artifact"))
+    parser.add_argument("command", choices=("check", "sync", "artifact"))
     parser.add_argument("--tag")
     args = parser.parse_args()
     try:
+        if args.command == "sync":
+            if args.tag is not None:
+                raise ValueError("--tag is not supported by sync")
+            print(f"Synchronized caddy-authenticator fallback to {sync_version()}")
+            return 0
         version = check_version(tag=args.tag)
         if args.command == "check":
             print(f"Version {version} is valid")

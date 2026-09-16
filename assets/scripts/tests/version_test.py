@@ -23,6 +23,9 @@ class VersionTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         (self.root / 'VERSION').write_text('1.1.64\n')
+        self.main = self.root / version.AUTHENTICATOR_MAIN
+        self.main.parent.mkdir(parents=True)
+        self.main.write_text('package main\n\nfunc init() {\n\tapp.SetVersion(appVersion, "1.1.64")\n}\n')
 
     def test_valid_version_and_exact_tag(self):
         for text in ('1.1.64', '1.1.64\n'):
@@ -40,6 +43,32 @@ class VersionTests(unittest.TestCase):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 (self.root / 'VERSION').write_bytes(text.encode())
                 version.read_version(self.root)
+
+    def test_sync_changes_only_fallback_and_check_is_read_only(self):
+        before = self.main.read_text()
+        (self.root / 'VERSION').write_text('1.2.0\n')
+        with self.assertRaisesRegex(ValueError, 'make version-sync'):
+            version.check_version(self.root)
+        self.assertEqual(self.main.read_text(), before)
+        self.assertEqual(version.sync_version(self.root), '1.2.0')
+        self.assertEqual(self.main.read_text(), before.replace('1.1.64', '1.2.0'))
+        self.assertEqual(version.check_version(self.root, 'v1.2.0'), '1.2.0')
+        updated = self.main.stat().st_mtime_ns
+        version.sync_version(self.root)
+        self.assertEqual(self.main.stat().st_mtime_ns, updated)
+
+    def test_sync_rejects_missing_duplicate_or_invalid_inputs_without_writing(self):
+        baseline = self.main.read_text()
+        for source in ('package main\n', baseline + baseline):
+            self.main.write_text(source)
+            with self.subTest(source=source), self.assertRaises(ValueError):
+                version.sync_version(self.root)
+            self.assertEqual(self.main.read_text(), source)
+        self.main.write_text(baseline)
+        (self.root / 'VERSION').write_text('2.0.0\n')
+        with self.assertRaises(ValueError):
+            version.sync_version(self.root)
+        self.assertEqual(self.main.read_text(), baseline)
 
     def test_artifact_identity_binds_version_time_and_commit(self):
         sha = 'abcdef0123456789' * 2 + 'abcdef01'
@@ -70,7 +99,7 @@ class VersionTests(unittest.TestCase):
                        cwd=self.root, env=env, check=True)
         sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, env=env, text=True).strip()
         sources = {path.relative_to(self.root): path.read_bytes()
-                   for path in (self.root / 'VERSION', self.root / 'Makefile', scripts / 'version.py')}
+                   for path in (self.root / 'VERSION', self.root / 'Makefile', scripts / 'version.py', self.main)}
         output = self.root / 'github-output'
         env['GITHUB_OUTPUT'] = str(output)
 
@@ -110,6 +139,19 @@ class VersionTests(unittest.TestCase):
                 env.update(baseline)
         for path, content in sources.items():
             self.assertEqual((self.root / path).read_bytes(), content, str(path))
+
+        # The public sync target projects an explicit VERSION edit; check/artifact never do.
+        env.pop('GITHUB_REF_TYPE', None)
+        env.pop('GITHUB_REF_NAME', None)
+        (self.root / 'VERSION').write_text('1.1.65\n')
+        before = output.read_bytes()
+        self.assertNotEqual(make('version-check').returncode, 0)
+        self.assertNotEqual(make('artifact-id').returncode, 0)
+        self.assertEqual(output.read_bytes(), before)
+        self.assertEqual(self.main.read_bytes(), sources[version.AUTHENTICATOR_MAIN])
+        result = make('version-sync')
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(version.check_version(self.root), '1.1.65')
 
 
 if __name__ == '__main__':
