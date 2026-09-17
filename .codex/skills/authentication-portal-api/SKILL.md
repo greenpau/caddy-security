@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-api
-description: "caddy-security authentication portal JSON API and admin/server API guidance. Use when building, reviewing, or debugging programmatic login clients, Portal API calls, Accept: application/json behavior, sandbox challenge sequences, /beacon, /whoami JSON/probe/id_token responses, refresh token API behavior, admin API directives, private signing-key export, public access-token JWKS discovery, and API-oriented authentication troubleshooting."
+description: "caddy-security authentication portal JSON API and admin/server API guidance. Use when building, reviewing, or debugging programmatic login clients, Portal API calls, profile mutations and user public keys, Accept: application/json behavior, sandbox challenge sequences, /beacon, /whoami JSON/probe/id_token responses, refresh token API behavior, admin API directives, private signing-key export, public access-token JWKS discovery, and API-oriented authentication troubleshooting."
 ---
 
 # Authentication Portal API
@@ -10,6 +10,12 @@ description: "caddy-security authentication portal JSON API and admin/server API
 Use this skill for HTTP/JSON interactions with a configured authentication
 portal. Use `configuration-authentication` for the surrounding portal
 Caddyfile and `configuration-http-integrations` for route mounting.
+
+For user-owned profile keys, legacy PGP/RSA metadata, ownership isolation, and
+the known transformed-profile identity gap, read
+[profile public keys](references/profile-public-keys.md).
+For password/MFA mutations and refresh/OIDC invalidation, read
+[local identity compatibility](../configuration-identity-stores/references/local-identity.md).
 
 For the standalone `caddy-authenticator` CLI, profile configuration, terminal
 input and private storage, use the

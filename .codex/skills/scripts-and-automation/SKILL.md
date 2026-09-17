@@ -46,7 +46,7 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   `build`.
 - Use `make test` for uncached, race-enabled Go tests and complete reports
   through pinned `go tool tested`. `TEST` is a regex, `TEST_DIR` accepts package
-  patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `20m`).
+  patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `30m`).
   `MINIMUM_COVERAGE=1` checks for nonzero coverage; it is not a coverage goal.
 - Use `make qtest` for the root package (`.`) by default, or set
   `QUICK_TEST_DIR` and `TEST` for another scope. Reports go to `.coverage/quick`.

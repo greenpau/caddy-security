@@ -12,6 +12,9 @@ Use this skill to configure `local identity store <name>` and
 the store parser is `caddyfile_identity_store.go`.
 
 Use `configuration-users` for detailed local `user <username>` entries.
+For password verification, credential versions, management/profile mutations,
+reload invalidation, and Caddy qualification, read
+[local identity compatibility](references/local-identity.md).
 Check `github.com/greenpau/go-authcrunch/pkg/ids` when changing this skill:
 `ids.Config.Validate` admits only `local` and `ldap` stores and validates the
 authcrunch parameter names produced by the Caddyfile parser.

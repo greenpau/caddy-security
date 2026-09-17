@@ -91,11 +91,19 @@ make test-automation
 make ci-check
 ```
 
-Lifecycle runs use `-mod=readonly -race -count=1 -timeout 20m -v`.
+Lifecycle runs use `-mod=readonly -race -count=1 -timeout 30m -v`.
 `TEST` is a regex (default `.`), `TEST_DIR` accepts package patterns (default
 `./...`), and `TEST_TIMEOUT` overrides the quoted per-package limit.
 `MINIMUM_COVERAGE` defaults to 1 percent as a nonzero-profile check, matching
 go-authcrunch; it is not a substantial coverage target.
+
+Go's timeout covers the entire package, including all sequential E2E parent
+tests. The Caddy journeys also have their own shorter child-process deadlines.
+If CI times out, inspect the captured test events and active test duration to
+distinguish an exhausted package budget from a stuck individual journey.
+Keep the job budget larger than the package budget so setup, builds and report
+upload can finish; the current workflow allows 45 minutes around the 30-minute
+Go package limit.
 
 Reports land in `.coverage`. `make qtest` defaults to the root package (`.`) with
 reports in `.coverage/quick`; override `QUICK_TEST_DIR` and `TEST` for another
@@ -163,6 +171,17 @@ server request counts, cookie-mode MFA metadata-only completion, dropped native
 transport at checkpoints, and rejected browser/native mixtures without consuming
 the refresh family. See the
 [native interoperability test map](../authentication-portal-api/references/native-client.md#caddy-validation).
+
+Local identity provisioning/reset units are in `local_identity_test.go`.
+`profile_public_key_test.go` checks public parser metadata and binary rejection.
+`TestCaddyLocalIdentityE2E` covers TLS login identity/realm/MFA combinations,
+management/profile credential mutations, reload invalidation, stateless access,
+and persisted user public keys. See
+[local identity compatibility](../configuration-identity-stores/references/local-identity.md#caddy-validation).
+The separate `identity_profile_regression` build tag records a known upstream
+v1.2.5 transformed-profile ownership failure. Run its explicit command in
+[profile isolation](../authentication-portal-api/references/profile-public-keys.md#known-upstream-profile-identity-gap);
+the default suite passing must not be reported as resolving that defect.
 
 Runtime ownership unit tests live in `app_lifecycle_test.go`.
 `TestCaddyLifecycleE2E` in `app_lifecycle_e2e_test.go` launches a bounded child

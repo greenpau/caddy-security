@@ -52,6 +52,11 @@ password during provisioning. Passwords may be plaintext or
 `bcrypt:<cost>:<hash>` values; authcrunch hashes plaintext passwords before
 storing them.
 
+Duplicate password updates can reuse the active hash while still advancing the
+account's credential version. Legacy records without `credential_version`
+remain supported. See [local identity compatibility](../configuration-identity-stores/references/local-identity.md)
+for update versus reset behavior, invalidation, and Caddy tests.
+
 Static user blocks are not a full sync mechanism. During local store
 configuration, authcrunch creates the user when it does not exist. When the user
 already exists, the static block updates only the password when `overwrite` is

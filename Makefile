@@ -14,7 +14,8 @@ CADDY_VERSION="v2.11.4"
 PYTHON ?= python3
 TEST ?= .
 TEST_DIR ?= ./...
-TEST_TIMEOUT ?= 20m
+# Go applies this limit to the whole package, including its serial Caddy E2E journeys.
+TEST_TIMEOUT ?= 30m
 QUICK_TEST_DIR ?= .
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1
