@@ -132,6 +132,11 @@ func TestCaddyJWKSPersistenceProcess(t *testing.T) {
 		if err := f.reload(""); err != nil {
 			t.Fatal("could not retire old verifier during reload")
 		}
+		// Probe the replacement on new connections. Caddy retires the old
+		// server's idle keep-alives; reusing one can race that retirement,
+		// especially for the non-idempotent discovery method probes below.
+		// Do not retry requests to hide a transport or protocol failure.
+		f.client.CloseIdleConnections()
 		fetchCaddyJWKS(t, f, 1)
 		assertCaddyGatekeeper(t, f, state.OldToken, false)
 		assertCaddyGatekeeper(t, f, state.NewToken, true)

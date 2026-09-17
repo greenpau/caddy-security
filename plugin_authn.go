@@ -124,13 +124,15 @@ func (m *AuthnMiddleware) Validate() error {
 func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 	release, ok := m.app.acquireRequest()
 	if !ok {
+		w.Header().Set("Cache-Control", "no-store")
 		return caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
 	}
 	defer release()
 
+	normalizeSecurityMetadata(r)
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
-	// Preserve the complete mount, body, cookies and headers. ServeHTTP owns
+	// Preserve the complete mount, body, cookies and protocol headers. ServeHTTP owns
 	// OIDC dispatch and refresh/session/logout authentication before ordinary
 	// access-token gates, so expired access can renew or log out. It also serves
 	// the matching browser coordinator and continuation UI. Do not preauthorize,

@@ -121,6 +121,13 @@ resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
 
+For cross-feature changes, use the
+[composed qualification map](references/composition-qualification.md).
+`TestCaddyCompositionE2E` covers the actual Caddy TLS feature matrix, edge trust,
+credential-purpose isolation, replacement failure/recovery, current roles,
+reload/disposal and combined Chromium flow. Run it with the existing browser
+refresh suite under race detection; preserve its bounded single-process scope.
+
 `TestSecurityAuthcrunchVersion` and `TestSecurityVersionCommand` cover embedded
 dependency versions, replacements, missing metadata, command dispatch and output
 failures. `TestCaddySecurityVersionE2E` compiles the real Caddy wrapper with

@@ -190,6 +190,7 @@ type oauthE2EUpstream struct {
 	clientID, clientSecret, accessAudience                            string
 	codes                                                             map[string]oauthE2ECode
 	subjects                                                          map[string]string
+	issuedSecrets                                                     []string
 	metadataFetches, keyFetches, exchanges, authorizations, userInfos int
 }
 
@@ -235,6 +236,7 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		}
 		f.authorizations++
 		code := fmt.Sprintf("one-use-code-%d", f.authorizations)
+		f.issuedSecrets = append(f.issuedSecrets, code)
 		record := oauthE2ECode{q.Get("state"), q.Get("nonce"), q.Get("code_challenge"), f.callback, fmt.Sprintf("external-user-%d", f.authorizations)}
 		if f.failure == "pkce" {
 			record.challenge = "mismatched-challenge"
@@ -312,6 +314,7 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 			}
 		}
 		f.subjects[signedAccess] = record.subject
+		f.issuedSecrets = append(f.issuedSecrets, signedID, signedAccess)
 		_ = json.NewEncoder(w).Encode(map[string]any{"id_token": signedID, "access_token": signedAccess, "token_type": "Bearer", "expires_in": 3600})
 	case "/userinfo":
 		subject, ok := f.subjects[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")]

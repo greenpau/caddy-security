@@ -39,7 +39,7 @@ Read these files when details matter:
 ## Route Roles
 
 `authenticate` serves the authentication portal. Put it on the portal host or
-portal path, such as `/auth*`. It is not the access-control layer for a file
+portal path, such as `/auth` and `/auth/*`. It is not the access-control layer for a file
 server or upstream app.
 
 `authorize` protects resource routes. It loads an authorization policy, checks
@@ -51,7 +51,8 @@ Keep portal and protected-resource routes separate:
 
 ```caddyfile
 example.com {
-	route /auth* {
+	@portal path /auth /auth/*
+	route @portal {
 		authenticate with myportal
 	}
 
@@ -67,7 +68,8 @@ route so the portal is not itself protected by `authorize`:
 
 ```caddyfile
 https://localhost:8443 {
-	route /auth* {
+	@portal path /auth /auth/*
+	route @portal {
 		authenticate with local_portal
 	}
 
@@ -92,6 +94,48 @@ authorization policy local_policy {
 For split-host deployments, put `authenticate` on the auth host and `authorize`
 only on the protected app or asset host. Use a full auth URL when the portal is
 on a different host.
+
+## Edge Trust
+
+The `authenticate` and `authorize` plugins normalize forwarded metadata before
+AuthCrunch reads it. Configure Caddy's server-level `trusted_proxies` with the
+actual proxy networks and use `trusted_proxies_strict` for append-style proxy
+chains. `client_ip_headers` determines which address header Caddy resolves.
+Do not trust arbitrary clients merely to make an authentication fixture pass.
+
+For trusted peers, both plugins use Caddy's resolved `client_ip` as the single
+`X-Forwarded-For` value. Direct peers use the original `RemoteAddr`, preserving
+Go's bracketed IPv6 representation. They remove raw `X-Real-IP`, `Forwarded`, `X-Forwarded-Port` and
+`X-Forwarded-Prefix`: these must not override Caddy's address decision or change
+the configured mount. An explicitly configured `X-Real-IP` address source can
+still contribute through Caddy's `client_ip_headers` resolution.
+
+The selected go-authcrunch v1.2.5 forwarded-address parser has an upstream IPv6
+limit: an uncompressed address such as `2001:db8:1:2:3:4:5:6` becomes `2001`,
+and a short address such as `::1` falls back to the peer. Caddy's trust decision
+does not repair that library parser. The suite qualifies forwarded IPv4 and
+`2001:db8::1`; do not claim complete forwarded IPv6 support pending an upstream
+fix. Direct IPv6 peer addresses do not traverse that parser.
+
+For untrusted connections, forwarded host/protocol are stripped. For trusted
+connections, the last field value of `X-Forwarded-Host` and `X-Forwarded-Proto`
+is retained, matching Caddy's reverse-proxy field selection; comma lists are
+not silently split into a chosen origin. The library still validates the
+configured issuer/public origin, Origin/Fetch Metadata, path, and secure
+transport. No Origin header, TLS state, or rewritten issuer mount is invented.
+The trusted proxy must normalize client-supplied metadata before forwarding.
+
+Use exact portal mount plus mount-slash matchers, such as `/auth /auth/*`.
+A broad `/auth*` also selects look-alike paths such as `/authentic`. Never add
+an authorization bypass for all OP or refresh-looking paths. Keep the
+protected catch-all after the portal route and retain separate signing keys
+for portal access and OP ID tokens.
+
+`TestSecurityRequestMetadata` verifies the library's view of normalized data;
+`TestCaddyCompositionE2E` exercises Caddy's actual trust calculation, direct
+TLS, cleartext rejection, a verified TLS proxy, duplicate values and encoded
+paths. See the [qualification map](../testing-and-ci/references/composition-qualification.md)
+for browser, reload and transaction limits.
 
 ## Public JWKS Routing
 

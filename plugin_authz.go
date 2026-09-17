@@ -132,13 +132,23 @@ func (m *AuthzMiddleware) Validate() error {
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
 	release, ok := m.app.acquireRequest()
 	if !ok {
+		w.Header().Set("Cache-Control", "no-store")
 		return caddyauth.User{}, false, caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
 	}
 	defer release()
 
+	normalizeSecurityMetadata(r)
 	ar := requests.NewAuthorizationRequest()
 	ar.ID = util.GetRequestID(r)
-	if err := m.gatekeeper.Authenticate(w, r, ar); err != nil {
+	// Gatekeeper writes only handled denials/redirects, never the protected
+	// response. Set no-store before those headers commit, without buffering or
+	// changing successful upstream caching behavior.
+	response := caddyhttp.NewResponseRecorder(w, nil, func(_ int, header http.Header) bool {
+		header.Set("Cache-Control", "no-store")
+		return false
+	})
+	if err := m.gatekeeper.Authenticate(response, r, ar); err != nil {
+		w.Header().Set("Cache-Control", "no-store")
 		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
 			getAuthorizationDetails(r, ar), err,
 		)
@@ -148,7 +158,15 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 		return caddyauth.User{}, ar.Response.Bypassed, nil
 	}
 
+	// A nil error does not imply authorization. A closed gatekeeper, for
+	// example, writes a handled 503 with both response flags false.
+	if !ar.Response.Authorized {
+		w.Header().Set("Cache-Control", "no-store")
+		return caddyauth.User{}, false, nil
+	}
+
 	if ar.Response.User == nil {
+		w.Header().Set("Cache-Control", "no-store")
 		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
 			getAuthorizationDetails(r, ar), "user data not found",
 		)

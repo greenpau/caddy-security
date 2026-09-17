@@ -328,16 +328,6 @@ func TestCaddyTokenRefreshBrowserProcess(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cert, key, roots := cookieTLSCertificate(t)
-	pemBytes, err := os.ReadFile(cert)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block, _ := pem.Decode(pemBytes)
-	certificate, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sum := sha256.Sum256(certificate.RawSubjectPublicKeyInfo)
 	for _, tc := range []struct {
 		name, mount, cookies, refresh, access, scenario string
 		lifetime                                        int
@@ -358,29 +348,7 @@ func TestCaddyTokenRefreshBrowserProcess(t *testing.T) {
 			if tc.scenario == "coordination" {
 				testCaddyTokenRefreshHTTP(t, f, tc.refresh)
 			}
-			profile := t.TempDir()
-			chrome := exec.CommandContext(ctx, browser, "--headless=new", "--remote-debugging-port=0", "--user-data-dir="+profile,
-				"--ignore-certificate-errors-spki-list="+base64.StdEncoding.EncodeToString(sum[:]),
-				"--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--disable-component-update", "--disable-default-apps", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter", "--no-proxy-server", "--password-store=basic", "--use-mock-keychain", "about:blank")
-			endpoint, stop, err := startCaddyRefreshBrowser(ctx, chrome, profile)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer stop()
-			driver := exec.CommandContext(ctx, "node", "testdata/browser/token_refresh_browser_e2e.cjs", endpoint, f.base, mount, tc.refresh, tc.access, tc.scenario)
-			driver.Stdin = strings.NewReader(lifecyclePassword)
-			driver.WaitDelay = time.Second
-			output, err := driver.CombinedOutput()
-			if err != nil {
-				t.Fatalf("real Chromium flow: %v\n%s", err, output)
-			}
-			var result struct {
-				Passed   bool   `json:"passed"`
-				Scenario string `json:"scenario"`
-			}
-			if json.Unmarshal(output, &result) != nil || !result.Passed || result.Scenario != tc.scenario {
-				t.Fatalf("browser did not complete scenario: %s", output)
-			}
+			runCaddyRefreshBrowser(t, ctx, browser, cert, f.base, mount, tc.refresh, tc.access, tc.scenario)
 		})
 	}
 }
@@ -455,4 +423,41 @@ func testCaddyTokenRefreshHTTP(t *testing.T, f *caddyTokenRefreshFixture, cookie
 	f.post(t, f.client, "/api/refresh_session", map[string]string{"refresh_token": native.RefreshToken}, nil, 403)
 	f.post(t, f.client, "/api/refresh_token", map[string]string{"refresh_token": native.RefreshToken}, http.Header{"X-Authcrunch-Refresh-Session": {native.SessionID}}, 400)
 	f.post(t, f.client, "/api/logout", map[string]string{"refresh_token": native.RefreshToken}, nil, 200)
+}
+
+func runCaddyRefreshBrowser(t *testing.T, ctx context.Context, browser, cert, base, mount, refresh, access, scenario string) {
+	t.Helper()
+	pemBytes, err := os.ReadFile(cert)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, _ := pem.Decode(pemBytes)
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(certificate.RawSubjectPublicKeyInfo)
+	profile := t.TempDir()
+	chrome := exec.CommandContext(ctx, browser, "--headless=new", "--remote-debugging-port=0", "--user-data-dir="+profile,
+		"--ignore-certificate-errors-spki-list="+base64.StdEncoding.EncodeToString(sum[:]),
+		"--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--disable-component-update", "--disable-default-apps", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter", "--no-proxy-server", "--password-store=basic", "--use-mock-keychain", "about:blank")
+	endpoint, stop, err := startCaddyRefreshBrowser(ctx, chrome, profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stop()
+	driver := exec.CommandContext(ctx, "node", "testdata/browser/token_refresh_browser_e2e.cjs", endpoint, base, mount, refresh, access, scenario)
+	driver.Stdin = strings.NewReader(lifecyclePassword)
+	driver.WaitDelay = time.Second
+	output, err := driver.CombinedOutput()
+	if err != nil {
+		t.Fatalf("real Chromium flow: %v\n%s", err, output)
+	}
+	var result struct {
+		Passed   bool   `json:"passed"`
+		Scenario string `json:"scenario"`
+	}
+	if json.Unmarshal(output, &result) != nil || !result.Passed || result.Scenario != scenario {
+		t.Fatalf("browser did not complete scenario: %s", output)
+	}
 }

@@ -337,11 +337,63 @@ async function coordination(context) {
   await assertPrivacy(first,context);
 }
 
+async function composition(context) {
+  const first=await page(context),second=await page(context);
+  stage="composed browser login and OP cookie isolation";
+  await navigate(first,mount+"/login?fresh=1");
+  await seedLegacyCookie(context);
+  const original=(await login(first)).sid;
+  await assertDeleted(context,false);
+  const opName="COMPOSED_OIDC_SESSION_ID";
+  const originalOP=(await cookieJar(context)).find(c=>c.name===opName);
+  assert(originalOP && originalOP.secure && originalOP.httpOnly && originalOP.path===mount);
+  await navigate(first,mount+"/portal",true);
+  await navigate(second,mount+"/portal",true);
+  await assertPrivacy(first,context);
+  assert.equal(await evaluate(first,secret=>document.cookie.includes(secret),originalOP.value),false);
+  assert.equal(await evaluate(first,async mount=>{
+    const r=await fetch(mount+"/resource");
+    return r.status===204 && r.headers.get("X-Protected-Upstream")==="reached";
+  },mount),true,"real browser cookie did not authorize protected upstream");
+  stage="composed two-tab rotation";
+  await coordinatedRefresh(first,second);
+  stage="composed realm replacement at capacity";
+  const replacement=(await login(first,"contractors")).sid;
+  assert.notEqual(replacement,original);
+  const replacementOP=(await cookieJar(context)).find(c=>c.name===opName);
+  assert(replacementOP && replacementOP.value!==originalOP.value,"realm switch retained OP session");
+  await navigate(first,mount+"/portal",true);
+  await navigate(second,mount+"/portal",true);
+  assert.deepEqual(await refresh(first),{ok:true,session:replacement});
+  stage="composed committed-response loss";
+  await control(first,"cut");
+  assert.deepEqual(await refresh(first,true),{ok:false});
+  const uncertain=await state(first);
+  assert.equal(uncertain.pending,true);
+  const committed=await snapshot(first);
+  await navigate(second,mount+"/portal",true);
+  assert.deepEqual(await refresh(second,true),{ok:false});
+  assert.equal((await snapshot(first)).requests,committed.requests,"uncertain composition retried rotation");
+  assert.equal((await snapshot(first)).lookups,committed.lookups,"uncertain composition used session lookup");
+  stage="composed recovery and coordinated logout";
+  const recovered=(await login(first)).sid;
+  assert.notEqual(recovered,replacement);
+  await navigate(first,mount+"/portal",true);
+  await navigate(second,mount+"/portal",true);
+  await coordinatedRefresh(first,second);
+  await seedLegacyCookie(context);
+  assert.equal(await logout(first),true);
+  await assertDeleted(context);
+  assert(!(await cookieJar(context)).some(c=>c.name===opName),"browser logout retained OP evidence");
+  await assertPrivacy(first,context);
+}
+
 (async()=>{
  await new Promise((resolve,reject)=>{socket.addEventListener("open",resolve,{once:true});socket.addEventListener("error",()=>reject(new Error("browser socket failed")),{once:true})});
  try{
   const context=(await command("Target.createBrowserContext")).browserContextId;
   if(scenario==="continuation") await continuation(context);
+  else if(scenario==="composition") await composition(context);
   else {
    await coordination(context);
    // Close active tabs before checking unsupported environments; each login

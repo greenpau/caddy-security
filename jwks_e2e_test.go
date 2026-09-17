@@ -34,6 +34,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -189,7 +190,11 @@ func jwksHTTPRequest(t *testing.T, f *caddyAdminFixture, method, target string, 
 	req.Header = headers.Clone()
 	resp, err := f.client.Do(req)
 	if err != nil {
-		t.Fatal("JWKS TLS request failed")
+		// Keep transport diagnostics without echoing request URLs or headers.
+		if requestErr, ok := err.(*url.Error); ok {
+			err = requestErr.Err
+		}
+		t.Fatalf("JWKS %s transport failed: %v", method, err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))

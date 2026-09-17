@@ -16,6 +16,7 @@ package security
 
 import (
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -25,7 +26,91 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+// Check the public gatekeeper result independently of the wrapper. In
+// particular, nil error and a handled response are not permission to continue.
+func TestAuthzResponseContract(t *testing.T) {
+	for _, tc := range []struct {
+		name, token                                             string
+		closed, bypass, redirect, forbidden, allowed, gateError bool
+		status                                                  int
+	}{
+		{name: "missing", gateError: true},
+		{name: "invalid", token: "synthetic-secret-invalid-token", gateError: true},
+		{name: "redirect", redirect: true, gateError: true, status: 302},
+		{name: "forbidden", token: "valid", forbidden: true, gateError: true, status: 403},
+		{name: "closed", closed: true, status: 503},
+		{name: "bypassed", bypass: true, allowed: true},
+		{name: "authorized", token: "valid", allowed: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := &authz.PolicyConfig{Name: "contract", AuthRedirectDisabled: !tc.redirect, ValidateBearerHeader: true,
+				RawCryptoKeyStoreConfig: []string{"crypto key verify " + authorizationPathKey},
+				AccessListRules:         []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}},
+			}
+			if tc.bypass {
+				policy.BypassConfigs = []*bypass.Config{{MatchType: "exact", URI: "/protected"}}
+			}
+			if tc.forbidden {
+				policy.AccessListRules[0].Conditions = []string{"match roles administrator"}
+			}
+			app := provisionLifecycleApp(t, &authcrunch.Config{AuthorizationPolicies: []*authz.PolicyConfig{policy}})
+			gate, err := app.getGatekeeper("contract")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.closed {
+				gate.Close()
+			}
+			request := func() *http.Request {
+				r := httptest.NewRequest("GET", "https://app.example.test/protected", nil)
+				token := tc.token
+				if token == "valid" {
+					token = authorizationPathToken(t)
+				}
+				if token != "" {
+					r.Header.Set("Authorization", "Bearer "+token)
+				}
+				return r
+			}
+			ar := requests.NewAuthorizationRequest()
+			raw := httptest.NewRecorder()
+			raw.Code = 0 // distinguish no write from an explicit response
+			err = gate.Authenticate(raw, request(), ar)
+			if (err != nil) != tc.gateError || ar.Response.Bypassed != tc.bypass || ar.Response.Authorized != (tc.allowed && !tc.bypass) || raw.Code != tc.status {
+				t.Fatalf("gate error=%t authorized=%t bypassed=%t status=%d", err != nil, ar.Response.Authorized, ar.Response.Bypassed, raw.Code)
+			}
+			wrapper := &AuthzMiddleware{app: app, gatekeeper: gate}
+			response := httptest.NewRecorder()
+			response.Code = 0
+			response.Header().Set("Cache-Control", "public, max-age=60")
+			user, allowed, err := wrapper.Authenticate(response, request())
+			if allowed != tc.allowed || response.Code != tc.status || (err != nil) != tc.gateError {
+				t.Fatal("wrapper changed gatekeeper decision or response")
+			}
+			if !allowed && (user.ID != "" || len(user.Metadata) != 0) {
+				t.Fatal("denial returned identity metadata")
+			}
+			cacheControl := "no-store"
+			if allowed {
+				cacheControl = "public, max-age=60"
+			}
+			if response.Header().Get("Cache-Control") != cacheControl {
+				t.Fatal("authorization response cache policy did not follow denial")
+			}
+			if tc.status != 0 {
+				if response.Result().Header.Get("Cache-Control") != "no-store" {
+					t.Fatal("handled denial committed cacheable headers")
+				}
+				if response.Body.String() != raw.Body.String() {
+					t.Fatal("wrapper changed the handled response body")
+				}
+			}
+		})
+	}
+}
 
 const authorizationPathKey = "synthetic-authorization-path-signing-key"
 

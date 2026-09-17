@@ -342,10 +342,12 @@ func TestAppLifecycleConcurrentCleanupDrains(t *testing.T) {
 	an := &AuthnMiddleware{app: app, portal: portal}
 	az := &AuthzMiddleware{app: app, gatekeeper: gate}
 	req := httptest.NewRequest(http.MethodGet, "https://example.test/auth/login", nil)
-	if err := an.ServeHTTP(httptest.NewRecorder(), req, nil); err == nil {
+	denial := httptest.NewRecorder()
+	if err := an.ServeHTTP(denial, req, nil); err == nil || denial.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("retired authenticator admitted work")
 	}
-	if _, ok, err := az.Authenticate(httptest.NewRecorder(), req); ok || err == nil {
+	denial = httptest.NewRecorder()
+	if _, ok, err := az.Authenticate(denial, req); ok || err == nil || denial.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("retired authorizer admitted work")
 	}
 	// Referencing handlers must not independently dispose their shared app.

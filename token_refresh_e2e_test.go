@@ -52,6 +52,7 @@ type caddyTokenRefreshFixture struct {
 	base, mount, input string
 	client             *http.Client
 	keys               []map[string]string
+	inspectResponse    func(*testing.T, int, []byte, []*http.Cookie)
 }
 
 // Every runtime field comes from the Caddyfile parser, including root mounts and
@@ -163,6 +164,9 @@ func (f *caddyTokenRefreshFixture) post(t *testing.T, client *http.Client, path 
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if f.inspectResponse != nil {
+		f.inspectResponse(t, resp.StatusCode, raw, resp.Cookies())
 	}
 	if resp.StatusCode != status {
 		t.Fatalf("POST %s: %d, want %d: %.300s", path, resp.StatusCode, status, raw)
