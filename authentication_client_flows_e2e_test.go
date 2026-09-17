@@ -25,7 +25,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"gopkg.in/yaml.v3"
 )
@@ -195,8 +197,103 @@ func assertAuthenticationClientStatus(t *testing.T, err error, status int) {
 	}
 }
 
+func (f *authenticationClientFixture) canceledHTTPRequest(t *testing.T) {
+	t.Helper()
+	t.Run("canceled HTTP login has no retry", func(t *testing.T) {
+		cfg := authclient.Config{Username: "alice", Password: lifecyclePassword}
+		if f.body {
+			cfg.RefreshTransport = authclient.RefreshTransportBody
+		}
+		client, wire, _ := f.loginClient(t, cfg, nil)
+		started, release := make(chan struct{}), make(chan struct{})
+		f.probe.mu.Lock()
+		before := f.probe.loginRequests
+		f.probe.holdLoginNext, f.probe.loginStarted, f.probe.loginRelease = true, started, release
+		f.probe.mu.Unlock()
+		ctx, cancel := context.WithCancel(t.Context())
+		type result struct {
+			credentials *authclient.Credentials
+			err         error
+		}
+		done := make(chan result, 1)
+		finished := make(chan struct{})
+		t.Cleanup(func() {
+			cancel()
+			close(release)
+			select {
+			case <-finished:
+			case <-time.After(5 * time.Second):
+				t.Error("authentication worker outlived canceled login")
+			}
+		})
+		go func() {
+			defer close(finished)
+			credentials, err := client.Authenticate(ctx)
+			done <- result{credentials, err}
+		}()
+		select {
+		case <-started:
+		case <-time.After(5 * time.Second):
+			t.Fatal("Caddy did not receive login before cancellation")
+		}
+		cancel()
+		select {
+		case result := <-done:
+			if result.credentials != nil || !errors.Is(result.err, context.Canceled) {
+				t.Fatal("in-flight cancellation returned credentials or lost context error")
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("canceled HTTP login did not terminate")
+		}
+		if wire.requests != 1 || len(wire.responses) != 0 {
+			t.Fatal("canceled login retried or received a response")
+		}
+		// The caller may explicitly start a fresh login with a new context.
+		credentials, err := client.Authenticate(t.Context())
+		if f.refresh && !f.body {
+			if credentials != nil || !errors.Is(err, authclient.ErrNativeTransportRequired) {
+				t.Fatal("fresh cookie login lost its transport error after cancellation")
+			}
+		} else if err != nil || credentials == nil {
+			t.Fatal("explicit fresh login failed after cancellation", err)
+		} else {
+			f.credentialAccess(t, credentials, "alice")
+		}
+		f.probe.mu.Lock()
+		requests := f.probe.loginRequests - before
+		f.probe.mu.Unlock()
+		if wire.requests != 3 || len(wire.responses) != 2 || requests != 3 {
+			t.Fatal("cancellation or explicit recovery issued unexpected login requests")
+		}
+	})
+}
+
 func (f *authenticationClientFixture) transportBoundaries(t *testing.T) {
 	t.Helper()
+	if f.body {
+		for _, challenge := range []string{"password", "totp"} {
+			t.Run("native checkpoint cannot drop transport/"+challenge, func(t *testing.T) {
+				request := apiauth.AuthRequest{Username: "totpuser@example.test", Realm: "local", RefreshTransport: authclient.RefreshTransportBody}
+				checkpoint := f.jsonRequest(t, "POST", "/login", request, nil).native(t, 200)
+				if checkpoint.NextChallenge != "password" || checkpoint.SandboxID == "" || checkpoint.SandboxSecret == "" {
+					t.Fatal("native login did not request password proof")
+				}
+				request.SandboxID, request.SandboxSecret = checkpoint.SandboxID, checkpoint.SandboxSecret
+				request.ChallengeKind, request.ChallengeResponse = "password", lifecyclePassword
+				if challenge == "totp" {
+					checkpoint = f.jsonRequest(t, "POST", "/login", request, nil).native(t, 200)
+					if checkpoint.NextChallenge != "totp" || checkpoint.SandboxSecret == "" || checkpoint.SandboxSecret == request.SandboxSecret {
+						t.Fatal("password completion lost the next checkpoint or fresh secret")
+					}
+					request.SandboxID, request.SandboxSecret = checkpoint.SandboxID, checkpoint.SandboxSecret
+					request.ChallengeKind, request.ChallengeResponse = "totp", authenticationClientTOTP()
+				}
+				request.RefreshTransport = ""
+				response := f.jsonRequest(t, "POST", "/login", request, nil)
+				authenticationClientLoginError(t, response, authenticationClientLoginCase{status: 401, message: "Invalid authentication context"})
+			})
+		}
+	}
 	if !f.body {
 		t.Run("native opt-in unavailable", func(t *testing.T) {
 			client, wire, _ := f.loginClient(t, authclient.Config{Username: "alice", Password: lifecyclePassword, RefreshTransport: authclient.RefreshTransportBody}, nil)
@@ -208,17 +305,45 @@ func (f *authenticationClientFixture) transportBoundaries(t *testing.T) {
 		})
 	}
 	if f.refresh {
-		t.Run("cookie metadata requires native opt-in", func(t *testing.T) {
-			client, wire, _ := f.loginClient(t, authclient.Config{Username: "alice", Password: lifecyclePassword}, nil)
-			credentials, err := client.Authenticate(t.Context())
-			if credentials != nil || !errors.Is(err, authclient.ErrNativeTransportRequired) || wire.requests != 2 || len(wire.responses) != 2 {
-				t.Fatal("metadata-only completion was retried or mistaken for native success")
+		for _, mode := range []string{"", authclient.RefreshTransportCookie} {
+			for _, user := range []string{"alice", "totpuser", "mfauser"} {
+				t.Run("cookie metadata requires native opt-in/"+mode+"/"+user, func(t *testing.T) {
+					cfg := authclient.Config{Username: user, Password: lifecyclePassword, RefreshTransport: mode}
+					want := 2
+					if user != "alice" {
+						cfg.TOTPSecret = authenticationClientTOTPSecret
+						want = 3
+					}
+					client, wire, jar := f.loginClient(t, cfg, nil)
+					credentials, err := client.Authenticate(t.Context())
+					if credentials != nil || !errors.Is(err, authclient.ErrNativeTransportRequired) || wire.requests != want || len(wire.responses) != want {
+						t.Fatal("metadata-only completion was retried or mistaken for native success")
+					}
+					last := wire.responses[want-1]
+					if !last.Authenticated || last.SessionID == "" || last.AccessToken != "" || last.RefreshToken != "" || last.AccessExpiresAt <= 0 || last.RefreshExpiresAt < last.AccessExpiresAt || last.SessionExpiresAt < last.RefreshExpiresAt {
+						t.Fatal("browser response exposed credentials or omitted metadata")
+					}
+					payload := wire.payloads[want-1]
+					for _, field := range []string{"authenticated", "session_id", "access_expires_at", "refresh_expires_at", "session_expires_at"} {
+						if _, ok := payload[field]; !ok {
+							t.Fatalf("browser completion omitted %s", field)
+						}
+					}
+					if len(payload) != 5 {
+						t.Fatal("browser completion returned fields beyond session metadata")
+					}
+					u, _ := url.Parse(f.base + f.mount + "/")
+					access, refresh := false, false
+					for _, cookie := range jar.Cookies(u) {
+						access = access || strings.EqualFold(cookie.Name, f.accessName) && cookie.Value != ""
+						refresh = refresh || cookie.Name == f.refreshName && cookie.Value != ""
+					}
+					if !access || !refresh {
+						t.Fatal("metadata-only completion lost browser session cookies")
+					}
+				})
 			}
-			last := wire.responses[1]
-			if !last.Authenticated || last.SessionID == "" || last.AccessToken != "" || last.RefreshToken != "" || last.AccessExpiresAt <= 0 {
-				t.Fatal("browser response exposed credentials or omitted metadata")
-			}
-		})
+		}
 	}
 }
 
@@ -268,6 +393,23 @@ func (f *authenticationClientFixture) apiKeyJourneys(t *testing.T, keys map[stri
 				t.Fatal("API key established browser state")
 			}
 			f.credentialAccess(t, credentials, name)
+		})
+	}
+	for _, tc := range []struct{ name, key string }{
+		{"wrong secret with valid prefix", keys["alice"][:24] + strings.Repeat("B", 40)},
+		{"unknown prefix", strings.Repeat("9", 24) + strings.Repeat("A", 40)},
+		{"malformed key", "invalid-key"},
+	} {
+		t.Run("API key "+tc.name, func(t *testing.T) {
+			client, wire, _ := f.loginClient(t, authclient.Config{APIKey: tc.key}, func(context.Context, authclient.PromptKind) (string, error) {
+				t.Error("rejected API key prompted for fallback credentials")
+				return "", authclient.ErrInputRequired
+			})
+			credentials, err := client.Authenticate(t.Context())
+			assertAuthenticationClientStatus(t, err, 401)
+			if credentials != nil || wire.requests != 1 || len(wire.responses) != 1 {
+				t.Fatal("rejected API key retried or returned credentials")
+			}
 		})
 	}
 	for _, body := range []map[string]string{

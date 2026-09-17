@@ -135,6 +135,8 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	// access-token gates, so expired access can renew or log out. It also serves
 	// the matching browser coordinator and continuation UI. Do not preauthorize,
 	// rewrite, retry or broaden CORS for these requests in Caddy middleware.
+	// JSON/native login uses this same dispatch: never synthesize Cookie, Origin
+	// or Fetch Metadata headers, or turn its credentials into OIDC login evidence.
 	return m.portal.ServeHTTP(r.Context(), w, r, rr)
 }
 

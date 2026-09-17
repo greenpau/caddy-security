@@ -131,6 +131,9 @@ type tokenRefreshBrowserState struct {
 	rotations, rotationRequests, lookups, logouts, active, maxActive int
 	staleRendered, cutNext, holdNext, held                           bool
 	staleRelease, rotationRelease                                    chan struct{}
+	loginRequests                                                    int
+	holdLoginNext                                                    bool
+	loginStarted, loginRelease                                       chan struct{}
 }
 
 var currentTokenRefreshBrowserProbe atomic.Pointer[tokenRefreshBrowserState]
@@ -177,6 +180,7 @@ func (m *tokenRefreshBrowserProbe) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		return nil
 	}
 	rotation := r.URL.Path == m.Mount+"/api/refresh_token"
+	login := r.URL.Path == m.Mount+"/login"
 	logout := r.URL.Path == m.Mount+"/api/logout"
 	stale := r.URL.Path == m.Mount+"/portal" && r.URL.Query().Get("deferred") == "1"
 	s.mu.Lock()
@@ -196,6 +200,14 @@ func (m *tokenRefreshBrowserProbe) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		s.logouts++
 	}
 	var hold <-chan struct{}
+	if login {
+		s.loginRequests++
+		if s.holdLoginNext {
+			s.holdLoginNext = false
+			hold = s.loginRelease
+			close(s.loginStarted)
+		}
+	}
 	if rotation && s.holdNext {
 		s.holdNext = false
 		s.held = true

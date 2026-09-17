@@ -45,6 +45,12 @@ Refresh-enabled browser completion exposes metadata without bearer credentials;
 the Go client returns the transport error with no credentials and does not retry
 an already-completed login.
 
+The metadata-only success contains `authenticated`, `session_id`, and the
+access, refresh, and absolute session expiry fields. Token values and token-name
+fields are absent, including after TOTP and combined MFA. The supplied cookie
+jar can already hold an authenticated browser session when the Go client reports
+`ErrNativeTransportRequired`; that error does not undo server completion.
+
 Body mode sends `refresh_transport: body` on initial identification and every
 password/TOTP checkpoint. The portal must name the local realm and explicitly
 enable `body transport enabled` in its [refresh block](../../configuration-authentication/references/token-refresh.md).
@@ -53,6 +59,19 @@ no Cookie, Origin or Fetch Metadata. `NewClient` copies the supplied HTTP client
 and ignores its Jar in body mode; custom transports remain trusted dependencies
 and must not inject browser headers. Preserve server error responses, including
 status and any ordinary tracking cookies on rejected initial requests.
+
+Transport is bound to the sandbox: omitting body mode at a later password or
+TOTP checkpoint fails with 401. A native request containing even same-origin
+browser metadata fails with 403. An explicitly empty Origin header also counts
+as browser metadata. Caddy must neither add these headers nor remove them to
+make a rejected request succeed.
+
+The wrapper preserves the portal's JSON error body, status, no-store policy and
+headers. The public client's `HTTPError` intentionally exposes only the status;
+this client-side redaction is independent of Caddy's HTTP response forwarding.
+When OIDC is enabled, its login-origin guard runs first and rejects an empty
+Origin with the OAuth `{"error":"invalid_request"}` envelope and status 403.
+Preserve that response too; do not translate it to the portal error envelope.
 
 ## Password, TOTP and API Keys
 
@@ -67,6 +86,9 @@ username, email and case aliases and retains the canonical sandbox identity.
 `ErrInputRequired`, `ErrUnsupportedChallenge`, cancellation and `HTTPError`
 remain distinct outcomes. The client does not implement WebAuthn/U2F assertions;
 do not advertise selecting that method as a completed authentication flow.
+Cancellation covers both prompt input and an in-flight HTTP request. Stop that
+exchange without retry; the caller may explicitly authenticate again with a new
+context. A canceled network request is not evidence that the server did no work.
 Fresh login is established by a new checkpoint exchange. An access-only JWT
 can repeat when identity claims and issuance seconds match; native fresh login
 creates a new SID and refresh credential.
@@ -127,6 +149,10 @@ headers, and no cookie jar. Rotation changes both tokens and retains SID and the
 absolute deadline. Logout revokes the refresh family; it does not imply that an
 already-issued access JWT immediately becomes invalid at every resource server.
 `/api/refresh_session` is browser-only and is not native recovery.
+Cookie/Origin/Fetch Metadata mixtures and the browser SID-precondition header
+must be rejected before consuming or revoking the native family. After a
+definitive transport rejection, a separately issued valid request can still use
+that family. This does not permit retry after an uncertain network failure.
 
 An interrupted response may follow a committed rotation. Never retry the spent
 credential automatically or add replay grace. Obtain a new family through an
@@ -143,18 +169,30 @@ refresh token in `Credentials` does not enable automatic renewal.
   legacy request schema across password and TOTP checkpoints.
 - `TestAuthenticationClientUnsupportedChallenge` checks that a WebAuthn
   assertion challenge stops without credentials or another request.
+- `TestAuthnJSONLoginDelegation` compares direct portal and Caddy middleware
+  errors at root/nested mounts, including native header rejection. It verifies
+  unchanged request headers/URL and response status, JSON error fields, cache,
+  CORS and cookie attributes; only timestamps and random tracking-cookie values
+  differ between independent calls. The TLS suite runs the same rejection cases.
 - `TestCaddyAuthenticationClientE2E` runs real TLS Caddy at root/nested mounts
   with default/custom names, password/configured/prompted TOTP/combined MFA,
   aliases, canceled input, opt-in/off, API keys, private credential reopening,
   an independently authorized resource and native/OIDC separation. Existing
   `security local connect` is also exercised with native MFA and saved metadata.
   Password/TOTP fixtures include trailing whitespace, and a changed API key must
-  be rejected rather than repaired. Request counters include attempts that fail
-  before a response, so cancellation and no-retry checks cannot miss them.
+  be rejected rather than repaired. Wrong-secret, unknown-prefix and malformed
+  keys cannot prompt or fall back to password. Default and explicit cookie mode
+  both complete password/TOTP/combined MFA with metadata only. Dropped body mode
+  at password or TOTP checkpoints fails. A held real HTTP request exercises
+  cancellation and explicit fresh recovery using the same public client.
+  Request counters include attempts that fail before a response; server counters
+  separately verify the canceled request and recovery reached Caddy only once.
 - `authentication_client_token_refresh_e2e_test.go` exercises explicit native
   rotation/logout and loss of a committed response through the existing test-only
   Caddy fault probe. Revoking the uncertain old family must leave a fresh family
   usable. The probe never issues tokens or bypasses authentication.
+  Rejected native/browser mixtures at refresh and logout must leave the family
+  usable for an explicit valid rotation.
 
 The fixture explicitly disables both admin and profile APIs before provisioning.
 Caddyfile portals currently default profile APIs on and expose no profile toggle;
@@ -167,6 +205,6 @@ Run these tests in this repository. Upstream authentication-client source and
 skills are read-only references, not instructions to run sibling suites.
 
 ```sh
-go test -mod=readonly -race -count=1 -run 'TestAuthenticationClient|TestCaddyAuthenticationClientE2E' .
+go test -mod=readonly -race -count=1 -run 'TestAuthnJSONLoginDelegation|TestAuthenticationClient|TestCaddyAuthenticationClientE2E' .
 make ci-check
 ```

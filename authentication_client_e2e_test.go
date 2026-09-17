@@ -255,6 +255,7 @@ type authenticationClientWire struct {
 	key        bool
 	requests   int
 	responses  []apiauth.AuthResponse
+	payloads   []map[string]json.RawMessage
 }
 
 func (tr *authenticationClientWire) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -290,6 +291,9 @@ func (tr *authenticationClientWire) RoundTrip(r *http.Request) (*http.Response, 
 	} else if _, exists := fields["refresh_transport"]; exists {
 		tr.t.Error("cookie-mode wire broke the legacy schema")
 	}
+	if tr.key && (len(fields) != 2 || fields["api_key"] == nil || fields["realm"] == nil) {
+		tr.t.Error("API-key login sent fields other than its independent credential and realm")
+	}
 	response, err := tr.next.RoundTrip(r)
 	if err != nil {
 		return nil, err
@@ -310,7 +314,12 @@ func (tr *authenticationClientWire) RoundTrip(r *http.Request) (*http.Response, 
 	if err := json.Unmarshal(data, &result); err != nil {
 		tr.t.Error("login response was not JSON")
 	}
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(data, &payload); err != nil {
+		tr.t.Error("login response was not a JSON object")
+	}
 	tr.responses = append(tr.responses, result)
+	tr.payloads = append(tr.payloads, payload)
 	return response, nil
 }
 
@@ -483,7 +492,9 @@ func TestCaddyAuthenticationClientProcess(t *testing.T) {
 				f.passwordJourneys(t)
 			}
 			f.transportBoundaries(t)
+			f.loginRejections(t)
 			f.apiKeyJourneys(t, keys)
+			f.canceledHTTPRequest(t)
 			if tc.body {
 				f.nativeProtocol(t)
 				f.cliConnect(t, cert)

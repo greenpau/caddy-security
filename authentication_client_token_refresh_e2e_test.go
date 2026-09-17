@@ -75,6 +75,9 @@ func (r authenticationClientHTTPResponse) native(t *testing.T, status int) apiau
 	if json.Unmarshal(r.body, &result) != nil {
 		t.Fatal("native response was not JSON")
 	}
+	if status != http.StatusOK && (result.Authenticated || result.AccessToken != "" || result.RefreshToken != "" || result.SessionID != "") {
+		t.Fatal("rejected native operation returned credential authority")
+	}
 	return result
 }
 
@@ -87,6 +90,24 @@ func (f *authenticationClientFixture) nativeProtocol(t *testing.T) {
 			t.Fatal(err)
 		}
 		request := map[string]string{"refresh_token": first.RefreshToken}
+		// Rejected browser/native mixtures must not consume or revoke this
+		// family. The legitimate rotation below proves it is still usable.
+		for _, path := range []string{"/api/refresh_token", "/api/logout"} {
+			for _, header := range []struct {
+				name, value string
+				status      int
+			}{
+				{"Cookie", "UNRELATED=browser", 403},
+				{"Cookie", f.refreshName + "=" + first.RefreshToken, 400},
+				{"Origin", f.base, 403},
+				{"Sec-Fetch-Site", "same-origin", 403},
+				{"Sec-Fetch-Mode", "cors", 403},
+				{"Sec-Fetch-Dest", "empty", 403},
+				{"X-Authcrunch-Refresh-Session", first.SessionID, 400},
+			} {
+				f.jsonRequest(t, "POST", path, request, http.Header{header.name: {header.value}}).native(t, header.status)
+			}
+		}
 		// Native state cannot be introspected with the browser-only lookup.
 		f.jsonRequest(t, "POST", "/api/refresh_session", request, nil).native(t, 403)
 		rotated := f.jsonRequest(t, "POST", "/api/refresh_token", request, nil).native(t, 200)
@@ -119,6 +140,7 @@ func (f *authenticationClientFixture) nativeProtocol(t *testing.T) {
 		}
 		f.probe.mu.Lock()
 		beforeRequests, beforeRotations := f.probe.rotationRequests, f.probe.rotations
+		beforeLookups := f.probe.lookups
 		f.probe.cutNext = true
 		f.probe.mu.Unlock()
 		lost := f.jsonRequest(t, "POST", "/api/refresh_token", map[string]string{"refresh_token": first.RefreshToken}, nil)
@@ -136,9 +158,10 @@ func (f *authenticationClientFixture) nativeProtocol(t *testing.T) {
 		}
 		f.probe.mu.Lock()
 		requests, rotations := f.probe.rotationRequests-beforeRequests, f.probe.rotations-beforeRotations
+		lookups := f.probe.lookups - beforeLookups
 		f.probe.mu.Unlock()
-		if requests != 1 || rotations != 1 {
-			t.Fatal("uncertain native rotation retried")
+		if requests != 1 || rotations != 1 || lookups != 0 {
+			t.Fatal("uncertain native rotation retried or used browser session lookup")
 		}
 		f.credentialAccess(t, fresh, "alice")
 		f.jsonRequest(t, "POST", "/api/logout", map[string]string{"refresh_token": first.RefreshToken}, nil).native(t, 200)

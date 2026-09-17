@@ -141,6 +141,14 @@ external application continuation; a GET link to `/api/refresh_token` is invalid
 The embedded client does not renew arbitrary cross-origin applications.
 See the [browser HTTP/UI contract](../authentication-portal-api/references/browser-refresh.md).
 
+Native JSON login uses POST `<mount>/login` on the same unstripped portal route
+and requires neither admin nor profile APIs. Preserve the JSON body and error
+status/metadata. Do not synthesize Cookie, Origin or Fetch Metadata headers for
+native requests, strip supplied browser headers to evade transport validation,
+or infer an OIDC browser session from a bearer/API-key credential. The public Go
+client and explicit native refresh/logout contract are documented separately in
+[JSON/native interoperability](../authentication-portal-api/references/native-client.md).
+
 ## Portal Path Selection
 
 For a portal with `oidc provider`, the issuer's path is also the HTTP mount.

@@ -68,10 +68,13 @@ Programmatic login is challenge-based:
    participating local refresh login instead uses the transport contract below:
    browser tokens arrive in cookies; opted-in native clients receive JSON tokens.
 
-Common challenge kinds are `password`, `totp`, and `mfa`. For WebAuthn/U2F,
-the client first answers `challenge_kind: mfa` with
-`challenge_response: webauthn`; the next challenge contains a base64-encoded
-WebAuthn payload. The final response must contain the signed WebAuthn result.
+Common challenge kinds are `password`, `totp`, and `mfa`. The public Go authclient
+supports password/TOTP, including combined MFA selection. It does not implement
+WebAuthn/U2F assertions and returns `ErrUnsupportedChallenge` for an assertion
+challenge. A separate client that supports assertions first answers
+`challenge_kind: mfa` with `challenge_response: webauthn`; the next challenge
+contains a base64-encoded WebAuthn payload. The final response must contain the
+signed WebAuthn result.
 
 Do not reuse an old `sandbox_secret`; use the latest value returned by the
 portal. Sandbox sessions are temporary and separate from the final JWT session.

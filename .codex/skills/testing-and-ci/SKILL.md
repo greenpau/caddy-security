@@ -152,10 +152,16 @@ and the dedicated public authclient parser. `TestAuthenticationClientConfigWhite
 checks exact credential preservation and prevents silently repaired options;
 `TestAuthenticationClientLegacyWire`
 checks omission of the refresh extension with a strict legacy schema.
+`TestAuthnJSONLoginDelegation` compares native/JSON rejection responses with
+direct portal dispatch, checking request headers/URL and response metadata at
+root/nested mounts. Its error cases also run through Caddy TLS.
 `TestCaddyAuthenticationClientE2E` covers password/MFA and API-key JSON login
 through actual Caddy TLS with admin/profile APIs disabled, private credential
 reopening, independent resource authorization, explicit native refresh/logout,
-and the existing CLI consumer. See the
+and the existing CLI consumer. It includes in-flight HTTP cancellation with
+server request counts, cookie-mode MFA metadata-only completion, dropped native
+transport at checkpoints, and rejected browser/native mixtures without consuming
+the refresh family. See the
 [native interoperability test map](../authentication-portal-api/references/native-client.md#caddy-validation).
 
 Runtime ownership unit tests live in `app_lifecycle_test.go`.
