@@ -65,6 +65,7 @@ func securityCommand(t *testing.T, args ...string) ([]byte, error) {
 	defer cancel()
 	command := exec.CommandContext(ctx, os.Args[0], append([]string{"-test.run=^TestRegistrationCommandProcess$", "--"}, args...)...)
 	command.Env = append(os.Environ(), "SECURITY_REGISTRATION_COMMAND=1")
+	collectSubprocessCoverage(t, command)
 	command.WaitDelay = 5 * time.Second
 	return command.CombinedOutput()
 }
@@ -198,6 +199,7 @@ func TestCaddyRegistrationE2E(t *testing.T) {
 		cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyRegistrationProcess$", "-test.v", "-test.timeout=90s")
 		cmd.Env = append(os.Environ(), "SECURITY_REGISTRATION_STAGE="+stage, "SECURITY_REGISTRATION_STORE="+cfg.Path, "SECURITY_REGISTRATION_ADDRESS="+address,
 			"XDG_DATA_HOME="+dir, "XDG_CONFIG_HOME="+dir)
+		collectSubprocessCoverage(t, cmd)
 		cmd.WaitDelay = 5 * time.Second
 		output, err := cmd.CombinedOutput()
 		cancel()
@@ -246,6 +248,7 @@ func TestCaddyRegistrationOutputFailureE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestRegistrationCommandProcess$", "--", "security", "oauth", "rotate", "secret", "--config", input, "--name", "website", "--revision", "v2", "--from", "v1")
 	cmd.Env = append(os.Environ(), "SECURITY_REGISTRATION_COMMAND=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	var diagnostics bytes.Buffer
 	cmd.Stdout, cmd.Stderr = output, &diagnostics
@@ -359,6 +362,7 @@ func TestCaddyRegistrationInterruptedWriterE2E(t *testing.T) {
 	defer cancel()
 	writer := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestRegistrationInterruptedWriterProcess$", "-test.timeout=40s")
 	writer.Env = append(os.Environ(), "SECURITY_INTERRUPTED_REGISTRATION_STORE="+cfg.Path)
+	collectSubprocessCoverage(t, writer)
 	writer.WaitDelay = 5 * time.Second
 	var diagnostics bytes.Buffer
 	writer.Stderr = &diagnostics
@@ -675,6 +679,10 @@ https://%s {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(outside, keyName), keyContents, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Exercise the actual nonprivate mode independently of the caller's umask.
+	if err := os.Chmod(filepath.Join(outside, keyName), 0644); err != nil {
 		t.Fatal(err)
 	}
 	// Native JSON providers must enforce the same private-key boundary as the

@@ -5,6 +5,17 @@ description: caddy-security unit and E2E coverage requirements, Caddyfile adapta
 
 # Testing and CI
 
+## Browser choice
+
+Use **headless Chrome** for browser E2E tests, screenshots, developer-tools
+network traces, and conformance visual evidence. Avoid Firefox unless the user
+explicitly requests it for a browser-specific investigation. Prefer a pinned
+Chrome for Testing distribution for reproducible external workflows; keep its
+binary, driver, profiles, caches and artifacts under this repository's `tmp/`.
+Preserve real browser interaction and TLS validation. Do not set
+`acceptInsecureCerts`, ignore-certificate flags, disable web security, rewrite
+Origin headers, or fabricate successful callbacks to make a conformance run pass.
+
 ## Overview
 
 Use this skill for caddy-security test selection, fixture maintenance, and CI
@@ -38,6 +49,12 @@ Caddy provisioning, routes, and HTTP requests as appropriate. Bound network,
 process, and worker completion; clean up test-owned resources. Parser/adapt
 tests and sibling go-authcrunch tests do not replace this repository's E2E
 coverage. Report missing coverage or blocked validation explicitly.
+
+Use `lifecycleAddress` for disposable Caddy listener addresses. It checks both
+TCP and UDP availability because Caddy's default HTTPS server also starts a
+QUIC listener; a TCP-only ephemeral-port check can select an occupied UDP port.
+The occupied-QUIC-port regression also verifies release of the rejected TCP
+reservation. Reservations are released before Caddy takes ownership.
 
 Every Caddyfile directive change also requires new or amended adaptation test
 cases in `testdata/caddyfile_adapt/`, even when the resulting JSON shape is
@@ -91,7 +108,7 @@ make test-automation
 make ci-check
 ```
 
-Lifecycle runs use `-mod=readonly -race -count=1 -timeout 30m -v`.
+Lifecycle runs use `-mod=readonly -race -count=1 -timeout 45m -v`.
 `TEST` is a regex (default `.`), `TEST_DIR` accepts package patterns (default
 `./...`), and `TEST_TIMEOUT` overrides the quoted per-package limit.
 `MINIMUM_COVERAGE` defaults to 1 percent as a nonzero-profile check, matching
@@ -102,7 +119,7 @@ tests. The Caddy journeys also have their own shorter child-process deadlines.
 If CI times out, inspect the captured test events and active test duration to
 distinguish an exhausted package budget from a stuck individual journey.
 Keep the job budget larger than the package budget so setup, builds and report
-upload can finish; the current workflow allows 45 minutes around the 30-minute
+upload can finish; the current workflow allows 60 minutes around the 45-minute
 Go package limit.
 
 Reports land in `.coverage`. `make qtest` defaults to the root package (`.`) with
@@ -120,6 +137,97 @@ manifests, or Caddyfiles. `make dep` downloads/verifies pinned dependencies and
 resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
+
+### Subprocess coverage
+
+`subprocess_coverage_test.go` owns the root package's `TestMain`. When Go enables
+coverage, it connects inherited `GOCOVERDIR` to `-test.gocoverdir`.
+`collectSubprocessCoverage(t, cmd)` assigns each child a private temporary
+directory and collects its completed files during parent test cleanup, before
+Go's native profile writer merges counters from the parent and descendants
+running the same instrumented test executable,
+including nested E2E helpers and CLI helpers that exit through `os.Exit`.
+Call the collector after setting `cmd.Env` and before starting every copy of the
+test executable, including PTY brokers that launch it. Always wait for the child
+before returning from its parent test. Cleanup publishes files atomically on
+the destination filesystem, so parallel children cannot race Go's metadata
+writes. Do not share a writable coverage directory between children or forward
+the parent's `-test.coverprofile` flag. Preserve process deadlines, exit status
+checks and isolation; never reuse a persistent counter directory across runs.
+
+This applies automatically to `go test -coverprofile=...`, `make test` and
+`make qtest`. The merged profile reaches tested before its coverage threshold,
+HTML/JSON/JUnit generation and manifest creation; `make run-reports` reuses that
+profile. There is no report rewrite or extra postprocessing step. Ordinary
+`go test` without coverage is unchanged. The `Test*Process` entries still skip
+in normal discovery because their parent tests run them in isolated processes;
+keep these truthful skip outcomes visible.
+
+Coverage is limited to the selected instrumented packages and executable.
+Separately built CLI binaries are not instrumented by this hook. Killed or
+panicking processes can lose unflushed counters; do not alter interruption tests
+or suppress their failures to obtain coverage. Official OIDC conformance remains
+separate and opt-in.
+
+`TestConfigureSubprocessCoverage` covers flag/environment precedence and inactive
+coverage. `TestCollectCoverageFiles` verifies concurrent publication, partial-file
+exclusion and collection failures. The automation test
+`assets/scripts/tests/subprocess_coverage_test.py` copies the actual bootstrap
+into a disposable module under `tmp/` and checks exact parent, parallel
+child, grandchild and CLI counters through Go and Make/tested. It also checks
+failed-child evidence, coverage thresholds, untouched code, set/count/atomic
+modes, fresh filtered runs, custom paths and quick/report regeneration. Run it
+with `make test-automation`, then use the real Caddy E2E report to validate the
+integrated change.
+
+### Feature suites
+
+Official OP conformance runs only through `make oidc-conformance-test`, with its
+own private artifacts. The harness and its unit tests are excluded from regular
+Go tests, `make test-automation`, and `make ci-check`. Existing local OIDC
+regressions stay in regular testing. The official runner's original nonzero
+outcome remains a failure; warnings, skips and reviews are never an all-pass claim.
+See [official OP conformance](../configuration-oauth-applications/references/oidc-conformance.md)
+for prerequisites, isolated artifacts and all remaining non-pass modules.
+The separate `OIDC conformance` GitHub workflow is manual-only and invokes these
+same Make targets. Follow [conformance Actions](../configuration-oauth-applications/references/oidc-conformance-actions.md)
+for the public encryption recipient, report artifact and failure-preserving
+upload. Never upload plaintext private evidence or add conformance to regular CI.
+OIDC conformance units live in `assets/scripts/oidc_certification_conformance_tests/`
+and use `test_oidc_conformance_*.py` filenames. Keep them out of the regular
+automation discovery directory. `test_oidc_conformance_cleanup.py` exercises
+deletion boundaries for bundles and supplemental logs/audits/browser profiles,
+retention of custom dependencies across repeated cleanup, active-run guards and
+the real Make cleanup recipe in a disposable repository. Never delete
+historical official evidence as a unit-test
+side effect. `make oidc-conformance-cleanup` is an explicit artifact-deletion
+target; it preserves tools, the suite and caches for the next opt-in run.
+The default `TestCaddyOIDCRelyingPartyE2E` also covers v1.2.6 claims, ACR,
+registered RS256 Request Objects and OIDC refresh rotation/replay through real
+Caddy TLS. Its discovery expectations track the selected dependency's capability surface;
+these local tests do not launch the official suite.
+The same RP E2E preserves the provider-owned themed page headers at root and
+nested issuer mounts. It checks the consent referrer/CSP restrictions, unchanged
+discovery/callback headers, and rejection of null/cross-origin and forged-CSRF
+consent submissions. The official workflow additionally exercises the real
+Chrome form Origin, both authentications, and the exact screenshot evidence slots.
+`CONFORMANCE_RESULTS` selects a new private destination under this checkout's
+`tmp/`; its `index.html` links and explains the full evidence, including blocked
+or incomplete runs. Report tests are part of the same opt-in target only.
+
+MFA E2E fixtures use independent identities/databases for separate successful
+login journeys. Repeated CLI logins for the same account wait for an unused
+real TOTP time step; never clear persisted replay counters or disable MFA to
+reuse a code. The authentication-client E2E also rejects TOTP replay through
+username-case and email aliases.
+
+HTTPS delegation unit fixtures must model inbound requests: use
+`httptest.NewRequest` with an HTTPS target and an origin-form `RequestURI`.
+An outbound `http.NewRequest` has no server TLS state; an absolute-form test
+target also differs from the ordinary Caddy request. Both can fail upstream
+Origin validation before the authentication condition under test. The shared
+refresh HTTP matrix checks unauthenticated protected routes and cross-origin
+API rejection through unit delegation and actual Caddy TLS.
 
 For cross-feature changes, use the
 [composed qualification map](references/composition-qualification.md).
@@ -185,10 +293,9 @@ Local identity provisioning/reset units are in `local_identity_test.go`.
 management/profile credential mutations, reload invalidation, stateless access,
 and persisted user public keys. See
 [local identity compatibility](../configuration-identity-stores/references/local-identity.md#caddy-validation).
-The separate `identity_profile_regression` build tag records a known upstream
-v1.2.5 transformed-profile ownership failure. Run its explicit command in
-[profile isolation](../authentication-portal-api/references/profile-public-keys.md#known-upstream-profile-identity-gap);
-the default suite passing must not be reported as resolving that defect.
+The default `TestCaddyProfileCanonicalIdentityRegression` verifies transformed
+claims cannot select another local account after the upstream fix; see
+[profile isolation](../authentication-portal-api/references/profile-public-keys.md#canonical-profile-identity-regression).
 
 Runtime ownership unit tests live in `app_lifecycle_test.go`.
 `TestCaddyLifecycleE2E` in `app_lifecycle_e2e_test.go` launches a bounded child

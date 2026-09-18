@@ -110,7 +110,7 @@ Go's bracketed IPv6 representation. They remove raw `X-Real-IP`, `Forwarded`, `X
 the configured mount. An explicitly configured `X-Real-IP` address source can
 still contribute through Caddy's `client_ip_headers` resolution.
 
-The selected go-authcrunch v1.2.5 forwarded-address parser has an upstream IPv6
+The selected go-authcrunch forwarded-address parser still has an upstream IPv6
 limit: an uncompressed address such as `2001:db8:1:2:3:4:5:6` becomes `2001`,
 and a short address such as `::1` falls back to the peer. Caddy's trust decision
 does not repair that library parser. The suite qualifies forwarded IPv4 and
@@ -211,6 +211,12 @@ handles OP requests before its ordinary access-token gates and HTML negotiation.
 `<mount>/oidc/jwks` publishes separate OP ID-token keys. See the
 [OIDC protocol contract](../configuration-oauth-applications/references/oidc-provider.md#http-mount-and-protocol-contract)
 for capabilities, native callbacks, and TLS relying-party tests.
+
+The selected go-authcrunch pin supplies its own themed OIDC page headers;
+preserve them through Caddy. For older v1.2.6 browser consent, use the explicit
+[consent response policy](../configuration-oauth-applications/references/oidc-provider.md#consent-response-policy-for-v126).
+It uses Caddy's deferred response-header matcher before `authenticate`; it does
+not rewrite incoming Origin or weaken the provider's CSRF checks.
 
 The authorization policy's `set auth url` must align with the path where the
 authentication portal is actually served:

@@ -12,7 +12,7 @@ independent of declaration order and Caddy file/snippet imports.
 values with the shared directive codec. `caddyfile_authn.go` attaches it with
 `Config.ConfigureOIDCProvider` after collecting the complete portal and before
 `AddAuthenticationPortal` validates it. Do not add a second field parser or
-validate the portal before attaching OIDC. AuthCrunch v1.2.5, pinned in `go.mod`,
+validate the portal before attaching OIDC. AuthCrunch v1.2.6, pinned in `go.mod`,
 provides `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives` and
 `PortalConfig.ConfigureOIDCProvider`.
 
@@ -20,7 +20,8 @@ Only one provider block is allowed per portal, including disabled blocks and
 blocks expanded from repeated imports. An absent block remains nil. A present
 block defaults enabled; an empty block fails enabled-provider validation.
 
-Inside `authentication portal myportal`, each setting occurs at most once:
+Inside `authentication portal myportal`, each setting occurs at most once
+except distinct `acr` mappings:
 
 | Setting | Arguments |
 | --- | --- |
@@ -29,8 +30,9 @@ Inside `authentication portal myportal`, each setting occurs at most once:
 | `realms` | One line with one or more distinct local realm names. |
 | `applications` | One line with one or more distinct registered nicknames, in selection order. |
 | `signing key files` | One line with one or more distinct absolute paths to dedicated private RSA PEM files. |
-| `session lifetime`, `token lifetime` | One decimal integer in seconds. |
-| `max sessions`, `max pending requests`, `max grants` | One decimal integer count. |
+| `session lifetime`, `token lifetime`, `refresh lifetime` | One decimal integer in seconds. |
+| `max sessions`, `max pending requests`, `max grants`, `max refresh tokens` | One decimal integer count. |
+| `acr` | One context value and one or more required authentication methods; repeat for distinct context values. |
 
 Multiword keywords are separate tokens; `"signing key files"`,
 `signing_key_files`, and `max "pending requests"` are invalid. Quote key paths
@@ -39,6 +41,20 @@ arguments, and repeated settings fail. Zero numbers retain library defaults:
 28,800 seconds for sessions, 300 seconds for tokens, 10,000 sessions, 1,024
 pending requests, and 10,000 grants. Negative or excessive enabled values fail
 the library's bounds checks.
+
+OIDC refresh defaults to a fixed 28,800-second family lifetime and capacity of
+10,000 refresh entries per provider, independent of portal refresh settings.
+Lifetime is bounded to 86,400 seconds and capacity to 1,000,000. Capacity
+exhaustion fails closed. Rotation never extends the original family deadline;
+reuse revokes the family. Grants remain bound to client, identity and consent.
+
+`acr urn:example:password pwd` advertises a context satisfied only by completed
+password authentication. `acr urn:example:mfa pwd otp` additionally requires
+completed OTP. Mappings describe verified methods; they never establish login
+evidence or change challenge policy. Context values must be distinct, nonempty,
+at most 256 bytes and contain no whitespace. Methods must be distinct and
+come from the library's validated AMR vocabulary (`pwd`, `otp`, `hwk`, `swk`,
+`mfa`, `sms`, `tel`, `email`, `fpt`, `face`, `pin`, `rba`, `sc`, `user`, `wia`).
 
 Check the enclosing portal's closing boundary as well as the provider body.
 Caddy's segment collection counts quoted brace-valued arguments as braces;
@@ -196,6 +212,14 @@ coverage; parser tests cannot establish those behaviors.
   wrong client/redirect/PKCE, consent CSRF, revocation/logout, token purposes,
   CORS and unsigned request objects. `oidc_loopback_e2e_test.go` delivers real
   callbacks to IPv4/IPv6 ephemeral listeners and redeems the exact actual URI.
+  `oidc_capabilities_e2e_test.go` extends the same default Caddy journeys with
+  registered RS256 Request Objects, signature/downgrade rejection, essential
+  individual claims, ACR, address/phone filtering, rotating refresh grants,
+  wrong-client rejection and refresh replay family revocation at both mounts.
+  `TestOAuthApplicationRequestObjectKeys` and
+  `TestCaddyfileOIDCAuthenticationContexts` cover delegated registration/mapping
+  grammar and malformed inputs; the provider adaptation fixture includes the
+  new directives and explicit/zero refresh limits.
 - `TestCaddyRegistrationE2E`: immutable client identity and signing keys across
   actual process restarts at the same issuer URL, explicit secret rotation and
   activation, and verification of an earlier ID token against retained rollover
@@ -209,7 +233,7 @@ above when changing this integration.
 ## HTTP mount and protocol contract
 
 The existing Caddy `AuthnMiddleware.ServeHTTP` acquires the app request reference
-and delegates to `Portal.ServeHTTP` with the original URL. AuthCrunch v1.2.5's
+and delegates to `Portal.ServeHTTP` with the original URL. AuthCrunch v1.2.6's
 `pkg/authn/serve_http.go` invokes its OP adapter before ordinary access-token
 checks, API dispatch, or HTML/JSON negotiation. Route the canonical issuer mount
 through that handler; do not strip the prefix with `handle_path` or rewrite the
@@ -227,6 +251,68 @@ authentication evidence only from completed password/MFA checkpoints and the
 selected local identity store; Caddy must never call `CompleteLogin` or create
 that evidence itself.
 
+### Consent response policy for v1.2.6
+
+The current pin, `v1.2.7-0.20260918155754-3e28980b0f5a`, supplies themed
+consent/form-post/error pages and the correct consent headers in the provider.
+Caddy preserves those headers. Both the official harness and normal RP E2E
+now run without the compatibility snippet below. Consent CSP retains default,
+frame and base restrictions, permits same-origin themed assets with a style
+nonce, and binds form-action to self and the validated client's callback origin.
+Form-post script and style nonces must match the actual response page.
+
+The v1.2.6 consent HTML inherits `Referrer-Policy: no-referrer`. Chrome consequently
+sends `Origin: null` on its form POST, and the provider rejects it with 403.
+For this version, import the reusable Caddy snippet
+[`assets/config/oidc-consent-headers.Caddyfile`](../../../../assets/config/oidc-consent-headers.Caddyfile)
+before the site declaration, then apply it before `authenticate`:
+
+```caddyfile
+import /path/to/oidc-consent-headers.Caddyfile
+
+login.example.com {
+	@portal path /auth /auth/*
+	route @portal {
+		import oidc_consent_headers /auth/oidc/authorize /auth/oidc/continue https://rp.example.com
+		authenticate with myportal
+	}
+}
+```
+
+This fragment assumes the named portal is already configured. Supply both exact
+paths for its issuer mount; a root issuer uses `/oidc/authorize /oidc/continue`.
+The third argument is the registered callback's HTTPS origin, including any
+non-default port. For this static deployment all clients share that origin.
+Do not supply `*`, a scheme-only source, or derive this value from request input.
+Import paths are relative to the containing Caddyfile. The snippet must be
+defined before it is used. Each import belongs to its own portal route.
+
+The standard Caddy [header response matcher](https://caddyserver.com/docs/caddyfile/directives/header)
+defers the change until it can match GET, HTTP 200, HTML, the original self-only
+form CSP, and the original `no-referrer` policy. Only matching consent responses
+get `same-origin`, which preserves the same-origin form POST Origin while
+withholding referrers from other origins. Their CSP keeps `default-src 'none'`,
+`frame-ancestors 'none'` and `base-uri 'none'`, and permits form submission to
+`'self'` plus that registered callback origin. Chrome applies `form-action` to
+the post-consent redirect too: `'self'` alone aborts a valid cross-origin code
+callback. Exact redirect-URI registration and code binding remain enforced by
+the provider. For deployments with other callback origins, configure an explicit
+reviewed source list; this snippet does not discover or authorize new callbacks.
+Discovery, errors, redirects and
+cross-origin form-post responses retain their library headers. Keep Origin and
+CSRF validation intact; do not accept `null`, alter request headers, or skip
+consent. This is an explicit deployment policy, not an automatic change to
+`authenticate` or a library patch. The snippet is retained for v1.2.6 deployments.
+
+The selected upstream fix emits the referrer policy and a form-action policy
+covering the validated request's callback directly from the provider. Reassess
+the snippet when changing dependency versions;
+its exact response matcher deliberately stops applying if the library contract
+changes. Local adaptation and root/nested Caddy TLS relying-party E2E verify the
+policy, null/cross-origin and forged-CSRF rejection, and unaffected callbacks.
+The official Chrome evidence additionally verifies actual browser-generated
+Origin headers and successful reauthentication.
+
 Keep key and token purposes distinct:
 
 - `<mount>/.well-known/jwks.json` contains portal access-token verification keys
@@ -241,16 +327,31 @@ prompt none/login/consent, fresh authentication/max_age, UserInfo and revocation
 Completing portal logout clears the OP session and invalidates its grants; it is
 not RP-initiated OIDC logout. Without a refresh cookie, GET `/logout` completes
 logout. With a portal refresh cookie, GET renders the confirmation page and
-the portal session API completes logout. Discovery must not advertise refresh grants,
-dynamic registration, private_key_jwt, signed/encrypted request objects or an
-end_session_endpoint. Requesting offline_access does not enable OIDC refresh;
-the library filters unsupported scopes from the granted scope.
+the portal session API completes logout. v1.2.6 advertises OIDC refresh grants,
+individual claims, optional address/phone scopes, and unsigned/RS256 Request
+Objects. Dynamic registration, private_key_jwt, encrypted Request Objects and
+end_session_endpoint remain unsupported. OIDC refresh credentials require
+registered `offline_access`, `prompt=consent`, and explicit approval. Scope
+requests outside the registration never grant additional permissions.
 
 By-value `request` JWTs with `alg: none` encode authorization parameters. They
 can neither authenticate a client nor assert an authenticated user. They still
 require real login, registered client/redirect checks, consent, PKCE and the
-registered token endpoint authentication method. Remote request_uri and signed
-or encrypted request objects are unsupported.
+registered token endpoint authentication method. RS256 signatures use registered
+client public keys and require `iss` matching the client and `aud` containing
+the issuer. Unknown keys, tampering, unsigned downgrade under an RS256 pin,
+remote/embedded header keys and malformed JWT metadata fail. The inner callback
+takes precedence over the outer callback, then undergoes registration validation.
+Remote `request_uri` and encrypted Request Objects are unsupported.
+
+Individual `claims` requests are limited by registered scope permissions and
+consent for the requested `userinfo` or `id_token` location. Optional profile,
+address and phone attributes come from explicit `identity.User.Profile` data;
+missing attributes are not fabricated. Caddy's inline `user` grammar does not
+expose this profile object. Use a prepared local identity database. The
+conformance fixture adds synthetic attributes offline after Caddy provisions its
+disposable account, before the serving process opens the database. It records
+phone verification as false and does not assert verified email ownership.
 
 Public native clients may vary only the authorization port for literal HTTP
 `127.0.0.1` or `[::1]`; all other URI bytes, including path/query encoding, stay

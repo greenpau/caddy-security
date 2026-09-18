@@ -36,6 +36,7 @@ func (f *localIdentityFixture) nativeLogin(t *testing.T, password string, mfa bo
 	t.Helper()
 	config := &authclient.Config{BaseURL: f.issuer, Realm: "local", Username: "alice", Password: password, RefreshTransport: authclient.RefreshTransportBody}
 	if mfa {
+		waitForFreshFixtureTOTP(t, f.database, "alice")
 		config.TOTPSecret = authenticationClientTOTPSecret
 	}
 	client, err := authclient.NewClient(config, authclient.Options{HTTPClient: f.plain})
@@ -132,8 +133,9 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 			}
 			f.secrets = append(f.secrets, password)
 			if protocol == "form" {
-				f.request(t, "POST", sandbox, url.Values{"passcode": {authenticationClientTOTP()}}, http.Header{"Origin": {f.base}}).requireStatus(t, 303)
-				f.request(t, "GET", sandbox, nil, nil).requireStatus(t, 401)
+				// Credential-version binding rejects the stale checkpoint at
+				// submission, before any completion redirect can be issued.
+				f.request(t, "POST", sandbox, url.Values{"passcode": {authenticationClientTOTP()}}, http.Header{"Origin": {f.base}}).requireStatus(t, 403)
 			} else {
 				r := f.json(t, f.client, "/login", apiauth.AuthRequest{Username: "alice", Realm: "local", SandboxID: challenge.SandboxID, SandboxSecret: challenge.SandboxSecret, ChallengeKind: "totp", ChallengeResponse: authenticationClientTOTP()}, "")
 				localIdentityRejectedAuth(t, r, 401)

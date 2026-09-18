@@ -30,7 +30,7 @@ import (
 // Syntax:
 //
 //	cookie prefix <prefix>
-//	cookie <session id|referer|sandbox id|identity token|access token|refresh token|oidc session id|oidc request id> name <name>
+//	cookie <session id|referer|sandbox id|identity token|access token|refresh token|oidc session id|oidc request id|saml session id> name <name>
 //	cookie path <path>
 //	cookie lifetime <seconds>
 //	cookie <same site|samesite> <lax|strict|none>
@@ -87,7 +87,7 @@ func encodePortalCookieDirective(keyword string, args []string, deferPlaceholder
 		legacyDomain := false
 		if len(args) == 3 {
 			switch args[0] {
-			case "domain", "prefix", "path", "lifetime", "samesite", "same", "insecure", "strip", "guess", "session", "referer", "redirect", "sandbox", "identity", "id", "access", "refresh", "oidc":
+			case "domain", "prefix", "path", "lifetime", "samesite", "same", "insecure", "strip", "guess", "session", "referer", "redirect", "sandbox", "identity", "id", "access", "refresh", "oidc", "saml":
 			default:
 				legacyDomain = true
 			}

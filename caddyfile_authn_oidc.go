@@ -20,7 +20,7 @@ import "github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 // fields, resolving applications, reading keys, or generating credentials.
 // Config.ConfigureOIDCProvider owns the field grammar and reference validation.
 //
-// Syntax (inside an authentication portal; every setting occurs at most once):
+// Syntax (inside an authentication portal; only acr may repeat):
 //
 //	oidc provider {
 //		<enabled|disabled>
@@ -30,6 +30,9 @@ import "github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 //		applications <nickname> [<nickname>...]
 //		session lifetime <seconds>
 //		token lifetime <seconds>
+//		refresh lifetime <seconds>
+//		max refresh tokens <count>
+//		acr <value> <method> [<method>...]
 //		max sessions <count>
 //		max pending requests <count>
 //		max grants <count>
@@ -43,6 +46,10 @@ import "github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 // must each identify exactly one attached local store and no upstream provider
 // at runtime. The first dedicated RSA key signs; all keys publish. Runtime key
 // checks require clean absolute paths, private 0700 directories and 0600 files.
+// OIDC refresh families have a fixed lifetime (default 28800 seconds) and a
+// separate capacity (default 10000); they are independent of portal refresh.
+// Distinct ACR values map to completed methods such as pwd/otp/hwk. A mapping
+// never establishes authentication evidence or bypasses required challenges.
 func readCaddyfileOIDCProvider(d *caddyfile.Dispenser, args []string) ([]string, error) {
 	if len(args) != 1 || args[0] != "provider" {
 		return nil, d.Errf("expected oidc provider block")

@@ -55,7 +55,14 @@ func (f *oidcRPFixture) testRouting(t *testing.T) {
 			r := f.request(t, tc.method, tc.path, nil, http.Header{"Accept": {accept}, "Authorization": {"Bearer invalid-portal-token"}})
 			r.requireStatus(t, tc.status)
 			r.noStore(t)
-			if r.header.Get("Allow") != tc.allow || !strings.HasPrefix(r.header.Get("Content-Type"), "application/json") {
+			contentType := "application/json"
+			if tc.path == "/oidc/authorize" && accept == "text/html" {
+				contentType = "text/html"
+				if !bytes.Contains(r.body, []byte("Unable to continue")) || r.header.Get("Location") != "" {
+					t.Fatal("invalid authorization did not remain on the provider error page")
+				}
+			}
+			if r.header.Get("Allow") != tc.allow || !strings.HasPrefix(r.header.Get("Content-Type"), contentType) {
 				t.Fatalf("library headers changed for %s %s", tc.method, tc.path)
 			}
 			if tc.method == "HEAD" && len(r.body) != 0 {
@@ -138,11 +145,25 @@ func (f *oidcRPFixture) testConsent(t *testing.T) {
 	params := f.authorization("basic")
 	consent := f.authorize(t, params)
 	consent.requireStatus(t, 200)
+	for _, response := range []oidcRPResponse{consent, f.request(t, "GET", "/oidc/continue", nil, nil)} {
+		response.requireStatus(t, 200)
+		response.noStore(t)
+		policy, err := normalizeOIDCPagePolicy(response.header.Get("Content-Security-Policy"))
+		if err != nil || response.header.Get("Referrer-Policy") != "same-origin" || policy != "default-src 'none'; style-src 'self' 'nonce-PER_RESPONSE'; img-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://rp.example.test" || response.header.Get("X-Frame-Options") != "DENY" {
+			t.Fatal("consent must preserve same-origin POSTs and its other security headers")
+		}
+	}
 	fields := oidcRPForm(t, consent.body).values
 	for _, form := range []url.Values{{"decision": {"allow"}}, {"csrf": {"forged"}, "decision": {"allow"}}} {
 		f.request(t, "POST", "/oidc/continue", form, http.Header{"Origin": {f.base}}).requireStatus(t, 403)
 	}
-	f.request(t, "POST", "/oidc/continue", url.Values{"csrf": {fields.Get("csrf")}, "decision": {"allow"}}, http.Header{"Origin": {"https://attacker.example"}}).requireStatus(t, 403)
+	for _, origin := range []string{"null", "https://attacker.example"} {
+		rejected := f.request(t, "POST", "/oidc/continue", url.Values{"csrf": {fields.Get("csrf")}, "decision": {"allow"}}, http.Header{"Origin": {origin}})
+		rejected.requireStatus(t, 403)
+		if rejected.header.Get("Referrer-Policy") != "no-referrer" {
+			t.Fatal("consent policy affected a rejected POST")
+		}
+	}
 	code := f.callback(t, f.approve(t, consent, "allow"), params, "")
 	f.tokens(t, f.exchange(t, "basic", code, oidcRPCallback, oidcRPVerifier), params)
 	params.Set("prompt", "none")
@@ -330,9 +351,9 @@ func (f *oidcRPFixture) testBindings(t *testing.T) {
 		})
 	}
 	form := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"unsupported"}}
-	f.request(t, "POST", f.endpoint(t, "token_endpoint"), form, oidcRPAuth("trusted", form)).failure(t, 400, "unsupported_grant_type")
-	// Unsupported scopes are ignored by the OP; requesting offline_access
-	// must never enable a refresh grant or cause it to appear in granted scope.
+	f.request(t, "POST", f.endpoint(t, "token_endpoint"), form, oidcRPAuth("trusted", form)).failure(t, 400, "invalid_grant")
+	// This client has no offline_access registration. Requesting it must not
+	// enable a refresh grant or cause it to appear in the granted scope.
 	params := f.authorization("trusted")
 	params.Set("scope", "openid offline_access")
 	code := f.callback(t, f.authorize(t, params), params, "")

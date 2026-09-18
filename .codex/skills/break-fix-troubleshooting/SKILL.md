@@ -67,6 +67,20 @@ separate work, and continue any correction that can be completed in this module.
 - OAuth/OIDC callback failures: check redirect URI, issuer/discovery URL,
   client ID/secret, scopes, PKCE settings, state/cookie behavior, trusted
   redirects, reverse-proxy headers, and provider-specific constraints.
+- OIDC consent POST `403 invalid_request` in a real browser: compare the
+  consent response's `Referrer-Policy` with the POST's actual `Origin`. In
+  go-authcrunch v1.2.6, `no-referrer` produces `Origin: null`, which its own
+  same-origin check rejects. HtmlUnit/HTTP-client success does not rule this
+  out. Preserve headless Chrome screenshots and network evidence; do not
+  rewrite Origin or relax CSRF/origin validation. Apply the explicit Caddy
+  [consent response policy](../configuration-oauth-applications/references/oidc-provider.md#consent-response-policy-for-v126)
+  for this version, then verify both successful consent and rejection of
+  cross-origin/forged-CSRF submissions. The library default needs a separate
+  upstream fix. If the consent Origin is correct but Chrome aborts the callback
+  with `net::ERR_ABORTED`, inspect `form-action`: its source list must permit the
+  registered callback origin as well as self. Keep the exact redirect checks;
+  do not replace the source list with a wildcard. See the
+  [conformance workflow](../configuration-oauth-applications/references/oidc-conformance.md).
 - SAML failures: check entity IDs, ACS URLs, certificates, signing keys,
   metadata, role attributes, and whether the issue is an identity-provider flow
   or an SSO app-provider flow.

@@ -55,6 +55,12 @@ transform user {
 
 ## Provider Notes
 
+The selected library binds the SAML response to its initiating browser using
+the portal's SAML session cookie. Configure its name inside the portal with
+`cookie saml session id name <name>` or the shared cookie prefix; see
+[cookie names and attributes](../configuration-authentication-cookies/SKILL.md).
+Keep this cookie distinct from access, OIDC and refresh cookies.
+
 Keep the portal base path in SAML URLs. If the portal is mounted at `/auth` and
 the SAML realm is `azure`, the ACS endpoint is usually
 `https://auth.example.com/auth/saml/azure`. For JumpCloud and other custom

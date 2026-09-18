@@ -182,3 +182,17 @@ locally, or documenting validation for a change.
 Code changes must have unit and E2E coverage. Caddyfile directive changes also
 require new or amended adaptation cases in `testdata/caddyfile_adapt/`. Follow
 the skill's coverage requirements and validation workflow.
+
+For official OP plans against the actual Caddy binary, use the
+[Caddy conformance workflow](.codex/skills/configuration-oauth-applications/references/oidc-conformance.md).
+Run it only with `make oidc-conformance-test`; its tests and artifacts are
+separate from regular testing. Existing local OIDC regression E2E remains enabled.
+Keep every non-pass outcome and the original runner status visible.
+The separate manual-only `OIDC conformance` GitHub Action runs those Make targets
+and uploads a readable summary plus encrypted private report. Follow its
+[setup and artifact guidance](.codex/skills/configuration-oauth-applications/references/oidc-conformance-actions.md).
+Use `make oidc-conformance-cleanup` to remove OIDC run bundles and supplemental
+logs, audits and browser reports while retaining the prepared suite and
+dependencies. The isolated tests live under
+`assets/scripts/oidc_certification_conformance_tests/`; keep OIDC conformance
+source/test filenames explicit about their scope.

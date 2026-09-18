@@ -16,15 +16,47 @@ package security
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"mime"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"golang.org/x/net/html"
 )
+
+// Browser pages generate a fresh 256-bit style nonce for every response.
+// Normalize only that value when comparing independently rendered policies;
+// all directive names, sources, and callback origins remain significant.
+func normalizeOIDCPagePolicy(policy string) (string, error) {
+	pattern := regexp.MustCompile(`'nonce-([A-Za-z0-9_-]{43})'`)
+	matches := pattern.FindAllStringSubmatch(policy, -1)
+	if len(matches) != 1 || strings.Count(policy, "'nonce-") != 1 {
+		return "", fmt.Errorf("expected one unpredictable page style nonce")
+	}
+	nonce, err := base64.RawURLEncoding.DecodeString(matches[0][1])
+	if err != nil || len(nonce) != 32 {
+		return "", fmt.Errorf("invalid page style nonce")
+	}
+	return strings.Replace(policy, matches[0][0], "'nonce-PER_RESPONSE'", 1), nil
+}
+
+func TestOIDCPagePolicyNonce(t *testing.T) {
+	nonce := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32))
+	policy := "default-src 'none'; style-src 'self' 'nonce-" + nonce + "'; form-action 'self' https://rp.example.test"
+	normalized, err := normalizeOIDCPagePolicy(policy)
+	if err != nil || normalized != strings.Replace(policy, nonce, "PER_RESPONSE", 1) {
+		t.Fatal("policy normalization changed more than the per-response nonce")
+	}
+	for _, bad := range []string{"", strings.Replace(policy, nonce, "short", 1), policy + "; script-src 'nonce-" + nonce + "'"} {
+		if _, err := normalizeOIDCPagePolicy(bad); err == nil {
+			t.Fatal("accepted a missing, weak or additional nonce")
+		}
+	}
+}
 
 type oidcRPBrowserForm struct {
 	action    string
@@ -139,13 +171,19 @@ func verifyOIDCRPCallback(r oidcRPResponse, params url.Values, issuer, failure s
 			}
 			directives[fields[0]] = fields[1:]
 		}
-		if len(directives) != 5 {
-			return "", fmt.Errorf("unexpected form-post CSP directives")
-		}
-		for directive, want := range map[string][]string{
+		expected := map[string][]string{
 			"default-src": {"'none'"}, "frame-ancestors": {"'none'"}, "base-uri": {"'none'"},
 			"script-src": {"'nonce-" + form.nonces[0] + "'"}, "form-action": {registered.Scheme + "://" + registered.Host},
-		} {
+		}
+		if _, themed := directives["style-src"]; themed {
+			expected["style-src"] = []string{"'self'", "'nonce-" + form.nonces[0] + "'"}
+			expected["img-src"] = []string{"'self'"}
+			expected["font-src"] = []string{"'self'"}
+		}
+		if len(directives) != len(expected) {
+			return "", fmt.Errorf("unexpected form-post CSP directives")
+		}
+		for directive, want := range expected {
 			if !slices.Equal(directives[directive], want) {
 				return "", fmt.Errorf("form-post CSP missing or weakened")
 			}
@@ -235,6 +273,10 @@ func TestOIDCRPResponse(t *testing.T) {
 	if code, err := verifyOIDCRPCallback(valid, params, issuer, ""); err != nil || code != "code" {
 		t.Fatalf("valid form-post callback rejected: %v", err)
 	}
+	valid.header.Set("Content-Security-Policy", valid.header.Get("Content-Security-Policy")+"; style-src 'self' 'nonce-test-nonce'; img-src 'self'; font-src 'self'")
+	if code, err := verifyOIDCRPCallback(valid, params, issuer, ""); err != nil || code != "code" {
+		t.Fatalf("valid themed form-post callback rejected: %v", err)
+	}
 	for _, tc := range []struct{ name, old, replacement string }{
 		{"GET", `method="post"`, `method="get"`},
 		{"default method", `method="post"`, ""},
@@ -264,6 +306,9 @@ func TestOIDCRPResponse(t *testing.T) {
 		valid.header.Get("Content-Security-Policy") + " https://attacker.example",
 		valid.header.Get("Content-Security-Policy") + "; script-src *",
 		valid.header.Get("Content-Security-Policy") + "; script-src-elem *",
+		strings.Replace(valid.header.Get("Content-Security-Policy"), "img-src 'self'", "img-src *", 1),
+		strings.Replace(valid.header.Get("Content-Security-Policy"), "font-src 'self'", "font-src https://attacker.example", 1),
+		strings.Replace(valid.header.Get("Content-Security-Policy"), "style-src 'self' 'nonce-test-nonce'", "style-src 'self' 'unsafe-inline'", 1),
 		strings.Replace(valid.header.Get("Content-Security-Policy"), "script-src 'nonce-test-nonce'", "script-src 'nonce-test-nonce' 'unsafe-inline'", 1),
 	} {
 		r := valid

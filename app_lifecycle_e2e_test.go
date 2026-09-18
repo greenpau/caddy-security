@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -29,6 +30,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -49,6 +51,7 @@ func TestCaddyLifecycleE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyLifecycleProcess$", "-test.v", "-test.timeout=75s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_LIFECYCLE_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -197,15 +200,69 @@ func capturedLifecycleApp(t *testing.T, label string) *App {
 
 func lifecycleAddress(t *testing.T) string {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	// Caddy also starts an HTTP/3 UDP listener on its HTTPS port. A free TCP
+	// port can already belong to another process's UDP socket.
+	for range 32 {
+		ln, packet, err := reserveLifecycleAddress("127.0.0.1:0")
+		if errors.Is(err, syscall.EADDRINUSE) {
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		addr := ln.Addr().String()
+		if err := errors.Join(packet.Close(), ln.Close()); err != nil {
+			t.Fatal(err)
+		}
+		return addr
+	}
+	t.Fatal("could not select a port available for both Caddy TCP and QUIC")
+	return ""
+}
+
+func reserveLifecycleAddress(address string) (net.Listener, net.PacketConn, error) {
+	ln, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, port, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		return nil, nil, errors.Join(err, ln.Close())
+	}
+	packet, err := net.ListenPacket("udp", ":"+port)
+	if err != nil {
+		return nil, nil, errors.Join(err, ln.Close())
+	}
+	return ln, packet, nil
+}
+
+func TestLifecycleAddressRejectsOccupiedQUICPort(t *testing.T) {
+	busy, err := net.ListenPacket("udp", ":0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	addr := ln.Addr().String()
-	if err := ln.Close(); err != nil {
+	t.Cleanup(func() { _ = busy.Close() })
+	_, port, err := net.SplitHostPort(busy.LocalAddr().String())
+	if err != nil {
 		t.Fatal(err)
 	}
-	return addr
+	address := net.JoinHostPort("127.0.0.1", port)
+	if ln, packet, err := reserveLifecycleAddress(address); !errors.Is(err, syscall.EADDRINUSE) || ln != nil || packet != nil {
+		t.Fatal("reservation did not reject the occupied QUIC port")
+	}
+	// Rejection must release the TCP listener it opened before checking UDP.
+	probe, err := net.Listen("tcp", address)
+	if err != nil {
+		t.Fatal("rejected reservation leaked its TCP listener", err)
+	}
+	if err := errors.Join(probe.Close(), busy.Close()); err != nil {
+		t.Fatal(err)
+	}
+	ln, packet, err := reserveLifecycleAddress(address)
+	if err != nil {
+		t.Fatal("released port could not be reserved", err)
+	}
+	t.Cleanup(func() { _ = errors.Join(packet.Close(), ln.Close()) })
 }
 
 func lifecycleCaddyConfig(t *testing.T, addr, label, failure string, cfg *authcrunch.Config, secrets ...json.RawMessage) []byte {

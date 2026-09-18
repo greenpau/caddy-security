@@ -86,6 +86,7 @@ func TestCaddyAuthenticatorE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyAuthenticatorProcess$", "-test.v", "-test.timeout=280s")
 	cmd.Env = append(os.Environ(), "CADDY_AUTHENTICATOR_E2E_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("caddy-authenticator through Caddy TLS: %v\n%s", err, output)
@@ -112,13 +113,13 @@ func TestCaddyAuthenticatorProcess(t *testing.T) {
 		t.Fatalf("build authenticator: %v\n%s", err, output)
 	}
 	cert, key, roots := cookieTLSCertificate(t)
-	database, keys := authenticationClientDatabase(t)
 	for _, native := range []bool{false, true} {
 		name, mount := "legacy root", ""
 		if native {
 			name, mount = "native nested", "/tenant/auth"
 		}
 		t.Run(name, func(t *testing.T) {
+			database, keys := authenticationClientDatabase(t)
 			f := newAuthenticationClientFixture(t, mount, database, cert, key, roots, native, native, true, false)
 			home := filepath.Join(t.TempDir(), "authenticator")
 			userHome := t.TempDir()
@@ -319,11 +320,14 @@ func TestCaddyAuthenticatorProcess(t *testing.T) {
 				}
 				must(lifecyclePassword, "login", "--profile", "wizard", "--password-file", "-")
 				check("wizard", "alice")
-				configure("interactive", "mfauser")
+				configure("interactive", "mfaprompt")
 				if output, err := call(lifecyclePassword, "login", "--profile", "interactive", "--password-file", "-"); err == nil || !bytes.Contains(output, []byte("authentication input required")) {
 					t.Fatal("default login did not reject missing MFA input")
 				}
 				for _, mode := range []string{"login", "paste", "default-login", "interrupt", "terminate", "timeout", "invalid-utf8", "keyboard-interrupt", "eof", "totp-interrupt", "totp-timeout"} {
+					if mode == "login" || mode == "paste" {
+						f.waitForFreshTOTP(t, "mfaprompt")
+					}
 					previous, _ := os.ReadFile(filepath.Join(home, "profiles", "interactive", "token.jwt"))
 					ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 					args := []string{"testdata/caddy_authenticator/terminal.py", binary, mode, "--home", home, "--profile", "interactive", "login", "--force"}
@@ -344,7 +348,7 @@ func TestCaddyAuthenticatorProcess(t *testing.T) {
 						}
 					}
 				}
-				check("interactive", "mfauser")
+				check("interactive", "mfaprompt")
 			}
 			for _, profile := range []string{"password", "mfa", "api"} {
 				logs, err := os.ReadFile(filepath.Join(home, "profiles", profile, "auth.log"))
@@ -406,6 +410,7 @@ func TestCaddyAuthenticatorProcess(t *testing.T) {
 		})
 	}
 	t.Run("expired access authenticates again", func(t *testing.T) {
+		database, _ := authenticationClientDatabase(t)
 		f := newAuthenticationClientFixture(t, "/auth", database, cert, key, roots, true, true, true, false, 4)
 		home := filepath.Join(t.TempDir(), "state")
 		call := func(args ...string) {

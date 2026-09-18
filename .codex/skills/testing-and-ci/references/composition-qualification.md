@@ -30,7 +30,7 @@ No OP key is added to a portal verification set to make a JWT test pass.
 | OAuth trust | Actual callback with retained issuer and supplemental access audience validation; invalid supplemental claims cannot add roles; upstream login remains access-only |
 | Realm replacement | Browser JSON password challenges with one slot in each portal component, cross-realm replacement, old family/grant rejection, strict spent-token replay, active-cookie and legacy-path deletion, default/custom names |
 | Completion failure | OP-only session occupies the single OP slot; local refresh issuance then OP-full completion returns 503 without credentials; logout releases the OP slot and a new login rotates successfully, proving refresh capacity was reclaimed |
-| Current identity | Admin API role overwrite followed by refresh; freshly signed claims contain current roles and authorization denies the removed grant |
+| Current identity | Admin API role overwrite revokes the previous refresh authentication; a fresh password login signs current roles and authorization denies the removed grant |
 | Two issuers | Independent hosts, mounts, keys and cookies, successful login/exchange at each issuer, bidirectional copied bearer/renamed refresh and OP-cookie denial, and both runtimes invalidated on replacement |
 | Edge | `composition_edge_e2e_test.go`: direct TLS, untrusted hostile/duplicate hints, real TLS proxy, Caddy `trusted_proxies_strict`, alternate `client_ip_headers`, retained Origin/issuer/TLS checks, raw/encoded and look-alike paths |
 | Reload | Missing-key candidate fails without displacing active grants/families; successful replacement preserves immutable registration bytes and key files, invalidates refresh/OP grants and unredeemed codes, and still verifies compatible stateless access JWTs |
@@ -59,7 +59,7 @@ they never retry a failed request. Transport diagnostics omit URLs and headers.
 ## Limits that must remain explicit
 
 This suite does not certify DEBUG log redaction. The selected go-authcrunch
-v1.2.5 OAuth implementation, `pkg/idp/oauth/authenticate.go`, logs callback
+OAuth implementation, `pkg/idp/oauth/authenticate.go`, still logs callback
 code/state and the raw token response at DEBUG before identity validation.
 That upstream logging needs separate remediation; enabling DEBUG can disclose
 credentials even when the subsequent login fails. Do not describe the

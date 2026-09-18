@@ -55,6 +55,7 @@ const (
 
 type authenticationClientFixture struct {
 	base, mount, accessName, refreshName string
+	database                             string
 	refresh, body, oidc                  bool
 	http                                 *http.Client
 	probe                                *tokenRefreshBrowserState
@@ -70,23 +71,26 @@ func authenticationClientDatabase(t *testing.T) (string, map[string]string) {
 		t.Fatal(err)
 	}
 	keys := make(map[string]string)
-	for i, name := range []string{"alice", "totpuser", "mfauser", "whitespace", "expiredkey", "revokedkey", "disabledkey", "disableduser"} {
+	// Successful MFA journeys get independent accounts so their real one-time
+	// codes cannot collide with another journey's persisted replay counter.
+	for i, name := range []string{"alice", "totpuser", "mfauser", "whitespace", "expiredkey", "revokedkey", "disabledkey", "disableduser",
+		"totpprompt", "mfaprompt", "totpmeta", "mfameta", "totpmetaexplicit", "mfametaexplicit", "whitespacecli", "totpreplay"} {
 		r := &requests.Request{User: requests.User{Username: name, Email: name + "@example.test", Password: lifecyclePassword, Roles: []string{"authp/user"}}}
-		if name == "whitespace" {
+		if strings.HasPrefix(name, "whitespace") {
 			r.User.Password = authenticationClientWhitespacePassword
 		}
 		if err := db.AddUser(r); err != nil {
 			t.Fatal(err)
 		}
-		if name == "totpuser" || name == "mfauser" || name == "whitespace" {
+		if strings.HasPrefix(name, "totp") || strings.HasPrefix(name, "mfa") || strings.HasPrefix(name, "whitespace") {
 			r.MfaToken = requests.MfaToken{Type: "totp", Secret: authenticationClientTOTPSecret, Algorithm: "sha1", Digits: 6, Period: 30, SkipVerification: true}
-			if name == "whitespace" {
+			if strings.HasPrefix(name, "whitespace") {
 				r.MfaToken.Secret = authenticationClientWhitespaceTOTPSecret
 			}
 			if err := db.AddMfaToken(r); err != nil {
 				t.Fatal(err)
 			}
-			if name == "mfauser" || name == "whitespace" {
+			if strings.HasPrefix(name, "mfa") || strings.HasPrefix(name, "whitespace") {
 				r.User.Challenges = []string{"password mfa"}
 				if err := db.OverwriteUserAuthChallengeRules(r); err != nil {
 					t.Fatal(err)
@@ -127,6 +131,7 @@ func authenticationClientDatabase(t *testing.T) (string, map[string]string) {
 func newAuthenticationClientFixture(t *testing.T, mount, database, cert, key string, roots *x509.CertPool, refresh, body, custom, oidc bool, accessLifetimeSeconds ...int) *authenticationClientFixture {
 	t.Helper()
 	f := &authenticationClientFixture{base: "https://" + lifecycleAddress(t), mount: mount, refresh: refresh, body: body, oidc: oidc, accessName: "authp_access_token", refreshName: "AUTHP_REFRESH_TOKEN"}
+	f.database = database
 	accessKey := newJWKSKeyFiles(t, "RSA", "access")
 	cookies, policyNames, refreshBlock, oidcBlock, applications := "", "", "", "", ""
 	if custom {
@@ -462,6 +467,7 @@ func TestCaddyAuthenticationClientE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyAuthenticationClientProcess$", "-test.v", "-test.timeout=570s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_AUTHCLIENT_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("authentication client through Caddy TLS: %v\n%s", err, output)
@@ -475,7 +481,6 @@ func TestCaddyAuthenticationClientProcess(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cert, key, roots := cookieTLSCertificate(t)
-	database, keys := authenticationClientDatabase(t)
 	for _, tc := range []struct {
 		name, mount                 string
 		refresh, body, custom, oidc bool
@@ -487,6 +492,7 @@ func TestCaddyAuthenticationClientProcess(t *testing.T) {
 		{"body disabled", "/auth", true, false, false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			database, keys := authenticationClientDatabase(t)
 			f := newAuthenticationClientFixture(t, tc.mount, database, cert, key, roots, tc.refresh, tc.body, tc.custom, tc.oidc)
 			if !tc.refresh || tc.body {
 				f.passwordJourneys(t)

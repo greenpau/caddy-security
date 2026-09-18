@@ -47,6 +47,7 @@ func TestCaddyCompositionE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyCompositionProcess$", "-test.v", "-test.timeout=270s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_COMPOSITION_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	output, err := cmd.CombinedOutput()
 	for _, secret := range []string{lifecyclePassword, oauthE2ESecret, applicationTestSecret, "PRIVATE KEY-----"} {

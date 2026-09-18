@@ -15,7 +15,7 @@ PYTHON ?= python3
 TEST ?= .
 TEST_DIR ?= ./...
 # Go applies this limit to the whole package, including its serial Caddy E2E journeys.
-TEST_TIMEOUT ?= 30m
+TEST_TIMEOUT ?= 45m
 QUICK_TEST_DIR ?= .
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1
@@ -50,7 +50,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.2.5=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.3.2=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
@@ -123,6 +123,33 @@ dep:
 .PHONY: test-automation ci-check version-check version-sync artifact-id
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
+
+# Conformance has its own opt-in entry point and private artifact bundle.
+# Override CONFORMANCE_RESULTS with a new path below this checkout's tmp/.
+# The command prints its HTML entry point: CONFORMANCE_RESULTS/index.html.
+CONFORMANCE_RESULTS ?= $(CURDIR)/tmp/oidc-conformance/run-$(shell date -u +%Y%m%dT%H%M%SZ)
+CONFORMANCE_SUITE ?= $(CURDIR)/tmp/oidc-conformance/suite
+CONFORMANCE_JAVA ?= $(CURDIR)/tmp/oidc-conformance/tools/java/bin/java
+CONFORMANCE_MONGOD ?= $(CURDIR)/tmp/oidc-conformance/tools/mongodb/bin/mongod
+CONFORMANCE_PYTHON ?= $(CURDIR)/tmp/oidc-conformance/venv/bin/python
+export CONFORMANCE_RESULTS CONFORMANCE_SUITE CONFORMANCE_JAVA CONFORMANCE_MONGOD CONFORMANCE_PYTHON
+.PHONY: oidc-conformance-help oidc-conformance-prepare oidc-conformance-test oidc-conformance-cleanup
+oidc-conformance-help:
+	@PYTHONDONTWRITEBYTECODE=1 $(PYTHON) assets/scripts/prepare_oidc_conformance.py --help
+
+oidc-conformance-prepare:
+	@PYTHONDONTWRITEBYTECODE=1 $(PYTHON) assets/scripts/prepare_oidc_conformance.py
+
+oidc-conformance-cleanup:
+	@PYTHONDONTWRITEBYTECODE=1 $(PYTHON) assets/scripts/cleanup_oidc_conformance.py \
+		--suite "$$CONFORMANCE_SUITE" --java "$$CONFORMANCE_JAVA" \
+		--mongod "$$CONFORMANCE_MONGOD" --runner-python "$$CONFORMANCE_PYTHON"
+
+oidc-conformance-test:
+	@PYTHONDONTWRITEBYTECODE=1 $(PYTHON) assets/scripts/oidc_conformance.py \
+		--results "$$CONFORMANCE_RESULTS" --suite "$$CONFORMANCE_SUITE" \
+		--java "$$CONFORMANCE_JAVA" --mongod "$$CONFORMANCE_MONGOD" \
+		--runner-python "$$CONFORMANCE_PYTHON"
 
 # Recursive invocations serialize gates even when the caller uses make -j.
 ci-check:
@@ -202,6 +229,7 @@ upgrade:
 .PHONY: license
 license:
 	@echo "$@: started"
-	@for f in `find ./ -type f -name '*.go'`; do versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath=$$f; done
+	@git ls-files --cached --others --exclude-standard -z -- '*.go' | \
+		xargs -0 -n 1 versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath
 	@assets/scripts/generate_downloads.sh
 	@echo "$@: complete"

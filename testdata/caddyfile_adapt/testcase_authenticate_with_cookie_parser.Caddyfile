@@ -11,6 +11,7 @@
 			cookie prefix AUTHP
 			cookie oidc session id name AUTHP_LOGIN_SESSION
 			cookie oidc request id name AUTHP_LOGIN_REQUEST
+			cookie saml session id name AUTHP_LOGIN_SAML
 			cookie refresh token name AUTHP_LOGIN_REFRESH
 			cookie access token name AUTHP_LOGIN_ACCESS
 			set redirect_url cookie name AUTHP_LOGIN_REDIRECT

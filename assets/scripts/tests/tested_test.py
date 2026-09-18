@@ -61,7 +61,7 @@ class TestedLifecycleTests(unittest.TestCase):
                 self.assertEqual((root / name).read_bytes(), content, name)
             first_run = json.loads((report / 'run.json').read_text())
             command = first_run['command']
-            self.assertEqual(command[command.index('-timeout') + 1], '30m')
+            self.assertEqual(command[command.index('-timeout') + 1], '45m')
             first_profile = (report / 'coverage.out').read_bytes()
             self.assertIn('TestSelected', (report / 'test_output.jsonl').read_text())
             self.assertNotIn('TestExcluded', (report / 'test_output.jsonl').read_text())

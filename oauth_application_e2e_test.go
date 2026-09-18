@@ -42,6 +42,7 @@ func TestCaddyOAuthApplicationsE2E(t *testing.T) {
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyOAuthApplicationsProcess$", "-test.v", "-test.timeout=75s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_APPLICATIONS_CHILD=1")
 	cmd.Env = append(cmd.Env, "XDG_DATA_HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir())
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	output, err := cmd.CombinedOutput()
 	if bytes.Contains(output, []byte(applicationTestSecret)) {

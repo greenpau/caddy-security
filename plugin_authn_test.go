@@ -86,7 +86,17 @@ func TestAuthnOIDCDelegation(t *testing.T) {
 				if got.Code != tc.status || got.Code != want.Code || got.Body.String() != want.Body.String() {
 					t.Fatalf("portal response changed: status %d, want %d", got.Code, tc.status)
 				}
-				if diff := cmp.Diff(want.Header(), got.Header()); diff != "" {
+				wantHeaders, gotHeaders := want.Header().Clone(), got.Header().Clone()
+				if tc.path == "/oidc/authorize" && accept == "text/html" {
+					for _, headers := range []http.Header{wantHeaders, gotHeaders} {
+						policy, err := normalizeOIDCPagePolicy(headers.Get("Content-Security-Policy"))
+						if err != nil {
+							t.Fatal(err)
+						}
+						headers.Set("Content-Security-Policy", policy)
+					}
+				}
+				if diff := cmp.Diff(wantHeaders, gotHeaders); diff != "" {
 					t.Fatal(diff)
 				}
 				if *r.URL != original {

@@ -130,6 +130,7 @@ func TestSecurityLocalClientSafetyE2E(t *testing.T) {
 			insecureValue = "1"
 		}
 		cmd.Env = append(os.Environ(), "SECURITY_LOCAL_TRANSPORT_PROCESS=1", "SECURITY_LOCAL_INSECURE_DEFAULT="+insecureValue)
+		collectSubprocessCoverage(t, cmd)
 		cmd.WaitDelay = 2 * time.Second
 		return cmd.CombinedOutput()
 	}

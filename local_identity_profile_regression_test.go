@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build identity_profile_regression
-
 package security
 
 import (
@@ -25,10 +23,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 )
 
-// This deliberately failing qualification test records a go-authcrunch v1.2.5
-// gap. It is separate from the supported-contract suite, never inverted into an
-// assertion that cross-user access is correct. Run the documented build tag
-// after an upstream fix, then remove the tag to make this a default regression.
+// Profile operations must stay bound to the canonical local login even when
+// token transforms name another real user's email address.
 func TestCaddyProfileCanonicalIdentityRegression(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())

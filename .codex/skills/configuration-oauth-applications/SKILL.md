@@ -29,7 +29,7 @@ After collection, also require the enclosing `security` dispenser's nesting
 to return to zero. Caddy's initial brace counting treats quoted `"}"` values
 as structural, so a child parser can consume the enclosing closing brace;
 EOF must not turn that incomplete security block into a valid configuration.
-The published go-authcrunch v1.2.5 selected in `go.mod` supports these APIs and
+The published go-authcrunch v1.2.6 selected in `go.mod` supports these APIs and
 repeated singular `redirect_uri` statements. No local replacement is required;
 follow the [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development)
 when changing the selected version.
@@ -42,6 +42,11 @@ selecting those clients in an `oidc provider` block. See
 all settings/defaults, deferred attachment, realm selection, issuer/cookie
 isolation, HTTP mounting, protocol capabilities, native callbacks, JSON
 restoration, and Caddy TLS relying-party coverage. See
+[Official Caddy OP conformance](references/oidc-conformance.md) for the pinned
+Foundation plans, private local prerequisites, trusted HTTPS, real browser
+interaction, signed evidence, original nonzero results and remaining reviews.
+Use the Caddy harness rather than treating library conformance as deployment
+evidence. See
 [Private provisioning and activation](references/private-provisioning.md) for
 the tested create/load/rotate workflow, storage security, candidate activation,
 and key rollover. External login through `oauth identity provider` uses
@@ -54,7 +59,8 @@ for standalone provisioning inputs. User registration remains a separate domain.
 
 ## Grammar
 
-This is a catalogue of fields inside `security`; only `redirect_uri` may repeat:
+This is a catalogue of fields inside `security`; `redirect_uri` and
+`request_object_key` may repeat:
 
 ```caddyfile
 oauth application <nickname> {
@@ -67,6 +73,8 @@ oauth application <nickname> {
 	scopes <scope> [<scope>...]
 	require_pkce <true|yes|on|1|false|no|off|0>
 	skip_consent <true|yes|on|1|false|no|off|0>
+	request_object_signing_alg <none|RS256>
+	request_object_key <kid> <base64url-modulus> <base64url-exponent>
 }
 ```
 
@@ -98,7 +106,16 @@ oauth application <nickname> {
   to true for all clients; only confidential clients may disable it.
 - Consent skipping defaults to false; explicitly enabling it grants the
   registered scopes. Scopes default to `openid profile email`; an explicit
-  list must be distinct, include `openid`, and use only those supported scopes.
+  list must be distinct, include `openid`, and use supported scopes:
+  `openid profile email address phone offline_access`. OIDC offline access still
+  requires an explicit consent prompt and approval, even with `skip_consent`.
+- Request Object verification keys contain only public RSA parameters, with
+  distinct `kid` values, 2048–8192-bit moduli, and at most eight keys. Both integer
+  parameters use unpadded base64url. `request_object_signing_alg RS256` requires
+  registered keys and rejects unsigned objects; `none` permits only unsigned
+  objects. Omitting the pin permits unsigned objects and RS256 signatures from
+  the registered keys. Keys and algorithm policy come from current directives,
+  not persisted-policy inheritance. No key file or remote JWKS is fetched.
 - Callback URIs are required, distinct, and preserved byte-for-byte, including
   case, percent encoding, query ordering, and explicit ports. HTTPS is required
   except for public native clients using HTTP with literal `127.0.0.1` or
@@ -130,7 +147,8 @@ keeps one directive form and unambiguous one-value arity. The serialized
 Normal adaptation never generates or persists credentials. `registration v1`
 loads the validated named record from the explicit private store. Only omitted
 ID and secret inherit; callbacks, scopes, display name, authentication method,
-consent, and PKCE come from the current declaration and parser defaults. Public
+consent, PKCE, and Request Object keys/policy come from the current declaration
+and parser defaults. Public
 clients inherit no secret. Moving to confidential authentication requires an
 explicit secret through the provisioning command. Changing IDs never borrows
 another ID's secret. Secret rotation retains the ID; use a new nickname to

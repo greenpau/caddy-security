@@ -45,6 +45,7 @@ func securityTerminalCommand(t *testing.T, mode string, args ...string) []byte {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, python, append([]string{"testdata/security_cli/terminal.py", os.Args[0], mode}, args...)...)
 	cmd.Env = append(os.Environ(), "SECURITY_LOCAL_TEST_TOTP_SECRET="+securityTerminalMFASecret)
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 2 * time.Second
 	output, err := cmd.CombinedOutput()
 	if err != nil {

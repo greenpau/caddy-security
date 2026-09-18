@@ -57,6 +57,7 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
 						"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 						"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+						"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
 						"cookie_name_prefix": "AUTHP"
 					},
 					"crypto_key_store_config": {
@@ -143,6 +144,7 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
 						"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 						"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+						"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
 						"cookie_name_prefix": "AUTHP"
 					},
 					"crypto_key_store_config": {

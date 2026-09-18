@@ -38,6 +38,10 @@ func TestRegistrationProviderKeyPathIdentity(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(outside, "key.pem"), []byte("different upstream file"), 0644); err != nil {
 		t.Fatal(err)
 	}
+	// This rejection fixture must be nonprivate even under a restrictive umask.
+	if err := os.Chmod(filepath.Join(outside, "key.pem"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Symlink(child, filepath.Join(dir, "link")); err != nil {
 		t.Fatal(err)
 	}

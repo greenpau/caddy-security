@@ -19,8 +19,8 @@ jobs:
   core:
     name: Tests and coverage
     runs-on: ubuntu-24.04
-    # Leave time around the 30-minute Go package limit for setup, builds and reports.
-    timeout-minutes: 45
+    # Leave time around the 45-minute Go package limit for setup, builds and reports.
+    timeout-minutes: 60
     env:
       GOTOOLCHAIN: local
       PYTHONDONTWRITEBYTECODE: '1'

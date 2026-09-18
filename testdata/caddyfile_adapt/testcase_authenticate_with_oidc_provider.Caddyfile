@@ -15,6 +15,10 @@
 				max sessions 42
 				max pending requests 43
 				max grants 44
+				refresh lifetime 3600
+				max refresh tokens 45
+				acr urn:example:password pwd
+				acr urn:example:mfa pwd otp
 			}
 			enable identity store employeesdb contractorsdb guestsdb
 			crypto key sign-verify synthetic-oidc-portal-signing-key
@@ -37,6 +41,8 @@
 				max sessions 0
 				max pending requests 0
 				max grants 0
+				refresh lifetime 0
+				max refresh tokens 0
 			}
 		}
 
@@ -66,6 +72,9 @@
 
 		oauth application website {
 			client_id website-client
+			request_object_signing_alg RS256
+			request_object_key current t04Rq3MJETW1WwsaNlr1mmth9f03a_dyHlopCMS0rf96ISAiQT1Sq8JUJQHZRWpl67ox9wWa-jxiwoe8G2rCZtlXBzot_HRc4spbjL2NWBX5RtD-PGDUekzgGPME4lusG9PhPpclgKoucEy2U7wPldLIf-fAy3Jis72J9BEHRcTyhnbV-qQUN3WpnZYrtIXYbu0hyBB0JnMP3k8Zs1jWLsCtATsGEimSp1xAkAH5ek7l65Y1vzn_bSCa4gVxpdnTqeJaWpTg1lgtxG69RD7W8ZA2K4U94Aisjuen2-liaQ-pGVL0dMAoODedq32nV4v4uUfiM7XLkb1ceBK1FkOm_d5346y9Dk0zX8Xcf385qRX83r0BzHMUsgMmNDOuHXAMGhR6rrD7M0kTCw-5TWbmGicMT896614du5P2HNpkeY8NwgxQwWG7G0KYA8jkCb4InqBKxbKXYqv8sWwvtlDa67pUzlvAUhOL3gICxEjEJsdbaA1c51dsXaK-OuSr8irQtq12RCJ2_GXkcGWtt5FxO9BFXfxnYcYRofdvbYzA2lgz5sgPDB98ZAro5D9y4A_vtcDcJir9ud1lLSnxMZZ-8ZMYCVHGHiFuqum6uUNJDTpuv18Bp6WCd_v6E9v5is6wNTe_C7_syyFiDj-vW1fFHmKw4GKAL03ogHD3r0Cm88E AQAB
+			request_object_key previous t04Rq3MJETW1WwsaNlr1mmth9f03a_dyHlopCMS0rf96ISAiQT1Sq8JUJQHZRWpl67ox9wWa-jxiwoe8G2rCZtlXBzot_HRc4spbjL2NWBX5RtD-PGDUekzgGPME4lusG9PhPpclgKoucEy2U7wPldLIf-fAy3Jis72J9BEHRcTyhnbV-qQUN3WpnZYrtIXYbu0hyBB0JnMP3k8Zs1jWLsCtATsGEimSp1xAkAH5ek7l65Y1vzn_bSCa4gVxpdnTqeJaWpTg1lgtxG69RD7W8ZA2K4U94Aisjuen2-liaQ-pGVL0dMAoODedq32nV4v4uUfiM7XLkb1ceBK1FkOm_d5346y9Dk0zX8Xcf385qRX83r0BzHMUsgMmNDOuHXAMGhR6rrD7M0kTCw-5TWbmGicMT896614du5P2HNpkeY8NwgxQwWG7G0KYA8jkCb4InqBKxbKXYqv8sWwvtlDa67pUzlvAUhOL3gICxEjEJsdbaA1c51dsXaK-OuSr8irQtq12RCJ2_GXkcGWtt5FxO9BFXfxnYcYRofdvbYzA2lgz5sgPDB98ZAro5D9y4A_vtcDcJir9ud1lLSnxMZZ-8ZMYCVHGHiFuqum6uUNJDTpuv18Bp6WCd_v6E9v5is6wNTe_C7_syyFiDj-vW1fFHmKw4GKAL03ogHD3r0Cm88E AQAB
 			client_secret synthetic-application-secret-0123456789
 			redirect_uri https://rp.example.test/callback
 		}
@@ -77,11 +86,35 @@
 	}
 }
 
+# go-authcrunch v1.2.6 consent forms need a same-origin referrer policy so
+# browsers retain their Origin on POST. Import before authenticate, passing
+# the exact authorization/continuation paths and the registered callback's
+# HTTPS origin. Chrome also applies form-action to the callback redirect.
+# The response matcher defers this operation until the portal writes headers.
+(oidc_consent_headers) {
+	@oidcConsent {
+		method GET
+		path {args[0]} {args[1]}
+	}
+	header @oidcConsent {
+		Referrer-Policy same-origin
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' {args[2]}"
+		match {
+			status 200
+			header Content-Type "text/html; charset=utf-8"
+			header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+			header Referrer-Policy no-referrer
+		}
+	}
+}
+
 http://127.0.0.1:9080 {
 	route /auth/* {
+		import oidc_consent_headers /auth/oidc/authorize /auth/oidc/continue https://rp.example.test
 		authenticate with myportal
 	}
 	route /other/* {
+		import oidc_consent_headers /other/oidc/authorize /other/oidc/continue https://rp.example.test
 		authenticate with defaults
 	}
 }

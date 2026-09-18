@@ -9,8 +9,7 @@ description: "caddy-security authentication portal cookie Caddyfile configuratio
 
 Portal cookie statements are collected in `caddyfile_authn.go`. The thin
 translation in `caddyfile_authn_cookie.go` preserves legacy Caddy spellings;
-`pkg/authn/cookie/parser.NewCookieConfigFromDirectives` in the pinned
-AuthCrunch v1.2.5 owns grammar, normalization, duplicates, and validation.
+`pkg/authn/cookie/parser.NewCookieConfigFromDirectives` in the AuthCrunch version selected by `go.mod` owns grammar, normalization, duplicates, and validation.
 `PortalConfig.ConfigureCookies` installs one complete validated snapshot.
 It replaces previous cookie settings, rather than merging individual lines.
 Portal construction wires the final access name into its grantor and validator.
@@ -27,7 +26,7 @@ authentication portal myportal {
 }
 ```
 
-That one statement covers all eight roles:
+That one statement covers all nine roles:
 
 | Role | Effective cookie name |
 | --- | --- |
@@ -39,12 +38,18 @@ That one statement covers all eight roles:
 | Refresh token | `PORTAL_REFRESH_TOKEN` |
 | OIDC session ID | `PORTAL_OIDC_SESSION_ID` |
 | OIDC request ID | `PORTAL_OIDC_REQUEST_ID` |
+| SAML session ID | `PORTAL_SAML_SESSION_ID` |
 
 `set cookie name prefix portal` preserves the legacy uppercasing behavior.
 The shared spelling `cookie prefix PORTAL` preserves the supplied case.
 With neither statement, every role uses the same suffix with `AUTHP_`.
 For initialized Go configs, call `SetCookieNamePrefix`; assigning
 `CookieNamePrefix` directly does not rename already initialized fields.
+
+The SAML session cookie binds a SAML login to its initiating browser. It uses
+host-only scope, path `/`, Secure, HttpOnly, SameSite=None and a 300-second
+lifetime. Its name participates in shared prefix, override and collision checks;
+changing its name does not weaken SAML state or assertion validation.
 
 ## Explicit Names and Precedence
 
@@ -58,6 +63,7 @@ authentication portal myportal {
     cookie access token name AUTHP_LOGIN_ACCESS
     cookie oidc session id name AUTHP_LOGIN_SESSION
     cookie oidc request id name AUTHP_LOGIN_REQUEST
+    cookie saml session id name AUTHP_LOGIN_SAML
     cookie refresh token name AUTHP_LOGIN_REFRESH
     cookie referer name AUTHP_LOGIN_REDIRECT
     cookie sandbox id name AUTHP_LOGIN_SANDBOX
@@ -68,7 +74,7 @@ authentication portal myportal {
 An explicit name wins independently of statement order, including one equal
 to an old default. For example, `cookie session id name AUTHP_SESSION_ID`
 plus `set cookie name prefix PORTAL` leaves that session name unchanged and
-sets all seven omitted names to `PORTAL_<SUFFIX>`.
+sets all eight omitted names to `PORTAL_<SUFFIX>`.
 `cookie access token name LOGIN_ACCESS` is also valid and stays exactly
 `LOGIN_ACCESS`; use `AUTHP_LOGIN_ACCESS` when the intended convention is AUTHP.
 
@@ -78,7 +84,7 @@ Legacy `set <role> cookie name <name>` supports `session_id`, `redirect_url`,
 
 Each prefix, name (including aliases), and attribute per scope may be set
 once. Duplicate statements are errors even when the values agree. Final
-names must be valid HTTP cookie names and distinct across all eight roles.
+names must be valid HTTP cookie names and distinct across all nine roles.
 Names may be explicitly unprefixed. `__Host-` and `__Secure-` remain optional
 compatibility cases; a name alone does not establish the required attributes.
 
@@ -261,7 +267,7 @@ identity-cookie role is not an override of the shared provider.
 
 ## Validation
 
-- `caddyfile_authn_cookie_test.go`: grammar, legacy translation, all eight prefix
+- `caddyfile_authn_cookie_test.go`: grammar, legacy translation, all nine prefix
   defaults, order independence, domains, quoted/empty values, duplicates,
   malformed input, runtime replacement, and typed/deferred JSON roundtrips.
 - `cookie_policy_test.go`: defaults/overrides, session ID consumption, shared

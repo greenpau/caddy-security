@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -81,6 +82,7 @@ type oidcRPFixture struct {
 	client              *http.Client
 	base, mount, issuer string
 	discovery           map[string]any
+	requestKey          *rsa.PrivateKey
 }
 
 func TestCaddyOIDCRelyingPartyE2E(t *testing.T) {
@@ -88,6 +90,7 @@ func TestCaddyOIDCRelyingPartyE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyOIDCRelyingPartyProcess$", "-test.v", "-test.timeout=165s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_OIDC_RP_CHILD=1", "XDG_DATA_HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir())
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	output, err := cmd.CombinedOutput()
 	if bytes.Contains(output, []byte(applicationTestSecret)) || bytes.Contains(output, []byte(oidcRPMFASecret)) || bytes.Contains(output, []byte("BEGIN PRIVATE KEY")) {
@@ -134,6 +137,22 @@ func newOIDCRPFixture(t *testing.T, mount, cert, tlsKey string, roots *x509.Cert
 	if err := db.AddMfaToken(&requests.Request{User: requests.User{Username: "mfauser", Email: "mfauser@example.test"}, MfaToken: requests.MfaToken{Type: "totp", Comment: "Caddy RP E2E", Secret: oidcRPMFASecret, Algorithm: "sha1", Digits: 6, Period: 30, SkipVerification: true}}); err != nil {
 		t.Fatal(err)
 	}
+	for _, user := range db.Users {
+		if user.Username == "alice" {
+			user.Profile = &identity.Profile{GivenName: "Alice", PhoneNumber: "+1 202-555-0100", PhoneNumberVerified: new(false), Address: &identity.Address{Country: "US"}}
+		}
+	}
+	identityData, err := json.Marshal(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dbPath, identityData, 0600); err != nil {
+		t.Fatal(err)
+	}
+	f.requestKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var applications strings.Builder
 	for _, client := range []string{"basic", "trusted", "post", "public", "native4", "native6"} {
 		auth, secret, redirect, consent := "client_secret_basic", "client_secret "+applicationTestSecret, oidcRPCallback, "on"
@@ -153,6 +172,7 @@ func newOIDCRPFixture(t *testing.T, mount, cert, tlsKey string, roots *x509.Cert
 		}
 		fmt.Fprintf(&applications, "oauth application %s {\nclient_id %s\n%s\ntoken_endpoint_auth_method %s\nredirect_uri %s\nskip_consent %s\n}\n", client, client, secret, auth, redirect, consent)
 	}
+	fmt.Fprintf(&applications, "oauth application capabilities {\nclient_id capabilities\nclient_secret %s\nredirect_uri %s\nscopes openid profile email address phone offline_access\nrequest_object_signing_alg RS256\nrequest_object_key rp-key %s AQAB\n}\n", applicationTestSecret, oidcRPCallback, base64.RawURLEncoding.EncodeToString(f.requestKey.N.Bytes()))
 	matcher := "/*"
 	if mount != "" {
 		matcher = mount + " " + mount + "/*"
@@ -175,7 +195,10 @@ func newOIDCRPFixture(t *testing.T, mount, cert, tlsKey string, roots *x509.Cert
     issuer %s
     realms local
     signing key files %q
-    applications basic trusted post public native4 native6
+    applications basic trusted post public native4 native6 capabilities
+    acr urn:example:password pwd
+    refresh lifetime 3600
+    max refresh tokens 32
    }
   }
   authorization policy app_policy {
@@ -252,6 +275,9 @@ func (f *oidcRPFixture) discover(t *testing.T) {
 	r := f.request(t, "GET", "/.well-known/openid-configuration", nil, http.Header{"Accept": {"text/html"}, "Authorization": {"Bearer invalid-portal-token"}})
 	r.requireStatus(t, 200)
 	r.noStore(t)
+	if r.header.Get("Referrer-Policy") != "no-referrer" {
+		t.Fatal("consent header policy affected discovery")
+	}
 	if json.Unmarshal(r.body, &f.discovery) != nil {
 		t.Fatal("invalid discovery")
 	}
@@ -261,7 +287,7 @@ func (f *oidcRPFixture) discover(t *testing.T) {
 		}
 	}
 	for name, want := range map[string][]string{
-		"response_types_supported": {"code"}, "response_modes_supported": {"query", "form_post"}, "grant_types_supported": {"authorization_code"}, "id_token_signing_alg_values_supported": {"RS256"}, "token_endpoint_auth_methods_supported": {"client_secret_basic", "client_secret_post", "none"}, "code_challenge_methods_supported": {"S256"}, "request_object_signing_alg_values_supported": {"none"},
+		"response_types_supported": {"code"}, "response_modes_supported": {"query", "form_post"}, "grant_types_supported": {"authorization_code", "refresh_token"}, "id_token_signing_alg_values_supported": {"RS256"}, "token_endpoint_auth_methods_supported": {"client_secret_basic", "client_secret_post", "none"}, "code_challenge_methods_supported": {"S256"}, "request_object_signing_alg_values_supported": {"none", "RS256"},
 	} {
 		got, ok := f.discovery[name].([]any)
 		var values []string
@@ -325,6 +351,9 @@ func (f *oidcRPFixture) approve(t *testing.T, r oidcRPResponse, decision string)
 	t.Helper()
 	r.requireStatus(t, 200)
 	r.noStore(t)
+	if r.header.Get("Referrer-Policy") != "same-origin" {
+		t.Fatal("consent policy would suppress browser Origin")
+	}
 	form := oidcRPForm(t, r.body)
 	if form.action != f.issuer+"/oidc/continue" || len(form.values["csrf"]) != 1 || form.values.Get("csrf") == "" || !slices.Contains(form.decisions, decision) {
 		t.Fatal("invalid consent action, CSRF token or decision control")
@@ -335,6 +364,9 @@ func (f *oidcRPFixture) approve(t *testing.T, r oidcRPResponse, decision string)
 
 func (f *oidcRPFixture) callback(t *testing.T, r oidcRPResponse, params url.Values, failure string) string {
 	t.Helper()
+	if r.header.Get("Referrer-Policy") != "no-referrer" {
+		t.Fatal("consent header policy affected the authorization response")
+	}
 	code, err := verifyOIDCRPCallback(r, params, f.issuer, failure)
 	if err != nil {
 		t.Fatal(err)
@@ -456,6 +488,7 @@ func TestCaddyOIDCRelyingPartyProcess(t *testing.T) {
 			t.Run("token purposes", f.testTokenPurposes)
 			t.Run("CORS", f.testCORS)
 			t.Run("request objects", f.testRequestObjects)
+			t.Run("claims signed requests and refresh", f.testCapabilities)
 			if mount != "" {
 				t.Run("native loopback", f.testLoopback)
 			}

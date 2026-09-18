@@ -34,11 +34,13 @@ import (
 )
 
 func TestCaddySecurityLocalE2E(t *testing.T) {
-	// Allow 70 seconds per portal mount, plus time for the process to exit.
-	ctx, cancel := context.WithTimeout(t.Context(), 220*time.Second)
+	// Include a real unused TOTP step after each automatic metadata login,
+	// plus bounded time for the three portal mounts and process cleanup.
+	ctx, cancel := context.WithTimeout(t.Context(), 330*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestSecurityLocalPortalProcess$", "-test.v", "-test.timeout=210s")
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestSecurityLocalPortalProcess$", "-test.v", "-test.timeout=320s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_LOCAL_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("local administration through TLS Caddy: %v\n%s", err, output)
@@ -62,18 +64,22 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 			if err != nil {
 				t.Fatal("cannot create MFA fixture database")
 			}
-			enrollment := &requests.Request{
-				User:     requests.User{Username: "mfaadmin", Email: "mfaadmin@example.test", Password: "Terminal-secret-123", Roles: []string{"authp/admin"}, Challenges: []string{"password mfa"}},
-				MfaToken: requests.MfaToken{Type: "totp", Secret: mfaSecret, Algorithm: "sha1", Digits: 6, Period: 30, SkipVerification: true},
-			}
-			if err := db.AddUser(enrollment); err != nil {
-				t.Fatal("cannot add MFA administrator")
-			}
-			if err := db.AddMfaToken(enrollment); err != nil {
-				t.Fatal("cannot enroll MFA administrator")
-			}
-			if err := db.OverwriteUserAuthChallengeRules(enrollment); err != nil {
-				t.Fatal("cannot require administrator MFA")
+			// Each successful login journey owns an identity; TOTP replay
+			// protection stays enabled across aliases and Caddy reloads.
+			for _, username := range []string{"mfaadmin", "mfaadmin-prompt", "mfaadmin-interactive", "mfaadmin-reload"} {
+				enrollment := &requests.Request{
+					User:     requests.User{Username: username, Email: username + "@example.test", Password: "Terminal-secret-123", Roles: []string{"authp/admin"}, Challenges: []string{"password mfa"}},
+					MfaToken: requests.MfaToken{Type: "totp", Secret: mfaSecret, Algorithm: "sha1", Digits: 6, Period: 30, SkipVerification: true},
+				}
+				if err := db.AddUser(enrollment); err != nil {
+					t.Fatal("cannot add MFA administrator")
+				}
+				if err := db.AddMfaToken(enrollment); err != nil {
+					t.Fatal("cannot enroll MFA administrator")
+				}
+				if err := db.OverwriteUserAuthChallengeRules(enrollment); err != nil {
+					t.Fatal("cannot require administrator MFA")
+				}
 			}
 			f.secrets = append(f.secrets, mfaSecret, "Terminal-secret-123")
 			f.input = strings.Replace(f.input, "path :memory:", "path "+database, 1)
@@ -238,9 +244,9 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 			jsonCall("connect")
 			jsonCall("list users", "--realm", "local")
 			// Verify the CLI's conditional prompt wiring against real TOTP MFA.
-			writeMFAConfig := func(password string, digits int) {
+			writeMFAConfig := func(username, password string, digits int) {
 				t.Helper()
-				writeConfig("mfaadmin", password, "")
+				writeConfig(username, password, "")
 				data, err := os.ReadFile(config)
 				if err != nil {
 					t.Fatal(err)
@@ -250,7 +256,7 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			writeMFAConfig("Terminal-secret-123", 6)
+			writeMFAConfig("mfaadmin", "Terminal-secret-123", 6)
 			mfaConnected := jsonCall("connect")
 			jsonCall("metadata")
 			var mfaTokenPath string
@@ -263,20 +269,20 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 			}
 			// Wrong length deterministically fails; a wrong secret could happen
 			// to produce the same six-digit code as the enrolled secret.
-			writeMFAConfig("Terminal-secret-123", 8)
+			writeMFAConfig("mfaadmin", "Terminal-secret-123", 8)
 			failure("connect")
 			currentToken, err := os.ReadFile(mfaTokenPath)
 			if err != nil || !bytes.Equal(previousToken, currentToken) {
 				t.Fatal("failed MFA login replaced valid cached credentials")
 			}
-			writeMFAConfig("", 6)
+			writeMFAConfig("mfaadmin-prompt", "", 6)
 			t.Run("prompted_password_with_MFA", func(t *testing.T) {
 				output := securityTerminalCommand(t, "login", "security", "local", "connect", "--config", config, "--ca-file", certFile)
 				if !json.Valid(output) || !bytes.Contains(output, []byte(`"success"`)) {
 					t.Fatal("prompted MFA login did not return successful JSON")
 				}
 			})
-			writeConfig("mfaadmin", "", "")
+			writeConfig("mfaadmin-interactive", "", "")
 			t.Run("fully_interactive_MFA", func(t *testing.T) {
 				output := securityTerminalCommand(t, "login-mfa", "security", "local", "connect", "--config", config, "--ca-file", certFile)
 				if !json.Valid(output) || !bytes.Contains(output, []byte(`"success"`)) {
@@ -284,7 +290,7 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 				}
 				jsonCall("metadata") // The interactively obtained credentials authorize real admin requests.
 			})
-			writeMFAConfig("Terminal-secret-123", 6)
+			writeMFAConfig("mfaadmin-reload", "Terminal-secret-123", 6)
 			// API-key generation output is accepted by the real local store and
 			// JSON login client, without constructing a separate CLI protocol.
 			// File-backed identity stores require a stop/start for configuration
@@ -300,6 +306,9 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 				t.Fatal("cannot disable admin API:", message)
 			}
 			failure("metadata")
+			// Metadata may authenticate before discovering that the admin API
+			// is disabled. Its consumed one-time code cannot be used by connect.
+			waitForFreshFixtureTOTP(t, database, "mfaadmin-reload")
 			jsonCall("connect") // Login remains independent of admin API enablement.
 		})
 	}

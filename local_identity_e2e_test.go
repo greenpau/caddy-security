@@ -364,6 +364,7 @@ func (f *localIdentityFixture) formLogin(t *testing.T, username, password string
 	sandbox := f.formPassword(t, username, password, 303)
 	f.noCredentials(t)
 	if mfa {
+		waitForFreshFixtureTOTP(t, f.database, "alice")
 		f.request(t, "GET", sandbox, nil, nil).requireStatus(t, 200)
 		f.request(t, "POST", sandbox, url.Values{"passcode": {authenticationClientTOTP()}}, http.Header{"Origin": {f.base}}).requireStatus(t, 303)
 	}
@@ -422,6 +423,7 @@ func TestCaddyLocalIdentityE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyLocalIdentityProcess$", "-test.v", "-test.timeout=7m")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_LOCAL_IDENTITY_CHILD=1", "XDG_DATA_HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir())
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Caddy local identity journeys: %v\n%s", err, output)
@@ -446,9 +448,11 @@ func TestCaddyLocalIdentityProcess(t *testing.T) {
 				if mfa {
 					mount = ""
 				}
-				f := newLocalIdentityFixture(t, localIdentityOptions{mount: mount, refreshRealm: tc.refresh, oidcRealm: tc.oidc, transform: true, mfa: mfa}, cert, key, roots)
 				for _, protocol := range []string{"form", "json"} {
 					t.Run(protocol, func(t *testing.T) {
+						// Independent journeys need independent factors: successful
+						// authentication persists the consumed TOTP counter.
+						f := newLocalIdentityFixture(t, localIdentityOptions{mount: mount, refreshRealm: tc.refresh, oidcRealm: tc.oidc, transform: true, mfa: mfa}, cert, key, roots)
 						f.newBrowser(t)
 						// Bob's password cannot authenticate Alice even though a
 						// configured transform sets her access subject to Bob.

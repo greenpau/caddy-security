@@ -23,7 +23,7 @@ import (
 // readOAuthApplication collects a named client for the upstream named parser,
 // which validates without generating credentials during normal adaptation.
 //
-// Syntax (inside security; only redirect_uri may repeat):
+// Syntax (inside security; redirect_uri and request_object_key may repeat):
 //
 //	oauth application <nickname> {
 //		registration <immutable-revision>
@@ -35,6 +35,8 @@ import (
 //		scopes <scope> [<scope>...]
 //		require_pkce <true|yes|on|1|false|no|off|0>
 //		skip_consent <true|yes|on|1|false|no|off|0>
+//		request_object_signing_alg <none|RS256>
+//		request_object_key <kid> <base64url-modulus> <base64url-exponent>
 //	}
 //
 // Each redirect_uri takes one URI and appends it in declaration order. The
@@ -53,6 +55,10 @@ import (
 // on the same line. Otherwise Caddy's NextBlock can read those tokens as body.
 // Adaptation does not enable a provider unless a portal selects applications in
 // an oidc provider block, and never changes existing provider snapshots.
+// Request Object keys are public RSA keys, limited to eight distinct IDs.
+// Pinning RS256 requires registered keys and rejects unsigned objects. Omission
+// permits none and signatures from registered keys; signatures never replace
+// user authentication, consent, PKCE, or token-endpoint client authentication.
 func readOAuthApplication(d *caddyfile.Dispenser) ([]string, []string, error) {
 	header, err := oauthApplicationArgs(d)
 	if err != nil {

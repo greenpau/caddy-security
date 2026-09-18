@@ -1,6 +1,7 @@
 # Local Identity Compatibility
 
-This contract is qualified against the selected go-authcrunch v1.2.5 module.
+This contract is qualified against the go-authcrunch revision selected in
+`go.mod`, currently `3e28980b0f5a78463953b674241f154bb77c6679`.
 Check `go list -m -json github.com/greenpau/go-authcrunch` before attributing
 behavior to a sibling checkout. The upstream `local-password-authentication`
 skill and `pkg/identity/password_verifier.go`, `user.go`, `database.go`,
@@ -52,7 +53,7 @@ Refresh preserves the canonical identity and SID. OIDC UserInfo uses the backend
 email and a subject derived from immutable backend identity. Deleting and
 recreating a username changes its OIDC subject.
 
-Password changes (including identical updates), MFA enrollment/deletion or rule
+Password changes (including identical updates), role changes, MFA enrollment/deletion or rule
 changes, disablement, deletion, and local database reload invalidate captured
 refresh/OIDC evidence. Verify refresh rejection, pending authorization-code
 rejection, UserInfo rejection, and loss of silent OIDC login. Reload invalidates
@@ -68,13 +69,12 @@ Profile enrollment titles accept 3–50 alphanumeric characters, not spaces.
 Do not infer completed MFA from a bearer/API key. Hardware-backed/WebAuthn
 assertions are outside this qualification; authclient implements password/TOTP.
 
-**Profile limitation:** v1.2.5 profile handlers still select backend identity
-from transformed session claims. A legacy login whose subject and email both
-collide with another account can read and mutate that account's profile. This
-does not qualify as canonical profile isolation. See the strict failing
-[profile regression](../../authentication-portal-api/references/profile-public-keys.md#known-upstream-profile-identity-gap).
-Fixing it belongs to go-authcrunch; Caddy must not rewrite tokens or intercept
-profile operations to mask the library defect.
+**Canonical profile identity:** the selected go-authcrunch revision
+`3e28980b0f5a78463953b674241f154bb77c6679` fixes backend identity selection when
+transformed claims collide with another account. The default Caddy
+[profile regression](../../authentication-portal-api/references/profile-public-keys.md#canonical-profile-identity-regression)
+verifies isolation through actual profile operations. Identity selection remains
+library-owned; Caddy does not rewrite tokens or intercept profile operations.
 
 ## Caddy Validation
 
@@ -115,6 +115,5 @@ go test -mod=readonly -race -count=1 -timeout=10m \
   -run '^Test(LocalIdentity|ProfilePublicKeyParserCompatibility|CaddyLocalIdentityE2E)' .
 ```
 
-This default suite covers supported behavior. The separate, deliberately failing
-profile-isolation qualification is linked above; a green default suite does not
-resolve that upstream gap.
+The canonical profile-isolation regression linked above is also enabled by
+default and runs under `TestCaddyProfileCanonicalIdentityRegression`.

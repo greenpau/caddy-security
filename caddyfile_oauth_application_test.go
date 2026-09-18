@@ -16,6 +16,9 @@ package security
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -32,6 +35,29 @@ import (
 )
 
 const applicationTestSecret = "synthetic-application-secret-0123456789"
+
+func TestOAuthApplicationRequestObjectKeys(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := base64.RawURLEncoding.EncodeToString(key.N.Bytes())
+	directives := "request_object_signing_alg RS256\nrequest_object_key first " + n + " AQAB\nrequest_object_key second " + n + " AQAB"
+	app := adaptApplicationTestConfig(t, applicationTestBlock("website", directives))
+	client := app.Config.OAuthApplications[0].Client
+	if client.RequestObjectSigningAlg != "RS256" || !client.RequirePKCE || client.SkipConsent {
+		t.Fatal("Request Object configuration weakened authentication defaults")
+	}
+	want := []oidc.RequestObjectKey{{KeyID: "first", Modulus: n, Exponent: "AQAB"}, {KeyID: "second", Modulus: n, Exponent: "AQAB"}}
+	if diff := cmp.Diff(want, client.RequestObjectKeys); diff != "" {
+		t.Fatal(diff)
+	}
+	for _, body := range []string{"request_object_signing_alg RS256", "request_object_key missing-values", "request_object_key first invalid AQAB", directives + "\nrequest_object_key first " + n + " AQAB", "request_object_signing_alg HS256"} {
+		if err := parseApplicationTestConfig(applicationTestBlock("website", body), authcrunch.NewConfig()); err == nil {
+			t.Fatal("accepted invalid Request Object registration")
+		}
+	}
+}
 
 func applicationTestBlock(name, directives string) string {
 	return fmt.Sprintf("oauth application %s {\nclient_id protocol-id\nclient_secret %s\nredirect_uri https://app.example.test/callback\n%s\n}\n", name, applicationTestSecret, directives)

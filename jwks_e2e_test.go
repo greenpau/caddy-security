@@ -52,6 +52,7 @@ func TestCaddyJWKSE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyJWKSProcess$", "-test.v", "-test.timeout=165s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_JWKS_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("TLS Caddy JWKS: %v\n%s", err, output)

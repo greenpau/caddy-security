@@ -44,10 +44,10 @@ func (f *authenticationClientFixture) passwordJourneys(t *testing.T) {
 		{name: "case alias", username: "ALICE", subject: "alice"},
 		{name: "prompted password", username: "alice", subject: "alice", promptPassword: true, prompts: []authclient.PromptKind{authclient.PromptPassword}},
 		{name: "configured TOTP with email alias", username: "totpuser@example.test", subject: "totpuser", configuredTOTP: true},
-		{name: "prompted TOTP", username: "totpuser", subject: "totpuser", prompts: []authclient.PromptKind{authclient.PromptTOTP}},
+		{name: "prompted TOTP", username: "totpprompt", subject: "totpprompt", prompts: []authclient.PromptKind{authclient.PromptTOTP}},
 		{name: "configured combined MFA", username: "mfauser", subject: "mfauser", configuredTOTP: true},
 		{name: "configured credentials with trailing whitespace", username: "whitespace", subject: "whitespace", configuredTOTP: true},
-		{name: "prompted combined MFA", username: "MFAUSER", subject: "mfauser", prompts: []authclient.PromptKind{authclient.PromptMFA, authclient.PromptTOTP}},
+		{name: "prompted combined MFA", username: "MFAPROMPT", subject: "mfaprompt", prompts: []authclient.PromptKind{authclient.PromptMFA, authclient.PromptTOTP}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := authclient.Config{BaseURL: f.base + f.mount, Realm: "local", Username: tc.username, Password: lifecyclePassword, AccessTokenName: "unused_client_fallback"}
@@ -140,6 +140,31 @@ func (f *authenticationClientFixture) passwordJourneys(t *testing.T) {
 			}
 		})
 	}
+	t.Run("TOTP replay across aliases", func(t *testing.T) {
+		code := authenticationClientTOTP()
+		prompt := func(context.Context, authclient.PromptKind) (string, error) { return code, nil }
+		for i, username := range []string{"totpreplay", "TOTPREPLAY", "totpreplay@example.test"} {
+			cfg := authclient.Config{Username: username, Password: lifecyclePassword}
+			if f.refresh {
+				cfg.RefreshTransport = authclient.RefreshTransportBody
+			}
+			client, wire, _ := f.loginClient(t, cfg, prompt)
+			result, err := client.Authenticate(t.Context())
+			if wire.requests != 3 {
+				t.Fatal("TOTP replay test skipped a real login checkpoint")
+			}
+			if i == 0 {
+				if err != nil || result == nil {
+					t.Fatal("initial one-time code was rejected", err)
+				}
+			} else {
+				assertAuthenticationClientStatus(t, err, 401)
+				if result != nil {
+					t.Fatal("replayed one-time code issued credentials")
+				}
+			}
+		}
+	})
 	for _, tc := range []struct {
 		name, user, password, answer string
 		wanted                       error
@@ -306,7 +331,10 @@ func (f *authenticationClientFixture) transportBoundaries(t *testing.T) {
 	}
 	if f.refresh {
 		for _, mode := range []string{"", authclient.RefreshTransportCookie} {
-			for _, user := range []string{"alice", "totpuser", "mfauser"} {
+			for _, user := range []string{"alice", "totpmeta", "mfameta"} {
+				if mode != "" && user != "alice" {
+					user += "explicit"
+				}
 				t.Run("cookie metadata requires native opt-in/"+mode+"/"+user, func(t *testing.T) {
 					cfg := authclient.Config{Username: user, Password: lifecyclePassword, RefreshTransport: mode}
 					want := 2
@@ -436,12 +464,13 @@ func (f *authenticationClientFixture) cliConnect(t *testing.T, cert string) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "client.yaml")
 		token := filepath.Join(dir, "private", "token.json")
-		data := fmt.Sprintf("base_url: %q\nrealm: local\nusername: whitespace\npassword: %q\ntotp_secret: %q\nrefresh_transport: body\ntoken_path: %q\n", f.base+f.mount, authenticationClientWhitespacePassword, authenticationClientWhitespaceTOTPSecret, token)
+		data := fmt.Sprintf("base_url: %q\nrealm: local\nusername: whitespacecli\npassword: %q\ntotp_secret: %q\nrefresh_transport: body\ntoken_path: %q\n", f.base+f.mount, authenticationClientWhitespacePassword, authenticationClientWhitespaceTOTPSecret, token)
 		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
 			t.Fatal(err)
 		}
 		var previous *authclient.Credentials
 		for range 2 {
+			f.waitForFreshTOTP(t, "whitespacecli")
 			output, err := securityCommand(t, "security", "local", "connect", "--config", path, "--ca-file", cert)
 			if err != nil {
 				t.Fatalf("native CLI login failed: %v\n%s", err, output)
@@ -470,8 +499,41 @@ func (f *authenticationClientFixture) cliConnect(t *testing.T, cert string) {
 					t.Fatal("connect disclosed credentials")
 				}
 			}
-			f.credentialAccess(t, credentials, "whitespace")
+			f.credentialAccess(t, credentials, "whitespacecli")
 			previous = credentials
 		}
 	})
+}
+
+// Repeated CLI logins for one account must wait for a real unused 30s TOTP
+// step. Read the disposable database's committed counter without changing it.
+func (f *authenticationClientFixture) waitForFreshTOTP(t *testing.T, username string) {
+	t.Helper()
+	waitForFreshFixtureTOTP(t, f.database, username)
+}
+
+func waitForFreshFixtureTOTP(t *testing.T, database, username string) {
+	t.Helper()
+	user := localIdentityRecord(t, database, username)
+	for _, token := range user.MfaTokens {
+		if token.Type != "totp" || token.LastTOTPCounter == nil {
+			continue
+		}
+		if token.Period != 30 {
+			t.Fatal("unexpected fixture TOTP period")
+		}
+		next := time.Unix(int64(*token.LastTOTPCounter+1)*30, 0).Add(50 * time.Millisecond)
+		if delay := time.Until(next); delay > 0 {
+			if delay > 31*time.Second {
+				t.Fatal("fixture TOTP counter is unexpectedly in the future")
+			}
+			timer := time.NewTimer(delay)
+			defer timer.Stop()
+			select {
+			case <-timer.C:
+			case <-t.Context().Done():
+				t.Fatal(t.Context().Err())
+			}
+		}
+	}
 }

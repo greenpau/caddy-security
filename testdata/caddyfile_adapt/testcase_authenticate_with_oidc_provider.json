@@ -33,6 +33,50 @@
 														{
 															"handle": [
 																{
+																	"handler": "headers",
+																	"response": {
+																		"require": {
+																			"headers": {
+																				"Content-Security-Policy": [
+																					"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+																				],
+																				"Content-Type": [
+																					"text/html; charset=utf-8"
+																				],
+																				"Referrer-Policy": [
+																					"no-referrer"
+																				]
+																			},
+																			"status_code": [
+																				200
+																			]
+																		},
+																		"set": {
+																			"Content-Security-Policy": [
+																				"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://rp.example.test"
+																			],
+																			"Referrer-Policy": [
+																				"same-origin"
+																			]
+																		}
+																	}
+																}
+															],
+															"match": [
+																{
+																	"method": [
+																		"GET"
+																	],
+																	"path": [
+																		"/other/oidc/authorize",
+																		"/other/oidc/continue"
+																	]
+																}
+															]
+														},
+														{
+															"handle": [
+																{
 																	"handler": "authenticator",
 																	"portal_name": "defaults",
 																	"route_matcher": "*"
@@ -55,6 +99,50 @@
 												{
 													"handler": "subroute",
 													"routes": [
+														{
+															"handle": [
+																{
+																	"handler": "headers",
+																	"response": {
+																		"require": {
+																			"headers": {
+																				"Content-Security-Policy": [
+																					"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+																				],
+																				"Content-Type": [
+																					"text/html; charset=utf-8"
+																				],
+																				"Referrer-Policy": [
+																					"no-referrer"
+																				]
+																			},
+																			"status_code": [
+																				200
+																			]
+																		},
+																		"set": {
+																			"Content-Security-Policy": [
+																				"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://rp.example.test"
+																			],
+																			"Referrer-Policy": [
+																				"same-origin"
+																			]
+																		}
+																	}
+																}
+															],
+															"match": [
+																{
+																	"method": [
+																		"GET"
+																	],
+																	"path": [
+																		"/auth/oidc/authorize",
+																		"/auth/oidc/continue"
+																	]
+																}
+															]
+														},
 														{
 															"handle": [
 																{
@@ -106,6 +194,7 @@
 							"refresh_token_cookie_name": "FIRST_REFRESH_TOKEN",
 							"oidc_session_id_cookie_name": "FIRST_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "FIRST_OIDC_REQUEST_ID",
+							"saml_session_id_cookie_name": "FIRST_SAML_SESSION_ID",
 							"cookie_name_prefix": "FIRST"
 						},
 						"identity_stores": [
@@ -151,6 +240,7 @@
 							"refresh_token_cookie_name": "SECOND_REFRESH_TOKEN",
 							"oidc_session_id_cookie_name": "SECOND_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "SECOND_OIDC_REQUEST_ID",
+							"saml_session_id_cookie_name": "SECOND_SAML_SESSION_ID",
 							"cookie_name_prefix": "SECOND"
 						},
 						"identity_stores": [
@@ -193,6 +283,7 @@
 							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
 							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
 							"cookie_name_prefix": "AUTHP"
 						},
 						"identity_stores": [
@@ -229,6 +320,7 @@
 							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
 							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
 							"cookie_name_prefix": "AUTHP"
 						},
 						"identity_stores": [
@@ -296,6 +388,19 @@
 								"profile",
 								"email"
 							],
+							"request_object_signing_alg": "RS256",
+							"request_object_keys": [
+								{
+									"kid": "current",
+									"n": "t04Rq3MJETW1WwsaNlr1mmth9f03a_dyHlopCMS0rf96ISAiQT1Sq8JUJQHZRWpl67ox9wWa-jxiwoe8G2rCZtlXBzot_HRc4spbjL2NWBX5RtD-PGDUekzgGPME4lusG9PhPpclgKoucEy2U7wPldLIf-fAy3Jis72J9BEHRcTyhnbV-qQUN3WpnZYrtIXYbu0hyBB0JnMP3k8Zs1jWLsCtATsGEimSp1xAkAH5ek7l65Y1vzn_bSCa4gVxpdnTqeJaWpTg1lgtxG69RD7W8ZA2K4U94Aisjuen2-liaQ-pGVL0dMAoODedq32nV4v4uUfiM7XLkb1ceBK1FkOm_d5346y9Dk0zX8Xcf385qRX83r0BzHMUsgMmNDOuHXAMGhR6rrD7M0kTCw-5TWbmGicMT896614du5P2HNpkeY8NwgxQwWG7G0KYA8jkCb4InqBKxbKXYqv8sWwvtlDa67pUzlvAUhOL3gICxEjEJsdbaA1c51dsXaK-OuSr8irQtq12RCJ2_GXkcGWtt5FxO9BFXfxnYcYRofdvbYzA2lgz5sgPDB98ZAro5D9y4A_vtcDcJir9ud1lLSnxMZZ-8ZMYCVHGHiFuqum6uUNJDTpuv18Bp6WCd_v6E9v5is6wNTe_C7_syyFiDj-vW1fFHmKw4GKAL03ogHD3r0Cm88E",
+									"e": "AQAB"
+								},
+								{
+									"kid": "previous",
+									"n": "t04Rq3MJETW1WwsaNlr1mmth9f03a_dyHlopCMS0rf96ISAiQT1Sq8JUJQHZRWpl67ox9wWa-jxiwoe8G2rCZtlXBzot_HRc4spbjL2NWBX5RtD-PGDUekzgGPME4lusG9PhPpclgKoucEy2U7wPldLIf-fAy3Jis72J9BEHRcTyhnbV-qQUN3WpnZYrtIXYbu0hyBB0JnMP3k8Zs1jWLsCtATsGEimSp1xAkAH5ek7l65Y1vzn_bSCa4gVxpdnTqeJaWpTg1lgtxG69RD7W8ZA2K4U94Aisjuen2-liaQ-pGVL0dMAoODedq32nV4v4uUfiM7XLkb1ceBK1FkOm_d5346y9Dk0zX8Xcf385qRX83r0BzHMUsgMmNDOuHXAMGhR6rrD7M0kTCw-5TWbmGicMT896614du5P2HNpkeY8NwgxQwWG7G0KYA8jkCb4InqBKxbKXYqv8sWwvtlDa67pUzlvAUhOL3gICxEjEJsdbaA1c51dsXaK-OuSr8irQtq12RCJ2_GXkcGWtt5FxO9BFXfxnYcYRofdvbYzA2lgz5sgPDB98ZAro5D9y4A_vtcDcJir9ud1lLSnxMZZ-8ZMYCVHGHiFuqum6uUNJDTpuv18Bp6WCd_v6E9v5is6wNTe_C7_syyFiDj-vW1fFHmKw4GKAL03ogHD3r0Cm88E",
+									"e": "AQAB"
+								}
+							],
 							"require_pkce": true
 						}
 					},
@@ -328,7 +433,9 @@
 					"token lifetime 0",
 					"max sessions 0",
 					"max pending requests 0",
-					"max grants 0"
+					"max grants 0",
+					"refresh lifetime 0",
+					"max refresh tokens 0"
 				],
 				"disabled": [
 					"disabled"
@@ -343,7 +450,11 @@
 					"token lifetime 600",
 					"max sessions 42",
 					"max pending requests 43",
-					"max grants 44"
+					"max grants 44",
+					"refresh lifetime 3600",
+					"max refresh tokens 45",
+					"acr urn:example:password pwd",
+					"acr urn:example:mfa pwd otp"
 				]
 			}
 		}

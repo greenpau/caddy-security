@@ -55,6 +55,7 @@ func TestCaddyAdminAPIE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyAdminAPIProcess$", "-test.v", "-test.timeout=135s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_ADMIN_API_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		// Fixtures and assertions never print credentials, response bodies, or keys.

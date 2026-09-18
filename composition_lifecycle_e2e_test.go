@@ -59,13 +59,16 @@ func testCompositionRoles(t *testing.T, f *compositionFixture) {
 	if err != nil || resp.StatusCode != 200 || result["status"] != "success" {
 		t.Fatalf("role mutation failed: status=%d", resp.StatusCode)
 	}
-	_, cookies := f.post(t, browser, "/api/refresh_token", struct{}{}, f.headers(), 200)
+	// Role mutations now revoke the earlier authentication evidence. Require
+	// a fresh password login before current roles can authorize another family.
+	f.post(t, browser, "/api/refresh_token", struct{}{}, f.headers(), 401)
+	_, cookies := f.browserLogin(t, f.browser(t), "employees", 200)
 	access := tokenRefreshActiveCookie(t, cookies, f.accessName()).Value
 	f.secrets = append(f.secrets, access)
 	claims := verifyCaddyJWKSSignature(t, f.keys, access, "RS512", "refresh")
 	roles, ok := claims["roles"].([]any)
 	if !ok || len(roles) != 1 || roles[0] != "changed/viewer" {
-		t.Fatal("refresh retained login-time roles")
+		t.Fatal("fresh login retained roles from before the mutation")
 	}
 	f.resourceStatus(t, access, "/protected", 403)
 }

@@ -1,0 +1,11 @@
+# Official runner dependencies, including transitive versions used by this rehearsal.
+httpx==0.28.1
+httpcore==1.0.9
+h11==0.16.0
+anyio==4.15.1
+idna==3.19
+certifi==2026.7.22
+typing_extensions==4.16.0
+pyparsing==3.3.2
+# Real browser WebDriver BiDi event transport (opt-in conformance only).
+websocket-client==1.9.0

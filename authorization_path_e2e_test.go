@@ -34,6 +34,7 @@ func TestCaddyAuthorizationPathE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyAuthorizationPathProcess$", "-test.v", "-test.timeout=50s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_AUTHORIZATION_PATH_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Caddy TLS path authorization: %v\n%s", err, output)

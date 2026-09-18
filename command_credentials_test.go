@@ -234,6 +234,7 @@ func securityCommandInput(t *testing.T, input string, args ...string) ([]byte, e
 	cmd := exec.CommandContext(ctx, os.Args[0], append([]string{"-test.run=^TestRegistrationCommandProcess$", "--"}, args...)...)
 	cmd.Env = append(os.Environ(), "SECURITY_REGISTRATION_COMMAND=1")
 	cmd.Stdin = strings.NewReader(input)
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	return cmd.CombinedOutput()
 }

@@ -96,7 +96,9 @@ func tokenRefreshHTTPCases(origin, mount, cookieName, credential string) []token
 		}
 	}
 	for _, path := range []string{"/api/profile", "/api/server/realms", "/api/refresh_token/", "/api/private_key"} {
-		cases = append(cases, tokenRefreshHTTPCase{name: "protected" + path, method: "POST", path: mount + path, body: "{}", status: 401})
+		cases = append(cases,
+			tokenRefreshHTTPCase{name: "protected" + path, method: "POST", path: mount + path, body: "{}", status: 401},
+			tokenRefreshHTTPCase{name: "protected/cross-origin" + path, method: "POST", path: mount + path, body: "{}", headers: http.Header{"Origin": {"https://foreign.example"}}, status: 403})
 	}
 	return cases
 }
@@ -130,7 +132,12 @@ func TestAuthnTokenRefreshDelegation(t *testing.T) {
 			middleware := &AuthnMiddleware{app: app, portal: portal}
 			for _, tc := range tokenRefreshHTTPCases("https://issuer.example", mount, "CUSTOM_REFRESH", "opaque") {
 				t.Run(tc.name, func(t *testing.T) {
-					r := tokenRefreshCaseRequest(t, "https://issuer.example", tc)
+					// Model an inbound TLS request. http.NewRequest constructs an
+					// outbound request without TLS state, which the provider correctly
+					// rejects when comparing its scheme with a browser's HTTPS Origin.
+					r := httptest.NewRequest(tc.method, "https://issuer.example"+tc.path, strings.NewReader(tc.body))
+					r.RequestURI = r.URL.RequestURI() // Origin-form request target, as received by Caddy.
+					r.Header = tokenRefreshCaseRequest(t, "https://issuer.example", tc).Header
 					original := *r.URL
 					headers := r.Header.Clone()
 					want := httptest.NewRecorder()

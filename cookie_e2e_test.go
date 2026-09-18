@@ -53,6 +53,7 @@ func TestCaddyCookiesE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyCookiesProcess$", "-test.v", "-test.timeout=75s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_COOKIE_CHILD=1")
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("TLS Caddy cookies: %v\n%s", err, output)
@@ -320,7 +321,7 @@ func TestCaddyCookiesProcess(t *testing.T) {
 		{name: "defaults", host: "login.example.com", session: "AUTHP_SESSION_ID", access: "AUTHP_ACCESS_TOKEN", path: "/"},
 		{name: "legacy_prefix_only", host: "login.example.com", directives: "set cookie name prefix portal", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", path: "/"},
 		{name: "explicit_authp_names", host: "login.example.com", directives: "cookie session id name AUTHP_SESSION_ID\ncookie access token name AUTHP_LOGIN_ACCESS", session: "AUTHP_SESSION_ID", access: "AUTHP_LOGIN_ACCESS", path: "/"},
-		{name: "prefix", host: "login.example.com", directives: "cookie prefix PORTAL", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", path: "/"},
+		{name: "prefix", host: "login.example.com", directives: "cookie prefix PORTAL\ncookie saml session id name PORTAL_LOGIN_SAML", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", path: "/"},
 		{name: "explicit_before_prefix", host: "login.example.com", directives: "cookie access token name LOGIN_ACCESS\ncookie session id name LOGIN_SESSION\ncookie prefix PORTAL", session: "LOGIN_SESSION", access: "LOGIN_ACCESS", path: "/"},
 		{name: "explicit_old_default", host: "login.example.com", directives: "cookie access token name AUTHP_ACCESS_TOKEN\ncookie prefix PORTAL", session: "PORTAL_SESSION_ID", access: "AUTHP_ACCESS_TOKEN", path: "/"},
 		{name: "domain_and_path", host: "login.example.com", directives: "cookie prefix PORTAL\ncookie domain example.com path /app\ncookie domain example.com lifetime 600\ncookie domain example.com same site strict", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", domain: "example.com", path: "/app", sibling: true},
@@ -449,6 +450,10 @@ func TestCaddyCookiesProcess(t *testing.T) {
 				f.rejectCookieReload(t, func(app *App) {
 					cookies := app.Config.AuthenticationPortals[0].CookieConfig
 					cookies.AccessTokenCookieName = cookies.SessionIDCookieName
+				})
+				f.rejectCookieReload(t, func(app *App) {
+					cookies := app.Config.AuthenticationPortals[0].CookieConfig
+					cookies.SAMLSessionIDCookieName = cookies.AccessTokenCookieName
 				})
 				f.rejectCookieReload(t, func(app *App) {
 					cookies := app.Config.AuthenticationPortals[0].CookieConfig

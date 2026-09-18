@@ -50,13 +50,14 @@ func TestPortalCookieDirectives(t *testing.T) {
  cookie access token name LOGIN_ACCESS
  cookie refresh token name LOGIN_REFRESH
  cookie oidc session id name LOGIN_SESSION
- cookie oidc request id name LOGIN_REQUEST`
+ cookie oidc request id name LOGIN_REQUEST
+ cookie saml session id name LOGIN_SAML`
 	for _, lines := range []string{names + "\ncookie prefix PORTAL", "cookie prefix PORTAL\n" + names} {
 		app, err := parseCookieApp(cookiePortalInput(lines))
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := &cookie.Config{CookieNamePrefix: "PORTAL", SessionIDCookieName: "AUTHP_SESSION_ID", RefererCookieName: "NEXT", SandboxIDCookieName: "CHALLENGE", IdentityTokenCookieName: "IDENTITY", AccessTokenCookieName: "LOGIN_ACCESS", RefreshTokenCookieName: "LOGIN_REFRESH", OIDCSessionIDCookieName: "LOGIN_SESSION", OIDCRequestIDCookieName: "LOGIN_REQUEST"}
+		want := &cookie.Config{CookieNamePrefix: "PORTAL", SessionIDCookieName: "AUTHP_SESSION_ID", RefererCookieName: "NEXT", SandboxIDCookieName: "CHALLENGE", IdentityTokenCookieName: "IDENTITY", AccessTokenCookieName: "LOGIN_ACCESS", RefreshTokenCookieName: "LOGIN_REFRESH", OIDCSessionIDCookieName: "LOGIN_SESSION", OIDCRequestIDCookieName: "LOGIN_REQUEST", SAMLSessionIDCookieName: "LOGIN_SAML"}
 		if diff := cmp.Diff(want, app.Config.AuthenticationPortals[0].CookieConfig); diff != "" {
 			t.Fatal(diff)
 		}
@@ -181,6 +182,8 @@ func TestPortalCookieMalformedDirectives(t *testing.T) {
 		"cookie referer name A\ncookie redirect url name B", "cookie identity token name A\ncookie id token name B",
 		"set access_token cookie name A\ncookie access token name B",
 		"cookie session id name SAME\ncookie oidc request id name SAME",
+		"cookie access token name SAME\ncookie saml session id name SAME",
+		"cookie saml session id name FIRST\ncookie saml session id name SECOND",
 		"cookie prefix PORTAL\ncookie access token name PORTAL_SESSION_ID",
 		"cookie same site lax\ncookie samesite strict", "cookie path /a\ncookie path /a",
 		"cookie domain EXAMPLE.com\ncookie domain .example.com",
@@ -278,6 +281,7 @@ func TestPortalCookieLegacyPrefixAllRoles(t *testing.T) {
 		RefreshTokenCookieName:  "PORTAL_REFRESH_TOKEN",
 		OIDCSessionIDCookieName: "PORTAL_OIDC_SESSION_ID",
 		OIDCRequestIDCookieName: "PORTAL_OIDC_REQUEST_ID",
+		SAMLSessionIDCookieName: "PORTAL_SAML_SESSION_ID",
 	}
 	if diff := cmp.Diff(want, app.Config.AuthenticationPortals[0].CookieConfig); diff != "" {
 		t.Fatal(diff)

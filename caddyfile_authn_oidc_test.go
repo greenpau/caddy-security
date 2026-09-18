@@ -58,11 +58,11 @@ func parseOIDCTestPortal(t *testing.T, body string) (*App, error) {
 func TestParseCaddyfileOIDCProvider(t *testing.T) {
 	for _, tc := range []struct {
 		name, body string
-		values     [5]int
+		values     [7]int
 	}{
-		{"defaults", oidcTestBody, [5]int{28800, 300, 10000, 1024, 10000}},
-		{"explicit enabled and zero defaults", "enabled\n" + oidcTestBody + "session lifetime 0\ntoken lifetime 0\nmax sessions 0\nmax pending requests 0\nmax grants 0\n", [5]int{28800, 300, 10000, 1024, 10000}},
-		{"all settings", oidcTestBody + "session lifetime 7200\ntoken lifetime 600\nmax sessions 42\nmax pending requests 43\nmax grants 44\n", [5]int{7200, 600, 42, 43, 44}},
+		{"defaults", oidcTestBody, [7]int{28800, 300, 10000, 1024, 10000, 28800, 10000}},
+		{"explicit enabled and zero defaults", "enabled\n" + oidcTestBody + "session lifetime 0\ntoken lifetime 0\nmax sessions 0\nmax pending requests 0\nmax grants 0\nrefresh lifetime 0\nmax refresh tokens 0\n", [7]int{28800, 300, 10000, 1024, 10000, 28800, 10000}},
+		{"all settings", oidcTestBody + "session lifetime 7200\ntoken lifetime 600\nmax sessions 42\nmax pending requests 43\nmax grants 44\nrefresh lifetime 3600\nmax refresh tokens 45\n", [7]int{7200, 600, 42, 43, 44, 3600, 45}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// The parser must neither generate credentials nor read/create keys.
@@ -80,6 +80,7 @@ func TestParseCaddyfileOIDCProvider(t *testing.T) {
 				Clients:                []*oidc.ClientConfig{app.Config.OAuthApplications[0].Client},
 				SessionLifetimeSeconds: tc.values[0], TokenLifetimeSeconds: tc.values[1],
 				MaxSessions: tc.values[2], MaxPendingRequests: tc.values[3], MaxGrants: tc.values[4],
+				RefreshLifetimeSeconds: tc.values[5], MaxRefreshTokens: tc.values[6],
 			}
 			if diff := cmp.Diff(want, p.OIDCProvider); diff != "" {
 				t.Fatal(diff)
@@ -105,6 +106,22 @@ func TestParseCaddyfileOIDCProvider(t *testing.T) {
 			}
 		} else if p == nil || p.Enabled {
 			t.Fatal("disabled provider was lost or enabled")
+		}
+	}
+}
+
+func TestCaddyfileOIDCAuthenticationContexts(t *testing.T) {
+	app, err := parseOIDCTestPortal(t, oidcTestBlock(oidcTestBody+"acr urn:example:password pwd\nacr urn:example:mfa pwd otp\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []oidc.AuthenticationContext{{Value: "urn:example:password", Methods: []string{"pwd"}}, {Value: "urn:example:mfa", Methods: []string{"pwd", "otp"}}}
+	if diff := cmp.Diff(want, app.Config.AuthenticationPortals[0].OIDCProvider.AuthenticationContexts); diff != "" {
+		t.Fatal(diff)
+	}
+	for _, body := range []string{"acr missing-method\n", "acr duplicate pwd\nacr duplicate otp\n", "acr invalid unknown\n", "refresh lifetime -1\n", "max refresh tokens 1000001\n", "refresh lifetime 5\nrefresh lifetime 6\n"} {
+		if _, err := parseOIDCTestPortal(t, oidcTestBlock(oidcTestBody+body)); err == nil {
+			t.Fatalf("accepted invalid provider capability: %q", body)
 		}
 	}
 }

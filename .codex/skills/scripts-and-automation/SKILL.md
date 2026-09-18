@@ -5,6 +5,15 @@ description: caddy-security repository automation, Makefile targets, build/test/
 
 # Scripts and Automation
 
+## Browser automation default
+
+Use headless Chrome for browser automation and screenshot/network evidence.
+Avoid Firefox unless explicitly requested for a browser-specific task. Follow
+[the testing browser guidance](../testing-and-ci/SKILL.md#browser-choice) for
+private profiles, reproducible tool pins and strict TLS trust. Keep all downloaded
+browser tools and generated data in this repository's `tmp/`; do not install
+browser packages or trust roots system-wide for a test run.
+
 ## Overview
 
 Use the Makefile as the primary automation surface for this Go module. This
@@ -46,7 +55,7 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   `build`.
 - Use `make test` for uncached, race-enabled Go tests and complete reports
   through pinned `go tool tested`. `TEST` is a regex, `TEST_DIR` accepts package
-  patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `30m`).
+  patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `45m`).
   `MINIMUM_COVERAGE=1` checks for nonzero coverage; it is not a coverage goal.
 - Use `make qtest` for the root package (`.`) by default, or set
   `QUICK_TEST_DIR` and `TEST` for another scope. Reports go to `.coverage/quick`.
@@ -55,6 +64,30 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   it does not rerun tests.
 - Use `make test-automation` for verbose Python fixture tests of artifact
   identity, build metadata, and the real Make/tested lifecycle.
+- Use `make oidc-conformance-prepare` and `make oidc-conformance-test` for the opt-in
+  official Foundation plans against a fresh Caddy binary. Follow the
+  [conformance workflow](../configuration-oauth-applications/references/oidc-conformance.md)
+  for pinned local prerequisites, private evidence, strict TLS trust and
+  preserved nonzero results. Conformance units/E2E and their artifacts are
+  separate from regular testing; existing local OIDC regressions remain default.
+  Set `CONFORMANCE_RESULTS` to a new directory below this checkout's `tmp/`;
+  open its private `index.html` for explanations and links to all run evidence.
+  Missing downloaded prerequisites require `make oidc-conformance-prepare`.
+  Use `make oidc-conformance-help` for local tool locations and removal commands
+  that preserve result bundles; it does not install or remove anything.
+- Use the manual-only `OIDC conformance` Actions workflow for a downloadable
+  report from a hosted runner. Its [setup and artifact reference](../configuration-oauth-applications/references/oidc-conformance-actions.md)
+  explains the age public recipient, readable summary, encrypted full evidence,
+  original runner status and failed-run uploads. This never joins regular CI.
+- Use `make oidc-conformance-cleanup` to remove all identified OIDC result
+  bundles under `tmp/`, including custom destinations and top-level supplemental
+  `oidc-*` logs, audits and browser reports, plus `audit_oidc_*.py`/`check_oidc_*.py`
+  helpers. Reserve these temporary names for generated OIDC output; prefer
+  keeping new diagnostics inside their run bundle. Cleanup retains the prepared
+  workspace, dependencies and caches, records custom dependency locations for
+  repeated cleanup, and refuses active runs/preparation. It does not clean
+  ordinary `.coverage/` or unrelated temporary files. See the
+  [cleanup scope](../configuration-oauth-applications/references/oidc-conformance.md#remove-test-output-keep-prerequisites).
 - Use `make ci-check` for sequential version, automation, full Go test/report,
   and build gates, including under `make -j`.
 - Use `make version-check` for read-only version validation and
@@ -87,6 +120,9 @@ dependencies and resolves that tool. `make install-test-tools` runs its version
 command without global installs or module edits. The other maintenance tools,
 such as `xcaddy` for `devbuild` and `versioned` for legacy release/license
 recipes, must already be on `PATH`; `make dep` does not install them.
+`make license` selects tracked and nonignored new Go files through Git. It must
+not traverse ignored `tmp/`, suite checkouts, tool caches or vendored modules;
+rewriting those files would invalidate the unmodified dependency evidence.
 
 Module/tool downloads and `xcaddy` can need network access. Tests and builds
 do not run module tidy, license rewrites, download-link regeneration, or
@@ -113,13 +149,19 @@ task.
 ## Local go-authcrunch Development
 
 For an explicitly requested published version, use a targeted upgrade from this
-repository, for example `go get github.com/greenpau/go-authcrunch@v1.2.5`, then
+repository, for example `go get github.com/greenpau/go-authcrunch@v1.2.6`, then
 `go mod tidy` and `go mod verify`. Inspect the dependency diff and keep the
 versioned replacement examples in `CONTRIBUTING.md` and the xcaddy argument in
 `Makefile` aligned. Do not use `make upgrade` for a single-module request: it
 updates all dependencies. `make sync` takes its version from the sibling's
 `VERSION`, which may differ from the requested release. Confirm the selected
 module's `Dir` and absence of an unintended `Replace` before validation.
+
+For official OIDC qualification of newer committed work, select its exact
+published commit with `go get github.com/greenpau/go-authcrunch@<commit>`.
+The resulting immutable pseudo-version must match the intended sibling revision;
+the conformance harness rejects local replacements. Record the selected module
+checksum and origin, and keep sibling source and Git state read-only.
 
 Development in `caddy-security` often connects this module to a local
 `github.com/greenpau/go-authcrunch` checkout that sits next to the
@@ -207,6 +249,12 @@ targets. Full, quick, and custom bundles and unrelated investigation files must
 survive one another's runs.
 Whole-directory cleanup belongs to the explicitly requested `make clean`.
 
+Normal coverage reports include the root test executable's E2E subprocesses
+through Go's native coverage merge. See
+[subprocess coverage](../testing-and-ci/SKILL.md#subprocess-coverage) for the
+bootstrap, regression tests and limits. Keep merging before tested evaluates
+coverage and writes reports; never patch a finished bundle's coverage percentage.
+
 ## CI Notes
 
 The reusable `.github/workflows/build.yml` runs `make dep` and `make ci-check`,
@@ -221,7 +269,7 @@ automation. Do not edit CLA signatures or consent files unless the user asks.
 ## Security Dependency Version
 
 Run `bin/authcrunch security version` to print the go-authcrunch module linked
-into the executable, for example `go-authcrunch v1.2.5`. This uses
+into the executable, for example `go-authcrunch v1.2.6`. This uses
 `runtime/debug.ReadBuildInfo` and works without a config, server, credentials,
 Go installation or source checkout. Do not substitute the caddy-security
 `VERSION`, a working-directory go.mod, or the authdb package's version banner.

@@ -1,0 +1,21 @@
+# go-authcrunch v1.2.6 consent forms need a same-origin referrer policy so
+# browsers retain their Origin on POST. Import before authenticate, passing
+# the exact authorization/continuation paths and the registered callback's
+# HTTPS origin. Chrome also applies form-action to the callback redirect.
+# The response matcher defers this operation until the portal writes headers.
+(oidc_consent_headers) {
+	@oidcConsent {
+		method GET
+		path {args[0]} {args[1]}
+	}
+	header @oidcConsent {
+		Referrer-Policy same-origin
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' {args[2]}"
+		match {
+			status 200
+			header Content-Type "text/html; charset=utf-8"
+			header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+			header Referrer-Policy no-referrer
+		}
+	}
+}

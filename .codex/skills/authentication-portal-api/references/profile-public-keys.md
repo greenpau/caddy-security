@@ -2,7 +2,7 @@
 
 These are user-owned keys stored through `/api/profile`, separate from portal
 JWT signing keys, public JWKS, and privileged private signing-key export. The
-selected go-authcrunch v1.2.5 uses the maintained ProtonMail OpenPGP parser for
+selected go-authcrunch dependency uses the maintained ProtonMail OpenPGP parser for
 historical armored public-key metadata. It adds no general OpenPGP encryption,
 decryption, signing, verification, or new Caddy key-policy directive.
 
@@ -64,32 +64,24 @@ those failures. Two users can store the same PGP public material; deleting it
 from one user's inventory must preserve the other's copy. These tests do not
 exercise hardware authenticators or WebAuthn assertions.
 
-## Known Upstream Profile Identity Gap
+## Canonical Profile Identity Regression
 
-**Canonical profile isolation is not qualified with colliding identity
-transforms in v1.2.5.** Reproduction: legacy access-only Alice login with her
-correct password, a transform setting `sub` to `bob` and `email` to
-`bob@example.test`, then `fetch_user_info` returns Bob. A subsequent public-key
-upload also writes to Bob's identity file record. No ownership fields in the
-request body are needed. The ordinary untransformed cross-user tests pass.
+The selected go-authcrunch commit `3e28980b0f5a78463953b674241f154bb77c6679`
+fixes the earlier v1.2.5 profile ownership defect. Profile access now uses the
+canonical authenticated local identity and its current security version, even
+when token transforms replace `sub` and `email` with another real account.
+Caddy continues to delegate this decision to the library.
 
-The library's `handle_api_profile.go` fills `rr.User.Username` and
-`rr.User.Email` from `usr.Claims.Subject` and `usr.Claims.Email`. Caddy's
-`AuthnMiddleware` forwards the request without selecting this identity.
-Correcting canonical ownership belongs in the library's profile/session path,
-not a Caddy token rewrite or copied management handler.
-
-`local_identity_profile_regression_test.go` preserves the **desired** isolation
-assertions under a dedicated build tag. It deliberately fails against v1.2.5
-and is separate from the default supported-contract suite:
+`local_identity_profile_regression_test.go` is now part of the default suite.
+`TestCaddyProfileCanonicalIdentityRegression` logs in as Alice, applies colliding
+Bob claims, reads Alice's profile and verifies that a public-key upload changes
+only Alice's persisted record. Run it directly with:
 
 ```sh
-go test -mod=readonly -tags identity_profile_regression -count=1 -timeout=2m \
+go test -mod=readonly -race -count=1 -timeout=2m \
   -run '^TestCaddyProfileCanonicalIdentityRegression$' .
 ```
 
-Expected current failures identify Bob's metadata and persisted key counts
-Alice=0, Bob=1 without printing credentials. Run this command after upgrading
-to an upstream fix, then remove the build tag so canonical profile isolation
-becomes a default regression gate. Do not invert the assertions to bless the
-defect or report the default suite as complete profile isolation qualification.
+The old `identity_profile_regression` build tag is no longer required. Keep the
+ownership assertions enabled; do not infer identity from transformed claims in
+Caddy or duplicate the library's profile handler.

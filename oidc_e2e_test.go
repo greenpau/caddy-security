@@ -45,6 +45,7 @@ func TestCaddyOIDCProviderE2E(t *testing.T) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyOIDCProviderProcess$", "-test.v", "-test.timeout=100s")
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_OIDC_CHILD=1", "XDG_DATA_HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir())
+	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	output, err := cmd.CombinedOutput()
 	if bytes.Contains(output, []byte(applicationTestSecret)) || bytes.Contains(output, []byte("BEGIN PRIVATE KEY")) {

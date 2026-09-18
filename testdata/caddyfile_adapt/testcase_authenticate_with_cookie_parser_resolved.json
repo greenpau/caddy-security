@@ -30,6 +30,7 @@
                 "refresh_token_cookie_name": "AUTHP_LOGIN_REFRESH",
                 "oidc_session_id_cookie_name": "AUTHP_LOGIN_SESSION",
                 "oidc_request_id_cookie_name": "AUTHP_LOGIN_REQUEST",
+                "saml_session_id_cookie_name": "AUTHP_LOGIN_SAML",
                 "cookie_name_prefix": "AUTHP"
             },
             "identity_stores": [
@@ -72,6 +73,7 @@
                 "refresh_token_cookie_name": "PORTAL_REFRESH_TOKEN",
                 "oidc_session_id_cookie_name": "PORTAL_OIDC_SESSION_ID",
                 "oidc_request_id_cookie_name": "PORTAL_OIDC_REQUEST_ID",
+                "saml_session_id_cookie_name": "PORTAL_SAML_SESSION_ID",
                 "cookie_name_prefix": "PORTAL"
             },
             "identity_stores": [
@@ -114,6 +116,7 @@
                 "refresh_token_cookie_name": "__Host-PORTAL_REFRESH_TOKEN",
                 "oidc_session_id_cookie_name": "__Host-PORTAL_OIDC_SESSION_ID",
                 "oidc_request_id_cookie_name": "__Host-PORTAL_OIDC_REQUEST_ID",
+                "saml_session_id_cookie_name": "__Host-PORTAL_SAML_SESSION_ID",
                 "cookie_name_prefix": "__Host-PORTAL"
             },
             "identity_stores": [
@@ -157,6 +160,7 @@
                 "refresh_token_cookie_name": "LEGACY_REFRESH_TOKEN",
                 "oidc_session_id_cookie_name": "LEGACY_OIDC_SESSION_ID",
                 "oidc_request_id_cookie_name": "LEGACY_OIDC_REQUEST_ID",
+                "saml_session_id_cookie_name": "LEGACY_SAML_SESSION_ID",
                 "cookie_name_prefix": "LEGACY"
             },
             "identity_stores": [
