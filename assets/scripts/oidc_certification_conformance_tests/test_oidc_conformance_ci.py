@@ -1,4 +1,4 @@
-"""Opt-in CI artifact units and real CLI/archive/cancellation journeys."""
+"""Opt-in CI artifact units and real CLI/download/cancellation journeys."""
 
 import json
 import os
@@ -6,11 +6,11 @@ from pathlib import Path
 import signal
 import subprocess
 import sys
-import tarfile
 import tempfile
 import time
 import unittest
 from unittest import mock
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -59,11 +59,12 @@ class CITests(unittest.TestCase):
         self.assertEqual(len(summary["modules"]), 8)
         self.assertEqual(summary["counts"]["PASSED"], 2)
         self.assertNotIn("PRIVATE_SENTINEL", json.dumps(summary))
-        page = ci.render_public(summary, True, "<script>alert(1)</script>")
+        summary.update(evidence_directory="private/", full_report="private/evidence/index.html")
+        page = ci.render_public(summary, "<script>alert(1)</script>")
         self.assertNotIn("<script>", page)
         for outcome in ci.OUTCOMES:
             self.assertIn(outcome, page)
-        self.assertIn('href="evidence.tar.gz"', page)
+        self.assertIn('href="private/evidence/index.html"', page)
 
     def test_workspace_rejects_dependencies_existing_runs_and_symlink_escapes(self):
         for path in (ROOT, ROOT / "tmp", ci.WORK, ci.WORK / "suite", ci.WORK / "tools/chrome"):
@@ -139,10 +140,10 @@ class CITests(unittest.TestCase):
         summary = json.loads((self.run / "artifact/summary.json").read_text())
         self.assertEqual(summary["state"], "EVIDENCE_ERROR")
         self.assertFalse(summary["all_passed"])
-        self.assertEqual(summary["evidence_archive"], "evidence.tar.gz")
+        self.assertEqual(summary["evidence_directory"], "private/")
+        self.assertIsNone(summary["full_report"])
         self.assertIn("incomplete or unreadable", (self.run / "artifact/index.html").read_text())
-        with tarfile.open(self.run / "artifact/evidence.tar.gz") as archive:
-            self.assertEqual(archive.extractfile("private/evidence/execution.json").read(), b'{"runner_exit_code":')
+        self.assertEqual((self.run / "artifact/private/evidence/execution.json").read_bytes(), b'{"runner_exit_code":')
 
     def test_initialize_and_blocked_report_need_no_recipient_or_encryption_tool(self):
         fresh = self.base / "fresh"
@@ -154,35 +155,47 @@ class CITests(unittest.TestCase):
         result = self.cli("package")
         self.assertEqual(result.returncode, 0, result.stderr)
         files = {p.name for p in (self.run / "artifact").iterdir()}
-        self.assertEqual(files, {"index.html", "summary.json", "sha256.json", "evidence.tar.gz"})
+        self.assertEqual(files, {"index.html", "summary.json", "sha256.json", "private", "filesystem-entries.json"})
         summary = json.loads((self.run / "artifact/summary.json").read_text())
         self.assertEqual(summary["state"], "BLOCKED")
         self.assertFalse(summary["all_passed"])
         self.assertTrue(summary["evidence_has_blocker"])
-        with tarfile.open(self.run / "artifact/evidence.tar.gz") as archive:
-            self.assertIn(b"PRIVATE_SENTINEL", archive.extractfile("private/evidence/execution.json").read())
+        self.assertIsNone(summary["full_report"])
+        page = (self.run / "artifact/index.html").read_text()
+        self.assertNotIn('href="private/evidence/index.html"', page)
+        self.assertIn('href="private/"', page)
+        self.assertIn(b"PRIVATE_SENTINEL", (self.run / "artifact/private/evidence/execution.json").read_bytes())
 
-    def test_archive_failure_removes_partial_and_stale_archives(self):
+    def test_packaging_failure_removes_partial_and_stale_evidence(self):
         self.record("private-data.json", {"secret": "PRIVATE_SENTINEL"})
         artifact = self.run / "artifact"
         prepared = self.base / "prepared"
         prepared.mkdir()
         (prepared / "suite-build.log").write_text("fixture preparation")
-        for target, method in ((ci.tarfile.TarFile, "add"), (ci.shutil, "copyfile")):
+        for method in ("copy2", "copyfile"):
             with self.subTest(failure=method), mock.patch.object(ci, "WORK", prepared), \
-                 mock.patch.object(target, method, side_effect=OSError("archive write failed")):
-                (artifact / "evidence.tar.gz").write_bytes(b'stale archive')
+                 mock.patch.object(ci.shutil, method, side_effect=OSError("evidence copy failed")):
+                (artifact / "stale.html").write_bytes(b'stale report')
+                partial = self.run / "artifact.partial"
+                partial.mkdir()
+                (partial / "interrupted.html").write_bytes(b'interrupted report')
                 self.assertEqual(ci.package(self.run), 2)
-                self.assertFalse((artifact / "evidence.tar.gz").exists())
-                self.assertFalse((artifact / "evidence.tar.gz.partial").exists())
+                self.assertEqual({p.name for p in artifact.iterdir()},
+                                 {"index.html", "summary.json", "sha256.json", "package-error.log"})
+                self.assertFalse(partial.exists())
                 summary = json.loads((artifact / "summary.json").read_text())
-                self.assertIsNone(summary["evidence_archive"])
+                self.assertIsNone(summary["evidence_directory"])
+                self.assertIsNone(summary["full_report"])
                 self.assertEqual(summary["packaging_exit_code"], 2)
-                self.assertNotIn('href="evidence.tar.gz"', (artifact / "index.html").read_text())
-                self.assertIn('href="archive-error.log"', (artifact / "index.html").read_text())
-                self.assertIn("archive write failed", (artifact / "archive-error.log").read_text())
+                self.assertNotIn('href="private/"', (artifact / "index.html").read_text())
+                self.assertIn('href="package-error.log"', (artifact / "index.html").read_text())
+                self.assertIn("evidence copy failed", (artifact / "package-error.log").read_text())
+        # A successful retry clears earlier packaging diagnostics as well.
+        self.assertEqual(ci.package(self.run), 0)
+        self.assertFalse((artifact / "package-error.log").exists())
+        self.assertFalse((artifact / "private/package-error.log").exists())
 
-    def test_real_archive_preserves_linked_report_original_bytes_hashes_and_symlinks(self):
+    def test_one_zip_extraction_opens_linked_report_with_original_bytes_and_hashes(self):
         self.record("evidence/execution.json", {"runner_exit_code": 1, "state": "RUNNER_FINISHED", "all_passed": False})
         self.record("evidence/summary.json", {"modules": [{"name": "oidcc-prompt-login", "outcome": "REVIEW",
                                                           "status": "FINISHED"}]})
@@ -191,43 +204,61 @@ class CITests(unittest.TestCase):
         (evidence / "trace.json").write_bytes(b'PRIVATE_SENTINEL')
         (evidence / "signed-export.zip").write_bytes(b'original signed export fixture')
         (evidence / ".hidden-evidence").write_bytes(b'hidden original')
+        (evidence / ".hidden-directory").mkdir()
+        (evidence / ".hidden-directory/data").write_bytes(b'hidden directory original')
         outside = self.base / "outside-archive.txt"
         outside.write_bytes(b'NEVER_FOLLOW_SYMLINK')
         (evidence / "profile-link").symlink_to(outside)
+        (evidence / "profile-directory").symlink_to(self.base, target_is_directory=True)
+        (evidence / "broken-link").symlink_to("missing-target")
+        os.mkfifo(evidence / "profile-pipe")
         self.record("evidence/evidence-sha256.json", {name: ci.digest(evidence / name)
-                    for name in ("index.html", "trace.json", "signed-export.zip", ".hidden-evidence")})
+                    for name in ("index.html", "trace.json", "signed-export.zip", ".hidden-evidence", ".hidden-directory/data")})
         result = self.cli("package")
         self.assertEqual(result.returncode, 0, result.stderr)
         artifact = self.run / "artifact"
         self.assertEqual({p.name for p in artifact.iterdir()},
-                         {"index.html", "summary.json", "sha256.json", "evidence.tar.gz"})
+                         {"index.html", "summary.json", "sha256.json", "private", "filesystem-entries.json"})
         summary = json.loads((artifact / "summary.json").read_text())
         self.assertEqual(summary["runner_exit_code"], 1)
         self.assertFalse(summary["all_passed"])
         self.assertEqual(summary["counts"], {"REVIEW": 1})
-        self.assertEqual(summary["evidence_archive"], "evidence.tar.gz")
+        self.assertEqual(summary["evidence_directory"], "private/")
+        self.assertEqual(summary["full_report"], "private/evidence/index.html")
         hashes = json.loads((artifact / "sha256.json").read_text())
+        self.assertEqual(set(hashes), {p.relative_to(artifact).as_posix()
+                         for p in artifact.rglob("*") if p.is_file() and p != artifact / "sha256.json"})
         for name, expected in hashes.items():
             self.assertEqual(ci.digest(artifact / name), expected)
-        with tarfile.open(artifact / "evidence.tar.gz") as archive:
-            self.assertEqual(archive.extractfile("private/evidence/index.html").read(), (evidence / "index.html").read_bytes())
-            self.assertEqual(archive.extractfile("private/evidence/trace.json").read(), b'PRIVATE_SENTINEL')
-            self.assertEqual(archive.extractfile("private/evidence/signed-export.zip").read(), b'original signed export fixture')
-            self.assertEqual(archive.extractfile("private/evidence/.hidden-evidence").read(), b'hidden original')
-            self.assertEqual(archive.extractfile("private/evidence/evidence-sha256.json").read(),
-                             (evidence / "evidence-sha256.json").read_bytes())
-            link = archive.getmember("private/evidence/profile-link")
-            self.assertTrue(link.issym())
-            self.assertEqual(link.linkname, str(outside))
-            self.assertFalse(any(m.name.endswith("outside-archive.txt") for m in archive.getmembers()))
+        entries = {entry["path"]: entry for entry in json.loads((artifact / "filesystem-entries.json").read_text())}
+        self.assertEqual(set(entries), {"private/evidence/" + name for name in
+                         ("profile-link", "profile-directory", "broken-link", "profile-pipe")})
+        self.assertEqual(entries["private/evidence/profile-link"]["target"], str(outside))
+        self.assertEqual(entries["private/evidence/profile-directory"]["target"], str(self.base))
+        self.assertEqual(entries["private/evidence/broken-link"]["target"], "missing-target")
+        self.assertTrue(entries["private/evidence/profile-pipe"]["mode"].startswith("p"))
+        # Model the upload action's single ZIP, including hidden files. There
+        # must be no live symlinks for its globber/archiver to follow.
+        download = self.base / "download.zip"
+        with zipfile.ZipFile(download, "w", zipfile.ZIP_DEFLATED) as archive:
+            for file in artifact.rglob("*"):
+                self.assertFalse(file.is_symlink())
+                if file.is_file():
+                    self.assertNotIn(b'NEVER_FOLLOW_SYMLINK', file.read_bytes())
+                    archive.write(file, file.relative_to(artifact))
         extracted = self.base / "extracted"
-        extracted.mkdir()
-        subprocess.run(["tar", "-xzf", artifact / "evidence.tar.gz", "-C", extracted,
-                        *["private/evidence/" + name for name in
-                          ("index.html", "trace.json", "signed-export.zip", ".hidden-evidence", "evidence-sha256.json")]],
-                       capture_output=True, check=True, timeout=10)
+        with zipfile.ZipFile(download) as archive:
+            archive.extractall(extracted)
+        page = (extracted / "index.html").read_text()
+        self.assertIn('href="private/evidence/index.html"', page)
+        self.assertNotIn("tar -xzf", page)
+        self.assertFalse((extracted / "evidence.tar.gz").exists())
+        for name, expected in hashes.items():
+            self.assertEqual(ci.digest(extracted / name), expected)
         report = extracted / "private/evidence"
         self.assertIn('href="trace.json"', (report / "index.html").read_text())
+        self.assertEqual((report / "signed-export.zip").read_bytes(), b'original signed export fixture')
+        self.assertEqual((report / "evidence-sha256.json").read_bytes(), (evidence / "evidence-sha256.json").read_bytes())
         for name, expected in json.loads((report / "evidence-sha256.json").read_text()).items():
             self.assertEqual(ci.digest(report / name), expected)
 

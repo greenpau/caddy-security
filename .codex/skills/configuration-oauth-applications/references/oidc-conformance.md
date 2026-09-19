@@ -115,7 +115,8 @@ instructions, plan lists, runner exit behavior, and evidence schema again.
 For a manual GitHub Actions run with a downloadable report, follow
 [manual conformance Actions](oidc-conformance-actions.md). It invokes the same
 Make targets and uploads an HTML summary plus the complete disposable test
-evidence in `evidence.tar.gz`. It is separate from regular CI and needs no
+evidence directly into one artifact ZIP. Unzip once and open `index.html` for
+the summary and full-report link. It is separate from regular CI and needs no
 encryption key, recipient input or repository variable.
 
 Run from this repository with Go matching `go.mod`, Git, OpenSSL, and Python

@@ -31,7 +31,7 @@ jobs:
         run: |
           artifact_timestamp="$(date -u +'%Y%m%d-%H%M%S')"
           artifact_commit="$(git rev-parse --short=12 HEAD)"
-          printf 'name=cadd-security-oidc-conformance-%s-%s\n' "$artifact_timestamp" "$artifact_commit" >> "$GITHUB_OUTPUT"
+          printf 'name=caddy-security-oidc-conformance-%s-%s\n' "$artifact_timestamp" "$artifact_commit" >> "$GITHUB_OUTPUT"
       - name: Initialize run evidence
         id: initialize
         run: python3 assets/scripts/oidc_conformance_ci.py initialize
@@ -70,7 +70,7 @@ jobs:
         run: |
           python3 assets/scripts/oidc_conformance_ci.py stage --timeout 2700 test -- \
             make oidc-conformance-test CONFORMANCE_RESULTS=tmp/oidc-conformance-ci/private/evidence
-      - name: Generate HTML summary and archive complete test evidence
+      - name: Generate HTML summary and package complete test evidence
         if: ${{ always() }}
         timeout-minutes: 10
         env:
@@ -88,6 +88,7 @@ jobs:
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: tmp/oidc-conformance-ci/artifact/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
       - name: Unload the owned Chrome AppArmor profile

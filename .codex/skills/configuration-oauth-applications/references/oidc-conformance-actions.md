@@ -10,20 +10,22 @@ The Basic OP, Config OP and Form Post OP selection is unchanged.
 
 ## Artifact contents
 
-The workflow publishes a readable HTML summary and a normal **`evidence.tar.gz`**
-archive containing the complete report. It requires no recipient input, repository
-variable, encryption key or age installation. Credentials, client registrations,
+The workflow uploads a readable HTML summary and the complete report directory
+directly into one GitHub artifact ZIP. Unzip the download once, open `index.html`,
+and follow **Open complete report and screenshots**. There is no nested evidence
+archive to extract. It requires no recipient input, repository variable,
+encryption key or age installation. Credentials, client registrations,
 TLS and signing keys are generated for the disposable loopback test deployment;
 keep this workflow limited to synthetic test data.
 
-The archive preserves the linked HTML report, Chrome screenshots and network
+The download preserves the linked HTML report, Chrome screenshots and network
 timelines, signed exports, raw logs/configuration, source snapshot and every
 recorded outcome. GitHub users with repository read access can
 [download its artifacts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts).
 The summary remains concise and only includes selected status fields; complete
-original evidence lives in the archive. Signatures and checksums are retained.
+original evidence lives in `private/`. Signatures and checksums are retained.
 
-The archive keeps the existing `private/` directory name to preserve report
+The artifact keeps the existing `private/` directory name to preserve report
 paths and evidence bytes. That name and its restrictive local file permissions
 do not imply the uploaded test bundle is confidential. Local Make runs keep
 their existing report layout and permissions.
@@ -31,6 +33,8 @@ their existing report layout and permissions.
 Older workflow revisions produced `evidence.tar.gz.age`; those existing artifacts
 still need their original private key. The current workflow no longer reads
 `OIDC_CONFORMANCE_AGE_RECIPIENT`, so a previously configured variable is unused.
+Intermediate revisions produced `evidence.tar.gz`; new downloads include the
+report files directly.
 
 ## Run and download
 
@@ -46,30 +50,25 @@ The CLI equivalent requires no inputs:
 gh workflow run oidc-conformance.yml --ref main
 ```
 
-Download `cadd-security-oidc-conformance-<YYYYMMDD>-<HHMMSS>-<short-commit>.zip`
-from the run's **Artifacts** section and open `index.html`. The prefix is
-`cadd-security`. The timestamp is UTC, recorded immediately after
+Download `caddy-security-oidc-conformance-<YYYYMMDD>-<HHMMSS>-<short-commit>.zip`
+from the run's **Artifacts** section, unzip it once, and open `index.html`. The prefix is
+`caddy-security`. The timestamp is UTC, recorded immediately after
 checkout, and the commit is Git's 12-character short hash of the checked-out HEAD
 (extended only if needed for uniqueness). The upload action receives the name
 without `.zip`; GitHub supplies that extension when downloading the artifact.
 The artifact is retained for 14 days. It contains:
 
-- `index.html`: readable summary, outcome explanations and archive instructions.
+- `index.html`: readable summary, outcome explanations and a direct full-report link.
 - `summary.json`: allowlisted outcomes, stage statuses, runner exit and revisions.
-- `sha256.json`: artifact checksums.
-- `evidence.tar.gz`: complete original test evidence, when packaging succeeded.
-- `archive-error.log`: packaging diagnostics if archive creation failed.
+- `sha256.json`: checksums for every uploaded file except this manifest itself.
+- `private/evidence/index.html`: full report, with linked screenshots and raw evidence.
+- `private/`: original test files and preparation/runner diagnostics.
+- `filesystem-entries.json`: metadata for symlinks and special filesystem entries.
+- `package-error.log`: packaging diagnostics if copying the evidence failed.
 
-To open the full report, extract the archive into a new directory:
-
-```sh
-umask 077
-mkdir extracted
-tar -xzf evidence.tar.gz -C extracted
-# Open extracted/private/evidence/index.html in Chrome.
-```
-
-Preparation/tool logs live at `extracted/private/*.log`. The actual conformance
+The summary links to the full report only when it exists; blocked runs still
+provide their original files and diagnostics. Preparation/tool logs live at
+`private/*.log`. The actual conformance
 bundle, including its unchanged SHA-256 inventory, is under `private/evidence/`.
 This artifact is a deployment rehearsal; it does not submit certification materials or confer
 OpenID certification. Do not add publishing/submission actions without a
@@ -112,7 +111,7 @@ hosts-file changes, Docker network or hosted-suite account are needed: Caddy,
 Chrome, the suite and MongoDB share loopback networking on the runner.
 
 `assets/scripts/oidc_conformance_ci.py` captures preparation/test output in
-locally restricted logs that are included in the test archive. It preserves each
+locally restricted logs that are included in the download. It preserves each
 command's original exit, propagates nonzero
 results to Actions, and records timeout/interruption separately. The original
 official runner exit remains in `execution.json` and both HTML reports; GNU
@@ -129,10 +128,19 @@ lost runner can prevent final cleanup/upload; no complete evidence claim is
 made for such a run. The action does not automatically retry or overwrite runs.
 
 The upload path is exclusively `tmp/oidc-conformance-ci/artifact/`. Never widen
-it to `tmp/`, `private/` or the suite workspace. The archive includes only the
+it to `tmp/`, `private/` or the suite workspace. The artifact includes only the
 owned run evidence and copied preparation diagnostics, not tool/cache trees.
-Packaging writes a temporary archive and exposes it only after completion. An
-archive failure fails packaging, removes partial or stale archives, and leaves
+Set `include-hidden-files: true` on the pinned upload action to retain hidden
+evidence files and directories. Its default excludes them; see the
+[upload action inputs](https://github.com/actions/upload-artifact/tree/v4.6.2#inputs).
+Copy regular files byte-for-byte. Record symlink paths/targets and special-file
+types in `filesystem-entries.json`, without copying live links, following their
+targets or opening sockets/FIFOs. This keeps the upload action from traversing
+outside the report. The ZIP is for report viewing; it does not preserve executable
+modes or recreate a runnable browser profile.
+Packaging builds `artifact.partial/` outside the upload path and renames it only
+after copying and writing the summary/checksums. A copy failure fails packaging,
+removes partial or stale output, and leaves
 a readable summary plus packaging diagnostics; incomplete evidence is never
 presented as complete. Conformance cleanup removes `tmp/oidc-conformance-ci*` output through
 its existing supplemental-output rule and retains downloaded tools.
@@ -149,12 +157,13 @@ and protection against overwriting existing evidence.
 `test_oidc_conformance_ci.py` stays in the isolated conformance test directory.
 It checks preservation of every outcome/repeated instance, public-field
 selection, private log handling, path boundaries, failed stages, real timeout
-cleanup, preparation SIGTERM cleanup and blocked artifacts. Its archive E2E
-runs without encryption tools or a recipient: it packages and extracts a real
-archive, verifies unchanged report links, original bytes and hashes, includes
-hidden evidence, and checks that symlinks are archived without reading their
-targets. Failure cases preserve malformed evidence and reject partial/stale
-archives. It never skips official suite modules for missing prerequisites.
+cleanup, preparation SIGTERM cleanup and blocked artifacts. Its download E2E
+runs the real packaging CLI, creates a single ZIP of the upload directory, and
+extracts it once. It checks the summary-to-report link, original bytes and hashes,
+hidden files/directories, and symlink/FIFO metadata without following targets.
+Failure cases preserve malformed evidence, reject partial/stale files and clear
+packaging diagnostics on a successful retry. It never skips official suite
+modules for missing prerequisites.
 
 The browser tests include real pinned Chrome/ChromeDriver startup with a long
 report path and inherited `TMPDIR`, both untrusted and trusted HTTPS controls,
@@ -169,8 +178,10 @@ originals and window restoration. Unit cases cover exact-limit acceptance,
 exhausted retries without an upload, changed-page/URL rejection, and binding the
 selected PNG to the existing official image slot without another form submission.
 
-Validate workflow syntax with `actionlint`, run the isolated conformance tests,
-and execute an actual Caddy conformance rehearsal through the CI stage wrapper.
-Extract the archive and confirm it matches the original report and manifests.
+Validate workflow syntax with `actionlint` and run the isolated conformance tests.
+For packaging-only changes, package a copy of an existing actual Caddy rehearsal;
+extract a single ZIP and verify report links, original bytes and manifests.
+Execution changes also require a new actual Caddy conformance rehearsal through
+the CI stage wrapper and `make oidc-conformance-test`.
 Local validation on macOS does not prove the hosted Ubuntu job has run; report
 that limitation until the committed workflow is dispatched on GitHub.

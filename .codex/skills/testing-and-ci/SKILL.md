@@ -239,8 +239,9 @@ for prerequisites, isolated artifacts and all remaining non-pass modules.
 The separate `OIDC conformance` GitHub workflow is manual-only and invokes these
 same Make targets. Follow [conformance Actions](../configuration-oauth-applications/references/oidc-conformance-actions.md)
 for the report artifact and failure-preserving upload. The workflow publishes
-the complete disposable test evidence in a plain archive, retaining signed
-exports and hashes; it needs no encryption key or recipient. Keep its inputs
+the complete disposable test evidence directly in its artifact ZIP, retaining
+signed exports and hashes. Unzip once and open `index.html`; no nested archive,
+encryption key or recipient is needed. Keep its inputs
 synthetic and conformance separate from regular CI.
 OIDC conformance units live in `assets/scripts/oidc_certification_conformance_tests/`
 and use `test_oidc_conformance_*.py` filenames. Keep them out of the regular

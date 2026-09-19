@@ -10,9 +10,9 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
-import tarfile
 import time
 import traceback
 
@@ -44,7 +44,7 @@ def initialize(path):
     (path / "private").mkdir(mode=0o700)
     (path / "artifact").mkdir(mode=0o700)
     # Preserve the report's existing internal paths and restrictive local modes.
-    # The CI archive intentionally publishes the disposable test evidence.
+    # The CI artifact intentionally publishes the disposable test evidence.
     write_json(path / "private/ci.json", {"suite_revision": REVISION})
 
 
@@ -163,22 +163,30 @@ def public_summary(path):
                                          or execution.get("interruption"))}
 
 
-def archive_evidence(path):
-    partial = path / "artifact/evidence.tar.gz.partial"
-    destination = path / "artifact/evidence.tar.gz"
-    # A failed repack must not upload a stale archive from an earlier attempt.
-    destination.unlink(missing_ok=True)
-    try:
-        # Archive links as links, never read their targets (Chrome can leave
-        # profile singleton symlinks). Keep hidden files and original bytes too.
-        with tarfile.open(partial, "x:gz", dereference=False) as bundle:
-            bundle.add(path / "private", arcname="private")
-        partial.replace(destination)
-    finally:
-        partial.unlink(missing_ok=True)
+def copy_evidence(source, destination, relative, entries):
+    """Copy regular evidence; record links/devices without letting upload follow them."""
+    mode = source.lstat().st_mode
+    if stat.S_ISDIR(mode):
+        destination.mkdir(mode=0o700)
+        for child in sorted(source.iterdir()):
+            copy_evidence(child, destination / child.name, relative / child.name, entries)
+    elif stat.S_ISREG(mode):
+        shutil.copy2(source, destination, follow_symlinks=False)
+    else:
+        entry = {"path": relative.as_posix(), "mode": stat.filemode(mode)}
+        if stat.S_ISLNK(mode):
+            entry["target"] = os.readlink(source)
+        entries.append(entry)
 
 
-def render_public(summary, archived, notice):
+def remove_artifact(path):
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def render_public(summary, notice):
     esc = lambda value: html.escape(str(value), quote=True)
     if summary["all_passed"]:
         headline = "All recorded modules passed"
@@ -193,13 +201,14 @@ def render_public(summary, archived, notice):
         explanation = CONTEXT.get((module["name"], module["outcome"]), OUTCOMES[module["outcome"]])
         rows.append("<tr>" + "".join("<td>" + esc(v) + "</td>" for v in
                     (index, module["name"], module["outcome"], module["status"], explanation)) + "</tr>")
-    archive_link = ('<p><a href="evidence.tar.gz" download>Download complete test evidence</a></p>'
-                    if archived else '<p>No complete evidence archive was produced. '
-                    '<a href="archive-error.log" download>Packaging diagnostics</a></p>')
-    instructions = """umask 077
-mkdir extracted
-tar -xzf evidence.tar.gz -C extracted
-# Open extracted/private/evidence/index.html locally."""
+    if summary.get("evidence_directory"):
+        report_link = ('<p><a href="private/evidence/index.html">Open complete report and screenshots</a></p>'
+                       if summary.get("full_report") else '<p>The full HTML report was not generated.</p>')
+        report_link += ('<p><a href="private/">Evidence files and run diagnostics</a> · '
+                        '<a href="filesystem-entries.json" download>Filesystem metadata</a></p>')
+    else:
+        report_link = ('<p>The evidence files could not be packaged. '
+                       '<a href="package-error.log" download>Packaging diagnostics</a></p>')
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width, initial-scale=1">'
             '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
@@ -214,12 +223,12 @@ tar -xzf evidence.tar.gz -C extracted
             f'<div class="cards">{cards}</div><p>'
             '<a href="summary.json" download>Recorded summary</a> · '
             '<a href="sha256.json" download>Artifact hashes</a></p></header>'
-            '<section><h2>Full report and visual evidence</h2><p>The archive preserves '
+            '<section><h2>Full report and visual evidence</h2>' + report_link + '<p>The download includes '
             'the original linked HTML report, Chrome screenshots and developer-tools timelines, '
             'signed exports, test logs/configuration, exact sources and all module outcomes. '
-            'Extract it and open private/evidence/index.html. No key or decryption is required. '
-            'Credentials and keys in this report belong to the disposable test deployment.</p>' + archive_link +
-            f'<pre>{esc(instructions)}</pre><p>If preparation failed, inspect extracted/private/*.log. '
+            'Unzip the downloaded artifact once and open index.html. '
+            'Credentials and keys in this report belong to the disposable test deployment.</p>'
+            '<p>If preparation failed, inspect the logs in private/. '
             'No official outcome is claimed for a blocked or incomplete run.</p></section>'
             '<section><h2>Execution and revisions</h2><pre>' + esc(json.dumps(
                 {k: v for k, v in summary.items() if k not in ("modules", "counts")}, indent=2)) +
@@ -232,44 +241,58 @@ tar -xzf evidence.tar.gz -C extracted
 
 
 def package(path):
+    artifact = path / "artifact"
+    partial = path / "artifact.partial"
+    # Build outside the upload path, including after an interrupted earlier pack.
+    # A failed repack must not upload stale or incomplete evidence.
+    remove_artifact(artifact)
+    remove_artifact(partial)
+    partial.mkdir(mode=0o700)
     code = 0
-    notice = "Read each non-pass result and its evidence. The complete disposable test report is downloadable without a key."
+    notice = "Read each non-pass result and its evidence. Open the complete report directly from this download."
     try:
         summary = public_summary(path)
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
-        # A killed writer can leave partial JSON. Still archive the exact files
+        # A killed writer can leave partial JSON. Still copy the exact files
         # and provide an honest report instead of losing the upload altogether.
         summary = {"certification": False, "all_passed": False, "runner_exit_code": None,
                    "counts": {}, "modules": [], "state": "EVIDENCE_ERROR"}
-        notice = "Recorded JSON is incomplete or unreadable. Inspect the original evidence archive; no pass is inferred."
+        notice = "Recorded JSON is incomplete or unreadable. Inspect the original evidence files; no pass is inferred."
         code = 2
     summary["workflow_steps"] = {
         key: safe_text(os.environ.get("OIDC_CI_" + key.upper()), r"success|failure|cancelled|skipped")
         for key in ("initialize", "go", "prerequisites", "prepare", "sandbox", "test")}
-    archived = False
+    copied = False
     try:
+        (path / "private/package-error.log").unlink(missing_ok=True)
         # Preserve preparation diagnostics without uploading tool/cache trees.
         for name in ("suite-build.log", "prerequisites.json"):
             source = WORK / name
             if source.is_file():
                 shutil.copyfile(source, path / "private" / name)
-        archive_evidence(path)
-        archived = True
-    except (OSError, ValueError, tarfile.TarError):
-        for name in ("evidence.tar.gz", "evidence.tar.gz.partial"):
-            (path / "artifact" / name).unlink(missing_ok=True)
+        if (path / "private").is_symlink():
+            raise ValueError("Evidence root must not be a symlink")
+        entries = []
+        copy_evidence(path / "private", partial / "private", Path("private"), entries)
+        write_json(partial / "filesystem-entries.json", entries)
+        copied = True
+    except (OSError, ValueError, shutil.Error):
         diagnostic = traceback.format_exc()
-        private_write(path / "private/archive-error.log", diagnostic)
-        private_write(path / "artifact/archive-error.log", diagnostic)
-        notice = "Evidence archive unavailable. Check the workflow step outcomes and packaging diagnostics; no complete archive is claimed."
+        remove_artifact(partial)
+        partial.mkdir(mode=0o700)
+        private_write(path / "private/package-error.log", diagnostic)
+        private_write(partial / "package-error.log", diagnostic)
+        notice = "Evidence packaging failed. Check the workflow step outcomes and packaging diagnostics; no complete report is claimed."
         code = 2
-    summary["evidence_archive"] = "evidence.tar.gz" if archived else None
+    summary["evidence_directory"] = "private/" if copied else None
+    summary["full_report"] = "private/evidence/index.html" if (partial / "private/evidence/index.html").is_file() else None
     summary["packaging_exit_code"] = code
-    write_json(path / "artifact/summary.json", summary)
-    private_write(path / "artifact/index.html", render_public(summary, archived, notice))
-    write_json(path / "artifact/sha256.json", {p.name: digest(p) for p in (path / "artifact").iterdir()
-                                             if p.is_file() and p.name != "sha256.json"})
-    message = ("OIDC report artifact: open index.html after downloading.\n\n"
+    write_json(partial / "summary.json", summary)
+    private_write(partial / "index.html", render_public(summary, notice))
+    write_json(partial / "sha256.json", {p.relative_to(partial).as_posix(): digest(p)
+                                        for p in sorted(partial.rglob("*")) if p.is_file()})
+    partial.replace(artifact)
+    message = ("OIDC report artifact: unzip the download once and open index.html.\n\n"
                f"Original runner exit: {summary['runner_exit_code']}; outcomes: "
                + json.dumps(summary["counts"], sort_keys=True) + ".\n\n" + notice + "\n")
     print(message)
