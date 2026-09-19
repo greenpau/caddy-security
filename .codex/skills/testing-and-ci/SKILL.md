@@ -150,7 +150,7 @@ and report bundles while checking this condition.
 The separate `.github/workflows/codeql.yml` analyzes Go, JavaScript/TypeScript,
 Python and Actions with the complete default suites. Local `make scan-codeql`
 uses the same checked-in configuration; `CODEQL_LANGUAGE` defaults to `go`.
-`.github/codeql/suppressions.json` records the four owner-approved findings.
+`.github/codeql/suppressions.json` records the five owner-approved findings.
 The shared SARIF filter matches exact rules, paths and CodeQL fingerprints,
 preserving raw evidence and an audit. No sibling logging exception applies
 automatically. Follow the [CodeQL workflow](../scripts-and-automation/references/codeql.md)

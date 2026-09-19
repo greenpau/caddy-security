@@ -98,12 +98,23 @@ def exception_fixtures(language):
         source = (REPO / "assets/scripts/oidc_conformance.py").read_text()
         neighbor = source.replace("stream.write(data)",
                                   "stream.write(data) # alert: py/clear-text-storage-sensitive-data")
+        browser_path = "assets/scripts/oidc_certification_conformance_tests/test_oidc_conformance_browser.py"
+        browser = (REPO / browser_path).read_text()
+        browser_neighbor = browser.replace(
+            "server.socket = context.wrap_socket(server.socket, server_side=True)",
+            "server.socket = context.wrap_socket(server.socket, server_side=True) # alert: py/insecure-protocol")
         return {"assets/scripts/oidc_conformance.py": source + '''
 
 def store_production_password(password):
     with open("production.txt", "w") as output:
         output.write(password) # alert: py/clear-text-storage-sensitive-data
-''', "assets/scripts/unapproved_conformance.py": neighbor}
+''', "assets/scripts/unapproved_conformance.py": neighbor,
+                browser_path: browser + '''
+
+def unapproved_tls_server(sock):
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    return context.wrap_socket(sock, server_side=True) # alert: py/insecure-protocol
+''', "assets/scripts/oidc_certification_conformance_tests/unapproved_browser.py": browser_neighbor}
     if language == "javascript-typescript":
         source = (REPO / "testdata/browser/token_refresh_browser_e2e.cjs").read_text()
         neighbor = source.replace('if (message.method === "Page.frameNavigated") {',
@@ -207,7 +218,7 @@ def main():
     env = {**os.environ, "PYTHON": sys.executable, "CODEQL": codeql, "CODEQL_LANGUAGE": language,
            "CODEQL_OUTPUT_DIR": str(output)}
     run(["bash", "assets/scripts/run_codeql_scan.sh"], root, env)
-    approved = {"go": {"CQ-001"}, "python": {"CQ-002"}}.get(language, set())
+    approved = {"go": {"CQ-001"}, "python": {"CQ-002", "CQ-006"}}.get(language, set())
     configured = verify_filter(output / "raw/results.sarif", output / "results.sarif", approved)
     if not expected <= configured[1]:
         raise AssertionError(f"Missing alerts: {expected - configured[1]}; received: {configured[1]}")

@@ -28,6 +28,13 @@
       "path": "testdata/browser/token_refresh_browser_e2e.cjs",
       "primary_location_line_hash": "969ff0a2a12a99a6:1",
       "reason": "Owner accepted delivery of the synthetic stdin password to the fixture-owned local Chrome debugging endpoint because it is a testing flow."
+    },
+    {
+      "review_id": "CQ-006",
+      "rule_id": "py/insecure-protocol",
+      "path": "assets/scripts/oidc_certification_conformance_tests/test_oidc_conformance_browser.py",
+      "primary_location_line_hash": "fea2690c04a959b1:1",
+      "reason": "Owner accepted GitHub alert #4 for the SSLContext-wrapped loopback HTTPS server in the OIDC browser regression fixture because it is testing code. This approves only the reviewed fixture finding, not other TLS contexts or production servers."
     }
   ]
 }

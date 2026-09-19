@@ -20,7 +20,7 @@ applies automatically.
 
 ## Approved findings
 
-The owner approved these exceptions in the initial findings review:
+The owner approved these individual findings:
 
 | Review ID | Exact rule and file | Accepted rationale |
 | --- | --- | --- |
@@ -28,6 +28,7 @@ The owner approved these exceptions in the initial findings review:
 | CQ-002 | `py/clear-text-storage-sensitive-data`, `assets/scripts/oidc_conformance.py` | The private credentials are generated for testing. |
 | CQ-004 | `js/user-controlled-bypass`, `testdata/browser/token_refresh_browser_e2e.cjs` | The Chrome event check belongs to the test harness. |
 | CQ-005 | `js/file-access-to-http`, the same CommonJS file | Synthetic password delivery belongs to the local browser test. |
+| CQ-006 | `py/insecure-protocol`, `assets/scripts/oidc_certification_conformance_tests/test_oidc_conformance_browser.py` | The loopback HTTPS server belongs to the OIDC browser regression test (GitHub alert [#4](https://github.com/greenpau/caddy-security/security/code-scanning/4)). |
 
 Each entry also requires the exact `primaryLocationLineHash` from the reviewed
 SARIF. Line-number movement does not invalidate a matching fingerprint. A
@@ -40,7 +41,8 @@ is absent from the selected suite or there is no corresponding finding.
 These rationales document the owner's accepted assumptions; matching a
 fingerprint does not itself prove key entropy, private storage or local-only
 execution. Do not generalize the approvals to all hashes, testing code,
-WebSocket messages or credential storage. New findings need separate review.
+WebSocket messages, credential storage or TLS contexts. New findings need
+separate review.
 
 CQ-003 was remediated by pinning `contributor-assistant/github-action` to
 `a895a435fcce79ecf28fbce61a4ef0f0dabc9853`, verified as the upstream `v2.3.1`
@@ -153,7 +155,10 @@ file and another password hash in the approved file. Python and JavaScript
 fixtures copy the actual approved harnesses as static inputs and retain
 equivalent findings in neighboring files. Python also retains a different
 password write in the approved file. These harnesses, Express/Flask fixtures
-and synthetic Actions workflows are never executed or deployed.
+and synthetic Actions workflows are never executed or deployed. The Python
+fixture also copies the actual approved OIDC browser test and retains the same
+TLS finding in a neighboring file plus a different TLS sink in the approved
+file. This verifies CQ-006 without excluding the test directory or TLS rule.
 
 The fixture first compares raw default rule IDs and alert locations against
 the complete upstream suite on the same database. It then verifies only the

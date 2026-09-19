@@ -37,14 +37,14 @@ class CodeQLFilterTests(unittest.TestCase):
     def setUp(self):
         self.approvals = filtering.load_policy(filtering.POLICY)
 
-    def test_only_four_approved_findings_are_removed_and_audited(self):
-        self.assertEqual({p["review_id"] for p in self.approvals}, {"CQ-001", "CQ-002", "CQ-004", "CQ-005"})
+    def test_only_approved_findings_are_removed_and_audited(self):
+        self.assertEqual({p["review_id"] for p in self.approvals}, {"CQ-001", "CQ-002", "CQ-004", "CQ-005", "CQ-006"})
         raw = sarif([finding(p) for p in self.approvals])
         original = copy.deepcopy(raw)
         reviewed, audit = filtering.filter_results(raw, self.approvals)
         self.assertEqual(raw, original)
         self.assertEqual(reviewed["runs"][0]["results"], [])
-        self.assertEqual(audit["suppressed_results"], 4)
+        self.assertEqual(audit["suppressed_results"], 5)
         self.assertEqual(audit["remaining_results"], 0)
         self.assertEqual(audit["unmatched_approval_ids"], [])
         for key in ("tool", "invocations", "properties", "automationDetails"):
