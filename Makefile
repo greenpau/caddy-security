@@ -124,6 +124,13 @@ dep:
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 
+.PHONY: scan-codeql test-codeql
+scan-codeql:
+	@PYTHON="$(PYTHON)" bash assets/scripts/run_codeql_scan.sh
+
+test-codeql:
+	@$(PYTHON) .github/codeql/test_scan.py
+
 # Conformance has its own opt-in entry point and private artifact bundle.
 # Override CONFORMANCE_RESULTS with a new path below this checkout's tmp/.
 # The command prints its HTML entry point: CONFORMANCE_RESULTS/index.html.

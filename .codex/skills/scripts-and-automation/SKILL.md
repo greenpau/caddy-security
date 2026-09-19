@@ -1,6 +1,6 @@
 ---
 name: scripts-and-automation
-description: caddy-security repository automation, Makefile targets, build/test/report workflows, caddy-authenticator profile login, and security local CLI administration. Use for standalone portal authentication, local-user, password, and API-key commands; repository scripts; local go-authcrunch replacement workflows; generated artifacts; or routing release tasks to release-and-versioning.
+description: caddy-security repository automation, Makefile targets, build/test/report workflows, CodeQL scans, caddy-authenticator profile login, and security local CLI administration. Use for standalone portal authentication, local-user, password, and API-key commands; repository scripts; local go-authcrunch replacement workflows; generated artifacts; or routing release tasks to release-and-versioning.
 ---
 
 # Scripts and Automation
@@ -64,6 +64,12 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   it does not rerun tests.
 - Use `make test-automation` for verbose Python fixture tests of artifact
   identity, build metadata, and the real Make/tested lifecycle.
+- Use `make scan-codeql` for a local Go scan, or set `CODEQL_LANGUAGE` to
+  `javascript-typescript`, `python` or `actions` for the other CI languages.
+  Use `make test-codeql` for real CLI regression fixtures in the selected
+  language. Read the
+  [CodeQL workflow](references/codeql.md) for CLI prerequisites, evidence,
+  approved suppression policy, and findings review.
 - Use `make oidc-conformance-prepare` and `make oidc-conformance-test` for the opt-in
   official Foundation plans against a fresh Caddy binary. Follow the
   [conformance workflow](../configuration-oauth-applications/references/oidc-conformance.md)
@@ -235,6 +241,10 @@ to update or commit them.
 - `.coverage/` contains the tested HTML/JSON/JUnit reports, raw test output,
   coverage profile, stderr, run metadata, and generation manifest. Start at
   `.coverage/index.html`; see `testing-and-ci` for the complete evidence layout.
+- `.coverage/codeql/` holds local scan databases, raw and reviewed SARIF/CSV,
+  suppression audits, logs, and retained regression fixtures.
+  Its evidence is separate from tested's report bundle;
+  `make clean` removes both. Local CodeQL does not upload or dismiss alerts.
 - `../xcaddy-caddy-security` is the permitted devbuild workspace. Only that
   sibling workspace may be created, refreshed, or cleaned for xcaddy builds.
 

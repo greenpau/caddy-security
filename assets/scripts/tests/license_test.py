@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 class LicenseTests(unittest.TestCase):
     def test_make_license_limits_writes_to_repository_sources(self):
+        (ROOT / "tmp").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="license-test-", dir=ROOT / "tmp") as directory:
             root = Path(directory)
             shutil.copyfile(ROOT / "Makefile", root / "Makefile")

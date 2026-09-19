@@ -1,0 +1,15 @@
+name: Caddy Security analysis
+
+# Run the complete default suite. Approved individual results are filtered by
+# filter_codeql_results.py using suppressions.json; raw evidence is retained.
+disable-default-queries: false
+
+# Generated output and downloaded tools are not repository source. For Go,
+# extraction is governed by the explicit go build command, not paths-ignore.
+paths-ignore:
+  - tmp
+  - .coverage
+  - bin
+  - dist
+  - vendor
+  - .doc

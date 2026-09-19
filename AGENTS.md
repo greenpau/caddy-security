@@ -183,6 +183,12 @@ Code changes must have unit and E2E coverage. Caddyfile directive changes also
 require new or amended adaptation cases in `testdata/caddyfile_adapt/`. Follow
 the skill's coverage requirements and validation workflow.
 
+Use the [CodeQL workflow](.codex/skills/scripts-and-automation/references/codeql.md)
+for local scans, Go/JavaScript/Python/Actions regression validation, findings
+reports and advanced code scanning. Apply only the reviewed exceptions in
+`.github/codeql/suppressions.json` and retain raw findings plus the suppression
+audit. Sibling logging exceptions do not apply automatically here.
+
 For official OP plans against the actual Caddy binary, use the
 [Caddy conformance workflow](.codex/skills/configuration-oauth-applications/references/oidc-conformance.md).
 Run it only with `make oidc-conformance-test`; its tests and artifacts are

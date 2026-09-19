@@ -1,6 +1,6 @@
 ---
 name: testing-and-ci
-description: caddy-security unit and E2E coverage requirements, Caddyfile adaptation and runtime resolution fixtures, pinned tested reports, automation tests, and reusable GitHub Actions gates. Use when writing or changing code, choosing or running tests, updating coverage, interpreting CI failures, reproducing CI locally, or validating report and artifact workflows.
+description: caddy-security unit and E2E coverage requirements, Caddyfile adaptation and runtime resolution fixtures, pinned tested reports, automation tests, CodeQL validation, and reusable GitHub Actions gates. Use when writing or changing code, choosing or running tests, updating coverage, interpreting CI failures, reproducing CI locally, or validating report and artifact workflows.
 ---
 
 # Testing and CI
@@ -137,6 +137,46 @@ manifests, or Caddyfiles. `make dep` downloads/verifies pinned dependencies and
 resolves tested; it may need network access but does not install global tools.
 
 ## Test Surfaces
+
+Automation fixtures must create their own generated parent directories before
+calling `TemporaryDirectory` or `mkdtemp`. A fresh checkout has no ignored
+`tmp/` directory; another test must not be responsible for creating it. When
+fixing fixture setup, run the affected test alone in a disposable checkout
+without `tmp/`, then run `make test-automation`. Preserve existing workspaces
+and report bundles while checking this condition.
+
+### CodeQL scanning
+
+The separate `.github/workflows/codeql.yml` analyzes Go, JavaScript/TypeScript,
+Python and Actions with the complete default suites. Local `make scan-codeql`
+uses the same checked-in configuration; `CODEQL_LANGUAGE` defaults to `go`.
+`.github/codeql/suppressions.json` records the four owner-approved findings.
+The shared SARIF filter matches exact rules, paths and CodeQL fingerprints,
+preserving raw evidence and an audit. No sibling logging exception applies
+automatically. Follow the [CodeQL workflow](../scripts-and-automation/references/codeql.md)
+for tool selection, output boundaries, report review and GitHub activation.
+
+`assets/scripts/tests/codeql_test.py` exercises the actual shell helper with a
+fake CLI to verify stage failure propagation, per-language build selection,
+source-root isolation, quoted paths, fresh evidence and rejected output escapes.
+It runs in `make test-automation`, alongside `codeql_filter_test.py`, which
+checks approval matching, negative boundaries, retained CSV results, audit
+identity, failed-analysis refusal and evidence preservation. `make test-codeql`
+runs the real CLI against isolated sources under `.coverage/codeql/`. It
+compares raw default results to the unmodified upstream suite, then verifies
+approved suppressions and retained neighboring findings in both default and
+extended suites. The actual Python and CommonJS test harnesses are copied as
+static fixture inputs; they are not executed. Go cases retain debug/ordinary
+sensitive logging, SQL injection and other password hashes. JavaScript, Python
+and Actions retain code injection, and Actions retains an unpinned-action case.
+
+Run automation tests and real fixtures for all four languages when changing
+shared scanning behavior. CLI absence is a failure, not a skipped test. The
+CodeQL matrix verifies its own language and applies the shared filter before
+uploading reviewed primary SARIF; raw results and suppression audits are
+retained as artifacts even after failure. `make ci-check` keeps its existing tool
+requirements and does not invoke CodeQL. A successful scan can contain alerts;
+do not describe a successful scanner invocation as a vulnerability-free result.
 
 ### Subprocess coverage
 

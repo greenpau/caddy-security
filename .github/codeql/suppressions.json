@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "approvals": [
+    {
+      "review_id": "CQ-001",
+      "rule_id": "go/weak-sensitive-data-hashing",
+      "path": "command_local_client.go",
+      "primary_location_line_hash": "2e96488a548fbad3:1",
+      "reason": "Owner accepted the API-key-derived cache filename because the generated secret has sufficient length. This approves this cache-identity use only, not general password hashing."
+    },
+    {
+      "review_id": "CQ-002",
+      "rule_id": "py/clear-text-storage-sensitive-data",
+      "path": "assets/scripts/oidc_conformance.py",
+      "primary_location_line_hash": "13661df38a3ad90c:1",
+      "reason": "Owner accepted private cleartext credential storage in the OIDC conformance harness because the credentials are generated for testing."
+    },
+    {
+      "review_id": "CQ-004",
+      "rule_id": "js/user-controlled-bypass",
+      "path": "testdata/browser/token_refresh_browser_e2e.cjs",
+      "primary_location_line_hash": "6631b65f453c88c0:1",
+      "reason": "Owner accepted the local Chrome protocol event check because it is part of the browser test harness."
+    },
+    {
+      "review_id": "CQ-005",
+      "rule_id": "js/file-access-to-http",
+      "path": "testdata/browser/token_refresh_browser_e2e.cjs",
+      "primary_location_line_hash": "969ff0a2a12a99a6:1",
+      "reason": "Owner accepted delivery of the synthetic stdin password to the fixture-owned local Chrome debugging endpoint because it is a testing flow."
+    }
+  ]
+}
