@@ -15,12 +15,14 @@
 package security
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -28,6 +30,61 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+func TestAuthzSourceTrust(t *testing.T) {
+	policy := &authz.PolicyConfig{Name: "source", AuthRedirectDisabled: true, ValidateBearerHeader: true, ValidateSourceAddress: true,
+		RawCryptoKeyStoreConfig: []string{"crypto key verify " + authorizationPathKey},
+		AccessListRules:         []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}},
+	}
+	app := provisionLifecycleApp(t, &authcrunch.Config{AuthorizationPolicies: []*authz.PolicyConfig{policy}})
+	gate, err := app.getGatekeeper("source")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": "source-viewer", "roles": []string{"viewer"}, "addr": "198.51.100.14",
+		"iat": time.Now().Unix(), "exp": time.Now().Add(5 * time.Minute).Unix(),
+	}).SignedString([]byte(authorizationPathKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrapper := &AuthzMiddleware{app: app, gatekeeper: gate}
+	for round := range 2 {
+		for _, tc := range []struct {
+			name, peer, clientIP string
+			trusted, allowed     bool
+		}{
+			{"trusted", "127.0.0.1:1234", "198.51.100.14", true, true},
+			{"changed trusted address", "127.0.0.1:1234", "198.51.100.15", true, false},
+			{"untrusted spoof", "127.0.0.1:1234", "198.51.100.14", false, false},
+			{"missing resolved address", "127.0.0.1:1234", "", true, false},
+			{"matching direct peer", "198.51.100.14:1234", "", false, true},
+		} {
+			t.Run(fmt.Sprintf("%d/%s", round, tc.name), func(t *testing.T) {
+				r := httptest.NewRequest("GET", "https://app.example.test/protected", nil)
+				r.RequestURI = r.URL.RequestURI()
+				r.RemoteAddr = tc.peer
+				r.Header.Set("Authorization", "Bearer "+token)
+				r.Header["X-Forwarded-For"] = []string{"198.51.100.14", "198.51.100.14, 127.0.0.1"}
+				r.Header.Set("X-Real-Ip", "198.51.100.14")
+				r = r.WithContext(context.WithValue(r.Context(), caddyhttp.VarsCtxKey, map[string]any{
+					caddyhttp.TrustedProxyVarKey: tc.trusted, caddyhttp.ClientIPVarKey: tc.clientIP,
+				}))
+				w := httptest.NewRecorder()
+				w.Code = 0
+				u, allowed, err := wrapper.Authenticate(w, r)
+				if allowed != tc.allowed || (err == nil) != tc.allowed {
+					t.Fatalf("source-bound decision: allowed=%t error=%t", allowed, err != nil)
+				}
+				// Source mismatch is an authentication error with no handled
+				// response. Caddy's enclosing authentication handler supplies 401.
+				if !allowed && (u.ID != "" || len(u.Metadata) != 0 || w.Code != 0 || w.Header().Get("Cache-Control") != "no-store") {
+					t.Fatal("source-bound denial leaked identity or lost its response contract")
+				}
+			})
+		}
+	}
+}
 
 // Check the public gatekeeper result independently of the wrapper. In
 // particular, nil error and a handled response are not permission to continue.

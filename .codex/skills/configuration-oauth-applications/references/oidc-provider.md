@@ -12,7 +12,7 @@ independent of declaration order and Caddy file/snippet imports.
 values with the shared directive codec. `caddyfile_authn.go` attaches it with
 `Config.ConfigureOIDCProvider` after collecting the complete portal and before
 `AddAuthenticationPortal` validates it. Do not add a second field parser or
-validate the portal before attaching OIDC. AuthCrunch v1.2.6, pinned in `go.mod`,
+validate the portal before attaching OIDC. The dependency selected in `go.mod`
 provides `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives` and
 `PortalConfig.ConfigureOIDCProvider`.
 
@@ -233,7 +233,7 @@ above when changing this integration.
 ## HTTP mount and protocol contract
 
 The existing Caddy `AuthnMiddleware.ServeHTTP` acquires the app request reference
-and delegates to `Portal.ServeHTTP` with the original URL. AuthCrunch v1.2.6's
+and delegates to `Portal.ServeHTTP` with the original URL. AuthCrunch's
 `pkg/authn/serve_http.go` invokes its OP adapter before ordinary access-token
 checks, API dispatch, or HTML/JSON negotiation. Route the canonical issuer mount
 through that handler; do not strip the prefix with `handle_path` or rewrite the
@@ -253,7 +253,7 @@ that evidence itself.
 
 ### Consent response policy for v1.2.6
 
-The current pin, `v1.2.7-0.20260918155754-3e28980b0f5a`, supplies themed
+The current published dependency, `v1.3.2`, supplies themed
 consent/form-post/error pages and the correct consent headers in the provider.
 Caddy preserves those headers. Both the official harness and normal RP E2E
 now run without the compatibility snippet below. Consent CSP retains default,
@@ -327,7 +327,7 @@ prompt none/login/consent, fresh authentication/max_age, UserInfo and revocation
 Completing portal logout clears the OP session and invalidates its grants; it is
 not RP-initiated OIDC logout. Without a refresh cookie, GET `/logout` completes
 logout. With a portal refresh cookie, GET renders the confirmation page and
-the portal session API completes logout. v1.2.6 advertises OIDC refresh grants,
+the portal session API completes logout. The selected library advertises OIDC refresh grants,
 individual claims, optional address/phone scopes, and unsigned/RS256 Request
 Objects. Dynamic registration, private_key_jwt, encrypted Request Objects and
 end_session_endpoint remain unsupported. OIDC refresh credentials require

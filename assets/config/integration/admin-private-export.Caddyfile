@@ -1,0 +1,69 @@
+# Complete Caddy server example. See the repo-local operator-examples reference.
+# Supply EXAMPLE_* values through the service environment; never commit credentials.
+{
+	admin off
+	persist_config off
+	auto_https off
+	log {
+		level INFO
+		output file "{$EXAMPLE_LOG}"
+	}
+	security {
+		local identity store employeesdb {
+			realm employees
+			path {$EXAMPLE_EMPLOYEES_DB}
+			user alice {
+				email alice@example.test
+				password {env.EXAMPLE_PASSWORD}
+				roles authp/admin authp/user
+			}
+		}
+		local identity store contractorsdb {
+			realm contractors
+			path {$EXAMPLE_CONTRACTORS_DB}
+			user alice {
+				email alice@example.test
+				password {env.EXAMPLE_PASSWORD}
+				roles authp/admin authp/user
+			}
+		}
+		local identity store guestsdb {
+			realm guests
+			path {$EXAMPLE_GUESTS_DB}
+			user alice {
+				email alice@example.test
+				password {env.EXAMPLE_PASSWORD}
+				roles authp/admin authp/user
+			}
+		}
+		authentication portal myportal {
+			enable identity stores employeesdb contractorsdb guestsdb
+			crypto key access sign-verify from file "{$EXAMPLE_ACCESS_KEY}"
+			cookie path /auth
+			enable admin api
+			enable admin api private key export
+		}
+		authorization policy app_policy {
+			crypto key access verify from file "{$EXAMPLE_ACCESS_PUBLIC_KEY}"
+			disable auth redirect
+			validate bearer header
+			allow roles authp/user resource/editor
+		}
+	}
+}
+
+{$EXAMPLE_ORIGIN} {
+	bind 127.0.0.1
+	tls "{$EXAMPLE_TLS_CERT}" "{$EXAMPLE_TLS_KEY}"
+	@portal path /auth /auth/*
+	route {
+		route @portal {
+			authenticate with myportal
+		}
+		route {
+			authorize with app_policy
+			reverse_proxy {$EXAMPLE_RESOURCE}
+		}
+	}
+}
+

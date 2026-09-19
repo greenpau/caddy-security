@@ -2,12 +2,12 @@
 
 Use this suite when changing the interaction between portal login, refresh,
 downstream OIDC, upstream OAuth, authorization, edge metadata, or Caddy reload.
-The selected dependencies are Caddy v2.11.4 and go-authcrunch v1.2.5; these tests
+The selected dependencies are Caddy v2.11.4 and go-authcrunch v1.3.2; these tests
 run in caddy-security, without running or modifying sibling repositories.
 
 ```sh
 go test -mod=readonly -race -count=1 -parallel=4 -timeout=10m \
-  -run 'TestSecurityRequestMetadata|TestAuthzResponseContract|TestAuthzPathDelegation|TestCaddyCompositionE2E|TestCaddyTokenRefreshBrowserE2E' .
+  -run 'TestSecurityRequestMetadata|TestAuthzResponseContract|TestAuthzSourceTrust|TestAuthzPathDelegation|TestCaddyRefreshBrowser|TestCaddyCompositionE2E|TestCaddyTokenRefreshBrowserE2E' .
 ```
 
 `TestCaddyCompositionE2E` starts a bounded child process so Caddy global state,
@@ -29,25 +29,32 @@ No OP key is added to a portal verification set to make a JWT test pass.
 | Credential purposes | OIDC ID token and opaque UserInfo token rejected by portal/resources; portal JWT rejected by UserInfo; distinct public key sets |
 | OAuth trust | Actual callback with retained issuer and supplemental access audience validation; invalid supplemental claims cannot add roles; upstream login remains access-only |
 | Realm replacement | Browser JSON password challenges with one slot in each portal component, cross-realm replacement, old family/grant rejection, strict spent-token replay, active-cookie and legacy-path deletion, default/custom names |
-| Completion failure | OP-only session occupies the single OP slot; local refresh issuance then OP-full completion returns 503 without credentials; logout releases the OP slot and a new login rotates successfully, proving refresh capacity was reclaimed |
-| Current identity | Admin API role overwrite revokes the previous refresh authentication; a fresh password login signs current roles and authorization denies the removed grant |
+| Completion failure | OP-only session occupies the single OP slot; three local refresh issuances followed by OP-full completion return 503 without credentials or session lookup authority; the holder remains usable, then logout releases the OP slot and a new login rotates successfully, proving refresh capacity was reclaimed |
+| Current identity | Admin API role overwrite revokes the previous refresh authentication; a fresh password login and its subsequent refresh sign current roles, and authorization denies the removed grant for both access tokens |
 | Two issuers | Independent hosts, mounts, keys and cookies, successful login/exchange at each issuer, bidirectional copied bearer/renamed refresh and OP-cookie denial, and both runtimes invalidated on replacement |
-| Edge | `composition_edge_e2e_test.go`: direct TLS, untrusted hostile/duplicate hints, real TLS proxy, Caddy `trusted_proxies_strict`, alternate `client_ip_headers`, retained Origin/issuer/TLS checks, raw/encoded and look-alike paths |
-| Reload | Missing-key candidate fails without displacing active grants/families; successful replacement preserves immutable registration bytes and key files, invalidates refresh/OP grants and unredeemed codes, and still verifies compatible stateless access JWTs |
+| Edge | `composition_edge_e2e_test.go`: direct TLS, untrusted hostile/duplicate hints, real TLS proxy, Caddy `trusted_proxies_strict`, alternate `client_ip_headers`, retained Origin/issuer/TLS checks, raw/encoded and look-alike paths. Source-bound authorization is checked before/after identity caching and after removing proxy trust; forged `X-Real-IP` or lower-priority address hints cannot restore a grant |
+| Reload | Missing-key candidate fails without displacing active grants/families or a pending password-completed authorization; successful replacement preserves immutable registration bytes and key files, invalidates pending authorizations, refresh/OP grants and unredeemed codes, and still verifies compatible stateless access JWTs |
 | Disposal | `composition_lifecycle_e2e_test.go`: two bounded requests held inside real AuthCrunch calls; replacement serves while old cleanup waits; released old refresh responses do not create authority in the new runtime |
 | Browser | The `composition` scenario in `testdata/browser/token_refresh_browser_e2e.cjs`, driven through Chromium/CDP, reuses the existing task-12 browser coordinator: two-tab rotation, realm/OP-cookie replacement at capacity, committed-response loss without retry/lookup recovery, fresh login, logout, HttpOnly privacy and legacy-path cleanup |
 
 The existing `TestCaddyTokenRefreshBrowserE2E` also runs default root, custom
 nested, and expired-access continuation scenarios. Chrome/Chromium and Node 24
 remain required; missing prerequisites fail rather than skip. Browser trust is
-limited to the generated fixture certificate's SPKI. Protocol clients and the
-TLS proxy retain normal certificate verification.
+limited to the generated fixture certificate in a fresh private Chrome profile's
+certificate database. Every browser scenario first rejects an unrelated
+untrusted certificate and the trusted certificate at the wrong hostname. No
+certificate-error allowance or system trust modification is used. Protocol
+clients and the TLS proxy retain normal certificate verification. See the
+[browser trust contract](../../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository).
 
 Failure responses are checked for no-store and credential redaction. The
 composition fixture captures issued credentials (including upstream codes and
 tokens) for INFO-and-higher log checks, and checks that private stored
 registrations do not appear in adapted JSON. Test probes hold or cut real
-responses; they do not mint authentication evidence. Ordinary correlation
+responses; they do not mint authentication evidence. The browser probe also
+records issued access/refresh/OP cookies in test memory, including committed
+cookies from lost responses, for the same log audit after Caddy stops. Its
+control endpoint never exposes those values. Ordinary correlation
 session IDs may be logged; they are distinct from credential-bearing OIDC
 session cookies, which remain included in redaction checks.
 

@@ -206,12 +206,41 @@ def registration_body(method, callback):
             "scopes openid profile email address phone offline_access\nrequire_pkce false\n")
 
 
+def verify_registrations(clients, callback):
+    """Check the persisted CLI output before using it in any official plan."""
+    if set(clients) != set(CLIENTS):
+        raise Blocker("conformance requires exactly the three static client registrations")
+    for name, method in CLIENTS.items():
+        client = clients[name]
+        if any(not isinstance(client.get(key), str) or not client[key]
+               for key in ("client_id", "client_secret")):
+            raise Blocker("conformance registration lacks confidential client credentials")
+        if client.get("token_endpoint_auth_method") != method:
+            raise Blocker("conformance registration has the wrong client authentication method")
+        if client.get("redirect_uris") != [callback]:
+            raise Blocker("conformance registration must contain only the exact suite callback")
+        # The persisted Go representation omits false booleans. The source
+        # registration_body explicitly disables PKCE for these fixtures only.
+        if (client.get("require_pkce", False) is not False or
+                client.get("skip_consent", False) is not False):
+            raise Blocker("conformance client must allow Basic profile requests and require consent")
+    for field in ("client_id", "client_secret"):
+        if len({client[field] for client in clients.values()}) != len(CLIENTS):
+            raise Blocker("conformance registrations must have distinct client IDs and secrets")
+    # Record the verified contract without duplicating credential material.
+    return {"callback": callback, "distinct_client_ids": len(clients),
+            "distinct_client_secrets": len(clients), "clients": [
+                {"name": name, "revision": "v1", "token_endpoint_auth_method": method,
+                 "redirect_uris": [callback], "require_pkce": False, "skip_consent": False}
+                for name, method in CLIENTS.items()]}
+
+
 def provision(binary, output, callback, env):
     store = f'oauth registration store {{\npath "{output / "registrations"}"\n}}\n'
     store_file = output / "oauth_store.Caddyfile"
     private_write(store_file, store)
     command([binary, "security", "oauth", "init", "provisioning", "store", "--config", store_file], env=env)
-    applications, config = "", {}
+    applications, config, registrations = "", {}, {}
     for name, method in CLIENTS.items():
         body = registration_body(method, callback)
         source = output / (name + ".Caddyfile")
@@ -219,11 +248,12 @@ def provision(binary, output, callback, env):
         record = command([binary, "security", "oauth", "create", "application", "--config", source,
                           "--name", name, "--revision", "v1"], env=env).stdout.decode().strip()
         client = json.loads(Path(record).read_text())["client"]
-        if client.get("require_pkce") or client.get("skip_consent"):
-            raise Blocker("conformance client must allow Basic profile requests and require consent")
+        registrations[name] = client
+        applications += f"oauth application {name} {{\nregistration v1\n{body}}}\n"
+    write_json(output / "registration-evidence.json", verify_registrations(registrations, callback))
+    for name, client in registrations.items():
         config[name] = {"client_id": client["client_id"], "client_secret": client["client_secret"],
                         "scope": "openid profile email"}
-        applications += f"oauth application {name} {{\nregistration v1\n{body}}}\n"
     key = command([binary, "security", "oidc", "create", "signing", "key", "--config", store_file,
                    "--name", "conformance", "--revision", "k1"], env=env).stdout.decode().strip()
     return store + applications, key, config

@@ -13,7 +13,7 @@ result, including cleanup errors.
 
 ## Host lifecycle traced
 
-This implementation targets the pinned Caddy v2.11.4 and AuthCrunch v1.2.2.
+This qualification uses the pinned Caddy v2.11.4 and AuthCrunch v1.3.2.
 The relevant Caddy paths are
 [`Context.LoadModuleByID` and context cancellation](https://github.com/caddyserver/caddy/blob/v2.11.4/context.go),
 [`run`, `provisionContext`, `unsyncedDecodeAndRun`, `unsyncedStop`, and `Validate`](https://github.com/caddyserver/caddy/blob/v2.11.4/caddy.go),
@@ -90,13 +90,17 @@ single named identity store across portals; multiple stores pointing at the
 same file in one runtime are also rejected. Registration dropboxes use the same
 snapshot database and receive the same protection.
 
-AuthCrunch v1.2.2's local authenticator loads a private `identity.Database`
+The selected AuthCrunch local authenticator loads a private `identity.Database`
 snapshot. Its mutex protects that instance only. The root server offers no
 public facility to inject a coordinated store or reload all snapshots. A mutex
 around HTTP requests cannot fix the problem: a second snapshot can overwrite
 the first snapshot's changes even when the writes happen sequentially.
 Construction can itself write static users, password overrides, API keys, and
 default administrators.
+The selected library serializes TOTP consumption with a file lock and reloads
+that operation's state. That narrower replay protection does not provide a
+shared database lifecycle for all construction and administrative mutations;
+it does not lift Caddy's identity-file reservation rule.
 
 The host therefore reserves local identity files before constructing a runtime
 and releases them only after request drain and server disposal. Overlap fails

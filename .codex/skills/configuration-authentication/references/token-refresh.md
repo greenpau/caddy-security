@@ -37,10 +37,14 @@ are runtime authentication/transport contracts, not identity-store capabilities.
 
 `caddyfile_authn_token_refresh.go` forwards encoded body statements to
 `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives` from the
-pinned go-authcrunch v1.2.5. Its result is `*authn.TokenRefreshConfig`, assigned to
+selected go-authcrunch module. Its result is `*authn.TokenRefreshConfig`, assigned to
 `PortalConfig.RefreshTokens` before portal validation. The engine package's Go
 identifier is `tokenrefresh`; `authn.RefreshConfig` and `pkg/authn/refresh` are
 obsolete. Keep refresh consumer filenames qualified with `token_refresh`.
+
+Use the [qualified operator examples](../../configuration/references/operator-examples.md)
+for complete outer Caddyfiles and generated native JSON, including browser/native
+transport, two eligible local realms, an unselected realm and combined OP use.
 
 | Setting | Arguments | Enabled default |
 | --- | --- | --- |

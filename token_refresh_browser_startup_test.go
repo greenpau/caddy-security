@@ -15,13 +15,65 @@
 package security
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestCaddyRefreshBrowserTrust(t *testing.T) {
+	cert, _, _ := cookieTLSCertificate(t)
+	prepare := func(profile, certificate string, wantError bool) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "node", "testdata/browser/token_refresh_browser_trust.cjs", profile, certificate)
+		cmd.WaitDelay = time.Second
+		output, err := cmd.CombinedOutput()
+		if (err != nil) != wantError {
+			t.Fatalf("private trust preparation error=%t want=%t", err != nil, wantError)
+		}
+		if wantError && !bytes.Contains(output, []byte("unable to prepare private browser certificate trust")) {
+			t.Fatal("trust failure did not preserve a diagnostic")
+		}
+		assertAdminRedacted(t, output, []string{"synthetic-private-certificate-input"})
+	}
+	profile := t.TempDir()
+	prepare(profile, cert, false)
+	path := filepath.Join(profile, "Default", "ServerCertificate")
+	before, err := os.ReadFile(path)
+	if err != nil || len(before) == 0 {
+		t.Fatal("browser trust was not persisted")
+	}
+	prepare(profile, cert, true)
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("trust preparation modified an existing profile")
+	}
+	linked := t.TempDir()
+	if err := os.Symlink(filepath.Join(profile, "Default"), filepath.Join(linked, "Default")); err != nil {
+		t.Fatal(err)
+	}
+	prepare(linked, cert, true)
+	after, err = os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("trust preparation followed a profile symlink")
+	}
+	malformed := filepath.Join(t.TempDir(), "invalid.pem")
+	if err := os.WriteFile(malformed, []byte("synthetic-private-certificate-input"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	invalidProfile := t.TempDir()
+	prepare(invalidProfile, malformed, true)
+	if _, err := os.Stat(filepath.Join(invalidProfile, "Default")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("invalid certificate created browser trust state")
+	}
+}
 
 // These local processes exercise the launcher's readiness, diagnostics and
 // cleanup boundaries. TestCaddyTokenRefreshBrowserE2E uses the same launcher

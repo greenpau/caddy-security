@@ -27,8 +27,8 @@ and still rejects null/cross-origin and forged-CSRF submissions.
 
 ## Verified v1.3.2 Caddy rehearsal
 
-The 2026-09-18 run at
-`tmp/oidc-conformance-ci-v1.3.2-final/private/evidence/index.html` completed all
+The 2026-09-19 UTC run at
+`tmp/oidc-conformance/caddy-rehearsal-20260919/index.html` completed all
 71 instances with **65 PASSED, 6 REVIEW, zero WARNING/SKIPPED/FAILED/INTERRUPTED**
 and original runner exit **0**. It used published go-authcrunch v1.3.2, Caddy
 v2.11.4, the pinned Chrome and unchanged suite below. The six REVIEW instances
@@ -37,8 +37,29 @@ are `oidcc-prompt-login`, `oidcc-max-age-1` and
 Chrome screenshots, repeated authentication journeys and redirect rejection
 remain available for human review; these labels were not promoted to PASSED.
 
+Basic and Form Post each recorded 32 PASSED and 3 REVIEW; Config recorded one
+PASSED. All 142 detached signatures, six signed screenshot matches and 1,689
+evidence hashes verified. All owned process leaders were reaped and no longer
+live, and the complete evidence retained private file modes. The source archive
+includes the current uncommitted composition changes and harness sources;
+`candidate.json` and `source-manifest.json`, rather than HEAD alone, identify
+the tested build. All 64 isolated harness tests and the focused race-enabled
+application parser, JSON/PKCE restoration and public-client transition tests
+passed. The fresh run observed no Caddy-owned failures or remaining library
+capability gaps in these plans; the six visual reviews remain outstanding.
+
+An independent same-host repeat at 10:46–10:49 UTC on 2026-09-19 is retained at
+`tmp/oidc-conformance/caddy-rehearsal-20260919-repeat/index.html`. All 64 harness
+tests and all 71 official instances completed with the same outcomes and
+original runner exit 0. The freshly rebuilt Caddy binary had the same SHA-256;
+client IDs/secrets, OP keys and TLS CA were independently generated. All 142
+signatures, six signed screenshot matches, 1,699 evidence hashes and private
+file modes verified, and owned processes stopped. The previous bundle remains
+intact; neither run is an all-pass result or certification.
+
 The [manual Actions artifact workflow](oidc-conformance-actions.md) was exercised
-locally through its stage wrapper. Its artifact is at
+locally through its stage wrapper on 2026-09-18, with the same module totals.
+Its artifact is at
 `tmp/oidc-conformance-ci-v1.3.2-final/artifact/index.html`. Decryption verified all
 1,701 archived files against their original bytes, all 1,692 evidence hashes,
 and six signed screenshot slots. Both reports passed actual Chrome desktop and
@@ -49,8 +70,8 @@ The earlier `tmp/oidc-conformance-ci-v1.3.2/` attempt remains a blocked run:
 a new CI timeout-cleanup unit exposed a transient macOS process-group probe
 error before official modules started. Its original failure and encrypted
 artifact remain intact. Cleanup now waits for the owned child to be reaped;
-preparation also unwinds independent helper sessions on SIGTERM. The final
-isolated harness/CI validation passes 63 tests, including real encryption,
+preparation also unwinds independent helper sessions on SIGTERM. That run's
+isolated harness/CI validation passed 63 tests, including real encryption,
 cancellation, private-output and original-exit checks.
 
 The v1.3.2 normal race-enabled `make test` run at
@@ -65,7 +86,7 @@ unchanged; the production library diff updates the embedded authdb version.
 
 The Foundation's [current OP instructions](https://openid.net/certification/connect_op_testing/)
 and [local Build & Run instructions](https://gitlab.com/openid/conformance-suite/-/wikis/Developers/Build-%26-Run)
-were inspected on 2026-09-18. Static testing requires independent Basic clients
+were reinspected on 2026-09-19 UTC. Static testing requires independent Basic clients
 for code binding, a POST client, and the suite's exact alias callback. The
 Foundation requires running each module and retaining warning, skip, review,
 failure and interruption outcomes. Some modules request browser evidence.
@@ -162,6 +183,15 @@ plan configuration and TLS evidence. Each isolated suite has its own database,
 so the local alias cannot collide with another run. Hosted testing instead
 requires a reachable deployment, the hosted suite's callback, and its normal
 account/token prerequisites; this harness does not contact it.
+
+Before starting Caddy or the official plans, the harness reads back all three
+private registration revisions and checks distinct, nonempty client IDs and
+secrets, the two Basic/one POST authentication methods, and a single exact
+callback per client. It also checks that consent is required and these fixtures
+allow code requests without PKCE. `registration-evidence.json` records these
+verified properties without copying credentials. Only these disposable
+conformance registrations explicitly set `require_pkce false`; ordinary
+application defaults and all public clients retain PKCE.
 
 The execution target is `oidc-conformance-test`. It runs
 the isolated harness unit tests, local Caddy E2E preflight, and all three official

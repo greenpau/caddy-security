@@ -30,6 +30,10 @@ import (
 )
 
 func testCompositionEdge(t *testing.T, f *compositionFixture, pair tls.Certificate) {
+	// Bind authorization to the address actually signed at login. A login-only
+	// claim check would miss a wrapper that trusts spoofed hints on authorize.
+	f.input = strings.Replace(f.input, "validate bearer header", "validate bearer header\nvalidate source address", 1)
+	f.load(t, f.input)
 	hostile := http.Header{
 		"X-Forwarded-Host":  {"evil.example", "other.evil.example"},
 		"X-Forwarded-Proto": {"http", "http"},
@@ -51,7 +55,25 @@ func testCompositionEdge(t *testing.T, f *compositionFixture, pair tls.Certifica
 			}
 		}
 	}
-	login := func(client *http.Client, extra http.Header, address string) {
+	resource := func(client *http.Client, token string, hints http.Header, want int) {
+		t.Helper()
+		headers := hints.Clone()
+		headers.Set("Authorization", "Bearer "+token)
+		before := f.hits.Load()
+		status, response, body := registrationHTTP(t, client, "GET", f.base+"/protected", nil, headers)
+		delta := int64(0)
+		if want == 204 {
+			delta = 1
+		}
+		if status != want || f.hits.Load() != before+delta || (response.Get("X-Protected-Upstream") != "") != (want == 204) {
+			t.Fatalf("source-bound authorization status=%d want=%d upstream delta=%d", status, want, f.hits.Load()-before)
+		}
+		if want != 204 && response.Get("Cache-Control") != "no-store" {
+			t.Fatal("source-bound denial permits caching")
+		}
+		assertAdminRedacted(t, body, f.secrets)
+	}
+	login := func(client *http.Client, extra http.Header, address string) string {
 		t.Helper()
 		headers := f.headers()
 		for k, v := range extra {
@@ -67,9 +89,13 @@ func testCompositionEdge(t *testing.T, f *compositionFixture, pair tls.Certifica
 		if claims["addr"] != address || claims["iss"] != f.base+"/auth" {
 			t.Fatalf("library observed wrong edge address or issuer: address=%v issuer=%v", claims["addr"], claims["iss"])
 		}
+		return token
 	}
 	discover(f.client, f.base, f.base, hostile, 200)
-	login(f.browser(t), hostile, "127.0.0.1")
+	directToken := login(f.browser(t), hostile, "127.0.0.1")
+	for range 2 {
+		resource(f.client, directToken, hostile, 204)
+	}
 	cleartext := "http://" + lifecycleAddress(t)
 	f.load(t, f.input+"\n"+cleartext+" {\nroute /auth/* {\nauthenticate with myportal\n}\n}\n")
 	request, err := http.NewRequestWithContext(t.Context(), "POST", cleartext+"/auth/api/refresh_token", strings.NewReader("{}"))
@@ -170,7 +196,15 @@ func testCompositionEdge(t *testing.T, f *compositionFixture, pair tls.Certifica
 	direct := *f.client
 	direct.Transport = compositionTargetTransport{base: f.client.Transport, target: target}
 	direct.Timeout = 5 * time.Second
-	login(&direct, trusted, "198.51.100.14")
+	forwardedToken := login(&direct, trusted, "198.51.100.14")
+	for range 2 {
+		resource(&direct, forwardedToken, trusted, 204)
+		wrongAddress := trusted.Clone()
+		wrongAddress.Set("X-Forwarded-For", "198.51.100.15, 127.0.0.1")
+		wrongAddress.Set("X-Real-Ip", "198.51.100.14")
+		resource(&direct, forwardedToken, wrongAddress, 401)
+		resource(&direct, forwardedToken, trusted, 204)
+	}
 	trusted.Set("X-Forwarded-For", "2001:db8::1, 127.0.0.1")
 	login(&direct, trusted, "2001:db8::1")
 	for _, mutation := range []struct{ key, value string }{
@@ -197,7 +231,20 @@ func testCompositionEdge(t *testing.T, f *compositionFixture, pair tls.Certifica
 	customHeader := strings.Replace(proxied, "trusted_proxies_strict", "trusted_proxies_strict\nclient_ip_headers X-Test-Client X-Forwarded-For", 1)
 	f.load(t, customHeader)
 	trusted.Set("X-Test-Client", "198.51.100.25")
-	login(&direct, trusted, "198.51.100.25")
+	customToken := login(&direct, trusted, "198.51.100.25")
+	resource(&direct, customToken, trusted, 204)
+	wrongAddress := trusted.Clone()
+	wrongAddress.Set("X-Test-Client", "198.51.100.26")
+	wrongAddress.Set("X-Forwarded-For", "198.51.100.25")
+	wrongAddress.Set("X-Real-Ip", "198.51.100.25")
+	resource(&direct, customToken, wrongAddress, 401)
+	// Retain the signed token and keys while removing proxy trust. Even the
+	// formerly accepted hints cannot make a direct peer impersonate its address.
+	f.base = backend
+	f.load(t, f.input)
+	for range 2 {
+		resource(f.client, forwardedToken, trusted, 401)
+	}
 }
 
 type compositionTargetTransport struct {

@@ -222,6 +222,13 @@ integrated change.
 
 ### Feature suites
 
+`TestCaddyOperatorExamplesE2E` qualifies every complete input under
+`assets/config/integration/` through Caddy adaptation, validation, provisioning
+and TLS journeys, then reloads generated native JSON independently. The
+[operator example reference](../configuration/references/operator-examples.md)
+describes private artifact retention and the exact scenario coverage. Keep
+those examples in the default gate and test their behavior, not just JSON shape.
+
 Official OP conformance runs only through `make oidc-conformance-test`, with its
 own private artifacts. The harness and its unit tests are excluded from regular
 Go tests, `make test-automation`, and `make ci-check`. Existing local OIDC
@@ -275,6 +282,10 @@ For cross-feature changes, use the
 credential-purpose isolation, replacement failure/recovery, current roles,
 reload/disposal and combined Chromium flow. Run it with the existing browser
 refresh suite under race detection; preserve its bounded single-process scope.
+Include `TestAuthzSourceTrust` for cached source-bound authorization and
+`TestCaddyRefreshBrowserTrust` for the fresh-profile trust boundary. Browser
+journeys must reject untrusted certificates and hostname mismatches before
+testing login; do not replace these controls with certificate-error allowances.
 
 `TestSecurityAuthcrunchVersion` and `TestSecurityVersionCommand` cover embedded
 dependency versions, replacements, missing metadata, command dispatch and output

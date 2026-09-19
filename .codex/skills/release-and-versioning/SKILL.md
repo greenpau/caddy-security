@@ -134,6 +134,9 @@ For release CI, artifact identity, dependency changelogs, toolchains, and
 packaging validation, read
 [CI and packaging](references/ci-and-packaging.md). It distinguishes the
 current workflow from release gates that would need implementation.
+For complete Caddy target builds, source/artifact vulnerability evidence,
+stripped-symbol limitations and unresolved official OP outcomes, use
+[final integration qualification](references/final-qualification.md).
 
 For automation changes, exercise success and failure paths in disposable
 repositories with local bare remotes. Include dirty/untracked state, wrong

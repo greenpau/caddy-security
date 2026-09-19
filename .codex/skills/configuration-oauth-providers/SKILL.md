@@ -21,6 +21,11 @@ but SAML uses the local `go-authcrunch/pkg/idp/saml` implementation.
 Read [shared parsing, grammar compatibility, and trust](references/shared-parser.md)
 when changing OAuth directives, issuer/audience, keys, or parser validation.
 
+The [qualified operator examples](../configuration/references/operator-examples.md)
+include an actual TLS journey using explicit issuer/access-token audience and
+static Ed25519 keys. Upstream login does not create downstream OP or local
+portal-refresh authority.
+
 Use `assets/config/home.Caddyfile` as the nearest repository example for Azure,
 GitHub, and LinkedIn OAuth providers.
 
@@ -169,7 +174,7 @@ logout url <logout_url>
 ```
 
 These are aliases for one scalar in upstream `pkg/idp/oauth/parser/fields.go`.
-The selected v1.2.5 shared validator in `pkg/idp/config.go` excludes that field,
+The selected v1.3.2 shared validator in `pkg/idp/config.go` excludes that field,
 so Caddy adaptation rejects it. Keep both forms documented with that status;
 exclude them from runnable examples until shared validation supports them.
 `enable logout` / `logout enabled` remains a separate supported switch.

@@ -17,11 +17,8 @@ package security
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
+	"crypto/tls"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -134,6 +131,8 @@ type tokenRefreshBrowserState struct {
 	loginRequests                                                    int
 	holdLoginNext                                                    bool
 	loginStarted, loginRelease                                       chan struct{}
+	credentialNames                                                  map[string]bool
+	credentials                                                      []string
 }
 
 var currentTokenRefreshBrowserProbe atomic.Pointer[tokenRefreshBrowserState]
@@ -179,6 +178,18 @@ func (m *tokenRefreshBrowserProbe) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(204)
 		return nil
 	}
+	// Observe genuine response cookies for the composition log audit, including
+	// cookies committed before a deliberately lost response. Never expose them
+	// through the browser control endpoint or its diagnostics.
+	defer func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		for _, cookie := range (&http.Response{Header: w.Header()}).Cookies() {
+			if s.credentialNames[cookie.Name] && cookie.Value != "" && cookie.MaxAge >= 0 {
+				s.credentials = append(s.credentials, cookie.Value)
+			}
+		}
+	}()
 	rotation := r.URL.Path == m.Mount+"/api/refresh_token"
 	login := r.URL.Path == m.Mount+"/login"
 	logout := r.URL.Path == m.Mount+"/api/logout"
@@ -349,7 +360,7 @@ func TestCaddyTokenRefreshBrowserProcess(t *testing.T) {
 			if tc.scenario == "coordination" {
 				testCaddyTokenRefreshHTTP(t, f, tc.refresh)
 			}
-			runCaddyRefreshBrowser(t, ctx, browser, cert, f.base, mount, tc.refresh, tc.access, tc.scenario)
+			runCaddyRefreshBrowser(t, ctx, browser, cert, key, f.base, mount, tc.refresh, tc.access, tc.scenario)
 		})
 	}
 }
@@ -426,28 +437,56 @@ func testCaddyTokenRefreshHTTP(t *testing.T, f *caddyTokenRefreshFixture, cookie
 	f.post(t, f.client, "/api/logout", map[string]string{"refresh_token": native.RefreshToken}, nil, 200)
 }
 
-func runCaddyRefreshBrowser(t *testing.T, ctx context.Context, browser, cert, base, mount, refresh, access, scenario string) {
+func runCaddyRefreshBrowser(t *testing.T, ctx context.Context, browser, cert, key, base, mount, refresh, access, scenario string) {
 	t.Helper()
-	pemBytes, err := os.ReadFile(cert)
+	if err := os.MkdirAll("tmp", 0700); err != nil {
+		t.Fatal(err)
+	}
+	profile, err := os.MkdirTemp("tmp", "refresh-browser-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	block, _ := pem.Decode(pemBytes)
-	certificate, err := x509.ParseCertificate(block.Bytes)
+	t.Cleanup(func() {
+		if err := os.RemoveAll(profile); err != nil {
+			t.Errorf("remove private browser profile: %v", err)
+		}
+	})
+	profile, err = filepath.Abs(profile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sum := sha256.Sum256(certificate.RawSubjectPublicKeyInfo)
-	profile := t.TempDir()
+	trust := exec.CommandContext(ctx, "node", "testdata/browser/token_refresh_browser_trust.cjs", profile, cert)
+	trust.WaitDelay = time.Second
+	if output, err := trust.CombinedOutput(); err != nil {
+		t.Fatalf("private Chrome trust: %v\n%s", err, output)
+	}
+	var invalidTLSHits atomic.Int64
+	invalidTLSHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		invalidTLSHits.Add(1)
+		w.WriteHeader(http.StatusNoContent)
+	})
+	untrusted := httptest.NewTLSServer(invalidTLSHandler)
+	defer untrusted.Close()
+	// Caddy selects certificates by SNI and rejects an unknown hostname before
+	// Chrome can check it. This separate listener always presents the same
+	// trusted fixture certificate, isolating Chrome's hostname validation.
+	pair, err := tls.LoadX509KeyPair(cert, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongName := httptest.NewUnstartedServer(invalidTLSHandler)
+	wrongName.TLS = &tls.Config{Certificates: []tls.Certificate{pair}, MinVersion: tls.VersionTLS12}
+	wrongName.StartTLS()
+	defer wrongName.Close()
+	wrongNameURL := strings.Replace(wrongName.URL, "127.0.0.1", "localhost", 1)
 	chrome := exec.CommandContext(ctx, browser, "--headless=new", "--remote-debugging-port=0", "--user-data-dir="+profile,
-		"--ignore-certificate-errors-spki-list="+base64.StdEncoding.EncodeToString(sum[:]),
 		"--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--disable-component-update", "--disable-default-apps", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter", "--no-proxy-server", "--password-store=basic", "--use-mock-keychain", "about:blank")
 	endpoint, stop, err := startCaddyRefreshBrowser(ctx, chrome, profile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stop()
-	driver := exec.CommandContext(ctx, "node", "testdata/browser/token_refresh_browser_e2e.cjs", endpoint, base, mount, refresh, access, scenario)
+	driver := exec.CommandContext(ctx, "node", "testdata/browser/token_refresh_browser_e2e.cjs", endpoint, base, mount, refresh, access, scenario, untrusted.URL, wrongNameURL)
 	driver.Stdin = strings.NewReader(lifecyclePassword)
 	driver.WaitDelay = time.Second
 	output, err := driver.CombinedOutput()
@@ -460,5 +499,8 @@ func runCaddyRefreshBrowser(t *testing.T, ctx context.Context, browser, cert, ba
 	}
 	if json.Unmarshal(output, &result) != nil || !result.Passed || result.Scenario != scenario {
 		t.Fatalf("browser did not complete scenario: %s", output)
+	}
+	if invalidTLSHits.Load() != 0 {
+		t.Fatal("browser reached an upstream with an invalid certificate")
 	}
 }

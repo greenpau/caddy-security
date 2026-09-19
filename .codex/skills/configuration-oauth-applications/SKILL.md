@@ -29,7 +29,7 @@ After collection, also require the enclosing `security` dispenser's nesting
 to return to zero. Caddy's initial brace counting treats quoted `"}"` values
 as structural, so a child parser can consume the enclosing closing brace;
 EOF must not turn that incomplete security block into a valid configuration.
-The published go-authcrunch v1.2.6 selected in `go.mod` supports these APIs and
+The published go-authcrunch module selected in `go.mod` supports these APIs and
 repeated singular `redirect_uri` statements. No local replacement is required;
 follow the [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development)
 when changing the selected version.
@@ -45,6 +45,9 @@ restoration, and Caddy TLS relying-party coverage. See
 [Official Caddy OP conformance](references/oidc-conformance.md) for the pinned
 Foundation plans, private local prerequisites, trusted HTTPS, real browser
 interaction, signed evidence, original nonzero results and remaining reviews.
+The [operator examples](../configuration/references/operator-examples.md) exercise
+the outer configuration, persisted confidential/public applications, two
+independent portals and generated native JSON with actual Caddy TLS journeys.
 Use the Caddy harness rather than treating library conformance as deployment
 evidence. See
 [Private provisioning and activation](references/private-provisioning.md) for

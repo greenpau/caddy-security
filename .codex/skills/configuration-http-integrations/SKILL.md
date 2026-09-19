@@ -132,9 +132,14 @@ protected catch-all after the portal route and retain separate signing keys
 for portal access and OP ID tokens.
 
 `TestSecurityRequestMetadata` verifies the library's view of normalized data;
+`TestAuthzSourceTrust` verifies source-address denials with cached identities,
+missing resolved addresses, trusted peers and untrusted spoofing. Source-address
+mismatch returns an authentication error without a handled response; Caddy's
+authentication chain supplies 401, and the protected upstream stays unreachable.
 `TestCaddyCompositionE2E` exercises Caddy's actual trust calculation, direct
 TLS, cleartext rejection, a verified TLS proxy, duplicate values and encoded
-paths. See the [qualification map](../testing-and-ci/references/composition-qualification.md)
+paths, including source-bound authorization after proxy trust is removed.
+See the [qualification map](../testing-and-ci/references/composition-qualification.md)
 for browser, reload and transaction limits.
 
 ## Public JWKS Routing

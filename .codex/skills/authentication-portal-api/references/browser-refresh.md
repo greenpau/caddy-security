@@ -133,18 +133,29 @@ API-key and explicit native-body logins remain separate contracts.
   module is registered in the production binary.
 - `TestCaddyRefreshBrowserStartup` verifies delayed/partial CDP readiness, early
   process exits, missing executables, deadline cleanup and process reaping.
+- `TestCaddyRefreshBrowserTrust` checks that trust preparation rejects malformed
+  certificates, existing profiles and profile symlinks without modifying their
+  trust state. Each real-browser scenario also rejects an untrusted certificate
+  and a hostname mismatch before completing the positive TLS journey.
 
 Node 24 and Chrome/Chromium are required; missing engines fail rather than skip.
 Set `AUTHCRUNCH_TEST_BROWSER` to a browser executable when autodetection cannot
-find it. The launcher uses a temporary profile, mock/basic key storage and a
-certificate-specific SPKI allowance. It does not change machine trust, reuse a
-personal browser profile or disable general TLS validation. CI selects Node 24
+find it. The launcher uses a temporary profile under `tmp/`, mock/basic key
+storage and the profile's real custom-certificate database. The Node 24 helper
+`testdata/browser/token_refresh_browser_trust.cjs` seeds only a fresh profile,
+using Chromium's schema v1 and trusted-certificate metadata, verified against
+[Chromium 153.0.8010.47](https://github.com/chromium/chromium/blob/153.0.8010.47/components/server_certificate_database/server_certificate_database.cc)
+and its [metadata definition](https://github.com/chromium/chromium/blob/153.0.8010.47/components/server_certificate_database/server_certificate_database.proto).
+If a browser changes that format, the positive TLS control must fail; never
+fall back to certificate-error flags or CDP overrides. This helper is independent
+of the opt-in official conformance runner. It does not change machine trust,
+reuse a personal browser profile or disable certificate validation. CI selects Node 24
 and checks the runner's Google Chrome before `make ci-check`; the browser test is
 part of the normal Go suite. This is local Chrome integration evidence, not a
 promise about every browser or production proxy.
 
 ```sh
-go test -mod=readonly -race -count=1 -run 'TestAuthnTokenRefreshDelegation|TestCaddyRefreshBrowserStartup|TestCaddyTokenRefreshBrowserE2E' .
+go test -mod=readonly -race -count=1 -run 'TestAuthnTokenRefreshDelegation|TestCaddyRefreshBrowser|TestCaddyTokenRefreshBrowserE2E' .
 make ci-check
 ```
 

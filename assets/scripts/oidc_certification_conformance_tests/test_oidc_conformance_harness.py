@@ -209,6 +209,54 @@ class ConformanceTests(unittest.TestCase):
             self.assertIn("require_pkce false\n", body)
             self.assertNotIn("skip_consent", body)
 
+    def test_persisted_registrations_match_the_static_plan_contract(self):
+        callback = "https://suite.test/test/a/caddy-local/callback"
+        clients = {name: {"client_id": name + "-id", "client_secret": name + "-secret",
+                         "token_endpoint_auth_method": method, "redirect_uris": [callback]}
+                   for name, method in harness.CLIENTS.items()}
+        # False booleans are omitted in the actual persisted Go representation.
+        evidence = harness.verify_registrations(clients, callback)
+        self.assertEqual(evidence["distinct_client_ids"], 3)
+        self.assertEqual(evidence["distinct_client_secrets"], 3)
+        for name, client in clients.items():
+            self.assertNotIn(client["client_id"], json.dumps(evidence))
+            self.assertNotIn(client["client_secret"], json.dumps(evidence))
+            client.update(require_pkce=False, skip_consent=False)
+        self.assertEqual(harness.verify_registrations(clients, callback), evidence)
+        for name in harness.CLIENTS:
+            for field, value in (
+                    ("client_id", None), ("client_id", ""), ("client_id", 123),
+                    ("client_secret", None), ("client_secret", ""), ("client_secret", 123),
+                    ("token_endpoint_auth_method", "none"),
+                    ("token_endpoint_auth_method", "client_secret_post" if name != "client_secret_post"
+                     else "client_secret_basic"),
+                    ("redirect_uris", []), ("redirect_uris", [callback + "/"]),
+                    ("redirect_uris", [callback, "https://attacker.example/callback"]),
+                    ("require_pkce", True), ("require_pkce", "false"),
+                    ("skip_consent", True), ("skip_consent", "false")):
+                with self.subTest(name=name, field=field, value=value):
+                    invalid = json.loads(json.dumps(clients))
+                    invalid[name][field] = value
+                    with self.assertRaises(harness.Blocker) as caught:
+                        harness.verify_registrations(invalid, callback)
+                    for client in clients.values():
+                        self.assertNotIn(client["client_secret"], str(caught.exception))
+        for name in harness.CLIENTS:
+            invalid = dict(clients)
+            invalid.pop(name)
+            with self.assertRaises(harness.Blocker):
+                harness.verify_registrations(invalid, callback)
+        with self.assertRaises(harness.Blocker):
+            harness.verify_registrations(dict(clients, unrelated=clients["client"]), callback)
+        for first, second in (("client", "client2"), ("client", "client_secret_post"),
+                              ("client2", "client_secret_post")):
+            for field in ("client_id", "client_secret"):
+                with self.subTest(first=first, second=second, field=field):
+                    invalid = json.loads(json.dumps(clients))
+                    invalid[second][field] = invalid[first][field]
+                    with self.assertRaisesRegex(harness.Blocker, "distinct"):
+                        harness.verify_registrations(invalid, callback)
+
     def test_consent_preflight_preserves_origin_and_rejects_broken_guards(self):
         issuer, callback = "https://op.example/auth", "https://suite.example/callback"
         clients = {name: {"client_id": name, "client_secret": "synthetic"} for name in harness.CLIENTS}

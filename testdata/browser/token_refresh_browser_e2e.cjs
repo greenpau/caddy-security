@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 // A dependency-free CDP consumer. The Go fixture owns Chrome and the real Caddy TLS listener.
 const assert = require("node:assert/strict");
-const [endpoint, origin, mount, refreshCookie, accessCookie, scenario] = process.argv.slice(2);
+const [endpoint, origin, mount, refreshCookie, accessCookie, scenario, untrustedOrigin, wrongHostnameOrigin] = process.argv.slice(2);
 const password = require("node:fs").readFileSync(0, "utf8");
 const socket = new WebSocket(endpoint);
 const pending = new Map();
@@ -391,6 +391,17 @@ async function composition(context) {
 (async()=>{
  await new Promise((resolve,reject)=>{socket.addEventListener("open",resolve,{once:true});socket.addEventListener("error",()=>reject(new Error("browser socket failed")),{once:true})});
  try{
+  stage="browser TLS negative controls";
+  const tlsContext=(await command("Target.createBrowserContext")).browserContextId;
+  try {
+   const probe=await page(tlsContext);
+   const untrusted=await command("Page.navigate",{url:untrustedOrigin},probe);
+   assert.equal(untrusted.errorText,"net::ERR_CERT_AUTHORITY_INVALID","untrusted certificate control did not reach trust validation");
+   const mismatch=await command("Page.navigate",{url:wrongHostnameOrigin},probe);
+   assert.equal(mismatch.errorText,"net::ERR_CERT_COMMON_NAME_INVALID","wrong-host control did not reach hostname validation");
+  } finally {
+   await command("Target.disposeBrowserContext",{browserContextId:tlsContext});
+  }
   const context=(await command("Target.createBrowserContext")).browserContextId;
   if(scenario==="continuation") await continuation(context);
   else if(scenario==="composition") await composition(context);

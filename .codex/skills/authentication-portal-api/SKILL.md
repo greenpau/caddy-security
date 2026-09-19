@@ -89,7 +89,7 @@ portal. Sandbox sessions are temporary and separate from the final JWT session.
 
 Use the [token refresh configuration](../configuration-authentication/references/token-refresh.md)
 for explicit participating local realms, origin, mount, cookie naming and limits.
-The selected go-authcrunch v1.2.5 implements real rotation; `/api/refresh_token`
+The selected go-authcrunch implements real rotation; `/api/refresh_token`
 is no longer a timestamp probe. No enabled block means access-only behavior and
 404 at the refresh/session API routes.
 

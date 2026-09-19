@@ -62,7 +62,8 @@ func testCompositionRoles(t *testing.T, f *compositionFixture) {
 	// Role mutations now revoke the earlier authentication evidence. Require
 	// a fresh password login before current roles can authorize another family.
 	f.post(t, browser, "/api/refresh_token", struct{}{}, f.headers(), 401)
-	_, cookies := f.browserLogin(t, f.browser(t), "employees", 200)
+	current := f.browser(t)
+	login, cookies := f.browserLogin(t, current, "employees", 200)
 	access := tokenRefreshActiveCookie(t, cookies, f.accessName()).Value
 	f.secrets = append(f.secrets, access)
 	claims := verifyCaddyJWKSSignature(t, f.keys, access, "RS512", "refresh")
@@ -71,6 +72,17 @@ func testCompositionRoles(t *testing.T, f *compositionFixture) {
 		t.Fatal("fresh login retained roles from before the mutation")
 	}
 	f.resourceStatus(t, access, "/protected", 403)
+	rotated, cookies := f.post(t, current, "/api/refresh_token", struct{}{}, f.headers(), 200)
+	if rotated.SessionID != login.SessionID {
+		t.Fatal("current-role refresh changed family")
+	}
+	renewed := tokenRefreshActiveCookie(t, cookies, f.accessName()).Value
+	claims = verifyCaddyJWKSSignature(t, f.keys, renewed, "RS512", "refresh")
+	roles, ok = claims["roles"].([]any)
+	if !ok || len(roles) != 1 || roles[0] != "changed/viewer" {
+		t.Fatal("renewal restored a removed role")
+	}
+	f.resourceStatus(t, renewed, "/protected", 403)
 }
 
 // The probe only holds the response writer around the real security plugins.

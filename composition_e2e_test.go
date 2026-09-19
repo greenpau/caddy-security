@@ -77,6 +77,7 @@ type compositionFixture struct {
 	resource                                          *httptest.Server
 	hits                                              atomic.Int64
 	secrets                                           []string
+	browserState                                      *tokenRefreshBrowserState
 }
 
 func newCompositionFixture(t *testing.T, opts compositionOptions, cert, key string, roots *x509.CertPool, upstream *oauthE2EUpstream) *compositionFixture {
@@ -164,6 +165,11 @@ func newCompositionFixture(t *testing.T, opts compositionOptions, cert, key stri
 			f.upstream.mu.Lock()
 			f.secrets = append(f.secrets, f.upstream.issuedSecrets...)
 			f.upstream.mu.Unlock()
+		}
+		if s := f.browserState; s != nil {
+			s.mu.Lock()
+			f.secrets = append(f.secrets, s.credentials...)
+			s.mu.Unlock()
 		}
 		assertAdminRedacted(t, logs, append(f.secrets, lifecyclePassword, applicationTestSecret, oauthE2ESecret, "PRIVATE KEY-----"))
 	})
@@ -408,6 +414,12 @@ func TestCaddyCompositionProcess(t *testing.T) {
 			f := newCompositionFixture(t, tc.opts, cert, key, roots, u)
 			browser := f.browser(t)
 			result, cookies := f.browserLogin(t, browser, "employees", 200)
+			if !tc.opts.refresh && (result.SessionID != "" || jarCookie(t, browser.Jar, f.base+"/auth/portal", f.refreshName()) != "") {
+				t.Fatal("disabled refresh feature issued a session")
+			}
+			if hasOP := jarCookie(t, browser.Jar, f.base+"/auth/portal", f.oidcName()) != ""; hasOP != tc.opts.op {
+				t.Fatal("OP login evidence did not follow feature enablement")
+			}
 			access := result.AccessToken
 			if tc.opts.refresh {
 				access = tokenRefreshActiveCookie(t, cookies, f.accessName()).Value
@@ -500,7 +512,10 @@ func TestCaddyCompositionProcess(t *testing.T) {
 	t.Run("real browser composition", func(t *testing.T) {
 		u := newOAuthE2EUpstream(t, pair, "RS256")
 		f := newCompositionFixture(t, compositionOptions{upstream: true, applications: true, op: true, refresh: true, custom: true, capacity: 1}, cert, key, roots, u)
-		state := &tokenRefreshBrowserState{staleRelease: make(chan struct{})}
+		state := &tokenRefreshBrowserState{staleRelease: make(chan struct{}), credentialNames: map[string]bool{
+			f.accessName(): true, f.refreshName(): true, f.oidcName(): true,
+		}}
+		f.browserState = state
 		currentTokenRefreshBrowserProbe.Store(state)
 		data := tokenRefreshBrowserAdapter(t, f.mount)(f.adapt(t, f.input))
 		if err := caddy.Load(data, true); err != nil {
@@ -508,7 +523,13 @@ func TestCaddyCompositionProcess(t *testing.T) {
 		}
 		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Second)
 		defer cancel()
-		runCaddyRefreshBrowser(t, ctx, caddyRefreshBrowserExecutable(t), cert, f.base, f.mount, f.refreshName(), f.accessName(), "composition")
+		runCaddyRefreshBrowser(t, ctx, caddyRefreshBrowserExecutable(t), cert, key, f.base, f.mount, f.refreshName(), f.accessName(), "composition")
+		state.mu.Lock()
+		credentialCount := len(state.credentials)
+		state.mu.Unlock()
+		if credentialCount == 0 {
+			t.Fatal("browser log audit did not observe any issued credentials")
+		}
 	})
 }
 
@@ -652,7 +673,18 @@ func testCompositionRecovery(t *testing.T, f *compositionFixture) {
 	login := f.browser(t)
 	// Refresh issuance precedes OP completion. The OP is full but the refresh
 	// store is empty; failure must reclaim the just-issued refresh family.
-	f.browserLogin(t, login, "employees", 503)
+	for range 3 {
+		f.browserLogin(t, login, "employees", 503)
+		// Failure must leave the unrelated OP holder usable and must not
+		// silently give the rejected browser either kind of authority.
+		f.exchange(t, holder)
+		f.post(t, login, "/api/refresh_session", struct{}{}, f.headers(), 401)
+		for _, name := range []string{f.accessName(), f.refreshName(), f.oidcName()} {
+			if jarCookie(t, login.Jar, f.base+"/auth/portal", name) != "" {
+				t.Fatal("failed completion retained a credential in the browser")
+			}
+		}
+	}
 	f.post(t, holder, "/api/logout", struct{}{}, f.headers(), 200)
 	result, cookies := f.browserLogin(t, login, "employees", 200)
 	if result.SessionID == "" {
@@ -667,6 +699,26 @@ func testCompositionRecovery(t *testing.T, f *compositionFixture) {
 }
 
 func testCompositionReload(t *testing.T, f *compositionFixture) {
+	// Retain a real pending authorization across each reload outcome, after
+	// completing its password step but before issuing a code.
+	pendingLogin := func() (*http.Client, url.Values) {
+		t.Helper()
+		client := f.browser(t)
+		query := url.Values{"client_id": {f.registration.ClientID}, "response_type": {"code"}, "redirect_uri": {f.registration.RedirectURIs[0]}, "scope": {"openid"}, "state": {"reload-pending"}, "nonce": {"reload-pending"}, "code_challenge_method": {"S256"}, "code_challenge": {"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}}
+		status, headers, body := registrationHTTP(t, client, "GET", f.base+"/auth/oidc/authorize?"+query.Encode(), nil, nil)
+		if status != 303 || headers.Get("Cache-Control") != "no-store" {
+			t.Fatal("pending authorization did not enter password login")
+		}
+		name := strings.TrimSuffix(f.oidcName(), "SESSION_ID") + "REQUEST_ID"
+		cookie := jarCookie(t, client.Jar, f.base+"/auth/oidc/continue", name)
+		if cookie == "" {
+			t.Fatal("authorization did not retain a pending request cookie")
+		}
+		f.secrets = append(f.secrets, cookie)
+		assertAdminRedacted(t, body, f.secrets)
+		f.browserLogin(t, client, "employees", 200)
+		return client, query
+	}
 	browser := f.browser(t)
 	login, cookies := f.browserLogin(t, browser, "employees", 200)
 	access := tokenRefreshActiveCookie(t, cookies, f.accessName()).Value
@@ -750,6 +802,7 @@ func testCompositionReload(t *testing.T, f *compositionFixture) {
 		keyBefore[keys.private] = data
 	}
 	old := f.active(t)
+	pending, query := pendingLogin()
 	bad := strings.Replace(f.input, f.opKey.private, f.opKey.private+".missing", 1)
 	if err := caddy.Load(f.adapt(t, bad), true); err == nil {
 		t.Fatal("invalid replacement activated")
@@ -757,6 +810,12 @@ func testCompositionReload(t *testing.T, f *compositionFixture) {
 	if f.active(t) != old {
 		t.Fatal("failed replacement displaced active deployment")
 	}
+	status, pendingHeaders, pendingBody := registrationHTTP(t, pending, "GET", f.base+"/auth/oidc/continue", nil, nil)
+	code, err := verifyOIDCRPCallback(oidcRPResponse{status: status, header: pendingHeaders, body: pendingBody}, query, f.base+"/auth", "")
+	if err != nil || code == "" || pendingHeaders.Get("Cache-Control") != "no-store" {
+		t.Fatal("failed replacement displaced pending authorization")
+	}
+	f.secrets = append(f.secrets, code)
 	f.resourceStatus(t, access, "/protected", 204)
 	f.userinfoStatus(t, tokens.accessToken, 200)
 	secondStatus, secondHeaders, _ := registrationHTTP(t, f.client, "GET", f.secondBase+"/other/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + secondTokens.accessToken}})
@@ -772,6 +831,7 @@ func testCompositionReload(t *testing.T, f *compositionFixture) {
 		t.Fatal("failed replacement lost volatile family")
 	}
 	refresh = tokenRefreshActiveCookie(t, cookies, f.refreshName()).Value
+	pending, _ = pendingLogin()
 	f.load(t, f.input)
 	assertServerClosed(t, old)
 	if diff := cmp.Diff(saved, registrationSnapshot(t, f.store.Path)); diff != "" {
@@ -784,6 +844,11 @@ func testCompositionReload(t *testing.T, f *compositionFixture) {
 		}
 	}
 	f.resourceStatus(t, access, "/protected", 204)
+	status, pendingHeaders, pendingBody = registrationHTTP(t, pending, "GET", f.base+"/auth/oidc/continue", nil, http.Header{"Accept": {"application/json"}})
+	if status != 400 || pendingHeaders.Get("Cache-Control") != "no-store" || pendingHeaders.Get("Location") != "" || !bytes.Contains(pendingBody, []byte("invalid_request")) {
+		t.Fatal("pending authorization survived successful replacement")
+	}
+	assertAdminRedacted(t, pendingBody, f.secrets)
 	f.userinfoStatus(t, tokens.accessToken, 401)
 	second.post(t, secondBrowser, "/api/refresh_token", struct{}{}, second.headers(), 401)
 	secondStatus, secondHeaders, _ = registrationHTTP(t, f.client, "GET", f.secondBase+"/other/oidc/userinfo", nil, http.Header{"Authorization": {"Bearer " + secondTokens.accessToken}})

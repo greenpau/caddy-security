@@ -21,7 +21,7 @@ immutable revisions, checkout does not persist credentials, and
 `contents: write` is confined to the publishing job.
 
 GoReleaser uses the pinned v6.3.0 action with tool version `v2.18.1` and
-`release --clean --timeout 60m`, matching the sibling's tool selection. The
+`release --clean --timeout 60m`. These are this repository's selected tools. The
 configuration declares schema version 2. Keep action and tool upgrades explicit
 and qualify the config against the selected version.
 
@@ -87,8 +87,8 @@ upstream fixture to avoid network-dependent changelog tests.
 ## Toolchain and Packaging Checks
 
 Inspect `go.mod` for the module minimum and both workflows for their Go
-selection. Both workflows select Go `1.26.8` with `GOTOOLCHAIN=local`, matching
-the sibling's tested workflow without raising this module's minimum. Record
+selection. Both workflows select Go `1.26.8` with `GOTOOLCHAIN=local`, without
+raising this module's minimum. Record
 the effective `go version` and inspect packaged executables with `go version -m`;
 the wrapper's Caddy version output is not
 enough to establish its toolchain or embedded dependency versions.
@@ -120,3 +120,11 @@ executable with `go version -m` for its target and toolchain; run the host-compa
 packaged authenticator's `version` and `--help` to verify release metadata and
 command availability. Also inspect the existing authcrunch archives for regressions.
 Do not use a live release as a packaging test.
+
+For final integration qualification, run the actual Caddy matrix and analyze the
+selected module graph and each binary with the real build toolchain. Follow
+[final qualification](final-qualification.md) for source hashes, matching symbol
+builds, original scanner statuses, conservative stripped-binary findings and
+official conformance reviews. A successful build or JSON scanner exit does not
+establish release readiness. Keep this repository's VERSION, command archives
+and publication policy separate from AuthCrunch's release and CLA procedures.

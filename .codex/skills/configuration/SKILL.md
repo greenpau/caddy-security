@@ -166,6 +166,12 @@ SAML identity-provider blocks are distinct from SSO app providers. Use
 
 ## Fixtures
 
+Use [qualified operator examples](references/operator-examples.md) for complete
+outer Caddyfiles and their generated, tested native JSON: legacy access, local
+token refresh, Ed25519 upstream OAuth, named applications, two OPs with refresh,
+and explicit administrative private export. It covers private setup, exact
+provisioning commands, realm/token/cookie boundaries and replacement limits.
+
 Use these examples for orientation:
 
 - `testdata/caddyfile_adapt/testcase_security_authentication_portal.Caddyfile`
