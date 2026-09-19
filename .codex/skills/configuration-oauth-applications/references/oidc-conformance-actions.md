@@ -125,6 +125,13 @@ its existing supplemental-output rule and retains downloaded tools.
 
 ## Validation
 
+Existing-path rejection cases must use paths guaranteed to exist in their own
+checkout. The harness scope test rejects the checkout root and a symlink to it,
+so it works without `../go-authcrunch`. Validate boundary-test changes in a
+disposable checkout with no sibling repositories; an existing local sibling
+can hide a strict path-resolution failure. Preserve symlink-escape rejection
+and protection against overwriting existing evidence.
+
 `test_oidc_conformance_ci.py` stays in the isolated conformance test directory.
 It checks preservation of every outcome/repeated instance, public-field
 selection, private log handling, path boundaries, failed stages, real timeout

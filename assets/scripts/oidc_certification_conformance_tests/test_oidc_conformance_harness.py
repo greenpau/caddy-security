@@ -121,9 +121,10 @@ class ConformanceTests(unittest.TestCase):
         self.assertTrue(stopped.exists(), "compiler helper outlived its owned build group")
 
     def test_scope_rejects_escape_symlinks_and_overwrite(self):
+        # The checkout root exists even when CI has no sibling repositories.
         with self.assertRaises(harness.Blocker):
-            harness.inside_tmp(ROOT / "../go-authcrunch")
-        (self.root / "escape").symlink_to(ROOT.parent, target_is_directory=True)
+            harness.inside_tmp(ROOT)
+        (self.root / "escape").symlink_to(ROOT, target_is_directory=True)
         with self.assertRaises(harness.Blocker):
             harness.inside_tmp(self.root / "escape/result", new=True)
         with self.assertRaises(harness.Blocker):
