@@ -242,7 +242,12 @@ for the public encryption recipient, report artifact and failure-preserving
 upload. Never upload plaintext private evidence or add conformance to regular CI.
 OIDC conformance units live in `assets/scripts/oidc_certification_conformance_tests/`
 and use `test_oidc_conformance_*.py` filenames. Keep them out of the regular
-automation discovery directory. `test_oidc_conformance_cleanup.py` exercises
+automation discovery directory. The browser suite tests real pinned Chrome
+startup with long evidence paths and strict TLS controls; it checks the Linux
+Unix-socket path budget even when validation runs on macOS. Follow the
+[Chrome temporary-path guidance](../configuration-oauth-applications/references/oidc-conformance-actions.md#execution-and-failure-behavior)
+when changing ChromeDriver's environment or report layout.
+`test_oidc_conformance_cleanup.py` exercises
 deletion boundaries for bundles and supplemental logs/audits/browser profiles,
 retention of custom dependencies across repeated cleanup, active-run guards and
 the real Make cleanup recipe in a disposable repository. Never delete

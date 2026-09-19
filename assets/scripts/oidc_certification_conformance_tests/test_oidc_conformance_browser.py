@@ -4,12 +4,16 @@ import base64
 from contextlib import closing
 import json
 import hashlib
+import http.server
+import os
 import sqlite3
 import ssl
 import stat
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import unittest
 from unittest import mock
 import zipfile
@@ -17,8 +21,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'assets/scripts'))
 import oidc_conformance as harness
-from oidc_conformance_browser import expected_slot, page_kind, Chrome, Reviewer, trust_ca, MAX_SCREENSHOT_BYTES
-from oidc_conformance_browser_tools import extract_zip
+from oidc_conformance_browser import chrome_environment, expected_slot, page_kind, Chrome, Reviewer, trust_ca, MAX_SCREENSHOT_BYTES
+from oidc_conformance_browser_tools import chrome_binary, extract_zip
 from oidc_conformance_review_report import network_rows, render_reviews, consent_diagnosis
 
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
@@ -51,6 +55,73 @@ class ReviewBrowserTests(unittest.TestCase):
         requested = request.call_args.args[2]['capabilities']['alwaysMatch']
         self.assertIs(requested['acceptInsecureCerts'], False)
         self.assertNotIn('--ignore-certificate-errors', requested['goog:chromeOptions']['args'])
+
+    def test_chrome_temporary_directory_rejects_checkout_escape(self):
+        (self.root / 'tmp').symlink_to(self.root.parent, target_is_directory=True)
+        with mock.patch('oidc_conformance_browser.ROOT', self.root), \
+             self.assertRaisesRegex(harness.Blocker, 'inside this checkout'):
+            chrome_environment()
+
+    def test_linux_chrome_rejects_a_checkout_exceeding_its_socket_budget(self):
+        checkout = self.root / ('checkout-' + 'x' * 100)
+        (checkout / 'tmp').mkdir(parents=True)
+        with mock.patch('oidc_conformance_browser.ROOT', checkout), \
+             mock.patch('oidc_conformance_browser.sys.platform', 'linux'), \
+             self.assertRaisesRegex(harness.Blocker, 'shorter checkout path'):
+            chrome_environment()
+
+    def test_real_chrome_starts_with_long_evidence_paths_and_checks_tls(self):
+        binary = chrome_binary(harness.WORK / 'tools/chrome')
+        driver = harness.WORK / 'tools/chromedriver/chromedriver'
+        if not all(path.is_file() and os.access(path, os.X_OK) for path in (binary, driver)):
+            self.skipTest('prepare pinned Chrome and ChromeDriver for the browser startup E2E')
+        ca, cert, key = harness.make_pki(self.root)
+
+        class Discovery(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                body = json.dumps({'issuer': issuer}).encode()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Discovery)
+        self.addCleanup(server.server_close)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert, key)
+        server.socket = context.wrap_socket(server.socket, server_side=True)
+        issuer = 'https://127.0.0.1:' + str(server.server_port) + '/auth'
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        self.addCleanup(worker.join, 5)
+        self.addCleanup(server.shutdown)
+        output = self.root / ('evidence-' + 'a' * 100) / ('nested-' + 'b' * 100) / 'run'
+        runtime = output / 'runtime'
+        runtime.mkdir(parents=True, mode=0o700)
+        self.assertGreater(len(os.fsencode(str(runtime))), 253)
+        reviewer = Reviewer({'output': str(output), 'ca': str(ca), 'issuer': issuer,
+                             'base': issuer, 'chrome': str(binary), 'chromedriver': str(driver)})
+        self.addCleanup(reviewer.close)
+        with mock.patch.dict(os.environ, {'TMPDIR': str(runtime)}), \
+             mock.patch('oidc_conformance_browser.subprocess.Popen', wraps=subprocess.Popen) as launch:
+            reviewer.start()
+            driver_environment = launch.call_args.kwargs.get('env', dict(os.environ))
+            self.assertEqual(os.environ['TMPDIR'], str(runtime))
+        # macOS Chrome tolerates paths that abort Linux Chrome. Check the Linux
+        # socket address budget as well as exercising actual browser startup.
+        relative_tmp = Path(driver_environment['TMPDIR']).relative_to(ROOT)
+        socket_path = (Path('/home/runner/work/caddy-security/caddy-security') / relative_tmp /
+                       'org.chromium.Chromium.XXXXXX/SingletonSocket')
+        self.assertLess(len(os.fsencode(str(socket_path))), 108)
+        evidence = json.loads((output / 'browser-tls.json').read_text())
+        self.assertTrue(evidence['untrusted_ca_rejected'])
+        self.assertTrue(evidence['trusted_https'])
+        self.assertFalse(evidence['acceptInsecureCerts'])
+        self.assertTrue((output / 'review-browser.ready').is_file())
 
     def test_themed_error_and_legacy_error_never_replace_login_or_consent(self):
         self.assertEqual(page_kind({'oidc_error': True}), 'rejected')

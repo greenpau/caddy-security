@@ -93,6 +93,16 @@ Chrome for Testing. It installs host runtime libraries, while downloaded suite,
 browser, Java, MongoDB, Maven, Python and encryption tools/data stay under
 `tmp/oidc-conformance/`. It does not cache or upload private run data.
 
+ChromeDriver and Chrome receive a separate `TMPDIR` pointing to the checkout's
+`tmp/` root. Chromium creates private unique temporary directories there;
+profiles, trust databases and logs remain in the private report bundle. Do not
+inherit the report's deeply nested runtime path for Chrome: Linux limits Unix
+socket addresses to 107 pathname bytes, including Chromium's generated
+directory and `SingletonSocket` suffix. The launcher rejects checkout paths
+that cannot meet this limit and rejects a temporary-directory symlink escaping
+the checkout. Use a shorter checkout path if that prerequisite check fails.
+The selected temporary base is recorded in `browser-tls.json`.
+
 Ubuntu can restrict user namespaces for downloaded Chrome binaries. The job
 loads a narrowly scoped AppArmor profile for the exact pinned Chrome path,
 following [Chromium's documented approach](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md),
@@ -140,6 +150,14 @@ tools present it also encrypts/decrypts a real archive and verifies unchanged
 report links, private bytes and hashes. Missing age skips only this CI archive
 E2E locally; the workflow installs age before these tests and requires it for
 packaging. It never skips official suite modules for missing prerequisites.
+
+The browser tests include real pinned Chrome/ChromeDriver startup with a long
+report path and inherited `TMPDIR`, both untrusted and trusted HTTPS controls,
+and a check of the resulting socket address length at the hosted checkout path.
+This browser E2E is skipped only when the local pinned browser tools are absent;
+the hosted workflow prepares them before invoking these tests. Unit cases also
+reject temporary-directory escapes and Linux checkout paths exceeding the
+socket budget. Keep these checks in the isolated conformance suite.
 
 Validate workflow syntax with `actionlint`, run the isolated conformance tests,
 and execute an actual Caddy conformance rehearsal through the CI stage wrapper.

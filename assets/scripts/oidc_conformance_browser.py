@@ -24,12 +24,28 @@ import urllib.parse
 import urllib.request
 
 from oidc_conformance_browser_tools import CHROME_VERSION
-from oidc_conformance import Blocker, Browser, digest, ports, private_write, write_json
+from oidc_conformance import ROOT, Blocker, Browser, digest, ports, private_write, write_json
 
 REVIEW_MODULES = {'oidcc-prompt-login', 'oidcc-max-age-1', 'oidcc-ensure-registered-redirect-uri'}
 ELEMENT = 'element-6066-11e4-a52e-4f735466cecf'
 # Unmodified suite logging/ImageAPI.java limits decoded uploads to 500 KiB.
 MAX_SCREENSHOT_BYTES = 500 * 1024
+
+
+def chrome_environment():
+    """Keep Chromium's temporary Unix sockets short and inside this checkout."""
+    temporary = ROOT / 'tmp'
+    resolved = temporary.resolve()
+    if not temporary.is_dir() or ROOT not in resolved.parents:
+        raise Blocker('Chrome temporary directory must remain inside this checkout')
+    # Pinned Chromium appends this name to TMPDIR for its singleton socket.
+    # Linux sockaddr_un has 108 bytes, including the terminating NUL. Report
+    # directories can be much longer; Chrome creates private unique children
+    # of this short base and removes them when its sessions close.
+    socket_path = temporary / 'org.chromium.Chromium.XXXXXX/SingletonSocket'
+    if sys.platform.startswith('linux') and len(os.fsencode(str(socket_path))) >= 108:
+        raise Blocker('checkout path is too long for Chrome Unix sockets; use a shorter checkout path')
+    return dict(os.environ, TMPDIR=str(temporary))
 
 
 def page_kind(state):
@@ -208,8 +224,10 @@ class Reviewer:
         self.endpoint = 'http://127.0.0.1:' + str(ports(1)[0])
 
     def start(self):
+        environment = chrome_environment()
         with (self.output / 'chromedriver.log').open('xb') as log:
-            self.driver_process = subprocess.Popen([self.config['chromedriver'], '--port=' + self.endpoint.rsplit(':', 1)[1]], stdout=log, stderr=subprocess.STDOUT)
+            self.driver_process = subprocess.Popen([self.config['chromedriver'], '--port=' + self.endpoint.rsplit(':', 1)[1]],
+                                                   cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 20
         while True:
             try:
@@ -233,6 +251,7 @@ class Reviewer:
             raise Blocker('trusted Chrome did not receive Caddy discovery')
         write_json(self.output / 'browser-tls.json', {'untrusted_ca_rejected': True, 'trusted_https': True,
                    'negative_navigation': negative, 'acceptInsecureCerts': False, 'ca_sha256': digest(Path(self.config['ca'])),
+                   'temporary_directory': environment['TMPDIR'],
                    'capabilities': self.browser.capabilities, 'chromedriver_pid': self.driver_process.pid,
                    'binary_sha256': digest(self.binary), 'trust': 'private profile ServerCertificate database (pinned Chromium schema v1)'})
         self.browser.close()
