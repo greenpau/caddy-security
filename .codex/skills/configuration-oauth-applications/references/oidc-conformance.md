@@ -758,11 +758,18 @@ regular testing. Existing local OIDC regression E2E remains enabled.
 The isolated `test_oidc_conformance_browser.py` covers exact screenshot-slot binding, second-login
 selection, strict TLS capabilities, private Chrome CA storage, safe archive
 extraction, redirect-hop preservation, signed PNG identity and HTML/path safety.
-Chrome uses a 1280×900 window so the themed login fits the pinned suite's
-500 KiB decoded image upload limit (`logging/ImageAPI.java`). Upload the exact
-Chrome PNG bytes, retain the original and the private upload response, and fail
-explicitly before uploading if the size limit is exceeded. Do not edit the
-image, omit the evidence or modify the suite's limit. Themed errors are recognized
+Chrome starts with a 1280×900 window. PNG sizes differ across platforms and
+themes; that window does not guarantee the pinned suite's 500 KiB decoded image
+upload limit (`logging/ImageAPI.java`). Before filling a screenshot slot, an
+oversized PNG triggers fresh captures of the same page at window widths of
+1024 and then 800 pixels, keeping the height and restoring the original window
+afterward. The helper checks the URL and page kind, never repeats a login or
+authorization request, and retains every capture with its byte count, window
+dimensions and hash. Upload the exact selected Chrome PNG bytes and retain the
+private upload response. If the page changes or all attempts exceed the limit,
+fail before uploading. Do not edit the image, omit the evidence or modify the
+suite's limit. The browser E2E uses a deterministic noisy page to force the
+oversized-image path on macOS as well as Linux. Themed errors are recognized
 from the real OP error-page heading/alert; login/password/consent forms take
 precedence and must never fill a redirect-error evidence slot.
 A real Chrome conformance execution is required in addition to these units.

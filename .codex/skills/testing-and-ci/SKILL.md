@@ -244,7 +244,9 @@ OIDC conformance units live in `assets/scripts/oidc_certification_conformance_te
 and use `test_oidc_conformance_*.py` filenames. Keep them out of the regular
 automation discovery directory. The browser suite tests real pinned Chrome
 startup with long evidence paths and strict TLS controls; it checks the Linux
-Unix-socket path budget even when validation runs on macOS. Follow the
+Unix-socket path budget even when validation runs on macOS. It also forces a
+real oversized PNG and verifies bounded viewport recapture, original evidence
+preservation and window restoration. Follow the
 [Chrome temporary-path guidance](../configuration-oauth-applications/references/oidc-conformance-actions.md#execution-and-failure-behavior)
 when changing ChromeDriver's environment or report layout.
 `test_oidc_conformance_cleanup.py` exercises

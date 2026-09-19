@@ -9,6 +9,7 @@ import os
 import sqlite3
 import ssl
 import stat
+import struct
 import subprocess
 from pathlib import Path
 import sys
@@ -79,9 +80,29 @@ class ReviewBrowserTests(unittest.TestCase):
 
         class Discovery(http.server.BaseHTTPRequestHandler):
             def do_GET(self):
-                body = json.dumps({'issuer': issuer}).encode()
+                # A deterministic noisy band forces oversized PNGs on macOS
+                # and Linux; a plain discovery page cannot expose this failure.
+                noisy = self.path == '/auth/noisy-login'
+                body = (b'''<!doctype html><html><body style="margin:0">
+<canvas style="display:block"></canvas><h1>Sign In</h1>
+<form><label>Username <input name="username"></label><button>Proceed</button></form>
+<script>
+function paint() {
+  const canvas = document.querySelector('canvas');
+  canvas.width = innerWidth; canvas.height = 170;
+  const context = canvas.getContext('2d');
+  const image = context.createImageData(canvas.width, canvas.height);
+  let state = 123456789;
+  for (let i = 0; i < image.data.length; i++) {
+    state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+    image.data[i] = i % 4 === 3 ? 255 : state & 255;
+  }
+  context.putImageData(image, 0, 0);
+}
+paint(); addEventListener('resize', paint);
+</script></body></html>''' if noisy else json.dumps({'issuer': issuer}).encode())
                 self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Type', 'text/html' if noisy else 'application/json')
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
@@ -122,6 +143,28 @@ class ReviewBrowserTests(unittest.TestCase):
         self.assertTrue(evidence['trusted_https'])
         self.assertFalse(evidence['acceptInsecureCerts'])
         self.assertTrue((output / 'review-browser.ready').is_file())
+        reviewer.browser = Chrome(reviewer.endpoint, binary, runtime / 'chrome-noisy', ca)
+        reviewer.browser.call('POST', '/url', {'url': issuer + '/noisy-login'})
+        reviewer.current = 'noisy'
+        (output / 'browser/noisy').mkdir(parents=True)
+        reviewer.record = {'name': 'oidcc-prompt-login', 'visits': [{}, {}], 'steps': [], 'uploads': []}
+        reviewer.records = [reviewer.record]
+        window = reviewer.browser.call('GET', '/window/rect')
+        original, png = reviewer.capture('Fresh login required', 'login')
+        self.assertGreater(len(png), MAX_SCREENSHOT_BYTES)
+        selected, uploaded = reviewer.upload_capture('Fresh login required', 'login', original, png)
+        self.assertLessEqual(len(uploaded), MAX_SCREENSHOT_BYTES)
+        self.assertEqual(reviewer.browser.call('GET', '/window/rect'), window)
+        self.assertGreater(len(reviewer.record['steps']), 1)
+        self.assertEqual((output / original['screenshot']).read_bytes(), png)
+        self.assertEqual((output / selected['screenshot']).read_bytes(), uploaded)
+        self.assertEqual(hashlib.sha256(uploaded).hexdigest(), selected['sha256'])
+        self.assertEqual(selected['visit'], 2)
+        self.assertEqual(selected['url'], original['url'])
+        self.assertEqual(selected['window']['height'], original['window']['height'])
+        self.assertLess(selected['window']['width'], original['window']['width'])
+        self.assertEqual(struct.unpack('>II', uploaded[16:24])[1], struct.unpack('>II', png[16:24])[1])
+        self.assertTrue(reviewer.browser.script("return !!document.querySelector('input[name=username]')"))
 
     def test_themed_error_and_legacy_error_never_replace_login_or_consent(self):
         self.assertEqual(page_kind({'oidc_error': True}), 'rejected')
@@ -150,8 +193,10 @@ class ReviewBrowserTests(unittest.TestCase):
                 reviewer.record = {'name': 'oidcc-ensure-registered-redirect-uri', 'visits': [], 'steps': [], 'uploads': []}
                 reviewer.save = mock.Mock()
                 reviewer.browser = mock.Mock()
+                reviewer.browser.call.return_value = {'width': 1280, 'height': 900, 'x': 0, 'y': 0}
                 reviewer.browser.script.return_value = {'url': 'https://op.test/auth/oidc/authorize', 'oidc_error': True}
-                reviewer.capture = mock.Mock(return_value=({'screenshot': 'frame.png', 'sha256': 'fixture', 'visit': 1}, png))
+                reviewer.capture = mock.Mock(return_value=({'screenshot': 'frame.png', 'sha256': 'fixture', 'visit': 1,
+                    'url': 'https://op.test/auth/oidc/authorize'}, png))
                 reviewer.api = mock.Mock()
                 reviewer.api.json.return_value = [{'src': 'ExpectRedirectUriErrorPage', 'upload': 'slot', '_id': 'event'}]
                 reviewer.api.request.side_effect = [(204, {}, b''), (200, {}, json.dumps({
@@ -162,11 +207,59 @@ class ReviewBrowserTests(unittest.TestCase):
                         reviewer.visit(url)
                     self.assertEqual(reviewer.api.request.call_count, 1)
                     self.assertEqual(reviewer.record['uploads'], [])
+                    self.assertEqual(reviewer.capture.call_count, 3)
                 else:
                     reviewer.visit(url)
                     self.assertEqual(len(reviewer.record['uploads']), 1)
                     self.assertEqual(reviewer.api.request.call_args.args[1], b'data:image/png;base64,' + base64.b64encode(png))
                     self.assertTrue((self.root / 'frame.png.upload-response.txt').is_file())
+                    self.assertEqual(reviewer.capture.call_count, 1)
+
+    def test_upload_recaptures_at_narrower_width_without_resubmitting_or_changing_slots(self):
+        reviewer = object.__new__(Reviewer)
+        reviewer.config = {'issuer': 'https://op.test/auth'}
+        reviewer.base, reviewer.current, reviewer.output = 'https://suite.test', 'id', self.root
+        reviewer.record = {'name': 'oidcc-ensure-registered-redirect-uri', 'visits': [], 'steps': [], 'uploads': []}
+        reviewer.save = mock.Mock()
+        reviewer.browser = mock.Mock()
+        window = {'width': 1280, 'height': 900, 'x': 7, 'y': 9}
+        reviewer.browser.call.return_value = window
+        url = 'https://op.test/auth/oidc/authorize?redirect_uri=https://unregistered.test'
+        reviewer.browser.script.return_value = {'url': url, 'oidc_error': True}
+        original = {'screenshot': 'original.png', 'sha256': 'original', 'visit': 1, 'url': url}
+        selected = {'screenshot': 'narrow.png', 'sha256': hashlib.sha256(PNG).hexdigest(), 'visit': 1, 'url': url}
+        reviewer.capture = mock.Mock(side_effect=[(original, PNG + b'\0' * MAX_SCREENSHOT_BYTES), (selected, PNG)])
+        reviewer.api = mock.Mock()
+        reviewer.api.json.return_value = [{'src': 'ExpectRedirectUriErrorPage', 'upload': 'slot', '_id': 'event'}]
+        reviewer.api.request.side_effect = [(204, {}, b''), (200, {}, json.dumps({
+            'img': 'data:image/png;base64,' + base64.b64encode(PNG).decode()}).encode())]
+        reviewer.visit(url)
+        self.assertEqual(len(reviewer.record['visits']), 1)
+        reviewer.browser.click.assert_not_called()
+        reviewer.browser.type.assert_not_called()
+        reviewer.browser.call.assert_has_calls([
+            mock.call('POST', '/window/rect', {'width': 1024, 'height': 900}),
+            mock.call('POST', '/window/rect', window)], any_order=False)
+        self.assertEqual(reviewer.record['uploads'], [{'placeholder': 'slot', 'source': 'ExpectRedirectUriErrorPage',
+            'event_id': 'event', 'screenshot': 'narrow.png', 'sha256': selected['sha256'], 'visit': 1}])
+        self.assertEqual(reviewer.api.request.call_args.args[1], b'data:image/png;base64,' + base64.b64encode(PNG))
+        self.assertTrue((self.root / 'narrow.png.upload-response.txt').is_file())
+
+    def test_upload_recapture_rejects_changed_page_or_url_and_restores_window(self):
+        url = 'https://op.test/auth/oidc/authorize?state=fixture'
+        for state in ({'url': url, 'consent': True}, {'url': url + '-changed', 'login': True}):
+            with self.subTest(state=state):
+                reviewer = object.__new__(Reviewer)
+                reviewer.browser = mock.Mock()
+                window = {'width': 1280, 'height': 900, 'x': 0, 'y': 0}
+                reviewer.browser.call.return_value = window
+                reviewer.browser.script.return_value = state
+                reviewer.capture = mock.Mock()
+                with self.assertRaisesRegex(harness.Blocker, 'changed during screenshot resize'):
+                    reviewer.upload_capture('Fresh login required', 'login', {'url': url},
+                                            PNG + b'\0' * MAX_SCREENSHOT_BYTES)
+                reviewer.capture.assert_not_called()
+                reviewer.browser.call.assert_called_with('POST', '/window/rect', window)
 
     def test_consent_diagnosis_requires_all_recorded_header_and_status_evidence(self):
         page = {'request': {'method': 'GET', 'url': 'https://op/auth/oidc/continue'},

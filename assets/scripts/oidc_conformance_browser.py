@@ -294,10 +294,46 @@ class Reviewer:
         private_write(self.output / (prefix + '.html.txt'), self.browser.call('GET', '/source'))
         step = {'at': time.time_ns() // 1000000, 'label': label, 'page': page, 'visit': len(self.record['visits']),
                 'url': self.browser.call('GET', '/url'), 'screenshot': prefix + '.png', 'source': prefix + '.html.txt',
-                'sha256': digest(self.output / (prefix + '.png'))}
+                'sha256': digest(self.output / (prefix + '.png')), 'bytes': len(png),
+                'window': self.browser.call('GET', '/window/rect')}
         self.record['steps'].append(step)
         self.save()
         return step, png
+
+    def page_state(self):
+        return self.browser.script("""return {url:location.href, text:document.body.innerText,
+            login:!!document.querySelector('input[name=username]'),
+            password:!!document.querySelector('input[name=secret]'),
+            consent:!!document.querySelector('button[name=decision][value=allow]'),
+            oidc_error:document.body.classList.contains('oidc-page') &&
+                document.querySelector('#oidc-title')?.textContent.trim()==='Unable to continue' &&
+                document.querySelector('[role=alert]')?.textContent.includes('This sign-in request is invalid or has expired.') &&
+                !document.querySelector('form')};""")
+
+    def upload_capture(self, label, page, step, png):
+        """Recapture the same page at bounded widths; retain every original PNG."""
+        if len(png) <= MAX_SCREENSHOT_BYTES:
+            return step, png
+        original = self.browser.call('GET', '/window/rect')
+        url = step['url']
+        try:
+            # PNG size differs across platforms and themes. Keep the window's
+            # height for legibility, preserve all captures, and never edit pixels.
+            for width in (1024, 800):
+                if width >= original['width']:
+                    continue
+                self.browser.call('POST', '/window/rect', {'width': width, 'height': original['height']})
+                state = self.page_state()
+                if state['url'] != url or page_kind(state) != page:
+                    raise Blocker('review page changed during screenshot resize; no image uploaded')
+                step, png = self.capture(label + ' (' + str(width) + 'px window)', page)
+                if step['url'] != url:
+                    raise Blocker('review URL changed during screenshot resize; no image uploaded')
+                if len(png) <= MAX_SCREENSHOT_BYTES:
+                    return step, png
+            raise Blocker('real Chrome screenshots exceed the official 500 KiB upload limit after bounded viewport retries')
+        finally:
+            self.browser.call('POST', '/window/rect', original)
 
     def visit(self, url):
         issuer = self.config['issuer']
@@ -311,14 +347,7 @@ class Reviewer:
         if response[0] != 204:
             raise Blocker('suite did not acknowledge the real browser navigation')
         for _ in range(12):
-            state = self.browser.script("""return {url:location.href, text:document.body.innerText,
-                login:!!document.querySelector('input[name=username]'),
-                password:!!document.querySelector('input[name=secret]'),
-                consent:!!document.querySelector('button[name=decision][value=allow]'),
-                oidc_error:document.body.classList.contains('oidc-page') &&
-                    document.querySelector('#oidc-title')?.textContent.trim()==='Unable to continue' &&
-                    document.querySelector('[role=alert]')?.textContent.includes('This sign-in request is invalid or has expired.') &&
-                    !document.querySelector('form')};""")
+            state = self.page_state()
             if state['url'].startswith(self.base + '/test/') and '/callback' in state['url']:
                 self.capture('Suite received the real browser callback', 'callback')
                 return
@@ -336,8 +365,7 @@ class Reviewer:
             slot_page = 'unknown' if self.record['name'] == 'oidcc-ensure-registered-redirect-uri' and not redirect_error else page
             slot = expected_slot(self.record['name'], len(self.record['visits']), slot_page, slots)
             if slot:
-                if len(png) > MAX_SCREENSHOT_BYTES:
-                    raise Blocker('real Chrome screenshot exceeds the official 500 KiB upload limit; use a smaller browser viewport')
+                step, png = self.upload_capture(labels[page], page, step, png)
                 code, _, body = self.api.request(self.base + '/api/log/' + self.current + '/images/' +
                     urllib.parse.quote(slot['upload'], safe=''), b'data:image/png;base64,' + base64.b64encode(png),
                     {'Content-Type': 'text/plain'})

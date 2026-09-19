@@ -103,6 +103,16 @@ that cannot meet this limit and rejects a temporary-directory symlink escaping
 the checkout. Use a shorter checkout path if that prerequisite check fails.
 The selected temporary base is recorded in `browser-tls.json`.
 
+Chrome startup and TLS checks can pass before a later image upload fails.
+The suite limits decoded screenshots to 500 KiB; Linux rendering can exceed
+that limit at a window size that worked on macOS. The browser helper retries
+oversized captures at bounded narrower widths, preserves every original PNG
+and restores the window. It verifies the page and URL before uploading the
+exact selected capture; it never repeats authentication or changes a result.
+Inspect the byte counts, window dimensions and hashes in `browser-evidence.json`
+and the private screenshot timeline. See the
+[capture and validation rules](oidc-conformance.md#regression-validation).
+
 Ubuntu can restrict user namespaces for downloaded Chrome binaries. The job
 loads a narrowly scoped AppArmor profile for the exact pinned Chrome path,
 following [Chromium's documented approach](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md),
@@ -158,6 +168,11 @@ This browser E2E is skipped only when the local pinned browser tools are absent;
 the hosted workflow prepares them before invoking these tests. Unit cases also
 reject temporary-directory escapes and Linux checkout paths exceeding the
 socket budget. Keep these checks in the isolated conformance suite.
+The same real-browser E2E serves a deterministic noisy login page whose original
+PNG exceeds the upload limit, then verifies a smaller authentic capture, retained
+originals and window restoration. Unit cases cover exact-limit acceptance,
+exhausted retries without an upload, changed-page/URL rejection, and binding the
+selected PNG to the existing official image slot without another form submission.
 
 Validate workflow syntax with `actionlint`, run the isolated conformance tests,
 and execute an actual Caddy conformance rehearsal through the CI stage wrapper.
