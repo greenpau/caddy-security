@@ -135,12 +135,12 @@ def render_reviews(output, modules, style):
             .request:nth-child(even){background:#f7f9fc}.time{font-variant-numeric:tabular-nums}.target{border-left:5px solid #ad6800}
             @media(max-width:900px){.review-grid{grid-template-columns:1fr}}
             </style></head><body><main><header><a href="./index.html#visual">← Conformance report</a>''',
-            '<div class="eyebrow">REAL HEADLESS CHROME CAPTURES · PRIVATE EVIDENCE</div><h1>' + e(record['name']) + '</h1>',
+            '<div class="eyebrow">REAL HEADLESS CHROME CAPTURES · TEST EVIDENCE</div><h1>' + e(record['name']) + '</h1>',
             '<p>Official outcome: <strong>' + e(module.get('outcome', module.get('result', 'NOT COLLECTED'))) + '</strong> · instance ' + e(identifier) + '</p>',
             '<p>Response mode: ' + e(str((module.get('variant') or {}).get('response_mode', 'not collected'))) + '</p>',
             '<p>' + e(GUIDANCE.get(record['name'], 'Review the original suite conditions.')) + '</p>',
-            '<p class="notice">Screenshots document what was displayed; they do not approve a REVIEW result. This private view includes full URLs, '
-            'headers, cookies and tokens. Keep the complete bundle private. No certification materials were submitted.</p>',
+            '<p class="notice">Screenshots document what was displayed; they do not approve a REVIEW result. This view includes full URLs, '
+            'headers, cookies and tokens from the disposable test deployment. No certification materials were submitted.</p>',
             '<nav><a href="#timeline">Screenshot timeline</a><a href="#network">Browser network</a><a href="#suite">Suite checks and HTTP</a><a href="#console">Console</a></nav></header>',
             '<section><h2>Evidence provenance</h2><p>These PNGs came directly from WebDriver during real navigation, before submitting the displayed forms. '
             'No page was reconstructed. The browser enforced TLS validation. One new profile per module; the first and second authorization share it.</p>',

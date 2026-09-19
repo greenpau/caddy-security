@@ -83,7 +83,7 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   that preserve result bundles; it does not install or remove anything.
 - Use the manual-only `OIDC conformance` Actions workflow for a downloadable
   report from a hosted runner. Its [setup and artifact reference](../configuration-oauth-applications/references/oidc-conformance-actions.md)
-  explains the age public recipient, readable summary, encrypted full evidence,
+  explains the readable summary, complete downloadable test evidence archive,
   original runner status and failed-run uploads. This never joins regular CI.
 - Use `make oidc-conformance-cleanup` to remove all identified OIDC result
   bundles under `tmp/`, including custom destinations and top-level supplemental

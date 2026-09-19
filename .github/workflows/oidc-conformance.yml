@@ -2,11 +2,6 @@ name: OIDC conformance
 
 on:
   workflow_dispatch:
-    inputs:
-      evidence_recipient:
-        description: 'age public key for private evidence (defaults to repository variable OIDC_CONFORMANCE_AGE_RECIPIENT)'
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -20,18 +15,24 @@ jobs:
   conformance:
     name: Official Basic, Config and Form Post OP plans
     runs-on: ubuntu-24.04
-    # Keep setup, cancellation cleanup, encryption and upload outside stage limits.
+    # Keep setup, cancellation cleanup, packaging and upload outside stage limits.
     timeout-minutes: 120
     env:
       GOTOOLCHAIN: local
       PYTHONDONTWRITEBYTECODE: '1'
-      OIDC_CONFORMANCE_AGE_RECIPIENT: ${{ inputs.evidence_recipient || vars.OIDC_CONFORMANCE_AGE_RECIPIENT }}
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Initialize private evidence and check recipient format
+      - name: Name OIDC report artifact
+        id: artifact
+        shell: bash
+        run: |
+          artifact_timestamp="$(date -u +'%Y%m%d-%H%M%S')"
+          artifact_commit="$(git rev-parse --short=12 HEAD)"
+          printf 'name=cadd-security-oidc-conformance-%s-%s\n' "$artifact_timestamp" "$artifact_commit" >> "$GITHUB_OUTPUT"
+      - name: Initialize run evidence
         id: initialize
         run: python3 assets/scripts/oidc_conformance_ci.py initialize
       - name: Set up Go
@@ -46,18 +47,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes make openssl python3-venv apparmor libnss3-tools libgtk-3-0t64 libasound2t64 libgbm1 libssl3t64
-      - name: Build pinned evidence encryption tools
-        id: tools
-        env:
-          GOBIN: ${{ github.workspace }}/tmp/oidc-conformance/tools/age
-          GOMODCACHE: ${{ github.workspace }}/tmp/oidc-conformance/tools/age-modcache
-          GOCACHE: ${{ github.workspace }}/tmp/oidc-conformance/tools/age-buildcache
-        run: |
-          python3 assets/scripts/oidc_conformance_ci.py stage --timeout 300 tools -- \
-            go install filippo.io/age/cmd/age@v1.2.1 filippo.io/age/cmd/age-keygen@v1.2.1
-      - name: Validate encryption recipient
-        id: recipient
-        run: python3 assets/scripts/oidc_conformance_ci.py check-recipient
       - name: Prepare pinned official suite and headless Chrome
         id: prepare
         run: |
@@ -81,15 +70,13 @@ jobs:
         run: |
           python3 assets/scripts/oidc_conformance_ci.py stage --timeout 2700 test -- \
             make oidc-conformance-test CONFORMANCE_RESULTS=tmp/oidc-conformance-ci/private/evidence
-      - name: Generate HTML summary and encrypt full evidence
+      - name: Generate HTML summary and archive complete test evidence
         if: ${{ always() }}
         timeout-minutes: 10
         env:
           OIDC_CI_INITIALIZE: ${{ steps.initialize.outcome }}
           OIDC_CI_GO: ${{ steps.go.outcome }}
           OIDC_CI_PREREQUISITES: ${{ steps.prerequisites.outcome }}
-          OIDC_CI_TOOLS: ${{ steps.tools.outcome }}
-          OIDC_CI_RECIPIENT: ${{ steps.recipient.outcome }}
           OIDC_CI_PREPARE: ${{ steps.prepare.outcome }}
           OIDC_CI_SANDBOX: ${{ steps.sandbox.outcome }}
           OIDC_CI_TEST: ${{ steps.test.outcome }}
@@ -99,7 +86,7 @@ jobs:
         timeout-minutes: 5
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: oidc-conformance_${{ github.run_id }}_${{ github.run_attempt }}
+          name: ${{ steps.artifact.outputs.name }}
           path: tmp/oidc-conformance-ci/artifact/
           if-no-files-found: error
           retention-days: 14

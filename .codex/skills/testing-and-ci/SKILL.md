@@ -238,8 +238,10 @@ See [official OP conformance](../configuration-oauth-applications/references/oid
 for prerequisites, isolated artifacts and all remaining non-pass modules.
 The separate `OIDC conformance` GitHub workflow is manual-only and invokes these
 same Make targets. Follow [conformance Actions](../configuration-oauth-applications/references/oidc-conformance-actions.md)
-for the public encryption recipient, report artifact and failure-preserving
-upload. Never upload plaintext private evidence or add conformance to regular CI.
+for the report artifact and failure-preserving upload. The workflow publishes
+the complete disposable test evidence in a plain archive, retaining signed
+exports and hashes; it needs no encryption key or recipient. Keep its inputs
+synthetic and conformance separate from regular CI.
 OIDC conformance units live in `assets/scripts/oidc_certification_conformance_tests/`
 and use `test_oidc_conformance_*.py` filenames. Keep them out of the regular
 automation discovery directory. The browser suite tests real pinned Chrome

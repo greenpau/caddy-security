@@ -1,4 +1,4 @@
-"""Offline, private HTML navigation for one recorded Caddy conformance run."""
+"""Offline HTML navigation for one recorded Caddy conformance run."""
 
 from collections import Counter, defaultdict
 from html import escape
@@ -168,9 +168,9 @@ def render_report(output):
              '<meta name="viewport" content="width=device-width, initial-scale=1">',
              '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'self\'; base-uri \'none\'; form-action \'none\'">',
              '<title>Caddy OIDC conformance report</title><style>' + STYLE + '</style></head><body><main>',
-             '<header><div class="eyebrow">CADDY · OPENID FOUNDATION SUITE · PRIVATE REHEARSAL</div>',
+             '<header><div class="eyebrow">CADDY · OPENID FOUNDATION SUITE · DISPOSABLE DEPLOYMENT</div>',
              '<h1>OIDC conformance report</h1><p>' + text(headline) + '</p>',
-             '<p class="notice">This bundle contains private credentials, logs, and identity data. Keep it private. '
+             '<p class="notice">This bundle records disposable test credentials, logs, and browser traces. '
              'This rehearsal is not OpenID certification; no materials were submitted.</p>',
              '<nav aria-label="Report sections">' + ''.join(f'<a href="#{key}">{label}</a>' for key, label in (
                  ('overview', 'Run overview'), ('plans', 'Plans'), ('modules', 'Every module'),

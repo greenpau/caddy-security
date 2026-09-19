@@ -195,7 +195,8 @@ Run it only with `make oidc-conformance-test`; its tests and artifacts are
 separate from regular testing. Existing local OIDC regression E2E remains enabled.
 Keep every non-pass outcome and the original runner status visible.
 The separate manual-only `OIDC conformance` GitHub Action runs those Make targets
-and uploads a readable summary plus encrypted private report. Follow its
+and uploads a readable summary plus a complete, unencrypted archive of the
+disposable test evidence, with signed exports and checksums. Follow its
 [setup and artifact guidance](.codex/skills/configuration-oauth-applications/references/oidc-conformance-actions.md).
 Use `make oidc-conformance-cleanup` to remove OIDC run bundles and supplemental
 logs, audits and browser reports while retaining the prepared suite and

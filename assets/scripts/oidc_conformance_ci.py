@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manual Actions orchestration and an encrypted artifact for private OP evidence."""
+"""Manual Actions orchestration and downloadable disposable OP test evidence."""
 
 import argparse
 from collections import Counter
@@ -22,8 +22,7 @@ from oidc_conformance_report import CONTEXT, OUTCOMES, STYLE
 
 
 DEFAULT = ROOT / "tmp/oidc-conformance-ci"
-AGE = WORK / "tools/age/age"
-STAGES = ("tools", "prepare", "test")
+STAGES = ("prepare", "test")
 
 
 def workspace(path):
@@ -44,22 +43,9 @@ def initialize(path):
     path.mkdir(mode=0o700, parents=True, exist_ok=False)
     (path / "private").mkdir(mode=0o700)
     (path / "artifact").mkdir(mode=0o700)
-    # Only generated, allowlisted report fields are ever uploaded unencrypted.
+    # Preserve the report's existing internal paths and restrictive local modes.
+    # The CI archive intentionally publishes the disposable test evidence.
     write_json(path / "private/ci.json", {"suite_revision": REVISION})
-
-
-def recipient():
-    value = os.environ.get("OIDC_CONFORMANCE_AGE_RECIPIENT", "").strip()
-    if not re.fullmatch(r"age1[0-9a-z]{58}", value):
-        raise ValueError("Set OIDC_CONFORMANCE_AGE_RECIPIENT to your age public key in repository Variables, "
-                         "or supply the evidence_recipient workflow input. Keep the private key locally.")
-    return value
-
-
-def check_recipient(age):
-    # Validate the actual checksum/key using age, before any sensitive run data.
-    subprocess.run([age, "--encrypt", "--recipient", recipient()], input=b"OIDC evidence key check\n",
-                   stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True, timeout=15)
 
 
 def stop_group(child):
@@ -177,30 +163,22 @@ def public_summary(path):
                                          or execution.get("interruption"))}
 
 
-def encrypt_evidence(path, age):
-    check_recipient(age)
-    write_json(path / "private/encryption-tool.json", {
-        "sha256": digest(age),
-        "version": subprocess.run([age, "--version"], capture_output=True, text=True, check=True, timeout=10).stdout.strip(),
-    })
-    archive = path / "evidence.tar.gz"
-    partial = path / "artifact/evidence.tar.gz.age.partial"
-    destination = path / "artifact/evidence.tar.gz.age"
+def archive_evidence(path):
+    partial = path / "artifact/evidence.tar.gz.partial"
+    destination = path / "artifact/evidence.tar.gz"
+    # A failed repack must not upload a stale archive from an earlier attempt.
+    destination.unlink(missing_ok=True)
     try:
         # Archive links as links, never read their targets (Chrome can leave
-        # profile singleton symlinks). tar extraction should use its data filter.
-        with tarfile.open(archive, "x:gz", dereference=False) as bundle:
+        # profile singleton symlinks). Keep hidden files and original bytes too.
+        with tarfile.open(partial, "x:gz", dereference=False) as bundle:
             bundle.add(path / "private", arcname="private")
-        with partial.open("xb") as output:
-            subprocess.run([age, "--encrypt", "--recipient", recipient(), archive],
-                           stdout=output, stderr=subprocess.PIPE, check=True, timeout=300)
         partial.replace(destination)
     finally:
-        archive.unlink(missing_ok=True)
         partial.unlink(missing_ok=True)
 
 
-def render_public(summary, encrypted, notice):
+def render_public(summary, archived, notice):
     esc = lambda value: html.escape(str(value), quote=True)
     if summary["all_passed"]:
         headline = "All recorded modules passed"
@@ -215,10 +193,10 @@ def render_public(summary, encrypted, notice):
         explanation = CONTEXT.get((module["name"], module["outcome"]), OUTCOMES[module["outcome"]])
         rows.append("<tr>" + "".join("<td>" + esc(v) + "</td>" for v in
                     (index, module["name"], module["outcome"], module["status"], explanation)) + "</tr>")
-    archive_link = ('<p><a href="evidence.tar.gz.age" download>Download encrypted full evidence</a></p>'
-                    if encrypted else "<p>No encrypted evidence archive was produced.</p>")
+    archive_link = ('<p><a href="evidence.tar.gz" download>Download complete test evidence</a></p>'
+                    if archived else '<p>No complete evidence archive was produced. '
+                    '<a href="archive-error.log" download>Packaging diagnostics</a></p>')
     instructions = """umask 077
-age --decrypt --identity /path/to/your-key.txt --output evidence.tar.gz evidence.tar.gz.age
 mkdir extracted
 tar -xzf evidence.tar.gz -C extracted
 # Open extracted/private/evidence/index.html locally."""
@@ -236,26 +214,26 @@ tar -xzf evidence.tar.gz -C extracted
             f'<div class="cards">{cards}</div><p>'
             '<a href="summary.json" download>Recorded summary</a> · '
             '<a href="sha256.json" download>Artifact hashes</a></p></header>'
-            '<section><h2>Full report and visual evidence</h2><p>The encrypted archive preserves '
+            '<section><h2>Full report and visual evidence</h2><p>The archive preserves '
             'the original linked HTML report, Chrome screenshots and developer-tools timelines, '
-            'signed exports, private logs/configuration, exact sources and all module outcomes. '
-            'Decrypt locally with the private key matching the supplied public recipient. '
-            'The private key is never needed by GitHub Actions.</p>' + archive_link +
+            'signed exports, test logs/configuration, exact sources and all module outcomes. '
+            'Extract it and open private/evidence/index.html. No key or decryption is required. '
+            'Credentials and keys in this report belong to the disposable test deployment.</p>' + archive_link +
             f'<pre>{esc(instructions)}</pre><p>If preparation failed, inspect extracted/private/*.log. '
             'No official outcome is claimed for a blocked or incomplete run.</p></section>'
             '<section><h2>Execution and revisions</h2><pre>' + esc(json.dumps(
                 {k: v for k, v in summary.items() if k not in ("modules", "counts")}, indent=2)) +
             '</pre></section><section><h2>Every recorded module instance</h2>'
             '<p>Repeated names are separate instances; all attempts remain listed. '
-            'Review details and exact plan membership are in the full private report.</p>'
+            'Review details and exact plan membership are in the full report.</p>'
             '<div class="scroll"><table><thead><tr><th>#</th><th>Module</th><th>Outcome</th>'
             '<th>Status</th><th>Explanation</th></tr></thead><tbody>' + "".join(rows) +
             '</tbody></table></div></section></main></body></html>')
 
 
-def package(path, age):
+def package(path):
     code = 0
-    notice = "Read each non-pass result and its evidence. Full evidence is private and encrypted."
+    notice = "Read each non-pass result and its evidence. The complete disposable test report is downloadable without a key."
     try:
         summary = public_summary(path)
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
@@ -263,29 +241,32 @@ def package(path, age):
         # and provide an honest report instead of losing the upload altogether.
         summary = {"certification": False, "all_passed": False, "runner_exit_code": None,
                    "counts": {}, "modules": [], "state": "EVIDENCE_ERROR"}
-        notice = "Recorded JSON is incomplete or unreadable. Inspect the encrypted original evidence; no pass is inferred."
+        notice = "Recorded JSON is incomplete or unreadable. Inspect the original evidence archive; no pass is inferred."
         code = 2
     summary["workflow_steps"] = {
         key: safe_text(os.environ.get("OIDC_CI_" + key.upper()), r"success|failure|cancelled|skipped")
-        for key in ("initialize", "go", "prerequisites", "tools", "recipient", "prepare", "sandbox", "test")}
-    encrypted = False
+        for key in ("initialize", "go", "prerequisites", "prepare", "sandbox", "test")}
+    archived = False
     try:
         # Preserve preparation diagnostics without uploading tool/cache trees.
         for name in ("suite-build.log", "prerequisites.json"):
             source = WORK / name
             if source.is_file():
                 shutil.copyfile(source, path / "private" / name)
-        encrypt_evidence(path, age)
-        encrypted = True
-    except (OSError, ValueError, subprocess.SubprocessError):
-        notice = ("Evidence encryption unavailable. Set OIDC_CONFORMANCE_AGE_RECIPIENT to a valid age public key "
-                  "and ensure the pinned age tool installed. Private data was not uploaded. "
-                  "Check the workflow step outcomes below and retry.")
+        archive_evidence(path)
+        archived = True
+    except (OSError, ValueError, tarfile.TarError):
+        for name in ("evidence.tar.gz", "evidence.tar.gz.partial"):
+            (path / "artifact" / name).unlink(missing_ok=True)
+        diagnostic = traceback.format_exc()
+        private_write(path / "private/archive-error.log", diagnostic)
+        private_write(path / "artifact/archive-error.log", diagnostic)
+        notice = "Evidence archive unavailable. Check the workflow step outcomes and packaging diagnostics; no complete archive is claimed."
         code = 2
-    summary["encrypted_evidence"] = encrypted
+    summary["evidence_archive"] = "evidence.tar.gz" if archived else None
     summary["packaging_exit_code"] = code
     write_json(path / "artifact/summary.json", summary)
-    private_write(path / "artifact/index.html", render_public(summary, encrypted, notice))
+    private_write(path / "artifact/index.html", render_public(summary, archived, notice))
     write_json(path / "artifact/sha256.json", {p.name: digest(p) for p in (path / "artifact").iterdir()
                                              if p.is_file() and p.name != "sha256.json"})
     message = ("OIDC report artifact: open index.html after downloading.\n\n"
@@ -305,10 +286,8 @@ def main():
     signal.signal(signal.SIGTERM, interrupt)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=DEFAULT)
-    parser.add_argument("--age", type=Path, default=AGE)
     sub = parser.add_subparsers(dest="action", required=True)
     sub.add_parser("initialize")
-    sub.add_parser("check-recipient")
     sub.add_parser("package")
     stage = sub.add_parser("stage")
     stage.add_argument("name", choices=STAGES)
@@ -319,13 +298,10 @@ def main():
         path = workspace(args.workspace)
         if args.action == "initialize":
             initialize(path)
-            recipient()
-        elif args.action == "check-recipient":
-            check_recipient(args.age)
         elif args.action == "package":
             if not path.exists():
                 initialize(path)
-            return package(path, args.age)
+            return package(path)
         else:
             command = args.command[1:] if args.command[:1] == ["--"] else args.command
             if args.timeout < 1 or not command:

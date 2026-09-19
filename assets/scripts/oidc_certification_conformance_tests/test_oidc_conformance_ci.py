@@ -1,4 +1,4 @@
-"""Opt-in CI artifact units and real CLI/encryption/cancellation journeys."""
+"""Opt-in CI artifact units and real CLI/archive/cancellation journeys."""
 
 import json
 import os
@@ -22,10 +22,12 @@ class CITests(unittest.TestCase):
     def setUp(self):
         # Fixture reports must never append to the real Actions job summary.
         env = {k: v for k, v in os.environ.items()
-               if k != "GITHUB_STEP_SUMMARY" and not k.startswith("OIDC_CI_")}
+               if k not in ("GITHUB_STEP_SUMMARY", "OIDC_CONFORMANCE_AGE_RECIPIENT")
+               and not k.startswith("OIDC_CI_")}
         environment = mock.patch.dict(os.environ, env, clear=True)
         environment.start()
         self.addCleanup(environment.stop)
+        (ROOT / "tmp").mkdir(exist_ok=True)
         self.directory = tempfile.TemporaryDirectory(prefix="oidc-ci-test-", dir=ROOT / "tmp")
         self.addCleanup(self.directory.cleanup)
         self.base = Path(self.directory.name)
@@ -61,10 +63,10 @@ class CITests(unittest.TestCase):
         self.assertNotIn("<script>", page)
         for outcome in ci.OUTCOMES:
             self.assertIn(outcome, page)
-        self.assertIn('href="evidence.tar.gz.age"', page)
+        self.assertIn('href="evidence.tar.gz"', page)
 
     def test_workspace_rejects_dependencies_existing_runs_and_symlink_escapes(self):
-        for path in (ROOT, ROOT / "tmp", ci.WORK, ci.WORK / "suite", ci.WORK / "tools/age"):
+        for path in (ROOT, ROOT / "tmp", ci.WORK, ci.WORK / "suite", ci.WORK / "tools/chrome"):
             with self.subTest(path=path), self.assertRaises((ValueError, ci.ArtifactError)):
                 ci.workspace(path)
         link = self.base / "escape"
@@ -133,50 +135,54 @@ class CITests(unittest.TestCase):
     def test_incomplete_json_still_gets_an_honest_artifact(self):
         (self.run / "private/evidence").mkdir()
         (self.run / "private/evidence/execution.json").write_text('{"runner_exit_code":')
-        with mock.patch.object(ci, "encrypt_evidence"):
-            self.assertEqual(ci.package(self.run, ci.AGE), 2)
+        self.assertEqual(ci.package(self.run), 2)
         summary = json.loads((self.run / "artifact/summary.json").read_text())
         self.assertEqual(summary["state"], "EVIDENCE_ERROR")
         self.assertFalse(summary["all_passed"])
+        self.assertEqual(summary["evidence_archive"], "evidence.tar.gz")
         self.assertIn("incomplete or unreadable", (self.run / "artifact/index.html").read_text())
+        with tarfile.open(self.run / "artifact/evidence.tar.gz") as archive:
+            self.assertEqual(archive.extractfile("private/evidence/execution.json").read(), b'{"runner_exit_code":')
 
-    def test_missing_recipient_produces_blocked_report_without_private_upload(self):
+    def test_initialize_and_blocked_report_need_no_recipient_or_encryption_tool(self):
+        fresh = self.base / "fresh"
+        result = subprocess.run([sys.executable, self.script, "--workspace", fresh, "initialize"],
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((fresh / "private/ci.json").is_file())
         self.record("evidence/execution.json", {"state": "BLOCKED", "blocker": "PRIVATE_SENTINEL"})
-        env = os.environ.copy()
-        env.pop("OIDC_CONFORMANCE_AGE_RECIPIENT", None)
-        result = self.cli("package", env=env)
-        self.assertEqual(result.returncode, 2, result.stderr)
+        result = self.cli("package")
+        self.assertEqual(result.returncode, 0, result.stderr)
         files = {p.name for p in (self.run / "artifact").iterdir()}
-        self.assertEqual(files, {"index.html", "summary.json", "sha256.json"})
-        for file in (self.run / "artifact").iterdir():
-            self.assertNotIn("PRIVATE_SENTINEL", file.read_text())
-        self.assertIn("OIDC_CONFORMANCE_AGE_RECIPIENT", (self.run / "artifact/index.html").read_text())
-        self.assertFalse((self.run / "evidence.tar.gz").exists())
+        self.assertEqual(files, {"index.html", "summary.json", "sha256.json", "evidence.tar.gz"})
+        summary = json.loads((self.run / "artifact/summary.json").read_text())
+        self.assertEqual(summary["state"], "BLOCKED")
+        self.assertFalse(summary["all_passed"])
+        self.assertTrue(summary["evidence_has_blocker"])
+        with tarfile.open(self.run / "artifact/evidence.tar.gz") as archive:
+            self.assertIn(b"PRIVATE_SENTINEL", archive.extractfile("private/evidence/execution.json").read())
 
-    def test_encryption_failure_never_exposes_partial_archive(self):
+    def test_archive_failure_removes_partial_and_stale_archives(self):
         self.record("private-data.json", {"secret": "PRIVATE_SENTINEL"})
-        with mock.patch.object(ci, "check_recipient"), \
-             mock.patch.object(ci, "recipient", return_value="age1fixture"), \
-             mock.patch.object(ci.subprocess, "run", side_effect=[
-                 subprocess.CompletedProcess([], 0, "v1.2.1\n"), OSError("PRIVATE_SENTINEL")]), \
-             mock.patch.object(ci, "digest", return_value="0" * 64):
-            with self.assertRaises(OSError):
-                ci.encrypt_evidence(self.run, ci.AGE)
-        self.assertFalse((self.run / "evidence.tar.gz").exists())
-        self.assertEqual(list((self.run / "artifact").iterdir()), [])
+        artifact = self.run / "artifact"
+        prepared = self.base / "prepared"
+        prepared.mkdir()
+        (prepared / "suite-build.log").write_text("fixture preparation")
+        for target, method in ((ci.tarfile.TarFile, "add"), (ci.shutil, "copyfile")):
+            with self.subTest(failure=method), mock.patch.object(ci, "WORK", prepared), \
+                 mock.patch.object(target, method, side_effect=OSError("archive write failed")):
+                (artifact / "evidence.tar.gz").write_bytes(b'stale archive')
+                self.assertEqual(ci.package(self.run), 2)
+                self.assertFalse((artifact / "evidence.tar.gz").exists())
+                self.assertFalse((artifact / "evidence.tar.gz.partial").exists())
+                summary = json.loads((artifact / "summary.json").read_text())
+                self.assertIsNone(summary["evidence_archive"])
+                self.assertEqual(summary["packaging_exit_code"], 2)
+                self.assertNotIn('href="evidence.tar.gz"', (artifact / "index.html").read_text())
+                self.assertIn('href="archive-error.log"', (artifact / "index.html").read_text())
+                self.assertIn("archive write failed", (artifact / "archive-error.log").read_text())
 
-    def test_real_age_roundtrip_preserves_linked_report_and_private_evidence(self):
-        # Local conformance does not require age. The manual CI workflow builds
-        # the pinned tools before running these opt-in tests.
-        age = ci.AGE
-        keygen = age.with_name("age-keygen")
-        if not age.is_file() or not keygen.is_file():
-            self.skipTest("CI archive E2E requires pinned age/age-keygen under tmp/oidc-conformance/tools/age")
-        key = self.base / "identity.txt"
-        subprocess.run([keygen, "-o", key], capture_output=True, check=True, timeout=10)
-        recipient = subprocess.run([keygen, "-y", key], capture_output=True, text=True,
-                                   check=True, timeout=10).stdout.strip()
-        env = dict(os.environ, OIDC_CONFORMANCE_AGE_RECIPIENT=recipient)
+    def test_real_archive_preserves_linked_report_original_bytes_hashes_and_symlinks(self):
         self.record("evidence/execution.json", {"runner_exit_code": 1, "state": "RUNNER_FINISHED", "all_passed": False})
         self.record("evidence/summary.json", {"modules": [{"name": "oidcc-prompt-login", "outcome": "REVIEW",
                                                           "status": "FINISHED"}]})
@@ -184,26 +190,46 @@ class CITests(unittest.TestCase):
         (evidence / "index.html").write_text('<a href="trace.json">Private report</a>')
         (evidence / "trace.json").write_bytes(b'PRIVATE_SENTINEL')
         (evidence / "signed-export.zip").write_bytes(b'original signed export fixture')
-        result = self.cli("package", env=env)
+        (evidence / ".hidden-evidence").write_bytes(b'hidden original')
+        outside = self.base / "outside-archive.txt"
+        outside.write_bytes(b'NEVER_FOLLOW_SYMLINK')
+        (evidence / "profile-link").symlink_to(outside)
+        self.record("evidence/evidence-sha256.json", {name: ci.digest(evidence / name)
+                    for name in ("index.html", "trace.json", "signed-export.zip", ".hidden-evidence")})
+        result = self.cli("package")
         self.assertEqual(result.returncode, 0, result.stderr)
         artifact = self.run / "artifact"
         self.assertEqual({p.name for p in artifact.iterdir()},
-                         {"index.html", "summary.json", "sha256.json", "evidence.tar.gz.age"})
-        for file in artifact.iterdir():
-            self.assertNotIn(b"PRIVATE_SENTINEL", file.read_bytes())
+                         {"index.html", "summary.json", "sha256.json", "evidence.tar.gz"})
         summary = json.loads((artifact / "summary.json").read_text())
         self.assertEqual(summary["runner_exit_code"], 1)
         self.assertFalse(summary["all_passed"])
+        self.assertEqual(summary["counts"], {"REVIEW": 1})
+        self.assertEqual(summary["evidence_archive"], "evidence.tar.gz")
         hashes = json.loads((artifact / "sha256.json").read_text())
         for name, expected in hashes.items():
             self.assertEqual(ci.digest(artifact / name), expected)
-        decrypted = self.base / "decrypted.tar.gz"
-        subprocess.run([age, "--decrypt", "-i", key, "-o", decrypted, artifact / "evidence.tar.gz.age"],
-                       capture_output=True, check=True, timeout=15)
-        with tarfile.open(decrypted) as archive:
+        with tarfile.open(artifact / "evidence.tar.gz") as archive:
             self.assertEqual(archive.extractfile("private/evidence/index.html").read(), (evidence / "index.html").read_bytes())
             self.assertEqual(archive.extractfile("private/evidence/trace.json").read(), b'PRIVATE_SENTINEL')
             self.assertEqual(archive.extractfile("private/evidence/signed-export.zip").read(), b'original signed export fixture')
+            self.assertEqual(archive.extractfile("private/evidence/.hidden-evidence").read(), b'hidden original')
+            self.assertEqual(archive.extractfile("private/evidence/evidence-sha256.json").read(),
+                             (evidence / "evidence-sha256.json").read_bytes())
+            link = archive.getmember("private/evidence/profile-link")
+            self.assertTrue(link.issym())
+            self.assertEqual(link.linkname, str(outside))
+            self.assertFalse(any(m.name.endswith("outside-archive.txt") for m in archive.getmembers()))
+        extracted = self.base / "extracted"
+        extracted.mkdir()
+        subprocess.run(["tar", "-xzf", artifact / "evidence.tar.gz", "-C", extracted,
+                        *["private/evidence/" + name for name in
+                          ("index.html", "trace.json", "signed-export.zip", ".hidden-evidence", "evidence-sha256.json")]],
+                       capture_output=True, check=True, timeout=10)
+        report = extracted / "private/evidence"
+        self.assertIn('href="trace.json"', (report / "index.html").read_text())
+        for name, expected in json.loads((report / "evidence-sha256.json").read_text()).items():
+            self.assertEqual(ci.digest(report / name), expected)
 
     def test_preparation_cancellation_unwinds_its_independent_process_session(self):
         # Exercise preparation's real entry point with only the download/build

@@ -8,43 +8,29 @@ run the official plans. It builds the actual Caddy deployment with the selected
 published go-authcrunch dependency and the unchanged pinned Foundation suite.
 The Basic OP, Config OP and Form Post OP selection is unchanged.
 
-## Set up artifact privacy once
+## Artifact contents
 
-GitHub permits signed-in repository readers to
-[download its Actions artifacts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts).
-The full conformance bundle contains disposable passwords, client secrets,
-signing keys and browser/token traces. File permissions inside a ZIP do not
-make an uploaded artifact private to its initiator.
+The workflow publishes a readable HTML summary and a normal **`evidence.tar.gz`**
+archive containing the complete report. It requires no recipient input, repository
+variable, encryption key or age installation. Credentials, client registrations,
+TLS and signing keys are generated for the disposable loopback test deployment;
+keep this workflow limited to synthetic test data.
 
-This workflow uploads a readable HTML summary and an **age-encrypted complete
-evidence archive**. The summary lists every module instance/outcome, explains
-non-pass statuses, reports the original runner exit and links to the archive.
-Arbitrary logs, configuration, captured pages and condition messages are never
-copied into the unencrypted summary. The full linked HTML report, screenshots,
-developer-tools timelines, signed exports and private originals are inside the
-encrypted archive. Local Make runs retain their usual private, unencrypted
-report and need no encryption key.
+The archive preserves the linked HTML report, Chrome screenshots and network
+timelines, signed exports, raw logs/configuration, source snapshot and every
+recorded outcome. GitHub users with repository read access can
+[download its artifacts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts).
+The summary remains concise and only includes selected status fields; complete
+original evidence lives in the archive. Signatures and checksums are retained.
 
-Create an [age identity](https://github.com/FiloSottile/age/tree/v1.2.1) locally,
-using `age-keygen -o /private/path/oidc-evidence-key.txt`. Keep this private key
-outside the checkout's temporary/cleanup directories and outside GitHub.
-Copy its public `age1...` recipient to the repository Actions **variable**
-`OIDC_CONFORMANCE_AGE_RECIPIENT` under Settings → Secrets and variables → Actions
-→ Variables. Only the public key is needed by the runner. Alternatively supply
-the `evidence_recipient` input when dispatching a particular run.
+The archive keeps the existing `private/` directory name to preserve report
+paths and evidence bytes. That name and its restrictive local file permissions
+do not imply the uploaded test bundle is confidential. Local Make runs keep
+their existing report layout and permissions.
 
-For repo-local tools, without a global install:
-
-```sh
-GOBIN="$PWD/tmp/oidc-conformance/tools/age" go install \
-  filippo.io/age/cmd/age@v1.2.1 filippo.io/age/cmd/age-keygen@v1.2.1
-# Invoke tmp/oidc-conformance/tools/age/age-keygen and age from here.
-```
-
-The workflow pins the same tools, records the encryption binary's version/hash,
-and validates the actual recipient before preparing or running the suite.
-Missing/invalid recipients stop the run with setup guidance. The artifact still
-contains a blocked-run HTML summary, with no plaintext private evidence.
+Older workflow revisions produced `evidence.tar.gz.age`; those existing artifacts
+still need their original private key. The current workflow no longer reads
+`OIDC_CONFORMANCE_AGE_RECIPIENT`, so a previously configured variable is unused.
 
 ## Run and download
 
@@ -54,26 +40,30 @@ GitHub requires the workflow on the default branch to expose manual dispatch;
 see [manual workflow instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
 Authoring this workflow does not itself push code or dispatch a remote job.
 
-The CLI equivalent, using the configured public recipient, is:
+The CLI equivalent requires no inputs:
 
 ```sh
 gh workflow run oidc-conformance.yml --ref main
 ```
 
-Download `oidc-conformance_<run-id>_<attempt>` from the run's **Artifacts** section
-and open `index.html`. The artifact is retained for 14 days. It contains:
+Download `cadd-security-oidc-conformance-<YYYYMMDD>-<HHMMSS>-<short-commit>.zip`
+from the run's **Artifacts** section and open `index.html`. The prefix is
+`cadd-security`. The timestamp is UTC, recorded immediately after
+checkout, and the commit is Git's 12-character short hash of the checked-out HEAD
+(extended only if needed for uniqueness). The upload action receives the name
+without `.zip`; GitHub supplies that extension when downloading the artifact.
+The artifact is retained for 14 days. It contains:
 
 - `index.html`: readable summary, outcome explanations and archive instructions.
 - `summary.json`: allowlisted outcomes, stage statuses, runner exit and revisions.
 - `sha256.json`: artifact checksums.
-- `evidence.tar.gz.age`: encrypted original evidence, when encryption succeeded.
+- `evidence.tar.gz`: complete original test evidence, when packaging succeeded.
+- `archive-error.log`: packaging diagnostics if archive creation failed.
 
-To open the full report, decrypt into a new private directory:
+To open the full report, extract the archive into a new directory:
 
 ```sh
 umask 077
-age --decrypt --identity /private/path/oidc-evidence-key.txt \
-  --output evidence.tar.gz evidence.tar.gz.age
 mkdir extracted
 tar -xzf evidence.tar.gz -C extracted
 # Open extracted/private/evidence/index.html in Chrome.
@@ -81,8 +71,7 @@ tar -xzf evidence.tar.gz -C extracted
 
 Preparation/tool logs live at `extracted/private/*.log`. The actual conformance
 bundle, including its unchanged SHA-256 inventory, is under `private/evidence/`.
-Do not publish the decrypted directory or private key. This artifact is a
-deployment rehearsal; it does not submit certification materials or confer
+This artifact is a deployment rehearsal; it does not submit certification materials or confer
 OpenID certification. Do not add publishing/submission actions without a
 separate user instruction.
 
@@ -90,12 +79,13 @@ separate user instruction.
 
 The job uses Ubuntu 24.04 x86_64, pinned Go 1.26.8, Python 3.12 and headless
 Chrome for Testing. It installs host runtime libraries, while downloaded suite,
-browser, Java, MongoDB, Maven, Python and encryption tools/data stay under
-`tmp/oidc-conformance/`. It does not cache or upload private run data.
+browser, Java, MongoDB, Maven and Python tools/data stay under
+`tmp/oidc-conformance/`. It does not cache run data; only the packaged disposable
+test evidence is uploaded.
 
 ChromeDriver and Chrome receive a separate `TMPDIR` pointing to the checkout's
 `tmp/` root. Chromium creates private unique temporary directories there;
-profiles, trust databases and logs remain in the private report bundle. Do not
+profiles, trust databases and logs remain in the complete report bundle. Do not
 inherit the report's deeply nested runtime path for Chrome: Linux limits Unix
 socket addresses to 107 pathname bytes, including Chromium's generated
 directory and `SingletonSocket` suffix. The launcher rejects checkout paths
@@ -110,7 +100,7 @@ oversized captures at bounded narrower widths, preserves every original PNG
 and restores the window. It verifies the page and URL before uploading the
 exact selected capture; it never repeats authentication or changes a result.
 Inspect the byte counts, window dimensions and hashes in `browser-evidence.json`
-and the private screenshot timeline. See the
+and the screenshot timeline. See the
 [capture and validation rules](oidc-conformance.md#regression-validation).
 
 Ubuntu can restrict user namespaces for downloaded Chrome binaries. The job
@@ -122,15 +112,16 @@ hosts-file changes, Docker network or hosted-suite account are needed: Caddy,
 Chrome, the suite and MongoDB share loopback networking on the runner.
 
 `assets/scripts/oidc_conformance_ci.py` captures preparation/test output in
-private logs. It preserves each command's original exit, propagates nonzero
+locally restricted logs that are included in the test archive. It preserves each
+command's original exit, propagates nonzero
 results to Actions, and records timeout/interruption separately. The original
 official runner exit remains in `execution.json` and both HTML reports; GNU
 Make's own failure status can differ from the official runner's status.
 REVIEW/WARNING/SKIPPED never become PASSED, including when the runner exits zero.
 
 Preparation has a 30-minute stage limit, testing a 45-minute limit and the job
-a 120-minute limit, leaving time for setup, cleanup and packaging/upload. On stage cancellation or
-timeout, the wrapper signals its owned process group and allows the harness
+a 120-minute limit, leaving time for setup, cleanup and packaging/upload. On stage
+cancellation or timeout, the wrapper signals its owned process group and allows the harness
 to stop its independent Caddy/Java/MongoDB/browser sessions. Preparation handles
 SIGTERM too, so its independent Maven/helper sessions unwind. Report packaging
 and upload use `always()` and execute after failures. A forcibly terminated or
@@ -138,9 +129,12 @@ lost runner can prevent final cleanup/upload; no complete evidence claim is
 made for such a run. The action does not automatically retry or overwrite runs.
 
 The upload path is exclusively `tmp/oidc-conformance-ci/artifact/`. Never widen
-it to `tmp/`, `private/` or the suite workspace. An encryption failure fails
-packaging and leaves only the public summary, without falling back to uploading
-plaintext. Conformance cleanup removes `tmp/oidc-conformance-ci*` output through
+it to `tmp/`, `private/` or the suite workspace. The archive includes only the
+owned run evidence and copied preparation diagnostics, not tool/cache trees.
+Packaging writes a temporary archive and exposes it only after completion. An
+archive failure fails packaging, removes partial or stale archives, and leaves
+a readable summary plus packaging diagnostics; incomplete evidence is never
+presented as complete. Conformance cleanup removes `tmp/oidc-conformance-ci*` output through
 its existing supplemental-output rule and retains downloaded tools.
 
 ## Validation
@@ -155,11 +149,12 @@ and protection against overwriting existing evidence.
 `test_oidc_conformance_ci.py` stays in the isolated conformance test directory.
 It checks preservation of every outcome/repeated instance, public-field
 selection, private log handling, path boundaries, failed stages, real timeout
-cleanup, preparation SIGTERM cleanup and blocked artifacts. With pinned age
-tools present it also encrypts/decrypts a real archive and verifies unchanged
-report links, private bytes and hashes. Missing age skips only this CI archive
-E2E locally; the workflow installs age before these tests and requires it for
-packaging. It never skips official suite modules for missing prerequisites.
+cleanup, preparation SIGTERM cleanup and blocked artifacts. Its archive E2E
+runs without encryption tools or a recipient: it packages and extracts a real
+archive, verifies unchanged report links, original bytes and hashes, includes
+hidden evidence, and checks that symlinks are archived without reading their
+targets. Failure cases preserve malformed evidence and reject partial/stale
+archives. It never skips official suite modules for missing prerequisites.
 
 The browser tests include real pinned Chrome/ChromeDriver startup with a long
 report path and inherited `TMPDIR`, both untrusted and trusted HTTPS controls,
@@ -176,6 +171,6 @@ selected PNG to the existing official image slot without another form submission
 
 Validate workflow syntax with `actionlint`, run the isolated conformance tests,
 and execute an actual Caddy conformance rehearsal through the CI stage wrapper.
-Confirm the encrypted archive decrypts to the original report and manifests.
+Extract the archive and confirm it matches the original report and manifests.
 Local validation on macOS does not prove the hosted Ubuntu job has run; report
 that limitation until the committed workflow is dispatched on GitHub.
