@@ -80,6 +80,8 @@ have different side effects:
 | `make release-git-check` | Read-only local check of `main`, a clean worktree/index including untracked files, and synchronized version values. Does not check the remote or run the quality gate. |
 | `make release` | Runs `assets/scripts/release.sh patch` for the complete checked patch release. |
 | `make minor-release` | Runs the same script with `minor`, resetting the patch to zero. |
+| `make fast-release` | Runs the patch workflow with `--skip-tests`, skipping local `make ci-check`. |
+| `make fast-minor-release` | Runs the minor workflow with `--skip-tests`, skipping local `make ci-check`. |
 | `make release-update-version`, `make release-git-commit` | Fail with instructions to use a complete release target; partial publication paths are disabled. |
 
 The shared script serializes checks, bump, synchronization, download generation,
@@ -90,7 +92,13 @@ origin, and checks the README marker and macOS `gsed` prerequisite before bumpin
 The pinned `go tool versioned` command comes from `go.mod`; release operations
 do not depend on a globally installed versioned executable.
 
-The gate runs once against the bumped version, including the binary build.
+For regular releases, the gate runs once against the bumped version, including
+the binary build. Fast releases skip the entire local gate (automation tests,
+Go tests/reports, and build); GitHub release validation still runs before
+GoReleaser publication. All version/Git checks, synchronization, download
+generation, staging restrictions and atomic publication remain in place.
+Use a fast target only when the user requests it; `release-git-check` does not
+accept `--skip-tests`.
 Only `VERSION`, `README.md`, and `cmd/caddy-authenticator/main.go` are staged.
 Unexpected staged, other tracked, or untracked changes stop publication.
 The commit subject is `ops: released v<VERSION>` and the exact tag is annotated.
@@ -119,6 +127,8 @@ For an actual release, carry forward the user's existing authorization and:
 3. Run the requested `make release` or `make minor-release` once. The script
    bumps, synchronizes projections, runs the complete gate, commits and tags the
    validated contents, and publishes the two explicit refs atomically.
+   When a fast release is requested, use `make fast-release` or
+   `make fast-minor-release`; only the local gate is skipped.
 4. Confirm the release commit, annotated tag, VERSION and intended publication
    refer to the same revision. Never force an existing release ref.
 

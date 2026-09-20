@@ -75,8 +75,10 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
         return result
 
-    def release(self, kind='patch', ok=True, **variables):
+    def release(self, kind='patch', ok=True, fast=False, **variables):
         target = {'patch': 'release', 'minor': 'minor-release', 'check': 'release-git-check'}[kind]
+        if fast:
+            target = f'fast-{target}'
         return self.run_command('make', '-j2', '-f', str(ROOT / 'Makefile'), target, ok=ok,
                                 env=dict(self.env, **variables))
 
@@ -86,7 +88,6 @@ class ReleaseTests(unittest.TestCase):
     def assert_published_release(self, version):
         tag = f'v{version}'
         self.assertEqual((self.root / 'VERSION').read_text().strip(), version)
-        self.assertEqual((self.root / '.fixture/gates').read_text(), version + '\n')
         self.run_command('make', 'version-check')
         readme = (self.root / 'README.md').read_text()
         self.assertTrue(readme.startswith('# Fixture\n'))
@@ -112,11 +113,27 @@ class ReleaseTests(unittest.TestCase):
         self.run_command('git', 'tag', '-a', 'unrelated-local-tag', '-m', 'unrelated')
         self.run_command('git', 'config', 'push.followTags', 'true')
         self.release()
+        self.assertEqual((self.root / '.fixture/gates').read_text(), '1.1.65\n')
         self.assert_published_release('1.1.65')
 
     def test_minor_release_resets_patch(self):
         self.release('minor')
+        self.assertEqual((self.root / '.fixture/gates').read_text(), '1.2.0\n')
         self.assert_published_release('1.2.0')
+
+    def assert_fast_release(self, kind, version):
+        self.run_command('git', 'tag', '-a', 'unrelated-local-tag', '-m', 'unrelated')
+        self.run_command('git', 'config', 'push.followTags', 'true')
+        result = self.release(kind, fast=True, FAIL_GATE='1', DIRTY_GATE='untracked')
+        self.assertIn('Skipping local ci-check', result.stdout)
+        self.assertFalse((self.root / '.fixture/gates').exists())
+        self.assert_published_release(version)
+
+    def test_fast_release_publishes_patch_without_local_gate(self):
+        self.assert_fast_release('patch', '1.1.65')
+
+    def test_fast_minor_release_publishes_minor_without_local_gate(self):
+        self.assert_fast_release('minor', '1.2.0')
 
     def test_release_check_does_not_bump_or_publish(self):
         self.release('check')
@@ -140,6 +157,7 @@ class ReleaseTests(unittest.TestCase):
                 else:
                     self.run_command('git', 'checkout', '--detach', '-q')
                 self.assertNotEqual(self.release('minor', ok=False).returncode, 0)
+                self.assertNotEqual(self.release('minor', ok=False, fast=True).returncode, 0)
                 self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.64')
                 self.assertEqual(self.remote_head(), self.initial)
                 self.assertFalse((self.root / '.fixture/gates').exists())
@@ -154,6 +172,7 @@ class ReleaseTests(unittest.TestCase):
         self.run_command('git', 'commit', '-qm', 'ops: fixture version drift')
         head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
         self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.63')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), head)
@@ -186,9 +205,11 @@ class ReleaseTests(unittest.TestCase):
     def test_existing_local_or_remote_tag_fails_before_bump(self):
         self.run_command('git', 'tag', 'v1.2.0')
         self.assertNotEqual(self.release('minor', ok=False).returncode, 0)
+        self.assertNotEqual(self.release('minor', ok=False, fast=True).returncode, 0)
         self.run_command('git', 'push', '-q', 'origin', 'v1.2.0')
         self.run_command('git', 'tag', '-d', 'v1.2.0')
         self.assertNotEqual(self.release('minor', ok=False).returncode, 0)
+        self.assertNotEqual(self.release('minor', ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.64')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), self.initial)
@@ -199,15 +220,22 @@ class ReleaseTests(unittest.TestCase):
         remote = self.remote_head()
         self.run_command('git', 'reset', '--hard', '-q', self.initial)
         self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.64')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), remote)
 
     def test_atomic_push_cannot_publish_main_without_tag(self):
+        self.assert_atomic_push_rejected(fast=False)
+
+    def test_fast_release_atomic_push_cannot_publish_main_without_tag(self):
+        self.assert_atomic_push_rejected(fast=True)
+
+    def assert_atomic_push_rejected(self, fast):
         hook = self.remote / 'hooks/update'
         hook.write_text('#!/bin/sh\ncase "$1" in refs/tags/*) exit 1 ;; esac\nexit 0\n')
         hook.chmod(0o755)
-        self.assertNotEqual(self.release('minor', ok=False).returncode, 0)
+        self.assertNotEqual(self.release('minor', ok=False, fast=fast).returncode, 0)
         self.assertEqual(self.remote_head(), self.initial)
         self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout, '')
         self.assertEqual(self.run_command('git', 'tag').stdout.strip(), 'v1.2.0')
@@ -219,12 +247,14 @@ class ReleaseTests(unittest.TestCase):
         result = self.release(ok=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('download insertion marker is missing', result.stdout)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.64')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), self.initial)
 
     def test_invalid_arguments_and_partial_targets_cannot_publish(self):
-        for args in (('major',), ('minor', '--skip-tests'), ('check', 'extra')):
+        for args in (('major',), ('patch', '--skip-test'), ('minor', '--skip-tests', 'extra'),
+                     ('check', '--skip-tests'), ('check', 'extra')):
             with self.subTest(args=args):
                 result = self.run_command('bash', 'assets/scripts/release.sh', *args, ok=False)
                 self.assertNotEqual(result.returncode, 0)

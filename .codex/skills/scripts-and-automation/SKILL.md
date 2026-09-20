@@ -210,7 +210,7 @@ switch changes. Refresh the owning configuration skills and syntax comments.
 `assets/scripts/generate_downloads.sh` rewrites Caddy download links in
 `README.md`. See [release-and-versioning](../release-and-versioning/SKILL.md)
 for version inputs and regeneration requirements. It is called by
-`make release`, `make minor-release`, and `make license`.
+`make release`, `make minor-release`, their `fast-` variants, and `make license`.
 
 `assets/scripts/update_doc_refs.sh` reads `../go-authcrunch/VERSION`, updates
 go-authcrunch references in `CONTRIBUTING.md`, `Makefile`, and `go.mod`, removes

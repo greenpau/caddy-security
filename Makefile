@@ -182,11 +182,19 @@ sync:
 
 # Only run these publishing commands when a release is explicitly requested.
 .PHONY: release minor-release release-git-check release-update-version release-git-commit
+.PHONY: fast-release fast-minor-release
 release:
 	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh patch
 
 minor-release:
 	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh minor
+
+# Skip the local quality gate; GitHub release validation still runs.
+fast-release:
+	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh patch --skip-tests
+
+fast-minor-release:
+	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh minor --skip-tests
 
 release-git-check:
 	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh check

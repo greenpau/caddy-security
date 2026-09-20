@@ -6,8 +6,13 @@ script_dir=$(cd -- "$(dirname -- "$0")" && pwd)
 cd "${script_dir}/../.."
 fail() { echo "Release stopped: $*" >&2; exit 1; }
 kind=${1:-patch}
-[ "$#" -le 1 ] || fail "usage: release.sh [patch|minor|check]"
 case "$kind" in patch|minor|check) ;; *) fail "Expected patch, minor, or check" ;; esac
+skip_tests=false
+if [ "$#" -gt 1 ]; then
+    [ "$#" -eq 2 ] && [ "$2" = --skip-tests ] && [ "$kind" != check ] || \
+        fail "usage: release.sh [patch|minor [--skip-tests]|check]"
+    skip_tests=true
+fi
 
 clean_tree() {
     [ -z "$(git status --porcelain --untracked-files=all)" ] || fail "working tree and index must be clean"
@@ -37,8 +42,12 @@ go tool versioned "-${kind}"
 make version-sync
 [ "$(cat VERSION)" = "$version" ] || fail "versioned produced an unexpected version"
 bash assets/scripts/generate_downloads.sh
-# Run the gate once against the synchronized release contents, including the build.
-make ci-check
+# Checked releases run the gate once against the synchronized contents.
+if [ "$skip_tests" = true ]; then
+    echo "Skipping local ci-check (--skip-tests); GitHub release validation still runs."
+else
+    make ci-check
+fi
 
 # Stage only the version authority and its declared projections.
 git diff --cached --quiet || fail "validation staged unexpected changes"
