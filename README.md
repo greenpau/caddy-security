@@ -38,8 +38,8 @@ See [version diagnostics](.codex/skills/scripts-and-automation/SKILL.md#security
 for module replacement details.
 
 Download Caddy with the plugins enabled:
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.64&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.64&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.2.0&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.2.0&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
 
 ## Tests and Reports
 
