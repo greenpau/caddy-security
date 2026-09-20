@@ -14,8 +14,14 @@ The checked revision is therefore the same revision qualified by the reusable
 test workflow. Checkout retrieves full history for release notes and tag checks.
 
 The `validate` job calls `.github/workflows/build.yml`; GoReleaser requires its
-success. That gate runs `make ci-check` and uploads tested reports. The
-publication job also validates `VERSION`, exact tag equality, and annotated tag
+success. That gate runs `make ci-check` and uploads tested reports. The separate
+build run for a `main` push skips its test job when the head commit
+message starts with the release script's `ops: released v` prefix. The script
+atomically pushes `main` and the release tag, so release validation owns testing
+for that revision. The skip is limited to the branch push; the reusable gate
+still runs for release tags and manual dispatches.
+
+The publication job also validates `VERSION`, exact tag equality, and annotated tag
 type before generating release notes or publishing. Test/build actions use
 immutable revisions, checkout does not persist credentials, and
 `contents: write` is confined to the publishing job.

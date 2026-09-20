@@ -488,7 +488,11 @@ wants debug artifacts kept.
 ## CI Workflow
 
 `.github/workflows/build.yml` runs on pushes/PRs to `main`, manual dispatch,
-and reusable workflow calls. It selects Ubuntu 24.04 and Go `1.26.8` with
+and reusable workflow calls. Its test job skips `main` push events whose head
+commit message starts with `ops: released v`: the release script atomically
+pushes that commit and its tag, and `release.yml` runs the gate for the tag.
+Ordinary pushes, PRs, manual runs, and release tag validation still run tests.
+It selects Ubuntu 24.04 and Go `1.26.8` with
 `GOTOOLCHAIN=local`, plus Node 24, Python 3 and NSS utilities. It checks the
 runner's Google Chrome installation for browser E2E. It resolves a versioned
 artifact identity, runs `make dep` and `make ci-check`, and checks that

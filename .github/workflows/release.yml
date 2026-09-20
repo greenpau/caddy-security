@@ -33,10 +33,21 @@ jobs:
         with:
           go-version: '1.26.8'
       - name: Verify release version and annotated tag
+        shell: bash
         run: |
           test "$GITHUB_REF_TYPE" = tag
           python3 assets/scripts/version.py check --tag "$GITHUB_REF_NAME"
-          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag
+          # Checkout can overwrite the local annotated tag with the event's commit SHA.
+          git fetch --no-tags origin "+refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          if test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" != tag; then
+            echo "::error::Release ref must be an annotated tag"
+            exit 1
+          fi
+          if test "$(git rev-parse "refs/tags/$GITHUB_REF_NAME^{commit}")" != "$GITHUB_SHA" ||
+             test "$(git rev-parse HEAD)" != "$GITHUB_SHA"; then
+            echo "::error::Release tag and checkout must point to the validated commit $GITHUB_SHA"
+            exit 1
+          fi
       - name: Generate go-authcrunch changelog
         shell: bash
         run: |

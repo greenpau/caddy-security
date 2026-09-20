@@ -18,6 +18,10 @@ concurrency:
 jobs:
   core:
     name: Tests and coverage
+    # The release script pushes main and its tag together; release.yml tests the tag.
+    if: >-
+      ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' ||
+          !startsWith(github.event.head_commit.message, 'ops: released v') }}
     runs-on: ubuntu-24.04
     # Leave time around the 45-minute Go package limit for setup, builds and reports.
     timeout-minutes: 60
