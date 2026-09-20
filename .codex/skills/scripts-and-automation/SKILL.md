@@ -120,11 +120,12 @@ executable. Missing browser/Node prerequisites fail the test; no sibling UI
 build or npm dependency installation is needed. See
 [browser validation](../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository).
 
-`go.mod` and `go.sum` pin `github.com/greenpau/tested`; invoke `go tool tested`
-instead of a global executable. `make dep` downloads/verifies module
-dependencies and resolves that tool. `make install-test-tools` runs its version
+`go.mod` and `go.sum` pin `github.com/greenpau/tested` and the release tool
+`github.com/greenpau/versioned/cmd/versioned`; use `go tool tested` and
+`go tool versioned`. `make dep` downloads/verifies module
+dependencies and resolves tested. `make install-test-tools` runs its version
 command without global installs or module edits. The other maintenance tools,
-such as `xcaddy` for `devbuild` and `versioned` for legacy release/license
+such as `xcaddy` for `devbuild` and `versioned` for the license
 recipes, must already be on `PATH`; `make dep` does not install them.
 `make license` selects tracked and nonignored new Go files through Git. It must
 not traverse ignored `tmp/`, suite checkouts, tool caches or vendored modules;
@@ -209,7 +210,7 @@ switch changes. Refresh the owning configuration skills and syntax comments.
 `assets/scripts/generate_downloads.sh` rewrites Caddy download links in
 `README.md`. See [release-and-versioning](../release-and-versioning/SKILL.md)
 for version inputs and regeneration requirements. It is called by
-`make release-update-version` and `make license`.
+`make release`, `make minor-release`, and `make license`.
 
 `assets/scripts/update_doc_refs.sh` reads `../go-authcrunch/VERSION`, updates
 go-authcrunch references in `CONTRIBUTING.md`, `Makefile`, and `go.mod`, removes

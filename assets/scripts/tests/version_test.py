@@ -44,6 +44,20 @@ class VersionTests(unittest.TestCase):
                 (self.root / 'VERSION').write_bytes(text.encode())
                 version.read_version(self.root)
 
+    def test_next_version_preserves_major_and_resets_patch_for_minor(self):
+        for current, kind, expected in (('1.1.64', 'patch', '1.1.65'),
+                                        ('1.1.64', 'minor', '1.2.0'),
+                                        ('1.2.0', 'minor', '1.3.0'),
+                                        ('1.0.0', 'patch', '1.0.1')):
+            with self.subTest(current=current, kind=kind):
+                self.assertEqual(version.next_version(current, kind), expected)
+        for current, kind in (('2.1.0', 'minor'), ('1.01.0', 'patch'),
+                              ('1.1.64', 'major'),
+                              ('1.1.18446744073709551614', 'patch'),
+                              ('1.18446744073709551614.0', 'minor')):
+            with self.subTest(current=current, kind=kind), self.assertRaises(ValueError):
+                version.next_version(current, kind)
+
     def test_sync_changes_only_fallback_and_check_is_read_only(self):
         before = self.main.read_text()
         (self.root / 'VERSION').write_text('1.2.0\n')

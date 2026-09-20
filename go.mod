@@ -193,4 +193,7 @@ require (
 
 retract v1.1.56
 
-tool github.com/greenpau/tested
+tool (
+	github.com/greenpau/tested
+	github.com/greenpau/versioned/cmd/versioned
+)

@@ -1,5 +1,3 @@
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.64&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.64&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
 # caddy-security
 
 <a href="https://github.com/greenpau/caddy-security/actions/workflows/build.yml" target="_blank"><img src="https://github.com/greenpau/caddy-security/actions/workflows/build.yml/badge.svg"></a>
@@ -38,6 +36,10 @@ on amd64 and arm64.
 Run `bin/authcrunch security version` to display the linked go-authcrunch version.
 See [version diagnostics](.codex/skills/scripts-and-automation/SKILL.md#security-dependency-version)
 for module replacement details.
+
+Download Caddy with the plugins enabled:
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.64&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.1.64&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
 
 ## Tests and Reports
 

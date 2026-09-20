@@ -64,8 +64,11 @@ An exact `v<VERSION>` tag produces `v<VERSION>`; another tag fails. `GITHUB_SHA`
 provides the checked CI revision (including PR merge commits), with local HEAD
 as fallback. Validated `version` and `artifact_id` values go to `GITHUB_OUTPUT`.
 
-The publishing automation offers a patch release only; it has no `minor-release`
-target. `version-sync` projects VERSION into the authenticator fallback only.
+`make release` increments the patch; `make minor-release` increments the minor
+and resets the patch to zero. Both preserve the major release line.
+`assets/scripts/version.py next --kind patch|minor` computes the candidate
+without writing files and rejects an increment beyond the supported range.
+`version-sync` projects VERSION into the authenticator fallback only.
 
 ## Existing Release Targets
 
@@ -74,28 +77,33 @@ have different side effects:
 
 | Target | Actual behavior |
 | --- | --- |
-| `make release-git-check` | Runs `go mod tidy` and `go mod verify`, checks `main`, then checks tracked changes with `git diff-index --quiet HEAD --`. It can modify module files and does not check untracked files or remote divergence. |
-| `make release-update-version` | Runs `versioned -patch`, synchronizes and validates the authenticator fallback, regenerates README download links, and stages `VERSION`, `README.md`, `CONTRIBUTING.md`, `Makefile`, and `cmd/caddy-authenticator/main.go`. It does not commit or publish. |
-| `make release-git-commit` | Commits the index with `ops: released v<VERSION>`, creates an annotated tag, runs `git push`, then runs `git push --tags`. These pushes are separate and the latter includes every local tag. |
-| `make release` | Declares `release-git-check`, `build`, `release-update-version`, and `release-git-commit` as prerequisites. It includes no test target and builds before bumping. |
+| `make release-git-check` | Read-only local check of `main`, a clean worktree/index including untracked files, and synchronized version values. Does not check the remote or run the quality gate. |
+| `make release` | Runs `assets/scripts/release.sh patch` for the complete checked patch release. |
+| `make minor-release` | Runs the same script with `minor`, resetting the patch to zero. |
+| `make release-update-version`, `make release-git-commit` | Fail with instructions to use a complete release target; partial publication paths are disabled. |
 
-`make release` is not ordered safely under parallel Make. Run release operations
-sequentially, including when `MAKEFLAGS` supplies parallelism. `make ci-check`
-does serialize its gates, but that does not serialize the legacy release target.
+The shared script serializes checks, bump, synchronization, download generation,
+`make ci-check`, commit, tag, and push even under parallel Make. It requires
+`main` with no tracked, staged, or untracked changes, fetches `origin/main`,
+rejects behind/diverged history and an existing candidate tag locally or on
+origin, and checks the README marker and macOS `gsed` prerequisite before bumping.
+The pinned `go tool versioned` command comes from `go.mod`; release operations
+do not depend on a globally installed versioned executable.
 
-The release recipes invoke `versioned` from `PATH`; `make dep` resolves only the
-pinned test tool and module dependencies, so versioned must already be installed.
-The `versioned` library requirement in `go.mod` does not pin that executable.
-Inspect `command -v versioned` and `versioned -version` before a bump. A change
-to tool pinning is an automation/dependency change, not a documentation fix.
+The gate runs once against the bumped version, including the binary build.
+Only `VERSION`, `README.md`, and `cmd/caddy-authenticator/main.go` are staged.
+Unexpected staged, other tracked, or untracked changes stop publication.
+The commit subject is `ops: released v<VERSION>` and the exact tag is annotated.
+One atomic push publishes `HEAD:refs/heads/main` and that tag to origin; unrelated
+local tags are excluded. There is no fallback to separate pushes.
 
 ## Preparation and Publication
 
 For a status check, start with read-only evidence: `git status --short
 --untracked-files=all`, `git branch --show-current`, `git diff`,
-`git diff --cached`, `VERSION`, and existing tags. Do not use
-`release-git-check` as a read-only probe. Release preparation can inspect and
-validate without executing a bump or publishing target.
+`git diff --cached`, `VERSION`, and existing tags. `make release-git-check` adds
+the local preflight without modifying files. Release preparation can inspect
+and validate without executing a bump or publishing target.
 
 For an actual release, carry forward the user's existing authorization and:
 
@@ -105,28 +113,24 @@ For an actual release, carry forward the user's existing authorization and:
    or let unrelated staged changes enter the release commit.
 2. Verify dependencies resolve to the intended published versions. Resolve any
    local go-authcrunch replacement through the dependency refresh workflow
-   before qualifying the release. Run `make dep` and `make ci-check` for version,
-   automation, full tested reports, and build evidence. Review any module or
-   source changes before proceeding; validation itself must not rewrite them.
-3. Perform the requested bump once, review the version/download-link diff and
-   staged file set, and validate the resulting tree. Keep the release commit,
-   annotated tag, `VERSION`, and intended publication tied to the same revision.
-4. Publish only the intended branch and exact tag to the verified remote. Prefer
-   one atomic push with explicit refs when supported. The existing
-   `release-git-commit` target cannot provide that scope; use explicit Git steps
-   instead of its broad tag push. Do not silently fall back from atomic to
-   separate pushes or force an existing release ref.
+   before qualifying the release. Run `make dep` to resolve pinned tools and
+   dependencies. Review any source changes before proceeding; validation itself
+   must not rewrite them.
+3. Run the requested `make release` or `make minor-release` once. The script
+   bumps, synchronizes projections, runs the complete gate, commits and tags the
+   validated contents, and publishes the two explicit refs atomically.
+4. Confirm the release commit, annotated tag, VERSION and intended publication
+   refer to the same revision. Never force an existing release ref.
 
 Only bump, tag, push, or dispatch a publishing workflow within the user's
 requested scope. A request to explain or port release guidance is not a request
 to execute a release. Do not ask again for actions already authorized.
 
 If any step fails, inspect the worktree, index, release commit/tag, and remote
-refs before continuing. Separate pushes can partially publish; a transport
-failure can leave the outcome uncertain. Preserve that evidence and report the
-last completed step. Do not rerun the entire release, bump again, reset changes,
-delete tags, or apply the Makefile's printed deletion/retraction suggestions as
-automatic recovery.
+refs before continuing. A transport failure can leave the outcome uncertain.
+Preserve that evidence and report the last completed step. Do not rerun the
+entire release, bump again, reset changes,
+delete tags, or retract a version as automatic recovery.
 
 ## CI and Automation Validation
 

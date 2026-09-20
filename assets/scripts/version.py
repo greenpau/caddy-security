@@ -54,6 +54,21 @@ def sync_version(root=ROOT):
     return version
 
 
+def next_version(version, kind):
+    if not VERSION_PATTERN.fullmatch(version):
+        raise ValueError("invalid release version")
+    major, minor, patch = map(int, version.split("."))
+    if kind == "minor":
+        minor, patch = minor + 1, 0
+    elif kind == "patch":
+        patch += 1
+    else:
+        raise ValueError("only patch and minor releases are supported")
+    if minor >= 2**64 - 1 or patch >= 2**64 - 1:
+        raise ValueError("next version exceeds the supported versioned range")
+    return f"{major}.{minor}.{patch}"
+
+
 def artifact_identity(version, sha, ref_type, ref_name, timestamp=None):
     if not VERSION_PATTERN.fullmatch(version):
         raise ValueError("invalid artifact version")
@@ -73,8 +88,9 @@ def artifact_identity(version, sha, ref_type, ref_name, timestamp=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("check", "sync", "artifact"))
+    parser.add_argument("command", choices=("check", "sync", "artifact", "next"))
     parser.add_argument("--tag")
+    parser.add_argument("--kind", choices=("patch", "minor"), default="patch")
     args = parser.parse_args()
     try:
         if args.command == "sync":
@@ -85,6 +101,8 @@ def main():
         version = check_version(tag=args.tag)
         if args.command == "check":
             print(f"Version {version} is valid")
+        elif args.command == "next":
+            print(next_version(version, args.kind))
         else:
             sha = os.environ.get("GITHUB_SHA") or subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()

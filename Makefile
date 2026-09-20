@@ -180,40 +180,21 @@ sync:
 	@echo "DEBUG: started $@"
 	@assets/scripts/update_doc_refs.sh
 
-.PHONY: release-git-check
+# Only run these publishing commands when a release is explicitly requested.
+.PHONY: release minor-release release-git-check release-update-version release-git-commit
+release:
+	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh patch
+
+minor-release:
+	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh minor
+
 release-git-check:
-	@echo "DEBUG: started $@"
-	@go mod tidy;
-	@go mod verify;
-	@if [ $(GIT_BRANCH) != "main" ]; then echo "cannot release to non-main branch $(GIT_BRANCH)" && false; fi
-	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && false )
-	@echo "DEBUG: completed $@"
+	@PYTHON="$(PYTHON)" bash assets/scripts/release.sh check
 
-.PHONY: release-update-version
-release-update-version:
-	@echo "DEBUG: started $@"
-	@versioned -patch
-	@$(MAKE) version-sync
-	@$(MAKE) version-check
-	@assets/scripts/generate_downloads.sh
-	@git add VERSION README.md CONTRIBUTING.md Makefile cmd/caddy-authenticator/main.go
-
-.PHONY: release-git-commit
-release-git-commit:
-	@echo "DEBUG: started $@"
-	@git commit -m "ops: released v`cat VERSION | head -1`"
-	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
-	@git push
-	@git push --tags
-	@echo "If necessary, run the following commands:"
-	@echo "  git push --delete origin v$(PLUGIN_VERSION)"
-	@echo "  git tag --delete v$(PLUGIN_VERSION)"
-	@echo "  go mod edit -retract v$(PLUGIN_VERSION)"
-	@echo "DEBUG: completed $@"
-
-.PHONY: release
-release: release-git-check build release-update-version release-git-commit
-	@echo "DEBUG: completed $@"
+# Partial entry points bypass the checked release workflow.
+release-update-version release-git-commit:
+	@echo "Use make release (patch) or make minor-release for the complete checked workflow." >&2
+	@exit 1
 
 .PHONY: logo
 logo:
