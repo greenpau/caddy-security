@@ -146,9 +146,12 @@ Group mapping rules:
 - Authcrunch supports `fallback_roles` for roles assigned when the user
   authenticates but no LDAP group mapping produced roles. It does not replace
   the requirement for explicit or automatic group mapping to configure LDAP.
-- Do not add new Caddyfile fallback-role examples until
-  `caddyfile_identity_store.go` is fixed and tested: the current parser stores
-  `args[2:]`, so ordinary `fallback role authp/user` drops the first role.
+- Use `fallback role authp/user` or `fallback roles authp/user directory/member`
+  inside an LDAP store. All supplied roles survive adaptation; repeating the
+  directive replaces the list. Local stores reject this LDAP-only setting.
+  `TestIdentityStoreFallbackRoles` checks typed mapping; the LDAP journey in
+  `TestCaddyAuthenticationChallengesE2E` verifies a real service bind, user bind,
+  signed role claims and protected route over disposable verified LDAPS/TLS.
 
 Runtime LDAP authentication flow:
 

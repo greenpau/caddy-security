@@ -15,12 +15,15 @@
 package security
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
+	challengeparser "github.com/greenpau/go-authcrunch/pkg/authchal/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 // parseCaddyfileIdentityStore parses local and LDAP stores in security.
@@ -38,6 +41,8 @@ import (
 //			password <plaintext_or_bcrypt_value> [overwrite]
 //			roles <role> [<role>...]
 //			api key <24_character_key_id> <bcrypt_value>
+//			auth challenges <method> [<method>...] [if <method> [and <method>...] not available]
+//			auth challenges <method> [or <method>...] [if <method> [and <method>...] not available]
 //		}
 //		enable username recovery
 //		enable password recovery
@@ -67,6 +72,7 @@ import (
 //			<group_dn> <role> [<role>...]
 //		}
 //		enable <short|full> automatic group mapping
+//		fallback <role|roles> <role> [<role>...]
 //	}
 //
 // search_filter aliases search_user_filter. Repeat trusted_authority for multiple
@@ -74,9 +80,15 @@ import (
 //
 //	icon <text> [<class> [<color> [<background>]]] [text <color> [<background>]] [priority <integer>]
 //
-// The legacy fallback <role|roles> <role> [<role>...] syntax is recognized, but
-// currently loses the first value when mapped here. Keep this limitation visible
-// and avoid runnable examples until the mapping is fixed and tested.
+// LDAP fallback roles apply when group mapping yields no roles. Repeating the
+// setting replaces the whole list. The local store does not support fallback.
+// Local user auth challenges are ordered rule bodies validated by the shared
+// authchal parser. Methods are password, totp, u2f and mfa; portal email
+// checkpoints are unsupported. Nonempty configured rules overwrite stored
+// preferences on provisioning, even for existing users; omission preserves them.
+// Factor-only rules require an enrolled factor. Portal transform policies can
+// replace this selection, and legacy require actions remain additive. Challenge
+// methods/operators are literal grammar, not runtime placeholders.
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
 	m := make(map[string]interface{})
@@ -178,10 +190,26 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 			username := args[0]
 			userMap["username"] = username
 			apiKeyList := []map[string]interface{}{}
+			var challengeStatements []string
 			for userNesting := d.Nesting(); d.NextBlock(userNesting); {
 				userPropName := d.Val()
 				userPropValue := d.RemainingArgs()
 				switch userPropName {
+				case "auth":
+					if len(userPropValue) < 2 || userPropValue[0] != "challenges" {
+						return d.Errf("local user auth requires challenges and a rule")
+					}
+					if err := validateOAuthDirectiveTokens(userPropValue); err != nil {
+						return d.Errf("invalid local user authentication challenge argument")
+					}
+					if d.Next() {
+						nested := d.Val() == "{"
+						d.Prev()
+						if nested {
+							return d.Errf("local user authentication challenges do not accept a block")
+						}
+					}
+					challengeStatements = append(challengeStatements, cfgutil.EncodeArgs(userPropValue[1:]))
 				case "email":
 					if len(userPropValue) != 1 {
 						return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" must contain single value")
@@ -228,6 +256,18 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 			if len(apiKeyList) > 0 {
 				userMap["api_keys"] = apiKeyList
 			}
+			if len(challengeStatements) > 0 {
+				policy, err := challengeparser.NewAuthenticationChallengeConfigFromDirectives(challengeStatements)
+				if err != nil {
+					return d.Errf("local user authentication challenges: %v", err)
+				}
+				for _, rule := range policy.Rules {
+					if slices.Contains(rule.Challenges, "email") || slices.Contains(rule.Conditions, "email") {
+						return d.Errf("email authentication checkpoints are unsupported")
+					}
+				}
+				userMap["auth_challenge_rules"] = policy.Statements
+			}
 			userMaps = append(userMaps, userMap)
 		case "groups":
 			// LDAP only.
@@ -273,7 +313,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 			}
 			switch args[0] {
 			case "role", "roles":
-				m["fallback_roles"] = args[2:]
+				m["fallback_roles"] = args[1:]
 			default:
 				return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "unsupported argument")
 			}

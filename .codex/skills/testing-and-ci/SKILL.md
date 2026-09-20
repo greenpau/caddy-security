@@ -136,6 +136,29 @@ Use `make build` when validation needs `bin/authcrunch` or
 manifests, or Caddyfiles. `make dep` downloads/verifies pinned dependencies and
 resolves tested; it may need network access but does not install global tools.
 
+## Conditional authentication coverage
+
+`TestPortalTransformSharedParser`, `TestPortalTransformRejects`, the transform
+runtime tests, and local-store parser tests cover v1.3.3 grammar and rejection
+boundaries. The `testcase_authenticate_with_challenges` pair exercises adapted
+JSON and runtime resolution, including mixed environment/claim templates.
+`TestCaddyAuthenticationChallengesE2E` runs isolated actual Caddy TLS journeys
+for HTML/JSON and native conditional login, signed WebAuthn, AMR claims and
+resource authorization, portal refresh/OIDC, Basic/API-key rejection, policy failure,
+static-user creation/replacement/omission and profile rule mutations.
+`TestPortalTransformMatchAnyIdentityContext` records the upstream timestamp
+limitation and the Caddy refresh/OIDC/System API guard; its resolution fixture and E2E
+prove that rejection preserves the active deployment. System API E2E additionally
+checks encrypted assertions and rejection of unsatisfied factor policy. Its LDAPS
+peer requires real service/user binds and verifies all fallback role values.
+Native JSON regressions cover quoted/resolved unconditional matchers and
+multiline instructions: reject the latter before CSV decoding can discard a
+second record. Unit tests compare the shared parser's interpretation; Caddy
+reload E2E verifies rejection and continued access through the previous runtime.
+Test credentials are seeded before Caddy owns the database; runtime profile
+mutations cross HTTP. Changed local-store configuration restarts explicitly,
+respecting the existing prohibition on overlapping file-backed runtimes.
+
 ## Test Surfaces
 
 Automation fixtures must create their own generated parent directories before

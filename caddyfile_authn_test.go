@@ -56,7 +56,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                 }
 				enable source ip tracking
 				validate source address
-				enable identity provider contoso.com example.com
+				enable identity store contoso.com example.com
 				enable identity provider azure okta
 			  }
 
@@ -82,7 +82,6 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
                     "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM" viewer
                   }
                 }
-			  }
 
 			  ldap identity store example.com {
                 realm example.com
@@ -107,8 +106,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
               }
 
               saml identity provider azure {
-                method saml
-                provider azure
+                driver azure
                 realm azure
                 idp_metadata_location assets/conf/saml/azure/idp/azure_ad_app_metadata.xml
                 idp_sign_cert_location assets/conf/saml/azure/idp/azure_ad_app_signing_cert.pem
@@ -124,7 +122,7 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 
               oauth identity provider okta {
                 realm okta
-                provider okta
+                driver okta
                 domain_name dev-680653.okta.com
                 client_id 0oa121qw81PJW0Tj34x7
                 client_secret b3aJC5E59hU18YKC7Yca3994F4qFhWiAo_ZojanF
@@ -133,142 +131,238 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
               }
             }`),
 			want: `{
-			  "config": {
-				"authentication_portals": [
-				  {
-					"name": "myportal",
-					"ui": {
-					  "private_links": [
-						{
-						  "link": "/app",
-						  "title": "My Website",
-						  "icon_name": "las la-star",
-						  "icon_enabled": true
-						},
-						{
-						  "link": "/auth/whoami",
-						  "title": "My Identity",
-						  "icon_name": "las la-user",
-						  "icon_enabled": true
-						}
-					  ]
-					},
-					"user_transformer_configs": [
-					  {
-						"matchers": [
-						  "exact match origin local"
-						],
-						"actions": [
-						  "action add role authp/user",
-						  "ui link \"Portal Settings\" /auth/settings icon \"las la-cog\""
-						]
-					  }
-					],
-                    "api": {
-                      "profile_enabled": true
-                    },
-					"cookie_config": {
-					  "domains": {
-						"contoso.com": {
-						  "domain": "contoso.com",
-						  "insecure": true
-						}
-					  },
-						"session_id_cookie_name": "AUTHP_SESSION_ID",
-						"referer_cookie_name": "AUTHP_REDIRECT_URL",
-						"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
-						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
-						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
-						"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
-						"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
-						"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
-						"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
-						"cookie_name_prefix": "AUTHP",
-					  "insecure": true
-					},
-					"identity_providers": [
-					  "contoso.com",
-					  "example.com",
-					  "azure",
-					  "okta"
-					],
-					"portal_admin_roles": {
-						"authp/admin": true
-					},
-					"portal_user_roles": {
-						"authp/user": true
-					},
-					"portal_guest_roles": {
-						"authp/guest": true
-					},
-					"token_validator_options": {
-					  "validate_source_address": true
-					},
-					"crypto_key_store_config": {
-						"auto_generate_algo": "ES512",
-						"auto_generate_tag":  "default",
-						"raw_key_configs": [
-							"crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
-						],
-						"token_lifetime": 3600
-					},
-					"raw_crypto_key_store_config": [
-					  "crypto default token lifetime 3600",
-					  "crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
-					],
-					"token_grantor_options": {
-					  "enable_source_address": true
-					}
-				  }
-				],
-				"identity_stores": [
-				  {
-					"name": "contoso.com",
-					"kind": "ldap",
-					"params": {
-					  "attributes": {
-						"email": "mail",
-						"member_of": "memberOf",
-						"name": "givenName",
-						"surname": "sn",
-						"username": "sAMAccountName"
-					  },
-					  "bind_password": "P@ssW0rd123",
-					  "bind_username": "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM",
-					  "groups": [
-						{
-						  "dn": "CN=Admins,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
-						  "roles": [
-							"admin"
-						  ]
-						},
-						{
-						  "dn": "CN=Editors,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
-						  "roles": [
-							"editor"
-						  ]
-						},
-						{
-						  "dn": "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
-						  "roles": [
-							"viewer"
-						  ]
-						}
-					  ],
-					  "realm": "contoso.com",
-					  "search_base_dn": "DC=CONTOSO,DC=COM",
-					  "search_user_filter": "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))",
-					  "servers": [
-						{
-						  "address": "ldaps://ldaps.contoso.com",
-						  "ignore_cert_errors": true
-						}
-					  ]
-					}
-				  }
-				]
-			  }
-			}`,
+  "config": {
+    "authentication_portals": [
+      {
+        "name": "myportal",
+        "ui": {
+          "private_links": [
+            {
+              "link": "/app",
+              "title": "My Website",
+              "icon_name": "las la-star",
+              "icon_enabled": true
+            },
+            {
+              "link": "/auth/whoami",
+              "title": "My Identity",
+              "icon_name": "las la-user",
+              "icon_enabled": true
+            }
+          ]
+        },
+        "user_transformer_configs": [
+          {
+            "matchers": [
+              "exact match origin local"
+            ],
+            "actions": [
+              "action add role authp/user",
+              "ui link \"Portal Settings\" /auth/settings icon \"las la-cog\""
+            ]
+          }
+        ],
+        "cookie_config": {
+          "domains": {
+            "contoso.com": {
+              "domain": "contoso.com",
+              "insecure": true
+            }
+          },
+          "insecure": true,
+          "session_id_cookie_name": "AUTHP_SESSION_ID",
+          "referer_cookie_name": "AUTHP_REDIRECT_URL",
+          "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+          "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+          "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+          "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+          "oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+          "oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+          "saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+          "cookie_name_prefix": "AUTHP"
+        },
+        "identity_stores": [
+          "contoso.com",
+          "example.com"
+        ],
+        "identity_providers": [
+          "azure",
+          "okta"
+        ],
+        "token_validator_options": {
+          "validate_source_address": true
+        },
+        "raw_crypto_key_store_config": [
+          "crypto default token lifetime 3600",
+          "crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
+        ],
+        "crypto_key_store_config": {
+          "token_lifetime": 3600,
+          "raw_key_configs": [
+            "crypto key sign-verify 01ee2688-36e4-47f9-8c06-d18483702520"
+          ],
+          "auto_generate_tag": "default",
+          "auto_generate_algo": "ES512"
+        },
+        "token_grantor_options": {
+          "enable_source_address": true
+        },
+        "portal_admin_roles": {
+          "authp/admin": true
+        },
+        "portal_user_roles": {
+          "authp/user": true
+        },
+        "portal_guest_roles": {
+          "authp/guest": true
+        },
+        "api": {
+          "profile_enabled": true
+        }
+      }
+    ],
+    "identity_stores": [
+      {
+        "name": "contoso.com",
+        "kind": "ldap",
+        "params": {
+          "attributes": {
+            "email": "mail",
+            "member_of": "memberOf",
+            "name": "givenName",
+            "surname": "sn",
+            "username": "sAMAccountName"
+          },
+          "bind_password": "P@ssW0rd123",
+          "bind_username": "CN=authzsvc,OU=Service Accounts,OU=Administrative Accounts,DC=CONTOSO,DC=COM",
+          "groups": [
+            {
+              "dn": "CN=Admins,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
+              "roles": [
+                "admin"
+              ]
+            },
+            {
+              "dn": "CN=Editors,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
+              "roles": [
+                "editor"
+              ]
+            },
+            {
+              "dn": "CN=Viewers,OU=Security,OU=Groups,DC=CONTOSO,DC=COM",
+              "roles": [
+                "viewer"
+              ]
+            }
+          ],
+          "realm": "contoso.com",
+          "search_base_dn": "DC=CONTOSO,DC=COM",
+          "search_user_filter": "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))",
+          "servers": [
+            {
+              "address": "ldaps://ldaps.contoso.com",
+              "ignore_cert_errors": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "example.com",
+        "kind": "ldap",
+        "params": {
+          "attributes": {
+            "email": "mail",
+            "member_of": "uniqueMember",
+            "name": "cn",
+            "surname": "foo",
+            "username": "uid"
+          },
+          "bind_password": "password",
+          "bind_username": "cn=read-only-admin,dc=example,dc=com",
+          "groups": [
+            {
+              "dn": "ou=mathematicians,dc=example,dc=com",
+              "roles": [
+                "authp/admin"
+              ]
+            },
+            {
+              "dn": "ou=scientists,dc=example,dc=com",
+              "roles": [
+                "authp/user"
+              ]
+            }
+          ],
+          "realm": "example.com",
+          "search_base_dn": "DC=EXAMPLE,DC=COM",
+          "search_user_filter": "(&(|(uid=%s)(mail=%s))(objectClass=inetOrgPerson))",
+          "servers": [
+            {
+              "address": "ldap://ldap.forumsys.com",
+              "posix_groups": true
+            }
+          ]
+        }
+      }
+    ],
+    "identity_providers": [
+      {
+        "name": "azure",
+        "kind": "saml",
+        "params": {
+          "acs_urls": [
+            "https://mygatekeeper/saml",
+            "https://mygatekeeper.local/saml",
+            "https://192.168.10.10:3443/saml",
+            "https://localhost:3443/saml"
+          ],
+          "application_id": "623cae7c-e6b2-43c5-853c-2059c9b2cb58",
+          "application_name": "My Gatekeeper",
+          "driver": "azure",
+          "entity_id": "urn:caddy:mygatekeeper",
+          "idp_metadata_location": "assets/conf/saml/azure/idp/azure_ad_app_metadata.xml",
+          "idp_sign_cert_location": "assets/conf/saml/azure/idp/azure_ad_app_signing_cert.pem",
+          "realm": "azure",
+          "tenant_id": "1b9e886b-8ff2-4378-b6c8-6771259a5f51"
+        }
+      },
+      {
+        "name": "okta",
+        "kind": "oauth",
+        "params": {
+          "base_auth_url": "https://dev-680653.okta.com/oauth2/default/",
+          "client_id": "0oa121qw81PJW0Tj34x7",
+          "client_secret": "b3aJC5E59hU18YKC7Yca3994F4qFhWiAo_ZojanF",
+          "domain_name": "dev-680653.okta.com",
+          "driver": "okta",
+          "identity_token_field_name": "id_token",
+          "login_icon": {
+            "background_color": "#324960",
+            "class_name": "lab la-codepen la-2x",
+            "color": "white",
+            "text_color": "#37474f"
+          },
+          "metadata_url": "https://dev-680653.okta.com/oauth2/default/.well-known/openid-configuration?client_id=0oa121qw81PJW0Tj34x7",
+          "realm": "okta",
+          "required_token_fields": [
+            "access_token",
+            "id_token"
+          ],
+          "response_type": [
+            "code"
+          ],
+          "scopes": [
+            "openid",
+            "email",
+            "profile",
+            "groups"
+          ],
+          "server_id": "default"
+        }
+      }
+    ]
+  }
+}`,
 		},
 		{
 			name: "test malformed authentication portal definition",
@@ -295,40 +389,6 @@ func TestParseCaddyfileAuthentication(t *testing.T) {
 				[]string{"bar"},
 			),
 		},
-		/*
-					{
-						name: "test smtp credentials without address",
-						d: caddyfile.NewTestDispenser(`
-			            security {
-			              credentials email smtp.contoso.com {
-			                protocol smtp
-			                username foo
-			                password bar
-			              }
-			            }`),
-						shouldErr: true,
-						err: errors.ErrMalformedDirective.WithArgs(
-							[]string{credPrefix, "email", "smtp.contoso.com"},
-							errors.ErrCredKeyValueEmpty.WithArgs("address"),
-						),
-					},
-					{
-						name: "test unsupported credentials type",
-						d: caddyfile.NewTestDispenser(`
-			            security {
-			              credentials foo bar {
-			                protocol smtp
-			                username foo
-			                password bar
-			              }
-			            }`),
-						shouldErr: true,
-						err: errors.ErrMalformedDirective.WithArgs(
-							credPrefix,
-							[]string{"foo", "bar"},
-						),
-					},
-		*/
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

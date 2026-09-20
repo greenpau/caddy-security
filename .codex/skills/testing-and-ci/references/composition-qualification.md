@@ -2,7 +2,7 @@
 
 Use this suite when changing the interaction between portal login, refresh,
 downstream OIDC, upstream OAuth, authorization, edge metadata, or Caddy reload.
-The selected dependencies are Caddy v2.11.4 and go-authcrunch v1.3.2; these tests
+The selected dependencies are Caddy v2.11.4 and go-authcrunch v1.3.3; these tests
 run in caddy-security, without running or modifying sibling repositories.
 
 ```sh

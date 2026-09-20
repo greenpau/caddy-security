@@ -1,7 +1,8 @@
 # Local Identity Compatibility
 
 This contract is qualified against the go-authcrunch revision selected in
-`go.mod`, currently `3e28980b0f5a78463953b674241f154bb77c6679`.
+`go.mod`, currently published v1.3.3 at
+`30985f1c9ed812218a8609cd2fc10e224b7e0f31`.
 Check `go list -m -json github.com/greenpau/go-authcrunch` before attributing
 behavior to a sibling checkout. The upstream `local-password-authentication`
 skill and `pkg/identity/password_verifier.go`, `user.go`, `database.go`,
@@ -63,14 +64,18 @@ immediate access-token revocation.
 
 Real required checkpoints must finish before renewable credentials or an OIDC
 browser session exist. Authentication challenge rules resolve against available
-factors; a `password totp` rule alone does not force enrollment when no factor
-exists. Use an existing `require mfa` transform when enrollment is required.
+factors. A `password totp` rule with no enrolled factor fails identification
+closed (HTTP 400); deleting a factor does not remove that rule. Administrative
+recovery can explicitly replace it with `password`, while an existing additive
+`require mfa` transform still requires enrollment. The server API rejects an
+empty rule list; the profile API supports an explicit empty-array reset.
 Profile enrollment titles accept 3–50 alphanumeric characters, not spaces.
-Do not infer completed MFA from a bearer/API key. Hardware-backed/WebAuthn
-assertions are outside this qualification; authclient implements password/TOTP.
+Do not infer completed MFA from a bearer/API key. The local-identity suite focuses on password/TOTP; the separate
+`TestCaddyAuthenticationChallengesE2E` now qualifies signed WebAuthn assertions
+through Caddy. The public authclient still implements password/TOTP.
 
-**Canonical profile identity:** the selected go-authcrunch revision
-`3e28980b0f5a78463953b674241f154bb77c6679` fixes backend identity selection when
+**Canonical profile identity:** go-authcrunch revision
+`3e28980b0f5a78463953b674241f154bb77c6679`, included in v1.3.3, fixed backend identity selection when
 transformed claims collide with another account. The default Caddy
 [profile regression](../../authentication-portal-api/references/profile-public-keys.md#canonical-profile-identity-regression)
 verifies isolation through actual profile operations. Identity selection remains

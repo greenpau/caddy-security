@@ -17,6 +17,9 @@ of Caddy server registration and the root security package. Reuse the selected
 copy login exchanges, challenge routing, TOTP generation or token serialization
 into this command. Inspect the version selected by `go list -m -json`; the
 sibling source is a read-only reference and can differ from that version.
+API keys remain access-only and cannot bypass explicit user/portal challenge
+requirements in v1.3.3. The Caddy CLI E2E checks MFA-policy rejection without a
+persisted token and successful independent API-key login for an eligible account.
 
 `main.go` initializes `*versioned.PackageManager` using the authdbctl pattern:
 `appVersion`, `gitBranch`, `gitCommit`, `buildUser` and `buildDate` are optional

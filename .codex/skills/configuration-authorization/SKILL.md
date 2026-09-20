@@ -145,6 +145,24 @@ multiple conditions, the default is match-all; add `any` to the action for
 match-any. A matched deny denies immediately. A matched allow grants access only
 if no later deny overrides it, unless `stop` is used.
 
+Use `amr` to require verified methods, for example inside a policy:
+
+```caddyfile
+acl rule {
+	match role authp/user
+	match amr hwk
+	allow stop
+}
+```
+
+AMR is a list: `pwd` records password proof, `otp` records TOTP, and `hwk`
+records WebAuthn/U2F. `allow amr otp` is also a valid shortcut. Credential
+inventory and transform-added claims are not evidence that a factor was
+completed. The library stamps authoritative evidence after login; the Caddy
+challenge E2E verifies that forged transform AMR cannot satisfy a policy.
+Direct Basic/API-key proxy authentication also observes current portal/user
+challenge requirements.
+
 ## Policy Options
 
 Use `set auth url` for the login redirect target and `set forbidden url` for
@@ -202,10 +220,12 @@ matches one or more ASCII letters, digits, underscores, dots, tildes or hyphens;
 `/tenantXv1/file`, and parentheses or `|` cannot expand a token's authority.
 This differs from explicit `regex match path` policy conditions.
 `validate source address` compares the token address claim to the request
-source address. `enable strip token` removes only cookie-sourced auth tokens
-from the upstream request.
+source address. `enable strip token` removes the accepted credential from its
+actual source: bearer/named header, Basic/API-key header, query or cookie.
+Unrelated request headers, query arguments and cookies remain. Token sources
+and validation still determine which credential can authorize the request.
 
-The selected go-authcrunch v1.2.5 checks every original, decoded and cleaned
+The selected go-authcrunch v1.3.3 checks every original, decoded and cleaned
 path interpretation whenever method/path or token path-claim validation is
 enabled. Every interpretation must satisfy the policy and any required claim;
 this also applies to cached identities. Cleaning must not turn
@@ -286,7 +306,9 @@ inject header "X-User-Email" from email
 
 `inject headers with claims` sets default `X-Token-*` headers for name, email,
 roles, and subject. Custom `inject header` entries map a header name to a claim
-field and are applied only after a user is authorized.
+field and are applied only after a user is authorized. Configured destination
+headers are cleared before authentication, including deny and bypass paths, so
+client-supplied identity values cannot survive as trusted claims.
 
 ## Fixtures
 

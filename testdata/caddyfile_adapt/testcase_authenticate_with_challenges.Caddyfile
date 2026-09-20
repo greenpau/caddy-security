@@ -1,0 +1,62 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path users.json
+			user alice {
+				password SyntheticPassword42!
+				roles authp/user
+				auth challenges u2f
+				auth challenges password totp if u2f not available
+				auth challenges password if u2f and totp not available
+			}
+		}
+		ldap identity store directory {
+			realm directory
+			username cn=service,dc=example,dc=test
+			password SyntheticBindPassword42!
+			search_base_dn dc=example,dc=test
+			servers {
+				ldaps://ldap.example.test
+			}
+			enable full automatic group mapping
+			fallback roles authp/user directory/member
+		}
+		authentication portal myportal {
+			crypto key sign-verify synthetic-challenge-signing-key
+			enable identity store localdb
+			transform user {
+				match realm local
+				field email exists
+				require auth challenges u2f or totp
+				require auth challenges password if u2f and totp not available
+				action add role {env.CHALLENGE_TEST_ROLE}
+				add label "{env.CHALLENGE_TEST_LABEL} {claims.sub}" as string
+				add teams "one team" two as string list
+				add nested metadata label with "literal value" as string
+				action delete org
+			}
+			transform users {
+				match any
+				ui link "User Profile" /auth/profile/ icon "las la-cog"
+			}
+		}
+		authorization policy factor_policy {
+			crypto key verify synthetic-challenge-signing-key
+			validate bearer header
+			acl rule {
+				match amr otp hwk
+				allow stop
+			}
+		}
+	}
+}
+:8443 {
+	route /auth/* {
+		authenticate with myportal
+	}
+	route /app/* {
+		authorize with factor_policy
+		respond protected
+	}
+}

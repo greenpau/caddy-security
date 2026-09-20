@@ -55,7 +55,11 @@ func (f *localIdentityFixture) rejectNativeLogin(t *testing.T, password string, 
 	credentials, err := f.nativeLogin(t, password, mfa)
 	var response *authclient.HTTPError
 	if credentials != nil || !errors.As(err, &response) || response.StatusCode != http.StatusUnauthorized {
-		t.Fatal("rejected native login did not return HTTP 401 without credentials")
+		status := 0
+		if response != nil {
+			status = response.StatusCode
+		}
+		t.Fatalf("rejected native login: credentials=%t, error=%T, HTTP status=%d; want HTTP 401 without credentials", credentials != nil, err, status)
 	}
 }
 
@@ -297,6 +301,34 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 			f.callback(t, f.authorize(t, params), params, "login_required")
 			f.assertResource(t, portalAccess)
 			f.assertResource(t, native.AccessToken)
+			if operation == "mfa-delete" {
+				// Stored rules fail closed when their only enrolled factor is
+				// removed. The old TOTP secret cannot satisfy that missing factor.
+				if diff := cmp.Diff([]string{"password totp"}, after.AuthChallengeRules); diff != "" {
+					t.Fatal(diff)
+				}
+				for _, supplyDeletedFactor := range []bool{false, true} {
+					credentials, err := f.nativeLogin(t, password, supplyDeletedFactor)
+					var response *authclient.HTTPError
+					if credentials != nil || !errors.As(err, &response) || response.StatusCode != http.StatusBadRequest {
+						t.Fatal("unresolvable stored policy did not reject native identification without credentials")
+					}
+				}
+				f.newBrowser(t)
+				f.request(t, "POST", "/login", url.Values{"username": {"alice"}, "realm": {"local"}}, http.Header{"Origin": {f.base}}).requireStatus(t, 400)
+				f.noCredentials(t)
+				// The server API requires a nonempty replacement (unlike profile
+				// reset). Explicit recovery allows password selection while the
+				// portal's additive require mfa still requires enrollment.
+				f.json(t, f.plain, "/api/server/user", map[string]any{"realm": "local", "operation": "overwrite_auth_challenges", "user": map[string]any{"username": "alice", "email": "alice@example.test", "challenges": []string{}}}, admin).requireStatus(t, 400)
+				if localIdentityRecord(t, f.database, "alice").CredentialVersion != after.CredentialVersion {
+					t.Fatal("rejected administrative reset mutated identity")
+				}
+				f.admin(t, admin, "overwrite_auth_challenges", map[string]any{"challenges": []string{"password"}})
+				if diff := cmp.Diff([]string{"password"}, localIdentityRecord(t, f.database, "alice").AuthChallengeRules); diff != "" {
+					t.Fatal(diff)
+				}
+			}
 			if operation == "mfa-delete" || operation == "profile-challenges" || operation == "admin-challenges" {
 				// A transform explicitly requires MFA, including enrollment
 				// after deletion. Challenge rules alone select available factors.

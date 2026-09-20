@@ -253,7 +253,7 @@ that evidence itself.
 
 ### Consent response policy for v1.2.6
 
-The current published dependency, `v1.3.2`, supplies themed
+The current published dependency, `v1.3.3`, supplies themed
 consent/form-post/error pages and the correct consent headers in the provider.
 Caddy preserves those headers. Both the official harness and normal RP E2E
 now run without the compatibility snippet below. Consent CSP retains default,

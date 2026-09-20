@@ -95,8 +95,11 @@ creates a new SID and refresh credential.
 
 API-key login sends only realm and key, once. It must not prompt, fall back to
 password/MFA, issue refresh authority, or set browser cookies. This remains true
-for MFA-enrolled accounts and refresh-enabled realms. Expired, disabled, revoked
-or invalid keys and disabled owners fail. Mixing a key with username or sandbox
+for refresh-enabled realms. Enrollment alone does not reject API keys, but an
+explicit stored or matching portal challenge policy must be satisfied; an API
+key cannot prove password/TOTP/U2F checkpoints and is rejected without a
+sandbox fallback. Expired, disabled, revoked or invalid keys and disabled
+owners also fail. Mixing a key with username or sandbox
 fields is invalid; body transport is invalid for this independent credential.
 
 ## Existing Outbound Configuration

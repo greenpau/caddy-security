@@ -74,7 +74,7 @@ The unit tests in `app_lifecycle_test.go` and actual Caddy reload tests in
 Guard raw instruction argument counts before calling AuthCrunch's dispatch
 parsers: a one-token `crypto` statement or messaging/registration `kind` statement
 can otherwise panic during provisioning. For crypto, credentials, messaging,
-and registration instructions, check resolved tokens before `cfgutil.EncodeArgs`,
+registration and transform instructions, check resolved tokens before `cfgutil.EncodeArgs`,
 which trims trailing empty tokens. Reject empty arguments and report the
 field/statement index without including secret values.
 Keep command semantics in AuthCrunch. Include literal empty tokens and empty
@@ -188,6 +188,28 @@ the dumped authcrunch config to `<prefix>_resolved.json`.
 For fixtures covered by `TestResolveRuntimeAppConfig`, the test fails when
 unresolved `{env.` tokens remain. Plain adapt fixtures may still contain
 placeholders unless they are also listed in the runtime-resolution test.
+
+## Transform claim templates
+
+Only user-transformer matcher/action arguments preserve `{claims.*}` for the
+AuthCrunch runtime. Claim expansion applies to supported action values; ACL
+matcher values stay literal. Resolution uses a scoped replacer without mutating the
+shared Caddy replacer; other fields still reject unknown placeholders. Resolve
+mixed environment/claim arguments and whole-value secret references as single
+arguments, then compile the resulting transformer with the shared parser.
+Empty replacements must fail before the codec can drop a token and change its
+meaning. Reject CR/LF in raw transform instructions before decoding, since the
+CSV decoder can discard later records. Shared validation also rejects multiline
+resolved transform values. Native JSON transformers receive the same validation.
+With refresh or OIDC enabled, or with System API crypto keys, reject `match any`
+by its decoded ACL meaning, including quoted and runtime-resolved encodings: the selected upstream
+identity checks lack the timestamp that matcher assumes. Use explicit realm
+matchers; see the [compatibility restriction](../configuration-authentication-user-transforms/SKILL.md#unconditional-matcher-restriction-in-v133).
+
+`TestPortalTransformRuntimeValues` and `TestPortalTransformRuntimeBoundaries`
+cover mixed environment/claim values, quoted secrets, empty/unknown tokens,
+replacer isolation and invalid native JSON. The challenges adapt/resolution
+fixture and actual Caddy challenge E2E verify claim expansion after login.
 
 ## Guidance
 

@@ -47,6 +47,7 @@ const localIdentityBobPassword = "SeparateBobPassword42!"
 type localIdentityOptions struct {
 	mount, refreshRealm, oidcRealm string
 	transform, mfa                 bool
+	seed                           func(*testing.T, string)
 }
 
 type localIdentityFixture struct {
@@ -117,6 +118,9 @@ func newLocalIdentityFixture(t *testing.T, options localIdentityOptions, cert, t
 	dir := t.TempDir()
 	database := filepath.Join(dir, "users.json")
 	seedLocalIdentity(t, database, options.mfa)
+	if options.seed != nil {
+		options.seed(t, database)
+	}
 	excluded := filepath.Join(dir, "excluded.json")
 	data, err := os.ReadFile(database)
 	if err != nil {

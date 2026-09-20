@@ -50,6 +50,9 @@ import (
 // A session cookie name setting takes one value; multiple access cookie names
 // belong on a single line. Cookie names and repeated settings must be unique.
 // Coordinate explicit names with portals using a custom cookie prefix.
+// enable strip token removes the accepted credential from its actual cookie,
+// bearer/named header, Basic/API-key header or query source; unrelated values
+// remain. Direct Basic/API-key authentication observes portal challenge policy.
 // validate path acl checks both policy rules and token path claims at every
 // decoded/cleaned path interpretation. Claims use literal paths with * and **
 // wildcards, not regular expressions; * stays in one segment, ** spans slashes,

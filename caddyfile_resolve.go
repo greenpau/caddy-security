@@ -17,6 +17,7 @@ package security
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
@@ -24,6 +25,8 @@ import (
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	transformparser "github.com/greenpau/go-authcrunch/pkg/authn/transformer/parser"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"go.uber.org/zap"
 )
@@ -441,35 +444,71 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		}
 		cfg.OverwriteRawCryptoKeyStoreConfig(entries)
 
+		// Claim templates belong to AuthCrunch at login. Preserve that namespace
+		// only for transform arguments, without teaching the shared Caddy replacer
+		// to accept unknown placeholders elsewhere or expanding inserted data twice.
+		transformRepl := caddy.NewEmptyReplacer()
+		transformRepl.Map(func(key string) (any, bool) {
+			if strings.HasPrefix(key, "claims.") {
+				return "{" + key + "}", true
+			}
+			return repl.Get(key)
+		})
 		// User Transforms
-		for _, trCfg := range cfg.UserTransformerConfigs {
-			actions := []string{}
-			for _, action := range trCfg.Actions {
-				args, err := cfgutil.DecodeArgs(action)
-				if err != nil {
-					return fmt.Errorf("failed to decode UserTransformerConfigs.Action: %v", err)
-				}
-				if values, err := substituteStrings(ctx, repl, secretManagers, "UserTransformerConfig.Action", args, log); err == nil {
-					actions = append(actions, cfgutil.EncodeArgs(values))
-				} else {
-					return err
+		for i, trCfg := range cfg.UserTransformerConfigs {
+			path := fmt.Sprintf("portal %q transform %d", cfg.Name, i)
+			// The shared transform compiler rejects multiline instructions. Check
+			// before DecodeArgs, whose CSV reader otherwise discards later records.
+			for _, instructions := range [][]string{trCfg.Actions, trCfg.Matchers} {
+				for _, instruction := range instructions {
+					if strings.ContainsAny(instruction, "\r\n") {
+						return fmt.Errorf("%s: user transformer instructions must be single-line", path)
+					}
 				}
 			}
-			trCfg.Actions = actions
-
-			matchers := []string{}
-			for _, action := range trCfg.Matchers {
-				args, err := cfgutil.DecodeArgs(action)
+			actions, err := resolveConfigInstructions(ctx, transformRepl, secretManagers, path+" actions", trCfg.Actions, 1, log)
+			if err != nil {
+				return err
+			}
+			matchers, err := resolveConfigInstructions(ctx, transformRepl, secretManagers, path+" matchers", trCfg.Matchers, 1, log)
+			if err != nil {
+				return err
+			}
+			trCfg.Actions, trCfg.Matchers = actions, matchers
+			if _, err := transformparser.CompileUserTransformerConfig(trCfg); err != nil {
+				return fmt.Errorf("%s: invalid resolved user transformer configuration", path)
+			}
+			// ACL conditions join decoded arguments before recognizing match any.
+			// Native JSON can encode it as a single quoted argument, including
+			// through replacement. Check the same meaning after shared validation.
+			matchesAny := slices.ContainsFunc(matchers, func(matcher string) bool {
+				args, err := cfgutil.DecodeArgs(matcher)
+				return err == nil && strings.Join(args, " ") == "match any"
+			})
+			// AuthCrunch v1.3.3 implements match any through the exp field, but
+			// refresh/OIDC identity checks transform claims before adding exp.
+			// Reject that combination instead of silently losing actions/policy.
+			if (cfg.RefreshTokens != nil && cfg.RefreshTokens.Enabled || cfg.OIDCProvider != nil && cfg.OIDCProvider.Enabled) && matchesAny {
+				return fmt.Errorf("%s: match any transforms are unsupported with portal refresh or OIDC; use an explicit realm matcher", path)
+			}
+			if matchesAny {
+				// Encrypted System API assertions also transform untimed claims.
+				// Use the shared key parser to identify usage, including resolved
+				// arguments, without mistaking key material for a usage keyword.
+				keyStore, err := kms.NewCryptoKeyStoreConfig(entries)
 				if err != nil {
-					return fmt.Errorf("failed to decode UserTransformerConfigs.Matcher: %v", err)
+					return fmt.Errorf("%s: invalid resolved crypto configuration", path)
 				}
-				if values, err := substituteStrings(ctx, repl, secretManagers, "UserTransformerConfig.Matcher", args, log); err == nil {
-					matchers = append(matchers, cfgutil.EncodeArgs(values))
-				} else {
-					return err
+				if len(keyStore.RawKeyConfigs) > 0 {
+					keys, err := kms.ParseCryptoKeyConfigs(keyStore.RawKeyConfigs)
+					if err != nil {
+						return fmt.Errorf("%s: invalid resolved crypto key configuration", path)
+					}
+					if slices.ContainsFunc(keys, func(key *kms.CryptoKeyConfig) bool { return key.Usage == "system" }) {
+						return fmt.Errorf("%s: match any transforms are unsupported with System API keys; use an explicit realm matcher", path)
+					}
 				}
 			}
-			trCfg.Matchers = matchers
 		}
 
 		// Optional settings may be absent in JSON configurations. Leave their

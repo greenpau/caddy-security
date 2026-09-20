@@ -29,7 +29,7 @@ import (
 //
 //	acl rule {
 //		comment <text> [<text>...]
-//		[no] [exact|partial|prefix|suffix|regex] match <field> <value> [<value>...]
+//		[no] [exact|partial|prefix|suffix|regex] match [any] <field> <value> [<value>...]
 //		match any
 //		field <field> [not] exists
 //		<allow|deny> [any] [stop] [log [debug|info|warn|error]] [counter] [tag <value>]
@@ -40,6 +40,8 @@ import (
 // at least one argument on every line inside acl rule; use allow stop (or another
 // action option) there, or acl default allow for a bare default action. Full
 // conditions, field aliases, and actions are owned by the upstream ACL parser.
+// amr is a list of verified methods: pwd (password), otp (TOTP), hwk (WebAuthn).
+// Match role and amr in the same rule when both identity and factor are required.
 func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)

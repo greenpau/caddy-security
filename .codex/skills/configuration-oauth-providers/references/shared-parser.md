@@ -26,7 +26,7 @@ mapping. Shared scalar/list keys also accept separate words, for example
 | Existing Caddy grammar | Shared grammar / handling |
 | --- | --- |
 | `realm`, `driver`, `tenant_id`, `domain_name`, `client_id`, `client_secret`, `server_id`, `base_auth_url`, `metadata_url`, `identity_token_field_name`, `authorization_url`, `token_url`, `region`, `user_pool_id`, `user_info_roles_field_name` | Forward one exact value. |
-| `logout_url <logout_url>` (also `logout url <logout_url>`) | Recognized by `pkg/idp/oauth/parser/fields.go`, but rejected by the OAuth allowlist in `pkg/idp/config.go` in v1.3.2. Forward it unchanged to that validation. Never remove it from Params to make registration succeed. |
+| `logout_url <logout_url>` (also `logout url <logout_url>`) | Recognized by `pkg/idp/oauth/parser/fields.go`, but rejected by the OAuth allowlist in `pkg/idp/config.go` in v1.3.3. Forward it unchanged to that validation. Never remove it from Params to make registration succeed. |
 | `scopes`, `user_group_filters`, `user_org_filters`, `response_type` | Preserve the old append behavior for repeated identical legacy spellings, combining them into one list statement. Mixing a spaced alias with the old spelling fails as a duplicate. |
 | `required_token_fields <fields...>` | Forward one nonempty list. Repetition fails instead of silently replacing the previous list. |
 | `delay_start`, `retry_attempts`, `retry_interval` | Forward one integer. Library validation retains driver/retry defaults and exact integer values. |

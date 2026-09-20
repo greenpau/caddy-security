@@ -76,7 +76,7 @@ import (
 // user_group_filters, and user_org_filters lines append for compatibility.
 //
 // logout_url is recognized by the typed OAuth parser but rejected by the shared
-// IdP validator in go-authcrunch v1.2.3. Keep it visible as restricted syntax;
+// IdP validator in go-authcrunch v1.3.3. Keep it visible as restricted syntax;
 // never drop it from input to make validation succeed. enable logout is separate.
 //
 // Compatible Caddy forms are translated before shared parsing:

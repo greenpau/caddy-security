@@ -100,7 +100,7 @@ below only describes retired-cookie cleanup.
 
 ### Reserved-Prefix Compatibility
 
-AuthCrunch v1.2.3 preserves `Secure`, `HttpOnly`, `SameSite`, domain, and path
+AuthCrunch v1.3.3 preserves `Secure`, `HttpOnly`, `SameSite`, domain, and path
 on matching deletion cookies, with a past expiry and `Max-Age=0`.
 `__Secure-` names require secure cookies. `__Host-` additionally requires no
 Domain and `Path=/`; a configured access path or domain must respect that scope.

@@ -174,7 +174,7 @@ logout url <logout_url>
 ```
 
 These are aliases for one scalar in upstream `pkg/idp/oauth/parser/fields.go`.
-The selected v1.3.2 shared validator in `pkg/idp/config.go` excludes that field,
+The selected v1.3.3 shared validator in `pkg/idp/config.go` excludes that field,
 so Caddy adaptation rejects it. Keep both forms documented with that status;
 exclude them from runnable examples until shared validation supports them.
 `enable logout` / `logout enabled` remains a separate supported switch.

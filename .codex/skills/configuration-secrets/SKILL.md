@@ -154,7 +154,10 @@ secrets static_secrets_manager users/jsmith {
 }
 
 local identity store localdb {
+	realm local
+	path assets/config/users.json
 	user jsmith {
+		email jsmith@localhost.localdomain
 		password "secrets:users/jsmith:password" overwrite
 	}
 }
@@ -171,7 +174,8 @@ The output includes `secret: <full-secret>` for the API client and
 `api key <24-char-prefix> "<bcrypt-payload>"` for the Caddyfile. Do not store
 the plaintext `secret:` value in the server config. If the payload is
 secret-backed, keep the 24-character prefix in the Caddyfile and store only the
-bcrypt payload in the secrets manager:
+bcrypt payload in the secrets manager. This example adds a key to an existing
+local user; keep its username and email consistent with that record:
 
 ```caddyfile
 secrets static_secrets_manager users/jsmith {
@@ -179,7 +183,10 @@ secrets static_secrets_manager users/jsmith {
 }
 
 local identity store localdb {
+	realm local
+	path assets/config/users.json
 	user jsmith {
+		email jsmith@localhost.localdomain
 		api key XnxJ5W0AAcDb2FO1nefd35fT "secrets:users/jsmith:api_key"
 	}
 }
@@ -190,7 +197,12 @@ local identity store localdb {
 The fixture test binary may not register external secrets manager modules. The
 `testcase_security_with_secrets` fixture intentionally expects a
 `module not registered: security.secrets.static_secrets_manager` error even
-though the Caddyfile shape is intentional.
+though the Caddyfile shape is intentional. `TestIdentityStoreSecretsFixture`
+parses its local-user block separately so a missing plugin cannot hide obsolete
+user syntax. `api_key` is a key inside the external manager; the local user
+consumes it as `api key <24-character-prefix> secrets:<id>:api_key`, without
+an `overwrite` suffix. The challenge E2E verifies static API-key provisioning
+and login before checking explicit challenge-policy rejection.
 
 The AWS plugin validates by fetching and caching the configured AWS secret during
 plugin validation. The static plugin serves the configured inline map locally.

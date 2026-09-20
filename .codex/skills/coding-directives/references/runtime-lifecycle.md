@@ -13,7 +13,7 @@ result, including cleanup errors.
 
 ## Host lifecycle traced
 
-This qualification uses the pinned Caddy v2.11.4 and AuthCrunch v1.3.2.
+This qualification uses the pinned Caddy v2.11.4 and AuthCrunch v1.3.3.
 The relevant Caddy paths are
 [`Context.LoadModuleByID` and context cancellation](https://github.com/caddyserver/caddy/blob/v2.11.4/context.go),
 [`run`, `provisionContext`, `unsyncedDecodeAndRun`, `unsyncedStop`, and `Validate`](https://github.com/caddyserver/caddy/blob/v2.11.4/caddy.go),

@@ -403,10 +403,16 @@ func (f *authenticationClientFixture) apiKeyJourneys(t *testing.T, keys map[stri
 			if wire.requests != 1 || len(wire.responses) != 1 {
 				t.Fatal("API-key login retried or entered sandbox authentication")
 			}
-			if strings.HasPrefix(name, "expired") || strings.HasPrefix(name, "revoked") || strings.HasPrefix(name, "disabled") {
+			// Enrollment alone does not prohibit API keys (totpuser), but an
+			// explicit stored password/MFA policy cannot be bypassed (mfauser).
+			if name == "mfauser" || strings.HasPrefix(name, "expired") || strings.HasPrefix(name, "revoked") || strings.HasPrefix(name, "disabled") {
 				assertAuthenticationClientStatus(t, err, 401)
 				if credentials != nil {
 					t.Fatal("denied API key returned credentials")
+				}
+				u, _ := url.Parse(f.base + f.mount + "/")
+				if len(jar.Cookies(u)) != 0 {
+					t.Fatal("denied API key established browser state")
 				}
 				return
 			}

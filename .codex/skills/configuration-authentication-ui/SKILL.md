@@ -5,6 +5,17 @@ description: "caddy-security authentication portal UI Caddyfile configuration. U
 
 # Configuration Authentication UI
 
+## Published UI contract
+
+The v1.3.3 embedded portal and OIDC pages supply their themed layouts and
+browser color preference behavior automatically. `theme basic` remains the
+only registered Caddy theme; do not invent `theme dark` or `theme light`.
+Profile assets include `profile/images/banner.svg`, `favicon.svg` and
+`logo.svg`. Custom static PNG assets remain supported. Avoid pinning internal
+hashed assets when customizing templates; inspect the selected embedded UI.
+Conditional flow selection and profile policy editing need no extra UI setting;
+see [authentication flows](../authentication-portal-api/references/authentication-flows.md).
+
 ## Purpose
 
 Use this skill for `ui` blocks inside `authentication portal <name>` blocks.

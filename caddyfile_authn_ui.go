@@ -29,7 +29,7 @@ import (
 //
 //	ui {
 //		template <template_name> <file_path>
-//		theme <theme>
+//		theme basic
 //		language <language>
 //		meta <title|author|description> <value>
 //		logo <url|description> <value>
@@ -44,6 +44,9 @@ import (
 //	}
 //
 // Quote multiword values. Use image/png or image/jpeg for image media types.
+// basic is the only registered theme in v1.3.3. Embedded pages handle browser
+// color preferences without additional Caddy directives. Profile image assets
+// use SVG; custom static PNG assets remain supported.
 // Template names, themes, and languages depend on go-authcrunch/pkg/authn/ui
 // and pkg/translate. custom html header reads its file during adaptation.
 // There are no logo_url, logo_description, or allow settings directives.

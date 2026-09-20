@@ -45,8 +45,9 @@ Use focused repo-local skills for specialized portal sub-blocks:
 - `configuration-authentication-ui` for `ui` blocks, templates, static assets,
   custom CSS/JS/HTML, themes, languages, logos, and private links.
 - `configuration-authentication-user-transforms` for `transform user` blocks,
-  ACL matchers, transform actions, challenges, claim replacements, and UI links
-  emitted by transforms.
+  ACL matchers, typed claims, conditional challenge selection, additive legacy
+  requirements, claim replacements and transform UI links.
+  Use `configuration-users` for persisted local-user challenge rules.
 - `configuration-saml-providers` for `saml identity provider <name>` login
   providers enabled by the portal.
 - `authentication-portal-api` for JSON login, `/whoami`, `/beacon`, refresh

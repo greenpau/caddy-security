@@ -1,4 +1,4 @@
 interface:
   display_name: "Configuration Users"
   short_description: "Configure local user accounts"
-  default_prompt: "Use $configuration-users to configure caddy-security local user accounts."
+  default_prompt: "Use $configuration-users to configure caddy-security local user accounts, including stored authentication challenge rules."

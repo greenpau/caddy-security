@@ -136,8 +136,15 @@ bin/authcrunch security local update user --config private/client.yaml \
 
 bin/authcrunch security local update user --config private/client.yaml \
   --realm local --username alice --email alice@example.com \
-  --overwrite-auth-challenges password,totp
+  --overwrite-auth-challenges "password totp"
 ```
+
+Each `--overwrite-auth-challenges` item is a complete ordered rule body.
+`"password totp"` requires both methods; `password,totp` supplies two separate
+rules, so an available password selects the first rule. Quote spaces within
+a rule and use commas or repeated flags between rules. The server API requires
+a nonempty replacement; it does not implement the profile API
+[empty-array reset](../../authentication-portal-api/references/authentication-flows.md#profile-api).
 
 Creation and password reset return a **server-generated plaintext password**
 in JSON; they do not accept a caller-selected password. Protect stdout,

@@ -28,6 +28,9 @@ import (
 //
 //	inject headers with claims
 //	inject header <header_name> from <claim_field>
+//
+// Configured destination headers are cleared before authentication, including
+// deny and bypass paths. Values are injected only after successful authorization.
 func parseCaddyfileAuthorizationHeaderInjection(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) error {
 	if len(args) == 0 {
 		return h.Errf("%s directive has no value", rootDirective)

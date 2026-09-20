@@ -293,9 +293,19 @@ func TestCaddyAuthenticatorProcess(t *testing.T) {
 			if err := os.WriteFile(apiFile, []byte(keys["mfauser"]), 0600); err != nil {
 				t.Fatal(err)
 			}
+			configure("api-mfa", "", "--api-key-file", apiFile)
+			if output, err := call("", "login", "--profile", "api-mfa"); err == nil || !bytes.Contains(output, []byte("status_code: 401")) {
+				t.Fatal("API-key CLI bypassed explicit MFA policy")
+			}
+			if _, err := os.Stat(filepath.Join(home, "profiles", "api-mfa", "token.jwt")); !os.IsNotExist(err) {
+				t.Fatal("denied API-key login persisted credentials")
+			}
+			if err := os.WriteFile(apiFile, []byte(keys["alice"]), 0600); err != nil {
+				t.Fatal(err)
+			}
 			configure("api", "", "--api-key-file", apiFile)
 			must("", "login", "--profile", "api")
-			api := check("api", "mfauser")
+			api := check("api", "alice")
 			if api.RefreshToken != "" || api.SessionID != "" {
 				t.Fatal("API key unexpectedly created refresh authority")
 			}

@@ -14,6 +14,8 @@ Caddyfile and `configuration-http-integrations` for route mounting.
 For user-owned profile keys, legacy PGP/RSA metadata, ownership isolation, and
 the known transformed-profile identity gap, read
 [profile public keys](references/profile-public-keys.md).
+For conditional login selection, authoritative AMR and profile policy preview/
+replacement, read [authentication flows](references/authentication-flows.md).
 For password/MFA mutations and refresh/OIDC invalidation, read
 [local identity compatibility](../configuration-identity-stores/references/local-identity.md).
 

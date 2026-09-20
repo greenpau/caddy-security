@@ -15,12 +15,61 @@
 package security
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/ids/ldap"
+	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/google/go-cmp/cmp"
 )
+
+// The complete fixture requires an external secrets module. Check its local
+// user block independently so that the expected missing-module error cannot
+// hide stale Caddy-owned syntax later in the file.
+func TestIdentityStoreSecretsFixture(t *testing.T) {
+	data, err := os.ReadFile("testdata/caddyfile_adapt/testcase_security_with_secrets.Caddyfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := caddyfile.NewTestDispenser(string(data))
+	for d.Next() {
+		if d.Val() != "local" {
+			continue
+		}
+		args := d.RemainingArgs()
+		if len(args) != 3 || args[0] != "identity" || args[1] != "store" {
+			t.Fatal("invalid local store header")
+		}
+		cfg := authcrunch.NewConfig()
+		if err := parseCaddyfileIdentityStore(d, cfg, "local", args[2], nil); err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := json.Marshal(cfg.IdentityStores[0].Params)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var localConfig local.Config
+		if err := json.Unmarshal(encoded, &localConfig); err != nil {
+			t.Fatal(err)
+		}
+		if len(localConfig.Users) != 2 || len(localConfig.Users[1].APIKeys) != 1 {
+			t.Fatal("fixture lost its static user API key")
+		}
+		key := localConfig.Users[1].APIKeys[0]
+		if key.ID != "XnxJ5W0AAcDb2FO1nefd35fT" || key.Payload != "secrets:users/jsmith:api_key" || key.Overwrite {
+			t.Fatal("static secret API key mapping changed")
+		}
+		return
+	}
+	t.Fatal("fixture has no local store")
+}
 
 func TestParseCaddyfileIdentityStore(t *testing.T) {
 	testcases := []struct {
@@ -238,6 +287,91 @@ func TestParseCaddyfileIdentityStore(t *testing.T) {
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Logf("JSON: %v", string(app.(httpcaddyfile.App).Value))
 				t.Errorf("parseCaddyfileIdentityStore() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestIdentityStoreFallbackRoles(t *testing.T) {
+	for _, tc := range []struct {
+		directive string
+		want      []string
+	}{
+		{"fallback role first", []string{"first"}},
+		{"fallback roles first second", []string{"first", "second"}},
+		{"fallback roles old\nfallback role replacement", []string{"replacement"}},
+	} {
+		app, err := parseCookieApp(`security {
+   ldap identity store directory {
+    realm directory
+    servers {
+     ldap://127.0.0.1:1389
+    }
+    ` + tc.directive + `
+   }
+  }`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := json.Marshal(app.Config.IdentityStores[0].Params)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var cfg ldap.Config
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(tc.want, cfg.FallbackRoles); diff != "" {
+			t.Fatal(diff)
+		}
+	}
+}
+
+func TestIdentityStoreAuthenticationChallenges(t *testing.T) {
+	input := func(body string) string {
+		return `security {
+  local identity store localdb {
+   realm local
+   path users.json
+   user alice {
+    password SyntheticPassword42!
+    ` + body + `
+   }
+  }
+ }`
+	}
+	rules := []string{"u2f", "password totp if u2f not available", "password if u2f and totp not available"}
+	app, err := parseCookieApp(input("auth challenges " + strings.Join(rules, "\nauth challenges ")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(app.Config.IdentityStores[0].Params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg local.Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Users) != 1 {
+		t.Fatal("missing configured user")
+	}
+	if diff := cmp.Diff(rules, cfg.Users[0].AuthChallengeRules); diff != "" {
+		t.Fatal(diff)
+	}
+	for i, body := range []string{
+		"auth challenges password {\nroles nested\n}", "auth challenges password {\n}",
+		"auth", "auth other password", "auth challenges", `auth challenges ""`, `auth challenges password ""`,
+		"auth challenges private-sentinel", "auth challenges password or totp u2f", "auth challenges u2f if totp available",
+		"auth challenges password\nauth challenges password", "auth challenges email", "auth challenges password if email not available",
+	} {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			_, err := parseCookieApp(input(body))
+			if err == nil {
+				t.Fatal("accepted malformed policy")
+			}
+			if strings.Contains(err.Error(), "private-sentinel") {
+				t.Fatal("error exposed directive value")
 			}
 		})
 	}

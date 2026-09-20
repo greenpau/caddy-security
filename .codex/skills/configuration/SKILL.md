@@ -31,6 +31,8 @@ plugin, and explain why.
 
 Use [Syntax maintenance](references/syntax-maintenance.md) when auditing syntax,
 changing directives, or consuming a Caddy/go-authcrunch dependency update.
+The [AuthCrunch compatibility map](references/authcrunch-compatibility.md)
+tracks changed upstream surfaces, Caddy ownership and validation.
 The Caddy wrappers and the selected upstream parsers jointly define the syntax.
 Maintain Go syntax comments, standalone Caddyfiles, fixtures, and domain skills
 together, including grammar delegated to upstream libraries or external modules.

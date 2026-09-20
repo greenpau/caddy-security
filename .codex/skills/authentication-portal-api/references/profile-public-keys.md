@@ -66,8 +66,8 @@ exercise hardware authenticators or WebAuthn assertions.
 
 ## Canonical Profile Identity Regression
 
-The selected go-authcrunch commit `3e28980b0f5a78463953b674241f154bb77c6679`
-fixes the earlier v1.2.5 profile ownership defect. Profile access now uses the
+The go-authcrunch commit `3e28980b0f5a78463953b674241f154bb77c6679`, included
+in selected v1.3.3, fixed the earlier v1.2.5 profile ownership defect. Profile access now uses the
 canonical authenticated local identity and its current security version, even
 when token transforms replace `sub` and `email` with another real account.
 Caddy continues to delegate this decision to the library.

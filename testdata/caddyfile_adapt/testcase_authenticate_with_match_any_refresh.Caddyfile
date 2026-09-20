@@ -1,0 +1,21 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		authentication portal myportal {
+			enable identity store localdb
+			token refresh {
+				enabled
+				realms local
+				public origin https://auth.example.test
+				base path /auth
+			}
+			transform user {
+				match any
+				require auth challenges password
+			}
+		}
+	}
+}

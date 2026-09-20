@@ -259,7 +259,9 @@ caddy-authenticator configure --profile work \
 caddy-authenticator login --profile work
 ```
 
-API keys use their own profile:
+API keys use their own profile. They cannot bypass a stored or portal
+authentication challenge policy: an account requiring password or MFA proof
+rejects API-key login. Use a password/TOTP profile for that account.
 
 ```sh
 caddy-authenticator configure --profile automation \

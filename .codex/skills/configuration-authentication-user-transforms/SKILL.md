@@ -1,127 +1,161 @@
 ---
 name: configuration-authentication-user-transforms
-description: "caddy-security authentication portal user transform Caddyfile configuration. Use when creating, reviewing, or modifying authentication portal transform user blocks, transform matchers, ACL condition syntax, add or overwrite role actions, drop matched role actions, MFA requirements, block or deny transforms, transform UI links, or authcrunch claim replacement placeholders."
+description: "caddy-security authentication portal transform configuration. Use for transform user matchers, typed custom claims, role changes, conditional authentication challenge policies, MFA requirements, deny actions, UI links, and claim placeholders."
 ---
 
 # Configuration Authentication User Transforms
 
-## Purpose
+Use for `transform user` or `transform users` inside an authentication portal.
+`caddyfile_authn_transform.go` forwards the complete block to the selected
+module's `pkg/authn/transformer/parser`; provisioning resolves individual
+arguments and compiles the result again. Inspect `go list -m -json github.com/greenpau/go-authcrunch` before relying on sibling source. The
+published v1.3.3 supports the grammar below.
 
-Use this skill for `transform user` blocks inside `authentication portal <name>`
-blocks.
+Use [portal configuration](../configuration-authentication/SKILL.md) for wiring,
+[static users](../configuration-users/SKILL.md) for stored challenge rules, and
+[authentication flows](../authentication-portal-api/references/authentication-flows.md)
+for login and profile API contracts.
 
-Read these files when details matter:
+## Matchers and actions
 
-- `caddyfile_authn_transform.go` for Caddyfile transform forwarding.
-- `../go-authcrunch/pkg/authn/transformer/` for
-  supported transform actions and claim replacement behavior.
-- `../go-authcrunch/pkg/acl/condition.go` for ACL
-  matcher grammar.
-- `../go-authcrunch/pkg/acl/acl.go` for field
-  aliases and field data types.
-
-Use `configuration-authentication` for the surrounding portal and
-`configuration-authentication-ui` for regular portal `ui` blocks.
-
-## Transform Shape
-
-The Caddyfile parser forwards matcher and action strings to authcrunch:
+Every block needs at least one matcher and one action. Conditions combine as
+match-all. Ordinary bare `match` retains the historical `exact match` spelling
+in adapted JSON; `match any` stays unconditional. Classification uses the
+shared parser, so a claim value containing the word `match` remains an action.
+These are alternative statements inside a transform, not a complete config:
 
 ```caddyfile
-authentication portal myportal {
-	transform user {
-		match origin local
-		action add role authp/user
-		require mfa
-		ui link "User Profile" /auth/profile/ icon "las la-cog"
-	}
-}
-```
-
-`transform user` and `transform users` are accepted. Each transform must have
-at least one matcher and one action after authcrunch parses it.
-
-## Matchers
-
-Bare `match ...` lines become exact ACL matches because the Caddyfile parser
-prepends `exact`. Use explicit match strategies when exact matching is not
-intended:
-
-```caddyfile
-match origin local
+match any
+match realm local
+field email exists
+field picture not exists
 partial match email @example.com
-regex match role ^authp/(admin|user)$
 no regex match any role ^authp/(admin|user)$
-```
-
-Authcrunch ACL grammar has `match any`, but the current Caddyfile transform
-parser cannot emit that exact string because bare `match ...` gets rewritten to
-`exact match ...`. The same parser classification means `field <name> exists`
-ACL conditions are not usable as Caddyfile transform matchers today.
-
-Useful field aliases include `role`, `group`, and `groups` for `roles`; `mail`
-for `email`; `subject` for `sub`; and `ip`, `ipv4`, or `address` for `addr`.
-
-## Actions
-
-Practical transform actions are `add`, `overwrite`, `drop matched role`,
-`require`, `block`/`deny`, and `ui link`. `action add|overwrite|drop ...` is
-normalized by authcrunch:
-
-```caddyfile
 action add role authp/user
 action overwrite roles authp/user
 action drop matched role
+action delete org
 require mfa
-block
 deny
-ui link "User Profile" /auth/profile/ icon "las la-cog"
+ui link "User Profile" /auth/profile/ icon "las la-cog" target_blank
 ```
 
-Do not rely on `delete` until authcrunch `transformData` implements it
-end-to-end.
+ACL strategies are `exact`, `partial`, `prefix`, `suffix`, and `regex`, with
+optional `no` and `any` according to `pkg/acl/condition.go`. Field aliases come
+from `pkg/acl/acl.go`: for example `role`/`group`/`groups` → `roles`, `mail` →
+`email`, and `subject` → `sub`. `amr` is a list of verified methods.
 
-For custom claims, include an explicit data type:
+`action` is optional before `add`, `overwrite`, `delete` and `drop`; it does
+not prefix `require`. `block` and `deny` are synonyms. Actions and matching
+transforms retain declaration order. `overwrite` accepts known claim fields; `delete` also removes custom fields.
+Custom claims use `add` with an explicit type:
 
 ```caddyfile
-action add matrix_id "@{claims.sub}:matrix.example.com" as string
-action add _couchdb.roles _admin as string list
+add matrix_id "@{claims.sub}:matrix.example.com" as string
+add teams "operations team" support as string list
+add nested metadata label with "literal value" as string
+add nested empty as map
 ```
 
-Transform values may use authcrunch claim replacements such as
-`{claims.realm}/user` or `{claims.email}`. These are authcrunch transform
-placeholders, not Caddy runtime replacer placeholders.
+A custom scalar needs exactly one value. List aliases are `list`, `string_list`
+and the two keywords `string list`. Nested paths need at least one key; values
+follow `with`, and an empty map uses `as map`. Nested values are literal;
+ordinary string/list actions expand claim placeholders. Follow
+`pkg/authn/transformer/parser/custom_fields.go` and its runtime consumer rather
+than inferring grammar from JSON.
 
-## Sandbox And Challenges
+`{env.*}` and whole-value `secrets:<id>:<key>` resolve during Caddy provisioning.
+`{claims.*}` templates survive that pass only in transform arguments and expand
+at authentication time in action values. ACL matcher values remain literal.
+Quotes, spaces and secrets remain a single argument;
+empty resolved tokens and unknown Caddy placeholders in configured arguments
+fail provisioning. Encoded native JSON actions and matchers must each contain
+one line; reject CR/LF before decoding so a later CSV record cannot disappear.
+Resolved multiline transform values also fail shared validation. Caddy does not
+recursively expand inserted replacement data. See
+[runtime resolution](../configuration-runtime-resolution/SKILL.md).
 
-`require mfa` adds an MFA checkpoint to the portal sandbox. The sandbox session
-is separate from the final JWT session, uses its own sandbox cookie and secret,
-and expires after a short window. Login proceeds through checkpoints in order,
-usually password first and then MFA. If a user has no MFA tokens and a transform
-requires MFA, the portal can force MFA token registration before completing
-login.
+## Unconditional matcher restriction in v1.3.3
 
-Useful runtime facts when troubleshooting:
+`match any` is accepted for access-only portals without System API keys. Caddy
+rejects it when portal refresh or the OIDC provider is enabled, or a portal
+crypto key has `system` usage. This provisioning check covers Caddyfile and
+native JSON, including quoted or runtime-resolved matcher encodings and
+runtime-resolved key usage. The check follows the ACL's decoded argument meaning,
+not the serialized spelling. Disabled/absent renewable
+features remain supported when no System API key is configured.
 
-- Several failed password attempts terminate the current sandbox session.
-- MFA failures are tracked on the user record across sandbox sessions and can
-  temporarily lock MFA validation.
-- `/sandbox/{id}/terminate` ends a sandbox session early and returns the user to
-  login.
-- Programmatic clients must use the latest `sandbox_secret` returned by the
-  Portal API after each challenge; see `authentication-portal-api`.
+The upstream ACL implements this matcher through the `exp` field. Ordinary
+login provides it, but refresh/OIDC identity checks and encrypted System API
+assertions transform fresh backend claims before timestamps exist. That can silently skip claims or challenge
+requirements. Use an explicit `match realm local` (or the intended realm list)
+with those features. Caddy does not rewrite matchers or fabricate timestamps.
 
-Authcrunch supports richer authentication challenge rules on user records, such
-as `u2f`, `password totp if u2f not available`, and rules that use `or` or
-`if ... not available`. They can be managed through `authdbctl` or Profile API
-paths in go-authcrunch. Do not generate Caddyfile examples with
-`require auth challenges ...` or local user `auth challenges ...` unless the
-current caddy-security parser supports and tests them; as of this skill update,
-`configuration-users` treats `auth_challenge_rules` as not exposed by the
-Caddyfile parser.
+`TestPortalTransformMatchAnyIdentityContext` records the upstream behavior and
+checks the guard for each feature independently; `TestPortalTransformMatchAnyEncoding`
+checks equivalent native JSON encodings. The challenge E2E verifies
+access-only matching and rejected replacement while the active refresh/OIDC
+session remains usable. The adapt/resolution fixture
+`testcase_authenticate_with_match_any_refresh` and
+`testcase_authenticate_with_match_any_system` accept syntax and reject runtime
+resolution. System API E2E checks encrypted password assertions, realm-based
+claims, rejected replacement and denial when the selected policy requires TOTP. See the [upstream work needed](../configuration/references/authcrunch-compatibility.md#upstream-match-any-limit)
+before removing this restriction.
 
-## Fixtures
+## Conditional authentication
 
-Use this fixture as the main example:
+Inside a portal, this policy prefers an enrolled security key, then an enrolled
+TOTP token, then the account password:
 
-- `testdata/caddyfile_adapt/testcase_authenticate_with_ui.Caddyfile`
+```caddyfile
+transform user {
+	match realm local
+	require auth challenges u2f
+	require auth challenges totp if u2f not available
+	require auth challenges password if u2f and totp not available
+}
+```
+
+Rule bodies are parsed by `pkg/authchal/parser`:
+
+```text
+<method> [<method>...] [if <method> [and <method>...] not available]
+<method> [or <method>...] [if <method> [and <method>...] not available]
+```
+
+Methods are `password`, `totp`, `u2f`, and `mfa`. Adjacent methods require all;
+`or` selects the first available alternative. `mfa` represents an available
+second factor. Conditions require the named credentials to be unavailable.
+Do not mix an `or` choice with adjacent-method requirements. Duplicate rules,
+unknown methods and email methods/conditions are rejected: the portal has no
+email checkpoint. Method keywords are literal configuration, not placeholders.
+
+The first eligible rule across matching transforms replaces backend/user
+challenge selection. Credential availability comes from server-owned inventory,
+never `roles`, `amr`, or transformed claims. If a matched conditional policy has
+no eligible rule, authentication fails; it does not fall back to a password.
+Without a matching conditional policy, stored user rules/defaults apply.
+
+Legacy `require password|mfa|totp|u2f` remains additive after selection; it can
+force MFA enrollment when appropriate. Replacing the backend policy can remove
+the password checkpoint: a TOTP-only or U2F-only rule is a deliberate policy
+choice. Use adjacent `password totp` when both proofs are required.
+
+Successful tokens receive authoritative AMR evidence: password → `pwd`, TOTP →
+`otp`, WebAuthn/U2F → `hwk`. Transform actions cannot fabricate completed
+methods. Direct Basic and API-key login, portal refresh, OP sessions and OIDC
+refresh reevaluate current policy and cannot bypass unmet requirements.
+Request-context matchers (such as issuer/address) evaluate current request
+context, including backchannel requests; use stable realm/identity selectors
+unless that context dependence is intentional.
+
+## Validation
+
+`caddyfile_authn_transform_test.go` covers shared parsing, custom claims,
+canonical JSON, conditional selection, errors and runtime replacement.
+`testcase_authenticate_with_challenges` supplies adapt/resolution fixtures.
+`TestCaddyAuthenticationChallengesE2E` exercises actual verified Caddy TLS:
+root/nested mounts, HTML/JSON and native clients, TOTP/U2F-only selection,
+password fallback, AMR authorization, refresh/OIDC, Basic/API-key rejection, no eligible
+rule, stored policies and profile edits. WebAuthn uses signed assertions and
+rejects wrong origin and signature. Keep these boundaries when extending syntax.

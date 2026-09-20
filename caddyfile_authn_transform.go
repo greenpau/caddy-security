@@ -19,60 +19,73 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
-	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
+	transformparser "github.com/greenpau/go-authcrunch/pkg/authn/transformer/parser"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// parseCaddyfileAuthPortalTransform collects go-authcrunch/pkg/acl matchers
-// and pkg/authn/transformer actions in an authentication portal.
+// parseCaddyfileAuthPortalTransform forwards a complete block to the shared
+// go-authcrunch/pkg/authn/transformer/parser, which validates ACL matchers,
+// actions, custom claim types, and conditional authentication requirements.
 //
 // Syntax:
 //
 //	transform <user|users> {
-//		[no] [exact|partial|prefix|suffix|regex] match <field> <value> [<value>...]
-//		action add role <role>
-//		action overwrite role <role>
-//		action drop matched role
-//		require mfa
+//		[no] [exact|partial|prefix|suffix|regex] match [any] <field> <value> [<value>...]
+//		match any
+//		field <field> [not] exists
+//		[action] add <field> <value> [<value>...]
+//		[action] overwrite <known_field> <value> [<value>...]
+//		[action] delete <field>
+//		[action] drop matched role
+//		[action] add <custom_field> <value> as string
+//		[action] add <custom_field> <value> [<value>...] as <list|string_list|string list>
+//		[action] add nested <key> [<key>...] with <value> [<value>...] as <string|list|string_list|string list>
+//		[action] add nested <key> [<key>...] as map
+//		require <password|mfa|totp|u2f>
+//		require auth challenges <method> [<method>...] [if <method> [and <method>...] not available]
+//		require auth challenges <method> [or <method>...] [if <method> [and <method>...] not available]
 //		<block|deny>
 //		ui link <title> <url> [icon <class>] [target_blank]
 //	}
 //
-// The action lines above are common forms; the upstream transformer owns the
-// complete action grammar. The Caddy collector classifies lines containing a
-// match token as matchers and makes bare match exact. It does not expose every
-// ACL condition form as a transform matcher (for example field ... exists).
+// Blocks require a matcher and an action. Ordinary bare match retains the
+// historical exact spelling in JSON; match any stays an unconditional matcher.
+// Repeated rules/actions preserve order. Conditional methods are password,
+// totp, u2f and mfa; email checkpoints are unsupported. The first eligible rule
+// across matching transforms replaces backend challenges; legacy require actions
+// remain additive. A matched policy with no eligible rule denies authentication.
+// Availability comes from registered credentials, never transformed claims.
+// Quote multiword values. Action {claims.*} expands at login, independently of Caddy
+// runtime placeholders. Custom scalar values require one token; nested values
+// remain literal. In v1.3.3, match any depends on an exp claim missing during
+// refresh/OIDC identity checks and System API assertions. Caddy rejects those
+// combinations at provisioning;
+// use explicit realm matchers with those features until upstream is corrected.
+// AMR is verified authentication evidence, not a grant that a
+// transform can fabricate. Parsers start no workers or network/file activity.
 // See .codex/skills/configuration-authentication-user-transforms/SKILL.md.
 func parseCaddyfileAuthPortalTransform(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string, rootArgs []string) error {
 	args := strings.Join(rootArgs, " ")
 	switch args {
 	case "user", "users":
-		tc := &transformer.Config{}
-		for nesting := h.Nesting(); h.NextBlock(nesting); {
-			trKey := h.Val()
-			trArgs := h.RemainingArgs()
-			trArgs = append([]string{trKey}, trArgs...)
-			encodedArgs := cfgutil.EncodeArgs(trArgs)
-			var matchArgs bool
-			for _, arg := range trArgs {
-				if arg == "match" {
-					matchArgs = true
-					break
-				}
+		body, err := readFlatDirectiveBlock(h, "user transform")
+		if err != nil {
+			return err
+		}
+		statements := make([]string, 0, len(body))
+		for _, trArgs := range body {
+			if trArgs[0] == "match" && !(len(trArgs) == 2 && trArgs[1] == "any") {
+				trArgs = append([]string{"exact"}, trArgs...)
 			}
-			if matchArgs {
-				if trArgs[0] == "match" {
-					trArgs = append([]string{"exact"}, trArgs...)
-					encodedArgs = cfgutil.EncodeArgs(trArgs)
-				}
-				tc.Matchers = append(tc.Matchers, encodedArgs)
-			} else {
-				tc.Actions = append(tc.Actions, encodedArgs)
-			}
+			statements = append(statements, cfgutil.EncodeArgs(trArgs))
+		}
+		tc, err := transformparser.NewUserTransformerConfigFromDirectives(statements)
+		if err != nil {
+			return h.Errf("%s: %v", rootDirective, err)
 		}
 		portal.UserTransformerConfigs = append(portal.UserTransformerConfigs, tc)
 	default:
-		return h.Errf("unsupported directive for %s: %s", rootDirective, args)
+		return h.Errf("%s requires user or users", rootDirective)
 	}
 
 	return nil

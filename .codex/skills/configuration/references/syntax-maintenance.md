@@ -51,7 +51,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | Portal token refresh | `caddyfile_authn_token_refresh.go`, `caddyfile_resolve_token_refresh.go` | `pkg/authn/token_refresh/parser` → `authn.TokenRefreshConfig`; attach before validation, then library cookie factory and local-realm checks |
 | Portal admin API and private-key export | `caddyfile_authn_admin_api.go` | `pkg/authn/admin_api/parser`, `PortalConfig.ConfigureAdminAPI` |
 | Portal UI | `caddyfile_authn_ui.go` | `pkg/authn/ui`, `pkg/translate`, portal asset/template loading |
-| User transforms | `caddyfile_authn_transform.go` | `pkg/acl`, `pkg/authn/transformer` |
+| User transforms | `caddyfile_authn_transform.go` | `pkg/authn/transformer/parser`, `pkg/authchal/parser`, `pkg/acl`, transformer runtime |
 | Portal/policy crypto | `caddyfile_authn_crypto.go`, `caddyfile_authz_crypto.go` | `pkg/kms/crypto_keystore_config.go`, `crypto_key_config.go`, `crypto_key.go` |
 | Policy ACL rules and shortcuts | `caddyfile_authz_acl.go`, `caddyfile_authz_acl_shortcuts.go` | `pkg/acl` conditions, fields, actions |
 | Policy options, bypass, headers, auth proxy | `caddyfile_authz_misc.go`, `caddyfile_authz_bypass.go`, `caddyfile_authz_inject.go` | `pkg/authz`, `pkg/authz/bypass`, `pkg/authz/injector`, `pkg/authproxy` |
@@ -154,7 +154,9 @@ Known fixture outcomes: `testcase_authenticate_malformed`,
 `testcase_security_oauth_registration_malformed` intentionally fail adaptation;
 `testcase_security_with_secrets` requires an external module absent from the
 normal test binary; `testcase_authenticate_malformed_replacement` adapts but
-fails runtime resolution. Check test registrations if these outcomes change.
+fails runtime resolution. `testcase_authenticate_with_match_any_refresh` and
+`testcase_authenticate_with_match_any_system` also adapt but fail resolution due to the v1.3.3 upstream unconditional-matcher
+limitation; see the compatibility map. Check test registrations if these outcomes change.
 `testcase_security_oauth_registration_store` needs
 `SECURITY_TEST_REGISTRATION_PATH` set to an isolated private store containing
 the `website` application's `v1` revision. Its registered Go test provisions
@@ -171,7 +173,9 @@ restrictions without claiming that parsing tests prove runtime behavior.
 ## Known Boundaries
 
 Recheck these against the selected implementation when dependencies change.
-The following were verified with go-authcrunch v1.2.3:
+The following were verified with published go-authcrunch v1.3.3. Use the
+[dependency compatibility map](authcrunch-compatibility.md) for changed surfaces
+and their Caddy validation:
 
 - OAuth `logout_url <logout_url>` (also `logout url <logout_url>`) exists in
   the typed field parser but is excluded from the shared OAuth allowlist in
@@ -185,14 +189,20 @@ The following were verified with go-authcrunch v1.2.3:
 - KMS auto-generation supports `ES512`, `EdDSA`, and `Ed25519`. Do not retain
   the old assertion that EdDSA material is unsupported. Direct key values are
   HMAC secrets; PEM input requires the appropriate file/env source form.
-- Local/LDAP `fallback role` / `fallback roles` is recognized by the Caddy
-  parser, but its current slice drops the first supplied role. Keep the defect
-  documented; a syntax refresh must not disguise it with a dummy argument.
-  Fixing the mapping requires a separate behavior change and coverage here.
-- Transform collection rewrites bare `match` to `exact match` and classifies
-  lines by a `match` token. Not all upstream ACL conditions are exposed as
-  transform matchers. User-database challenge fields do not automatically
-  create Caddyfile user directives.
+- LDAP `fallback role` / `fallback roles` preserves every role; repeated
+  directives replace the list. Local stores reject this LDAP-only parameter.
+- Transforms delegate complete blocks to the shared parser, preserving
+  `match any`, field existence checks, custom claims and conditional policies.
+  Bare ordinary `match` retains historical exact spelling in JSON. Static
+  local users expose repeated `auth challenges <rule body>`. Both surfaces
+  reject unsupported email checkpoints; neither setting enrolls credentials.
+- `match any` transforms are rejected at provisioning when portal refresh or
+  OIDC is enabled, or System API keys are configured: upstream identity checks
+  and encrypted assertions omit the `exp` field used by that matcher. Access-only
+  portals without System API keys remain supported; use explicit realm matchers
+  with refresh/OIDC until the upstream limitation is corrected.
+- `{claims.*}` placeholders survive Caddy resolution only in transform
+  arguments. Resolved transforms are compiled again, including native JSON.
 - Portal `ui logo url` / `logo description` are valid; JSON field spellings
   `logo_url` / `logo_description` are not UI directives. Registration attaches
   through the global registry's identity store, not `enable user registration`.

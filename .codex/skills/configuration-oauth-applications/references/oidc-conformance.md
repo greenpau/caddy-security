@@ -12,8 +12,8 @@ publish, freeze certification packages, or use the certification mark as part
 of this workflow. The separate library rehearsal is reference evidence only.
 
 The current Caddy dependency pin is
-`go-authcrunch v1.3.2`, whose published tag resolves to
-commit `709b1845bd917967dda828092da83316e4a71b09`. Use an immutable published
+`go-authcrunch v1.3.3`, whose published tag resolves to
+commit `30985f1c9ed812218a8609cd2fc10e224b7e0f31`. Use an immutable published
 commit pin when qualifying newer upstream work; this harness rejects local
 module replacements and records the downloaded module checksums and Git origin.
 Reading a sibling checkout alone does not select it for a Caddy build.
@@ -24,6 +24,10 @@ deployment preserves those headers without importing the older v1.2.6 snippet.
 `consent-policy.json` records policy ownership and links to candidate provenance.
 Preflight validates CSP directives, nonce-limited styles and same-origin assets,
 and still rejects null/cross-origin and forged-CSRF submissions.
+
+The recorded official-plan rehearsals below used older dependencies. The v1.3.3
+upgrade is qualified by ordinary Caddy unit/E2E tests; those tests do not
+relabel historical conformance outcomes or establish a new official-plan run.
 
 ## Verified v1.3.2 Caddy rehearsal
 
