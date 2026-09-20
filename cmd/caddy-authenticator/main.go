@@ -44,7 +44,7 @@ func init() {
 	app.Description = "Authenticate to a Caddy security portal using named profiles"
 	app.Documentation = "https://github.com/greenpau/caddy-security/tree/main/cmd/caddy-authenticator"
 	// Keep the go install fallback synchronized with VERSION via make version-sync.
-	app.SetVersion(appVersion, "1.2.0")
+	app.SetVersion(appVersion, "1.2.1")
 	app.SetGitBranch(gitBranch, "")
 	app.SetGitCommit(gitCommit, "")
 	app.SetBuildUser(buildUser, "")
