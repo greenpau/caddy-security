@@ -18,7 +18,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -150,7 +149,12 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 			}
 		})
 	}
-	for _, operation := range []string{"password", "same-password", "import", "same-import", "admin-reset", "mfa-add", "mfa-delete", "profile-challenges", "admin-challenges", "disable", "recreate", "reload", "restore-and-reload"} {
+	hash, err := bcrypt.GenerateFromPassword([]byte("ReplacementPassword42!"), 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rejectedImport := "bcrypt:9:" + string(hash)
+	for _, operation := range []string{"password", "same-password", "admin-reset", "mfa-add", "mfa-delete", "profile-challenges", "admin-challenges", "disable", "recreate", "reload", "restore-and-reload"} {
 		t.Run(operation, func(t *testing.T) {
 			mfa := operation == "mfa-delete" || operation == "profile-challenges" || operation == "admin-challenges"
 			f := newLocalIdentityFixture(t, localIdentityOptions{mount: "/auth", refreshRealm: "local", oidcRealm: "local", mfa: mfa}, cert, key, roots)
@@ -170,6 +174,7 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 			f.secrets = append(f.secrets, tokens.Access, tokens.ID, code, pending)
 			before := localIdentityRecord(t, f.database, "alice")
 			oldPassword := localIdentityActivePassword(t, before)
+			f.secrets = append(f.secrets, rejectedImport, oldPassword.EncodedHash())
 			original, err := os.ReadFile(f.database)
 			if err != nil {
 				t.Fatal(err)
@@ -179,6 +184,11 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 				{"kind": "update_user_password", "old_password": localIdentityBobPassword, "new_password": "ReplacementPassword42!"},
 				{"kind": "update_user_password", "old_password": lifecyclePassword, "new_password": "short"},
 				{"kind": "update_user_password", "old_password": lifecyclePassword, "new_password": "bcrypt:invalid-cost:invalid"},
+				{"kind": "update_user_password", "old_password": lifecyclePassword, "new_password": "argon2:invalid"},
+				// Profile changes accept plaintext only, including when an
+				// otherwise valid import would reuse the current password.
+				{"kind": "update_user_password", "old_password": lifecyclePassword, "new_password": rejectedImport},
+				{"kind": "update_user_password", "old_password": lifecyclePassword, "new_password": oldPassword.EncodedHash()},
 			} {
 				f.profile(t, body, 400)
 				after := localIdentityRecord(t, f.database, "alice")
@@ -195,21 +205,11 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 			f.secrets = append(f.secrets, rotated.RefreshToken, rotated.AccessToken)
 			password, freshMFA := lifecyclePassword, mfa
 			switch operation {
-			case "password", "same-password", "import", "same-import", "restore-and-reload":
+			case "password", "same-password", "restore-and-reload":
 				replacement := lifecyclePassword
-				if operation == "password" || operation == "import" {
+				if operation == "password" {
 					password = "ReplacementPassword42!"
 					replacement = password
-				}
-				if operation == "import" {
-					hash, err := bcrypt.GenerateFromPassword([]byte(password), 9)
-					if err != nil {
-						t.Fatal(err)
-					}
-					replacement = "bcrypt:9:" + string(hash)
-				}
-				if operation == "same-import" {
-					replacement = "bcrypt:8:" + oldPassword.Hash
 				}
 				f.secrets = append(f.secrets, password, replacement)
 				f.profile(t, map[string]any{"kind": "update_user_password", "old_password": lifecyclePassword, "new_password": replacement}, 200)
@@ -264,13 +264,13 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 					t.Fatal("security mutation did not persist its credential version")
 				}
 			}
-			if operation == "same-password" || operation == "same-import" {
+			if operation == "same-password" {
 				active := localIdentityActivePassword(t, after)
 				if active.Hash != oldPassword.Hash || !active.CreatedAt.Equal(oldPassword.CreatedAt) {
 					t.Fatal("duplicate update rehashed the active credential")
 				}
 			}
-			if operation == "password" || operation == "import" || operation == "admin-reset" {
+			if operation == "password" || operation == "admin-reset" {
 				if localIdentityActivePassword(t, after).Hash == oldPassword.Hash {
 					t.Fatal("replacement retained the old active hash")
 				}
@@ -351,9 +351,9 @@ func testLocalIdentityMutations(t *testing.T, cert, key string, roots *x509.Cert
 			if password != lifecyclePassword {
 				f.rejectNativeLogin(t, lifecyclePassword, false)
 			}
-			if operation == "import" || operation == "same-import" {
+			if operation == "password" || operation == "same-password" {
 				active := localIdentityActivePassword(t, after)
-				serialized := fmt.Sprintf("bcrypt:%d:%s", active.Cost, active.Hash)
+				serialized := active.EncodedHash()
 				f.rejectNativeLogin(t, serialized, false)
 			}
 			fresh, err := f.nativeLogin(t, password, freshMFA)

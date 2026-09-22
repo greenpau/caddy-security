@@ -1,8 +1,7 @@
 # Local Identity Compatibility
 
 This contract is qualified against the go-authcrunch revision selected in
-`go.mod`, currently published v1.3.3 at
-`30985f1c9ed812218a8609cd2fc10e224b7e0f31`.
+`go.mod`, currently published v1.3.4.
 Check `go list -m -json github.com/greenpau/go-authcrunch` before attributing
 behavior to a sibling checkout. The upstream `local-password-authentication`
 skill and `pkg/identity/password_verifier.go`, `user.go`, `database.go`,
@@ -38,7 +37,12 @@ bulk-migrates legacy records lacking `credential_version`; missing means zero,
 and successful security mutations persist a later version for the affected user.
 
 Profile password update uses `kind: update_user_password`, `old_password`, and
-`new_password`. Management uses the existing `/api/server/user` operations,
+`new_password`. In v1.3.4, profile updates accept plaintext only and reject
+reserved `bcrypt:` and `argon2:` import prefixes with HTTP 400, including valid
+hashes and imports matching the current password. Rejection preserves password
+records, credential versions and existing renewable sessions. Trusted database
+and static-user provisioning imports remain supported.
+Management uses the existing `/api/server/user` operations,
 including `reset_password`, `disable`, `enable`, `delete`, `add`, and
 `overwrite_auth_challenges`. Inspect both HTTP status and the operation's JSON
 status: existing management endpoints can return HTTP 200 with a failure object.
@@ -101,8 +105,9 @@ selected realms. Both form and JSON paths independently reject the transformed
 account's password. OIDC exchange uses the existing independent RP verifier.
 
 `local_identity_mutation_e2e_test.go` performs profile password changes, identical
-updates/imports, new imports, admin reset, MFA changes, account disable/enable,
-delete/recreate, realm reload, and old-file restoration through actual routes.
+plaintext updates, rejected new/current hash imports, admin reset, MFA changes,
+account disable/enable, delete/recreate, realm reload, and old-file restoration
+through actual routes.
 It checks complete password-record preservation after rejected updates,
 fresh authentication afterward, stale
 refresh/code/UserInfo/browser evidence, and continued stateless access. It also
