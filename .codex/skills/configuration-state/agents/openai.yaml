@@ -1,0 +1,4 @@
+interface:
+  display_name: "Persistent Runtime State"
+  short_description: "Caddy session persistence and restart lifecycle"
+  default_prompt: "Use $configuration-state to configure durable Caddy authentication state and verify the restart lifecycle."

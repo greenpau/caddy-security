@@ -41,6 +41,7 @@ func init() {
 //
 //	{
 //		security {
+//			state { directory <absolute-private-directory> }
 //			oauth registration store { path <absolute-private-directory> }
 //			secrets <module> <id> { ... }
 //			credentials <name> { ... }
@@ -75,6 +76,15 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 	}
 	var applications []applicationDeclaration
 	for d.NextBlock(0) {
+		if d.Val() == "state" {
+			if app.Config.State != nil {
+				return nil, d.Errf("duplicate security state block")
+			}
+			if err := parseCaddyfileState(d, app.Config); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		if d.Val() == "oauth" {
 			if !d.NextArg() {
 				return nil, d.Errf("expected oauth application, oauth registration store, or oauth identity provider header")

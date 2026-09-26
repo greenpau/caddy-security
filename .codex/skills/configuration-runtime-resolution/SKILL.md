@@ -83,6 +83,11 @@ that the old deployment still authorizes requests.
 
 Resolve these app config areas:
 
+- `state.directory`: replace the original scalar in the private config copy,
+  then run the shared state validator without creating files. Whole environment
+  and secrets-manager references retain exact token boundaries; unresolved or
+  empty replacements fail with a redacted error. See
+  [persistent runtime state](../configuration-state/SKILL.md).
 - `credentials.raw_credential_configs`, `messaging.raw_configs`, and
   `user_registration.raw_configs`: decode each instruction, replace each
   argument independently, then re-encode it for AuthCrunch validation. A resolved

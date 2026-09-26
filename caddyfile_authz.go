@@ -18,7 +18,9 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+	oauthparser "github.com/greenpau/go-authcrunch/pkg/authz/oauth/parser"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -41,6 +43,13 @@ const (
 //		bypass uri <exact|partial|prefix|suffix|regex> <path>
 //		validate bearer header
 //		inject headers with claims
+//		use oauth identity provider <name>
+//		oauth public origin <https-origin>
+//		oauth base path <path>
+//		oauth <session|login> cookie name <name>
+//		oauth session lifetime <seconds>
+//		oauth maximum sessions <count>
+//		oauth maximum pending logins <count>
 //	}
 //
 // At least one ACL rule is required. Additional enable, disable, validate, set,
@@ -54,10 +63,20 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config)
 	switch args[0] {
 	case "policy":
 		p := &authz.PolicyConfig{Name: args[1]}
+		var oauthStatements []string
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
+			case "use", "oauth":
+				args := append([]string{k}, d.RemainingArgs()...)
+				if d.Next() {
+					if d.Val() == "{" {
+						return d.Errf("OAuth authorization statements cannot contain blocks")
+					}
+					d.Prev()
+				}
+				oauthStatements = append(oauthStatements, cfgutil.EncodeArgs(args))
 			case cryptoKeyword:
 				v := d.RemainingArgs()
 				if err := parseCaddyfileAuthorizationCrypto(d, p, rootDirective, v); err != nil {
@@ -90,6 +109,13 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config)
 			default:
 				return errors.ErrMalformedDirective.WithArgs(rootDirective, d.RemainingArgs())
 			}
+		}
+		oauth, err := oauthparser.NewOAuthAuthorizationConfigFromDirectives(p.Name, oauthStatements)
+		if err != nil {
+			return d.Errf("%v", err)
+		}
+		if err := p.ConfigureOAuth(oauth); err != nil {
+			return d.Errf("%v", err)
 		}
 		if err := cfg.AddAuthorizationPolicy(p); err != nil {
 			return err

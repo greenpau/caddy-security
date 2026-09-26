@@ -12,9 +12,9 @@ pluggable secrets managers.
 
 The module registers two primary HTTP integrations: `authenticate`, which serves
 an authentication portal for form-based, basic, local, LDAP, OpenID Connect,
-OAuth 2.0, and SAML authentication; and `authorize`, which plugs into Caddy's
-authentication provider chain to authorize requests using gatekeeper policies and
-JWT/PASETO-derived user claims.
+OAuth 2.0, and SAML authentication; and `authorize`, which applies gatekeeper
+policies to JWT/PASETO claims and direct OAuth sessions. The legacy authorization
+provider remains available for Caddy's authentication provider chain.
 
 In Caddy terms, `security` is an application: a top-level Caddy module with its
 own lifecycle, configuration, provisioning, and shared runtime state. The
@@ -54,9 +54,10 @@ modules register from package `init` hooks.
 - `app.go` defines the Caddy `security` app, its lifecycle/provisioning, the
   `SecretsManager` plugin interface, and access to provisioned authcrunch
   portals and gatekeepers.
-- `plugin_authn.go` and `plugin_authz.go` define the HTTP integrations:
-  `authenticate` registers the authentication portal handler, while `authorize`
-  registers the authorization provider used in Caddy's authentication chain.
+- `plugin_authn.go` registers the authentication portal handler.
+  `plugin_authz.go` implements policy delegation and the legacy authentication
+  provider. `plugin_authorization.go` supplies the current `authorize` route
+  handler, preserving handled OAuth callbacks, redirects and denials.
 - `caddyfile.go` registers the global `security` Caddyfile option and dispatches
   parser blocks. The `caddyfile_<domain>.go` files parse credentials,
   messaging, identity stores, OAuth and SAML identity providers, SSO app
@@ -79,6 +80,9 @@ modules register from package `init` hooks.
 - `caddyfile_resolve.go` applies Caddy replacer values and
   `security.secrets.*` plugin lookups to authcrunch configuration during
   provisioning.
+- `caddyfile_state.go` adapts the optional root runtime-state block. Persistent
+  roots are constructed in `App.Start`; overlapping persistent reload is rejected
+  before candidate routes start, and Cleanup drains calls before root disposal.
 - `*_test.go` files sit beside the code they exercise. `caddyfile_adapt_test.go`
   is fixture-driven and compares Caddyfile input against expected adapted JSON.
 - `testdata/caddyfile_adapt/` contains `.Caddyfile`, `.json`, optional `.env`,
@@ -129,6 +133,10 @@ Use `configuration-oauth-applications` for `oauth application <nickname>`
 registrations, private `oauth registration store` configuration, the
 `security oauth` and `security oidc` CLI commands, and portal `oidc provider` blocks;
 `configuration-oauth-providers` owns external login providers.
+
+Use `configuration-state` for the root `state` block, restart persistence,
+exclusive runtime ownership and the stop/start deployment boundary. Direct
+OAuth without a portal belongs to `configuration-authorization`.
 
 ## Break-Fix Troubleshooting
 

@@ -1,0 +1,32 @@
+{
+	security {
+		state {
+			directory "/var/lib/authcrunch/private runtime"
+		}
+		oauth identity provider upstream {
+			driver generic
+			realm upstream
+			client_id fixture-client
+			client_secret synthetic-client-secret
+			base_auth_url https://identity.example.test
+			metadata_url https://identity.example.test/.well-known/openid-configuration
+		}
+		authorization policy direct {
+			use oauth identity provider upstream
+			oauth public origin https://app.example.test
+			oauth base path /private/oauth
+			oauth session lifetime 600
+			oauth maximum sessions 200
+			oauth maximum pending logins 20
+			validate method path
+			allow roles authp/user
+		}
+	}
+}
+
+app.example.test {
+	route /private/* {
+		authorize with direct
+		respond "protected application"
+	}
+}

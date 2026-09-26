@@ -84,6 +84,10 @@ func TestCaddyAuthorizationPathProcess(t *testing.T) {
 }
 %[2]s {
  tls %[3]q %[4]q
+ handle_errors {
+  header X-Authorization-Error {http.auth.authorizer.error}
+  respond "authentication failed" {http.error.status_code}
+ }
  @bypass header X-Test-Policy bypass
  @method header X-Test-Policy method
  @claim header X-Test-Policy claim
@@ -149,6 +153,12 @@ func TestCaddyAuthorizationPathProcess(t *testing.T) {
 				}
 				if allow && string(body) != target {
 					t.Fatal("authorization changed the downstream URI")
+				}
+				if !allow && mode == "bypass" && response.Header.Get("X-Authorization-Error") == "" {
+					t.Fatal("error route lost authentication provider error placeholder")
+				}
+				if !allow && response.Header.Get("Cache-Control") != "no-store" {
+					t.Fatal("denial became cacheable through Caddy error handling")
 				}
 				if response.TLS == nil || len(response.TLS.VerifiedChains) == 0 || (response.ProtoMajor == 2) != http2 {
 					t.Fatal("request did not use verified TLS and the selected HTTP protocol")

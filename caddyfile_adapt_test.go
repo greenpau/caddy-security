@@ -64,6 +64,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "persistent state and portal-free OAuth", inputFileNamePrefix: "testcase_security_state"},
 		{name: "match any System API combination defers rejection to provisioning", inputFileNamePrefix: "testcase_authenticate_with_match_any_system"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},
 		{name: "match any refresh combination defers rejection to provisioning", inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh"},

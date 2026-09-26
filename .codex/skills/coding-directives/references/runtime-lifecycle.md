@@ -13,7 +13,7 @@ result, including cleanup errors.
 
 ## Host lifecycle traced
 
-This qualification uses the pinned Caddy v2.11.4 and AuthCrunch v1.3.3.
+This qualification uses the pinned Caddy v2.11.4 and AuthCrunch v1.3.4.
 The relevant Caddy paths are
 [`Context.LoadModuleByID` and context cancellation](https://github.com/caddyserver/caddy/blob/v2.11.4/context.go),
 [`run`, `provisionContext`, `unsyncedDecodeAndRun`, `unsyncedStop`, and `Validate`](https://github.com/caddyserver/caddy/blob/v2.11.4/caddy.go),
@@ -24,7 +24,7 @@ and the [HTTP app's `Stop` and `Cleanup`](https://github.com/caddyserver/caddy/b
 | Module load | Constructs, decodes, provisions, validates, then records the module for cleanup | Deep copies the declarative AuthCrunch config through JSON before replacement, validation, or construction can mutate it |
 | Own provisioning failure | Calls the failed module's `Cleanup` directly | Handles a nil server; `NewServer` already unwinds partial construction |
 | Later module provisioning/validation failure | Cancels the candidate context and cleans up successfully loaded modules | Disposes a successful candidate, even though `Start` was never called |
-| Validation without running | Provisions and validates, then cancels the context | Disposes validation-only runtimes |
+| Validation without running | Provisions and validates, then cancels the context | Disposes volatile validation-only runtimes; persistent configuration has no runtime yet |
 | Start failure | Stops apps already started and cancels the candidate context | Disposes the candidate; does not close the old configuration's runtime |
 | Successful replacement | Starts new apps, changes the current context, stops all old apps, then cancels the old context | Leaves `Stop` free of disposal; closes the old runtime in `Cleanup` after its AuthCrunch calls drain |
 
@@ -36,9 +36,22 @@ expiry is also not proof that a handler has returned.
 
 The host already owns publication and listener replacement, so the security app
 does not add its own global active-server pointer or swap runtimes inside an app.
-It publishes its constructed server during provisioning, before route modules
-resolve names. Caddy starts the candidate HTTP stack and retires the old stack.
+Volatile mode publishes its constructed server during provisioning, before route
+modules resolve names. Persistent mode constructs only in `Start`, so validation
+does not create keys or state files; routes validate names against the resolved
+configuration and acquire runtime objects after startup. Admission is closed
+until construction succeeds. Caddy starts the candidate HTTP stack and retires the old stack.
 An app instance cannot be reprovisioned or resurrected after cleanup.
+
+Persistent-to-persistent replacement is rejected during provisioning, using
+`caddy.ActiveContext().AppIfConfigured("security")` to inspect the host-owned
+active app before any candidate apps start. This is intentionally conservative
+even for a different directory. It adds no storage lock or snapshot registry;
+AuthCrunch alone owns the cross-process directory lock. Stop/drain Caddy fully
+before starting a persistent replacement. First startup can briefly have HTTP
+listeners before the security app's `Start`; requests then fail closed with
+503. See [persistent state](../../configuration-state/SKILL.md) for the operator
+contract and built-command restart/reload tests.
 
 Construction success retains AuthCrunch's existing readiness semantics. An
 explicitly delayed OAuth provider may still be performing discovery; Caddy does
@@ -57,7 +70,9 @@ after authorization uses Caddy's copied user metadata and no longer needs the
 AuthCrunch runtime. Calls that have not entered AuthCrunch when retirement
 starts fail closed. An authentication portal returns a Caddy 503 error. The
 authorization provider returns an error and no authenticated user; Caddy's
-authentication middleware normally turns that rejection into 401.
+authentication middleware normally turns that rejection into 401. The route
+`AuthorizationHandler` used by current Caddyfiles preserves the 503 and every
+other handled gatekeeper response instead of running an error route over it.
 
 Cleanup waits synchronously, so the reload operation can wait while the new
 deployment is already serving. It can outlast the HTTP grace period. It never
@@ -117,7 +132,7 @@ separate files even on a case-sensitive filesystem. This avoids admitting two
 writers solely because an inode is not available yet.
 Reservation of multiple files is atomic within this process; a failed conflict
 check leaves no partial reservation. `:memory:` stores are independent and need
-no file reservation. LDAP/OAuth deployments can reload normally.
+no file reservation. Volatile LDAP/OAuth deployments can reload normally.
 
 This safeguard does **not** implement seamless replacement for local files.
 That remaining feature needs upstream database coordination: either shared
@@ -137,8 +152,9 @@ Client registrations and signing-key files remain persisted independently of
 runtime disposal. Supply the existing registration credentials and key paths to
 the next configuration; do not regenerate them on every load. The config copy
 preserves those values. Access JWTs can remain valid when verification keys and
-policy remain compatible. OIDC sessions, pending requests, grants, and portal
-refresh state are volatile and are not promised to survive replacement.
+policy remain compatible. Without `Config.State`, OIDC sessions, pending
+requests, grants and portal refresh state are volatile. With it, completed
+authority and generated keys survive a stop/start; pending requests do not.
 
 ## Validation
 

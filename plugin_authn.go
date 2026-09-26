@@ -113,7 +113,7 @@ func (m *AuthnMiddleware) Validate() error {
 	if m.PortalName == "" {
 		return fmt.Errorf("empty portal name")
 	}
-	if m.portal == nil {
+	if m.portal == nil && m.app == nil {
 		return fmt.Errorf("portal is nil")
 	}
 
@@ -128,6 +128,15 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		return caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
 	}
 	defer release()
+	portal := m.portal
+	if portal == nil {
+		// Admission pins the root; cleanup cannot close it before this call ends.
+		var err error
+		portal, err = m.app.server.GetPortalByName(m.PortalName)
+		if err != nil {
+			return caddyhttp.Error(http.StatusServiceUnavailable, err)
+		}
+	}
 
 	normalizeSecurityMetadata(r)
 	rr := requests.NewRequest()
@@ -139,7 +148,7 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	// rewrite, retry or broaden CORS for these requests in Caddy middleware.
 	// JSON/native login uses this same dispatch: never synthesize Cookie, Origin
 	// or Fetch Metadata headers, or turn its credentials into OIDC login evidence.
-	return m.portal.ServeHTTP(r.Context(), w, r, rr)
+	return portal.ServeHTTP(r.Context(), w, r, rr)
 }
 
 // parseAuthnCaddyfile attaches a named portal to a Caddy HTTP route.

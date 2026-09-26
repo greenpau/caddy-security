@@ -45,6 +45,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | Surface | Caddy owner | Selected upstream owner / next validation |
 | --- | --- | --- |
 | Global `security` and child headers | `caddyfile.go`, `caddyfile_identity.go`, `caddyfile_user.go` | `Config.Add*` methods and `Config.Validate` |
+| Root runtime `state` | `caddyfile_state.go`, `caddyfile_resolve.go` | `pkg/state/parser` → `Config.State`; initialization belongs to `NewServer` in `App.Start` |
 | HTTP `authenticate` / `authorize` | `plugin_authn.go`, `plugin_authz.go` | Caddy route matching; provisioned portal/policy |
 | Portal body and backend enablement | `caddyfile_authn.go`, `caddyfile_authn_misc.go` | `pkg/authn/config.go`, redirect validation, backend attachment |
 | Portal cookies | `caddyfile_authn_cookie.go` | `pkg/authn/cookie/parser`, `PortalConfig.ConfigureCookies` |
@@ -54,6 +55,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | User transforms | `caddyfile_authn_transform.go` | `pkg/authn/transformer/parser`, `pkg/authchal/parser`, `pkg/acl`, transformer runtime |
 | Portal/policy crypto | `caddyfile_authn_crypto.go`, `caddyfile_authz_crypto.go` | `pkg/kms/crypto_keystore_config.go`, `crypto_key_config.go`, `crypto_key.go` |
 | Policy ACL rules and shortcuts | `caddyfile_authz_acl.go`, `caddyfile_authz_acl_shortcuts.go` | `pkg/acl` conditions, fields, actions |
+| Direct policy OAuth | `caddyfile_authz.go`, `plugin_authorization.go` | `pkg/authz/oauth/parser` → `PolicyConfig.ConfigureOAuth`; route handler preserves authorization, bypass and handled responses |
 | Policy options, bypass, headers, auth proxy | `caddyfile_authz_misc.go`, `caddyfile_authz_bypass.go`, `caddyfile_authz_inject.go` | `pkg/authz`, `pkg/authz/bypass`, `pkg/authz/injector`, `pkg/authproxy` |
 | Local/LDAP stores and static users | `caddyfile_identity_store.go` | `pkg/ids/config.go`, `pkg/ids/local`, `pkg/ids/ldap`, `pkg/authn/icons` |
 | Upstream OAuth | `caddyfile_identity_provider_oauth.go` | `pkg/idp/parser/oauth.go` → `pkg/idp/oauth/parser` → shared `pkg/idp/config.go`; runtime `pkg/idp/oauth` |

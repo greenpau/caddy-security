@@ -80,6 +80,9 @@ type App struct {
 
 	server *authcrunch.Server
 	logger *zap.Logger
+	// Persistent runtimes are constructed only by Start. Caddy also calls
+	// Provision during validation, which must not initialize durable state.
+	runtimeConfig *authcrunch.Config
 
 	mu            sync.Mutex
 	provisioned   bool
@@ -98,7 +101,8 @@ func (*App) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision constructs the security runtime for this Caddy configuration.
+// Provision validates this Caddy configuration and constructs volatile runtimes.
+// Persistent runtimes wait for Start so validation never initializes storage.
 func (app *App) Provision(ctx caddy.Context) error {
 	app.mu.Lock()
 	defer app.mu.Unlock()
@@ -173,17 +177,48 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := validateOIDCProviderMounts(&config); err != nil {
 		return err
 	}
+	if config.State != nil {
+		// Caddy provisions every candidate before starting any of its apps.
+		// Reject persistent-to-persistent replacement at that boundary, before
+		// the candidate HTTP app can publish routes. There is no public atomic
+		// drain/close/construct/rollback contract for sharing a state directory.
+		// The library remains the sole cross-process storage-lock owner.
+		if current, err := caddy.ActiveContext().AppIfConfigured(appName); err == nil {
+			if old, ok := current.(*App); ok && old != app {
+				old.mu.Lock()
+				live := old.runtimeConfig != nil && old.server != nil && !old.disposing
+				old.mu.Unlock()
+				if live {
+					return fmt.Errorf("persistent security runtime does not support overlapping reload; stop Caddy and wait for request drain before starting the replacement")
+				}
+			}
+		}
+		app.runtimeConfig = &config
+		return nil
+	}
+	return app.constructServer(&config)
+}
 
+// constructServer runs with app.mu held, before publishing admission.
+func (app *App) constructServer(config *authcrunch.Config) error {
 	// Local stores cache independent database snapshots. Until AuthCrunch can
 	// coordinate those snapshots, overlapping owners must fail before NewServer
 	// can initialize or overwrite users in a file used by the live deployment.
-	app.identityFiles, err = reserveIdentityFiles(&config)
+	files, err := reserveIdentityFiles(config)
 	if err != nil {
 		return err
 	}
+	app.identityFiles = files
 
-	server, err := authcrunch.NewServer(&config, app.logger)
+	server, err := authcrunch.NewServer(config, app.logger)
 	if err != nil {
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		if config.State != nil {
+			// Do not put constructor details (possibly containing credentials)
+			// into shared Caddy logs or admin API responses.
+			return fmt.Errorf("persistent security runtime could not start; ensure the state directory is private and intact and stop its current owner before starting another instance (overlapping reload is unsupported)")
+		}
 		app.logger.Error(
 			"failed provisioning app server instance",
 			zap.String("app", app.Name),
@@ -203,6 +238,16 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 // Start starts the App.
 func (app *App) Start() error {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if app.disposing {
+		return fmt.Errorf("security app is shutting down")
+	}
+	if app.runtimeConfig != nil && app.server == nil {
+		if err := app.constructServer(app.runtimeConfig); err != nil {
+			return err
+		}
+	}
 	app.logger.Debug(
 		"started app instance",
 		zap.String("app", app.Name),
@@ -255,6 +300,14 @@ func (app *App) acquireRequest() (release func(), ok bool) {
 func (app *App) getPortal(s string) (*authn.Portal, error) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
+	if !app.disposing && app.server == nil && app.runtimeConfig != nil {
+		for _, p := range app.runtimeConfig.AuthenticationPortals {
+			if p.Name == s {
+				return nil, nil // Declaration checked; Start has not run yet.
+			}
+		}
+		return nil, fmt.Errorf("authentication portal %q not configured", s)
+	}
 	if app.disposing || app.server == nil {
 		return nil, authcrunch.ErrServerClosed
 	}
@@ -264,6 +317,14 @@ func (app *App) getPortal(s string) (*authn.Portal, error) {
 func (app *App) getGatekeeper(s string) (*authz.Gatekeeper, error) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
+	if !app.disposing && app.server == nil && app.runtimeConfig != nil {
+		for _, p := range app.runtimeConfig.AuthorizationPolicies {
+			if p.Name == s {
+				return nil, nil
+			}
+		}
+		return nil, fmt.Errorf("authorization policy %q not configured", s)
+	}
 	if app.disposing || app.server == nil {
 		return nil, authcrunch.ErrServerClosed
 	}

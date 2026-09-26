@@ -113,6 +113,8 @@ authorize /api/* with api_policy
 
 ## Domain Map
 
+- Persistent runtime state: [configuration-state](../configuration-state/SKILL.md),
+  parsed by `caddyfile_state.go`; stop/start persistence also supports policy-only OAuth.
 - HTTP integrations: `configuration-http-integrations`, parsed by
   `plugin_authn.go` and `plugin_authz.go`.
 - Authentication portals: `configuration-authentication`, parsed by

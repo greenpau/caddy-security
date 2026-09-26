@@ -103,7 +103,7 @@ func compositionLifecycleConfig(t *testing.T, data []byte, label string) []byte 
 				if k == "handle" {
 					if handlers, ok := child.([]any); ok {
 						for _, handler := range handlers {
-							if h, ok := handler.(map[string]any); ok && (h["handler"] == "authenticator" || h["handler"] == "authentication") {
+							if h, ok := handler.(map[string]any); ok && (h["handler"] == "authenticator" || h["handler"] == "authentication" || h["handler"] == "authorization") {
 								node[k] = append([]any{map[string]any{"handler": "security_lifecycle_probe", "label": label}}, handlers...)
 								count++
 								break

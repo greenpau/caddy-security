@@ -17,13 +17,9 @@
             {
               "handle": [
                 {
-                  "handler": "authentication",
-                  "providers": {
-                    "authorizer": {
-                      "gatekeeper_name": "zoo",
-                      "route_matcher": "*"
-                    }
-                  }
+                  "gatekeeper_name": "zoo",
+                  "handler": "authorization",
+                  "route_matcher": "*"
                 }
               ]
             }

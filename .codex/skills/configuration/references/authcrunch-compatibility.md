@@ -2,8 +2,8 @@
 
 ## Selected implementation
 
-The supported dependency is published `github.com/greenpau/go-authcrunch v1.3.3`,
-commit `30985f1c9ed812218a8609cd2fc10e224b7e0f31`, without a local replacement.
+The supported dependency is published `github.com/greenpau/go-authcrunch v1.3.4`,
+commit `a97ff2f0a4429e286c30b9cc0cd6babab109b964`, without a local replacement.
 The review baseline is `7b890459d5eb3782d1df4f035e7920a3a3ed1c71` (v1.2.5).
 Use `go list -m -json github.com/greenpau/go-authcrunch` to reestablish the
 selected version and module directory before repeating this qualification.
@@ -17,6 +17,8 @@ AuthCrunch HTTP server's configuration into Caddy's app or routes.
 
 | Upstream surface | Caddy integration and validation |
 | --- | --- |
+| `Config.State`, `pkg/state/parser` | Root `state` adapter delegates grammar and preserves library JSON. Persistent runtime construction occurs in Start; Caddy rejects overlapping persistent reload before candidate route startup. `TestCaddyRuntimeStateE2E` qualifies built-command restarts, storage/capacity failures and revocation. See configuration-state. |
+| `PolicyConfig.OAuth`, `pkg/authz/oauth/parser` | Complete `use oauth`/`oauth` statements select portal-free provider login. The new authorization route handler preserves all three outcomes; parser/adapt, response-contract and built-command tests cover the host boundary. |
 | `pkg/authchal`, `pkg/authn/transformer` | Complete transform blocks use the shared parser. Conditional replacement, additive legacy requirements, field existence, `match any`, typed custom/nested claims and deletion are exposed. Static local users accept repeated rule bodies. Unit/adapt/resolution tests and `TestCaddyAuthenticationChallengesE2E` cover actual selection and rejection. |
 | `pkg/ids/local`, `pkg/identity`, `pkg/requests`, `pkg/user` | Static users map through exported local-store types; inventory stays server-owned. Deleting a required factor leaves stored rules in force and fails login closed; administrative replacement permits deliberate recovery. `TestCaddyLocalIdentityE2E` verifies password/MFA lifecycle and credential-version invalidation; the challenge E2E adds stored rule creation/replacement/omission and profile policy reset. The Caddy local CLI continues to use public admin operations. |
 | `pkg/authn` profile handlers | Existing profile routes expose flow preview and atomic rule replacement. The challenge E2E verifies owner binding, rejected candidates, reauthentication and stale refresh/profile rejection. No new enable directive is needed. See [authentication flows](../../authentication-portal-api/references/authentication-flows.md). |

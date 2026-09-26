@@ -13,6 +13,11 @@ It includes:
 * Authorization Plugin for HTTP request authorization based on JWT/PASETO tokens
 * Credentials Plugin for managing credentials for various integrations
 
+To retain sessions and generated signing keys across restarts, enable
+[persistent runtime state](.codex/skills/configuration-state/references/operations.md).
+It supports portals and direct OAuth policies without a portal. Persistent
+deployments require a complete stop/start; overlapping reload is rejected.
+
 Please show your **appreciation for this work** and :star: :star: :star:
 
 Please consider **sponsoring this project** via Github Sponsors!

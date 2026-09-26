@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch"
@@ -140,6 +141,25 @@ func TestAuthzResponseContract(t *testing.T) {
 				t.Fatalf("gate error=%t authorized=%t bypassed=%t status=%d", err != nil, ar.Response.Authorized, ar.Response.Bypassed, raw.Code)
 			}
 			wrapper := &AuthzMiddleware{app: app, gatekeeper: gate}
+			// Exercise the actual route handler, including the handled response
+			// outcome that the legacy Caddy authentication provider cannot express.
+			routeResponse := httptest.NewRecorder()
+			routeRequest := request()
+			repl := caddy.NewReplacer()
+			routeRequest = routeRequest.WithContext(context.WithValue(routeRequest.Context(), caddy.ReplacerCtxKey, repl))
+			called := false
+			routeErr := (AuthorizationHandler{AuthzMiddleware: *wrapper}).ServeHTTP(routeResponse, routeRequest, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { called = true; return nil }))
+			if called != tc.allowed || (routeErr != nil) != (tc.status == 0 && !tc.allowed) {
+				t.Fatal("route handler changed three-outcome contract")
+			}
+			if tc.status != 0 && (routeResponse.Code != tc.status || routeResponse.Body.String() != raw.Body.String()) {
+				t.Fatal("route handler changed handled status/body")
+			}
+			if tc.gateError && tc.status == 0 {
+				if value, ok := repl.Get("http.auth.authorizer.error"); !ok || value == "" {
+					t.Fatal("unhandled denial lost authentication error placeholder")
+				}
+			}
 			response := httptest.NewRecorder()
 			response.Code = 0
 			response.Header().Set("Cache-Control", "public, max-age=60")

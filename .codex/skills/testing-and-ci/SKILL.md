@@ -245,6 +245,15 @@ integrated change.
 
 ### Feature suites
 
+`TestCaddyRuntimeStateE2E` builds a real Caddy executable with production modules
+and an isolated TLS-root fixture. It tests SIGKILL/restart at the same origin,
+direct OAuth without a portal, sessions/JWKS, refresh/OIDC replay, identity
+rollback, storage failures, actual snapshot capacity and controlled reload
+rejection under in-flight callbacks and protected traffic. Read
+[configuration-state](../configuration-state/SKILL.md#validation) for its scope
+and focused unit/adaptation companions. Never substitute upstream library tests
+or a reload-only test for process restart evidence.
+
 `TestCaddyOperatorExamplesE2E` qualifies every complete input under
 `assets/config/integration/` through Caddy adaptation, validation, provisioning
 and TLS journeys, then reloads generated native JSON independently. The

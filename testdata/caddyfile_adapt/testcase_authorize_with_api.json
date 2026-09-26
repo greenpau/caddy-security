@@ -10,13 +10,9 @@
                         {
                             "handle": [
                                 {
-                                    "handler": "authentication",
-                                    "providers": {
-                                        "authorizer": {
-                                            "gatekeeper_name": "api_access_policy",
-                                            "route_matcher": "*"
-                                        }
-                                    }
+                                    "gatekeeper_name": "api_access_policy",
+                                    "handler": "authorization",
+                                    "route_matcher": "*"
                                 },
                                 {
                                     "body": "ok",

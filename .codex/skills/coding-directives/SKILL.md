@@ -169,13 +169,14 @@ variables; do not reparse the proxy chain or synthesize Origin/TLS evidence.
 See [edge trust](../configuration-http-integrations/SKILL.md#edge-trust).
 
 `Gatekeeper.Authenticate` has two independent outputs: an error and response
-flags. An error with redirects disabled may leave the writer untouched; return
-the failure to Caddy's authentication chain, which supplies HTTP 401. A nil
-error with neither authorization nor bypass is also a denial (including a
-closed gatekeeper's handled 503). Preserve handled status/body, mark denials
-and redirects no-store before headers commit, and never proceed upstream on
-nil error alone. `TestAuthzResponseContract` and the composed TLS suite check
-both the public gatekeeper result and the actual protected handler boundary.
+flags. `AuthorizationHandler` preserves a handled response and runs downstream
+only after explicit authorization or bypass; unhandled errors deny. The legacy
+authenticator remains available for manually written JSON, but Caddy's generic
+authentication chain cannot express a handled OAuth callback/logout. Current
+`authorize` directives emit `http.handlers.authorization`. Preserve handled
+status/body, mark denials and redirects no-store before headers commit, and
+never proceed upstream on nil error alone. `TestAuthzResponseContract` and the
+composed TLS suite check the actual protected handler boundary.
 
 Keep request handling thin. For `authenticate`, construct the authcrunch request
 object, attach `util.GetRequestID(r)`, and delegate to the portal. For

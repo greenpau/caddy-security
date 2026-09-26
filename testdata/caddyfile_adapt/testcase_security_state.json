@@ -1,0 +1,134 @@
+{
+	"apps": {
+		"http": {
+			"servers": {
+				"srv0": {
+					"listen": [
+						":443"
+					],
+					"routes": [
+						{
+							"match": [
+								{
+									"host": [
+										"app.example.test"
+									]
+								}
+							],
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"handler": "subroute",
+													"routes": [
+														{
+															"handle": [
+																{
+																	"gatekeeper_name": "direct",
+																	"handler": "authorization",
+																	"route_matcher": "*"
+																},
+																{
+																	"body": "protected application",
+																	"handler": "static_response"
+																}
+															]
+														}
+													]
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/private/*"
+													]
+												}
+											]
+										}
+									]
+								}
+							],
+							"terminal": true
+						}
+					]
+				}
+			}
+		},
+		"security": {
+			"config": {
+				"state": {
+					"directory": "/var/lib/authcrunch/private runtime"
+				},
+				"authorization_policies": [
+					{
+						"oauth": {
+							"identity_provider": "upstream",
+							"public_origin": "https://app.example.test",
+							"base_path": "/private/oauth",
+							"session_cookie_name": "AUTHZ_direct_SESSION",
+							"login_cookie_name": "AUTHZ_direct_LOGIN",
+							"session_lifetime": 600,
+							"max_sessions": 200,
+							"max_pending_logins": 20
+						},
+						"name": "direct",
+						"auth_url_path": "/auth",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match roles authp/user"
+								],
+								"action": "allow log debug"
+							}
+						],
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"validate_method_path": true,
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					}
+				],
+				"identity_providers": [
+					{
+						"name": "upstream",
+						"kind": "oauth",
+						"params": {
+							"base_auth_url": "https://identity.example.test",
+							"client_id": "fixture-client",
+							"client_secret": "synthetic-client-secret",
+							"driver": "generic",
+							"identity_token_field_name": "id_token",
+							"login_icon": {
+								"background_color": "#324960",
+								"class_name": "lab la-codepen la-2x",
+								"color": "white",
+								"text_color": "#37474f"
+							},
+							"metadata_url": "https://identity.example.test/.well-known/openid-configuration",
+							"realm": "upstream",
+							"required_token_fields": [
+								"access_token",
+								"id_token"
+							],
+							"response_type": [
+								"code"
+							],
+							"scopes": [
+								"openid",
+								"email",
+								"profile"
+							]
+						}
+					}
+				]
+			}
+		}
+	}
+}

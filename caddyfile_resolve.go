@@ -301,6 +301,16 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 	if err := validateConfigObjects(config); err != nil {
 		return err
 	}
+	if config.State != nil {
+		directory, err := substituteString(ctx, repl, secretManagers, "State.Directory", config.State.Directory, zap.NewNop())
+		if err != nil {
+			return fmt.Errorf("security state directory replacement failed")
+		}
+		config.State.Directory = directory
+		if err := config.State.Validate(); err != nil {
+			return err
+		}
+	}
 	if err := resolvePortalTokenRefresh(ctx, repl, secretManagers, config, tokenRefreshDirectives, log); err != nil {
 		return err
 	}
@@ -636,10 +646,10 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		// Pin gatekeeper defaults before NewServer can discover names from
 		// unrelated portals. Custom names require an explicit policy list.
 		defaults := cookie.NewConfig()
-		if cfg.SessionIDCookieName == "" {
+		if cfg.OAuth == nil && cfg.SessionIDCookieName == "" {
 			cfg.SessionIDCookieName = defaults.SessionIDCookieName
 		}
-		if len(cfg.AccessTokenCookieNames) == 0 {
+		if cfg.OAuth == nil && len(cfg.AccessTokenCookieNames) == 0 {
 			cfg.AccessTokenCookieNames = []string{defaults.AccessTokenCookieName, "access_token", "jwt_access_token"}
 		}
 		entries, err := resolveConfigInstructions(ctx, repl, secretManagers, "RawCryptoKeyStoreConfigs", cfg.GetRawCryptoKeyStoreConfig(), 2, log)

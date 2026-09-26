@@ -183,12 +183,17 @@ func (k oauthE2EKey) pem(t *testing.T, pkcs1 bool) string {
 
 type oauthE2ECode struct{ state, nonce, challenge, redirect, subject string }
 type oauthE2EUpstream struct {
-	mu                                                                sync.Mutex
-	server                                                            *httptest.Server
-	identity, access                                                  oauthE2EKey
-	keys                                                              []map[string]string
-	callback, discoveredIssuer, tokenIssuer, accessMode, failure      string
-	clientID, clientSecret, accessAudience                            string
+	mu                                                           sync.Mutex
+	server                                                       *httptest.Server
+	identity, access                                             oauthE2EKey
+	keys                                                         []map[string]string
+	callback, discoveredIssuer, tokenIssuer, accessMode, failure string
+	clientID, clientSecret, accessAudience                       string
+	// Optional persistent-state fixtures: large verified identities exercise
+	// the real snapshot bound; holds exercise reload with an admitted callback.
+	identityName                                                      string
+	exchangeEntered                                                   chan struct{}
+	exchangeRelease                                                   <-chan struct{}
 	codes                                                             map[string]oauthE2ECode
 	subjects                                                          map[string]string
 	issuedSecrets                                                     []string
@@ -249,6 +254,11 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		}
 		http.Redirect(w, r, f.callback+"?"+params.Encode(), 302)
 	case "/token":
+		if f.exchangeEntered != nil {
+			close(f.exchangeEntered)
+			<-f.exchangeRelease
+			f.exchangeEntered = nil
+		}
 		if r.Method != "POST" || r.ParseForm() != nil {
 			t.Error("invalid code exchange method")
 			w.WriteHeader(400)
@@ -268,6 +278,9 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		}
 		f.exchanges++
 		id := map[string]any{"iss": f.tokenIssuer, "aud": f.clientID, "sub": record.subject, "email": record.subject + "@example.test", "name": "External User", "nonce": record.nonce, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"authp/user"}}
+		if f.identityName != "" {
+			id["name"] = f.identityName
+		}
 		access := map[string]any{"iss": f.tokenIssuer, "aud": f.accessAudience, "azp": f.clientID, "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"resource/editor"}}
 		switch f.failure {
 		case "identity issuer":

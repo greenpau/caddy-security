@@ -33,7 +33,7 @@ import (
 //	enable <js redirect|strip token|additional scopes>
 //	enable login hint [with <validator> [<validator>...]]
 //	disable <auth redirect query|auth redirect>
-//	validate <path acl|source address|bearer header>
+//	validate <method path|path acl|source address|bearer header>
 //	set session_id cookie name <name>
 //	set access_token cookie name <name> [<name>...]
 //	set token sources <cookie|header|query> [<cookie|header|query>...]
@@ -87,6 +87,8 @@ func parseCaddyfileAuthorizationMisc(h *caddyfile.Dispenser, p *authz.PolicyConf
 		}
 	case "validate":
 		switch {
+		case v == "method path":
+			p.ValidateMethodPath = true
 		case v == "path acl":
 			p.ValidateAccessListPathClaim = true
 			p.ValidateMethodPath = true

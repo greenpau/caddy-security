@@ -175,6 +175,16 @@ the library owns public discovery, method validation, and serialization.
 There is no discovery enable directive. See
 [the HTTP contract](../authentication-portal-api/SKILL.md#public-signing-key-discovery).
 
+## Direct OAuth Routing
+
+Direct OAuth without a portal uses the policy's own callback/logout namespace.
+Route that namespace and application resources through the same `authorize`
+handler. See [direct OAuth](../configuration-authorization/SKILL.md#direct-oauth-without-a-portal).
+The directive now emits `http.handlers.authorization`, which preserves handled
+responses without allowing the protected handler to run. Legacy manually written
+JSON using `authentication.providers.authorizer` retains Caddy's generic
+authentication-chain behavior and should be regenerated for direct OAuth.
+
 ## Browser Refresh Routing
 
 Keep POST `<mount>/api/refresh_token`, `/api/refresh_session`, and `/api/logout`

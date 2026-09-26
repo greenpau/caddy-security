@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
@@ -42,8 +41,8 @@ func init() {
 	httpcaddyfile.RegisterDirectiveOrder("authorize", httpcaddyfile.Before, "basicauth")
 }
 
-// AuthzMiddleware authorizes access to endpoints based on
-// the presense and content of JWT token.
+// AuthzMiddleware delegates JWT and direct OAuth authorization to a policy.
+// AuthorizationHandler supplies the route-level handled-response contract.
 type AuthzMiddleware struct {
 	RouteMatcher   string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
 	GatekeeperName string `json:"gatekeeper_name,omitempty" xml:"gatekeeper_name,omitempty" yaml:"gatekeeper_name,omitempty"`
@@ -121,14 +120,13 @@ func (m *AuthzMiddleware) Validate() error {
 	if m.GatekeeperName == "" {
 		return fmt.Errorf("empty gatekeeper name")
 	}
-	if m.gatekeeper == nil {
+	if m.gatekeeper == nil && m.app == nil {
 		return fmt.Errorf("gatekeeper is nil")
 	}
 	return nil
 }
 
-// Authenticate authorizes access based on the presense and content of
-// authorization token.
+// Authenticate translates successful gatekeeper identity into Caddy metadata.
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
 	release, ok := m.app.acquireRequest()
 	if !ok {
@@ -136,6 +134,14 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 		return caddyauth.User{}, false, caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
 	}
 	defer release()
+	gatekeeper := m.gatekeeper
+	if gatekeeper == nil {
+		var err error
+		gatekeeper, err = m.app.server.GetGatekeeperByName(m.GatekeeperName)
+		if err != nil {
+			return caddyauth.User{}, false, caddyhttp.Error(http.StatusServiceUnavailable, err)
+		}
+	}
 
 	normalizeSecurityMetadata(r)
 	ar := requests.NewAuthorizationRequest()
@@ -147,7 +153,7 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 		header.Set("Cache-Control", "no-store")
 		return false
 	})
-	if err := m.gatekeeper.Authenticate(response, r, ar); err != nil {
+	if err := gatekeeper.Authenticate(response, r, ar); err != nil {
 		w.Header().Set("Cache-Control", "no-store")
 		return caddyauth.User{}, false, errors.ErrAuthorizationFailed.WithArgs(
 			getAuthorizationDetails(r, ar), err,
@@ -221,11 +227,7 @@ func parseAuthzCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, e
 	if err := m.UnmarshalCaddyfile(h.Dispenser); err != nil {
 		return nil, err
 	}
-	return caddyauth.Authentication{
-		ProvidersRaw: caddy.ModuleMap{
-			authzPluginName: caddyconfig.JSON(m, nil),
-		},
-	}, nil
+	return &AuthorizationHandler{AuthzMiddleware: *m}, nil
 }
 
 // Interface guards

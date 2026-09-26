@@ -47,13 +47,9 @@
                                         {
                                             "handle": [
                                                 {
-                                                    "handler": "authentication",
-                                                    "providers": {
-                                                        "authorizer": {
-                                                            "gatekeeper_name": "app_policy",
-                                                            "route_matcher": "*"
-                                                        }
-                                                    }
+                                                    "gatekeeper_name": "app_policy",
+                                                    "handler": "authorization",
+                                                    "route_matcher": "*"
                                                 },
                                                 {
                                                     "body": "ok",

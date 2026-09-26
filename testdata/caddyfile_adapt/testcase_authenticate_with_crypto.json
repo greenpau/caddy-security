@@ -46,13 +46,9 @@
 														{
 															"handle": [
 																{
-																	"handler": "authentication",
-																	"providers": {
-																		"authorizer": {
-																			"gatekeeper_name": "ed25519",
-																			"route_matcher": "*"
-																		}
-																	}
+																	"gatekeeper_name": "ed25519",
+																	"handler": "authorization",
+																	"route_matcher": "*"
 																},
 																{
 																	"body": "allowed",
