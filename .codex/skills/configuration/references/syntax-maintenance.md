@@ -45,6 +45,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | Surface | Caddy owner | Selected upstream owner / next validation |
 | --- | --- | --- |
 | Global `security` and child headers | `caddyfile.go`, `caddyfile_identity.go`, `caddyfile_user.go` | `Config.Add*` methods and `Config.Validate` |
+| Root diagnostic `logging` | `caddyfile_logging.go` | `pkg/logging/parser` → `Config.Logging`; `NewServer` filters components, not Caddy's separate authentication logger |
 | Root runtime `state` | `caddyfile_state.go`, `caddyfile_resolve.go` | `pkg/state/parser` → `Config.State`; initialization belongs to `NewServer` in `App.Start` |
 | HTTP `authenticate` / `authorize` | `plugin_authn.go`, `plugin_authz.go` | Caddy route matching; provisioned portal/policy |
 | Portal body and backend enablement | `caddyfile_authn.go`, `caddyfile_authn_misc.go` | `pkg/authn/config.go`, redirect validation, backend attachment |

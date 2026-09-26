@@ -1,0 +1,12 @@
+{
+	security {
+		logging {
+			skip exact text "  quoted \"value\", with spaces  "
+			skip partial text 世界
+			skip prefix text "start here"
+			skip suffix text "end here"
+			skip regex text "^error:\s+\d{2}\\path$"
+			skip exact text "  quoted \"value\", with spaces  "
+		}
+	}
+}

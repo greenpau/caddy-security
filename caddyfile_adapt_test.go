@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "logging issue example", inputFileNamePrefix: "testcase_security_logging"},
+		{name: "logging matchers and token encoding", inputFileNamePrefix: "testcase_security_logging_matchers"},
+		{name: "empty logging", inputFileNamePrefix: "testcase_security_logging_empty"},
 		{name: "persistent state and portal-free OAuth", inputFileNamePrefix: "testcase_security_state"},
 		{name: "match any System API combination defers rejection to provisioning", inputFileNamePrefix: "testcase_authenticate_with_match_any_system"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},

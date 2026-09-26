@@ -213,6 +213,12 @@ Use zap structured logging for app lifecycle and runtime diagnostics. Log
 identifiers, paths, directive names, and types; never log secrets or token
 payloads.
 
+For diagnostic suppression, follow [configuration-logging](../configuration-logging/SKILL.md).
+Delegate rule parsing and immutable filters to AuthCrunch. Its root logger
+wrapping does not reach Caddy's private authentication middleware logger, and
+Caddy v2.11.4's custom cores only tee output. Keep that upstream limitation
+explicit; never change authentication results to silence a host log.
+
 ## Style
 
 Do not import or use Go's `reflect` package in repository Go code, including

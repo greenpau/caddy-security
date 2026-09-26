@@ -1,0 +1,9 @@
+{
+	"apps": {
+		"security": {
+			"config": {
+				"logging": {}
+			}
+		}
+	}
+}

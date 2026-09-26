@@ -1,0 +1,20 @@
+{
+	"apps": {
+		"security": {
+			"config": {
+				"logging": {
+					"skip": [
+						{
+							"match": "partial",
+							"text": "auth provider returned error"
+						},
+						{
+							"match": "partial",
+							"text": "reason: no token found"
+						}
+					]
+				}
+			}
+		}
+	}
+}

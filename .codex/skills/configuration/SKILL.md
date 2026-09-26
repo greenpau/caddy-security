@@ -1,6 +1,6 @@
 ---
 name: configuration
-description: "caddy-security Caddyfile configuration generation for the security app and authenticate or authorize HTTP directives. Use when creating, reviewing, or modifying Caddyfile configs for authentication portals, authorization policies, identity stores, OAuth or SAML identity providers, SSO app providers, users, registration flows, messaging, credentials, secrets, or runtime replacement in this repository."
+description: "caddy-security Caddyfile configuration generation for the security app and authenticate or authorize HTTP directives. Use when creating, reviewing, or modifying Caddyfile configs for authentication portals, authorization policies, identity stores, OAuth or SAML identity providers, SSO app providers, users, registration flows, messaging, credentials, secrets, diagnostic logging, or runtime replacement in this repository."
 ---
 
 # Configuration
@@ -20,6 +20,8 @@ reason to edit or run tests in `../go-authcrunch`.
 The parser entry point is `caddyfile.go`. Put `security { ... }` inside Caddy's
 outer global options block, `{ ... }`. Route-level HTTP integrations reference
 configured objects with `authenticate with <portal>` and `authorize with <policy>`.
+Define the global `security` option once; duplicate blocks fail instead of
+silently replacing the previous app. Collect declarations inside that one block.
 
 Do not generate global Caddy directive-order overrides for caddy-security by
 default. `authenticate` and `authorize` register their own order in
@@ -113,6 +115,9 @@ authorize /api/* with api_policy
 
 ## Domain Map
 
+- Diagnostic skip rules: [configuration-logging](../configuration-logging/SKILL.md),
+  parsed by `caddyfile_logging.go`; AuthCrunch component filtering is supported,
+  while Caddy's independent authentication middleware logger needs an upstream hook.
 - Persistent runtime state: [configuration-state](../configuration-state/SKILL.md),
   parsed by `caddyfile_state.go`; stop/start persistence also supports policy-only OAuth.
 - HTTP integrations: `configuration-http-integrations`, parsed by

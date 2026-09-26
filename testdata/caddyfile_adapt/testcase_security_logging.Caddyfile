@@ -1,0 +1,8 @@
+{
+	security {
+		logging {
+			skip partial text "auth provider returned error"
+			skip partial text "reason: no token found"
+		}
+	}
+}

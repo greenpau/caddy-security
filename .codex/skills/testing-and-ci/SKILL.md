@@ -245,6 +245,15 @@ integrated change.
 
 ### Feature suites
 
+`TestCaddyLoggingE2E` builds the actual race-enabled Caddy command, captures JSON
+logs and qualifies diagnostic rules through real TLS login, legacy/current
+authorization, counted protected handlers, replacements/removal, independent
+processes and persistent-session restarts. It explicitly proves that the private
+Caddy authentication middleware logger remains unfiltered in v2.11.4; a passing
+suite is not an issue #280 host-suppression fix. See
+[logging validation](../configuration-logging/SKILL.md#validation) for focused
+unit/adaptation coverage and the upstream acceptance criteria.
+
 `TestCaddyRuntimeStateE2E` builds a real Caddy executable with production modules
 and an isolated TLS-root fixture. It tests SIGKILL/restart at the same origin,
 direct OAuth without a portal, sessions/JWKS, refresh/OIDC replay, identity

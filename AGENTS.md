@@ -138,6 +138,10 @@ Use `configuration-state` for the root `state` block, restart persistence,
 exclusive runtime ownership and the stop/start deployment boundary. Direct
 OAuth without a portal belongs to `configuration-authorization`.
 
+Use `configuration-logging` for root diagnostic skip rules and issue #280's
+logger ownership boundary. AuthCrunch component filtering does not suppress
+Caddy v2.11.4's independent authentication middleware logger.
+
 ## Break-Fix Troubleshooting
 
 Use the repo-local `break-fix-troubleshooting` skill when diagnosing reported

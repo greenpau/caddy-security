@@ -1,0 +1,36 @@
+{
+	"apps": {
+		"security": {
+			"config": {
+				"logging": {
+					"skip": [
+						{
+							"match": "exact",
+							"text": "  quoted \"value\", with spaces  "
+						},
+						{
+							"match": "partial",
+							"text": "世界"
+						},
+						{
+							"match": "prefix",
+							"text": "start here"
+						},
+						{
+							"match": "suffix",
+							"text": "end here"
+						},
+						{
+							"match": "regex",
+							"text": "^error:\\s+\\d{2}\\\\path$"
+						},
+						{
+							"match": "exact",
+							"text": "  quoted \"value\", with spaces  "
+						}
+					]
+				}
+			}
+		}
+	}
+}

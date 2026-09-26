@@ -41,6 +41,7 @@ func init() {
 //
 //	{
 //		security {
+//			logging { skip <exact|partial|prefix|suffix|regex> text <value> }
 //			state { directory <absolute-private-directory> }
 //			oauth registration store { path <absolute-private-directory> }
 //			secrets <module> <id> { ... }
@@ -59,12 +60,17 @@ func init() {
 // Delegated body syntax and validation remain part of the Caddyfile contract.
 // See .codex/skills/configuration/references/syntax-maintenance.md for ownership
 // and the audit workflow when local parsers or upstream dependencies change.
-func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
+func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 	app := new(App)
 	app.Config = authcrunch.NewConfig()
 
 	if !d.Next() {
 		return nil, d.ArgErr()
+	}
+	if previous != nil {
+		// Caddy otherwise replaces the entire earlier app, silently losing
+		// its logging rules and other security declarations.
+		return nil, d.Errf("duplicate security block")
 	}
 
 	// Collect the explicit store and application declarations before resolving
@@ -76,6 +82,16 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 	}
 	var applications []applicationDeclaration
 	for d.NextBlock(0) {
+		if d.Val() == "logging" {
+			if app.Config.Logging != nil {
+				return nil, d.Errf("duplicate security logging block")
+			}
+			// Read in place: segment extraction drops empty blocks.
+			if err := parseCaddyfileLogging(d, app.Config); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		if d.Val() == "state" {
 			if app.Config.State != nil {
 				return nil, d.Errf("duplicate security state block")

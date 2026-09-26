@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Logging"
+  short_description: "Configure AuthCrunch diagnostic skip rules"
+  default_prompt: "Use $configuration-logging to configure diagnostic skip rules and check Caddy host logger limitations."
