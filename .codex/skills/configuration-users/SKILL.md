@@ -51,11 +51,13 @@ The current Caddyfile parser supports only these subdirectives:
 - `auth challenges <rule body>`; repeat to append ordered rules.
 
 Use `overwrite` when the configured password should replace the existing stored
-password during provisioning. With selected go-authcrunch v1.3.4, passwords may
+password during provisioning. With selected go-authcrunch v1.3.6, passwords may
 be plaintext, `bcrypt:<cost>:<hash>`, or `argon2:<PHC>` imports. The unchanged
 plaintext path creates bcrypt hashes. Static API-key payloads remain bcrypt;
-password-import support does not change their format. The local identity
-reference distinguishes upstream import support from Caddy qualification.
+password-import support does not change their format. Read
+[password imports and generation](references/password-hashing.md) for the exact
+Argon2 format, generation commands, resource limits, trusted-input boundary,
+and Caddy qualification.
 
 Duplicate password updates can reuse the active hash while still advancing the
 account's credential version. Legacy records without `credential_version`
@@ -147,6 +149,11 @@ Use these examples:
 
 - `caddyfile_identity_store.go` for accepted Caddyfile subdirectives.
 - `caddyfile_identity_store_test.go` for local store parser coverage.
+- `testcase_authenticate_with_argon2` for quoted imports, adapt-time environment
+  expansion, runtime placeholders, bcrypt and plaintext compatibility.
+- `TestPasswordImportAdaptAndResolve`, `TestPasswordImportProvisioningRejectsMalformed`
+  and `TestCaddyPasswordArgon2E2E` for preservation, redacted rejection and actual
+  executable TLS login, restart, overwrite and public self-service boundaries.
 - `testcase_authenticate_with_challenges` for adaptation and resolution.
 - `TestCaddyAuthenticationChallengesE2E` for stored policy creation, replacement,
   omission, native login and profile policy management through Caddy.

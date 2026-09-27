@@ -117,7 +117,7 @@ does not undo the committed registration.
 Pending registrations are held in the registry's in-memory cache. Reload or
 restart discards them; the durable dropbox only contains confirmed entries.
 An expired or lost pending registration must be started again. A supplied
-password must be plaintext: v1.3.4 rejects reserved password-hash import prefixes
+password must be plaintext: the selected AuthCrunch rejects reserved password-hash import prefixes
 on the public registration path, while trusted static-user imports are separate.
 
 When multiple registrations target different identity stores or realms, use
@@ -144,7 +144,11 @@ Use these examples:
 - `assets/config/registrations_local.json`.
 
 The adaptation/resolution fixture verifies configuration shape and defaults,
-not a registration journey. The lifecycle tests exercise registry ownership
+not a registration journey. `TestCaddyPasswordArgon2E2E/public-registration`
+uses the actual executable and a disposable file sender to reject valid, malformed
+and whitespace-padded bcrypt/Argon2 imports without a message or persisted user;
+ordinary plaintext reaches confirmation-message delivery. This does not qualify
+confirmation, approval, transfer or SMTP. The lifecycle tests exercise registry ownership
 and replacement, but this checkout has no complete user-signup E2E. Do not
 confuse `TestCaddyRegistrationE2E`, which covers persisted OAuth client
 registrations, with user signup. A future user-signup acceptance case should

@@ -143,7 +143,8 @@ static PEM files; custom HTML header parsing reads its file. External secrets
 plugins may perform their own I/O. Inspect those paths before choosing checks.
 Never require disabled TLS, nonce, PKCE, or signature checks for a syntax audit.
 
-Known fixture outcomes: `testcase_authenticate_malformed`,
+Known fixture outcomes: `testcase_authenticate_with_argon2_malformed`,
+`testcase_authenticate_malformed`,
 `testcase_authenticate_with_admin_api_malformed`,
 `testcase_authenticate_with_token_refresh_cookie_whitespace`,
 `testcase_authenticate_with_oauth_icon_malformed`, and

@@ -239,6 +239,14 @@ automation. Do not edit CLA signatures or consent files unless the user asks.
 
 ## Generated Artifacts
 
+Go's `./...` discovery does not honor `.gitignore`. Name temporary Go helpers
+with a leading underscore, or put them in an underscore-prefixed directory,
+so ignored working files do not become extra test/coverage packages. Confirm
+the package list with `go list -mod=readonly ./...`. Keep source files in place
+until both the covered test run and report generation finish: the coverage
+renderer still reads them after tests exit. Preserve a failed bundle before
+rerunning; do not remove source files or edit coverage profiles to repair it.
+
 Treat these as generated outputs unless the user explicitly asks to preserve or
 commit them:
 

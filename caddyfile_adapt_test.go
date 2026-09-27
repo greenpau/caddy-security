@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "password option error redacts imports", inputFileNamePrefix: "testcase_authenticate_with_argon2_malformed", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': malformed \"security.identity.store[localdb].user\" directive with [alice]: password only supports the overwrite option")},
+		{name: "Argon2, bcrypt and plaintext local passwords", inputFileNamePrefix: "testcase_authenticate_with_argon2"},
 		{name: "logging issue example", inputFileNamePrefix: "testcase_security_logging"},
 		{name: "logging matchers and token encoding", inputFileNamePrefix: "testcase_security_logging_matchers"},
 		{name: "empty logging", inputFileNamePrefix: "testcase_security_logging_empty"},
@@ -209,7 +212,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			t.Logf("output file: %s", outputFilePath)
 
 			for _, tv := range parseTestEnvVars(envFilePath) {
-				t.Logf("setting environment variable %s=%s", tv.key, tv.value)
+				t.Logf("setting environment variable %s", tv.key)
 				os.Setenv(tv.key, tv.value)
 				t.Cleanup(func() {
 					t.Logf("unsetting environment variable %s", tv.key)

@@ -31,6 +31,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	passwordparser "github.com/greenpau/go-authcrunch/pkg/identity/password/parser"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/term"
@@ -82,13 +84,37 @@ func addSecurityCredentialCommands(parent *cobra.Command) {
 			cmd.Long = "Generate a random 72-character API key and a bcrypt hash. Output includes the plaintext secret and an api key Caddyfile directive with its 24-character prefix. Protect stdout. No server or database is accessed."
 		} else {
 			cmd.Short = "Generate a Caddyfile password hash"
-			cmd.Long = "Read a password without terminal echo and print a password Caddyfile directive. For automation use --password-file, or --password-file - for stdin. One final LF or CRLF is removed; other whitespace is never silently trimmed. An optional --db-path reads password policy without modifying the database."
+			cmd.Long = "Read a password without terminal echo and print a password Caddyfile directive. Bcrypt is the default; --algorithm argon2 selects Argon2id. Argon2 options are --memory (KiB), --iterations and --parallelism; --cost is bcrypt-only. For automation use --password-file, or --password-file - for stdin. One final LF or CRLF is removed; other whitespace is never silently trimmed. An optional --db-path reads password policy without modifying the database."
 			cmd.Flags().String("password-file", "", "Owner-only password file, or - to read stdin")
 			cmd.Flags().String("db-path", "", "Existing local database to read password policy from")
+			cmd.Flags().String("algorithm", "bcrypt", "Password algorithm: bcrypt or argon2 (Argon2id)")
+			cmd.Flags().Int("memory", 65536, "Argon2 memory in KiB")
+			cmd.Flags().Int("iterations", 3, "Argon2 passes")
+			cmd.Flags().Int("parallelism", 4, "Argon2 lanes")
 		}
 		cmd.RunE = func(cmd *cobra.Command, _ []string) error { return runSecurityCredential(cmd, action.api) }
 		action.parent.AddCommand(cmd)
 	}
+}
+
+// Collect explicit options once. The shared parser owns defaults, algorithm
+// compatibility and resource bounds; parsing must finish before reading input.
+func securityPasswordHashConfig(cmd *cobra.Command) (*identity.PasswordHashConfig, error) {
+	var directives []string
+	for _, name := range []string{"algorithm", "cost", "memory", "iterations", "parallelism"} {
+		if cmd.Flags().Changed(name) {
+			value := cmd.Flags().Lookup(name).Value.String()
+			if name == "algorithm" {
+				// EncodeArgs trims unquoted trailing tabs and Unicode whitespace.
+				// Preserve this string exactly so the shared parser rejects invalid
+				// algorithm names before any password input or hashing work.
+				directives = append(directives, `algorithm "`+strings.ReplaceAll(value, `"`, `""`)+`"`)
+				continue
+			}
+			directives = append(directives, cfgutil.EncodeArgs([]string{name, value}))
+		}
+	}
+	return passwordparser.NewPasswordHashConfigFromDirectives(directives)
 }
 
 // The caller owns terminal state so cancellation restores echo immediately.
@@ -140,8 +166,17 @@ func readSecuritySecret(ctx context.Context, input io.Reader, output io.Writer, 
 
 func runSecurityCredential(cmd *cobra.Command, api bool) error {
 	cost, _ := cmd.Flags().GetInt("cost")
-	if cost < 8 || cost > bcrypt.MaxCost {
+	if api && (cost < 8 || cost > bcrypt.MaxCost) {
 		return fmt.Errorf("bcrypt cost must be between 8 and 31")
+	}
+	var config *identity.PasswordHashConfig
+	if !api {
+		var err error
+		config, err = securityPasswordHashConfig(cmd)
+		if err != nil {
+			return err
+		}
+		cost = config.Cost
 	}
 	var secret string
 	if api {
@@ -174,14 +209,23 @@ func runSecurityCredential(cmd *cobra.Command, api bool) error {
 				defer cancel()
 				return readSecuritySecret(ctx, cmd.InOrStdin(), cmd.ErrOrStderr(), "Password: ")
 			}()
-			// Release the interrupt handler before bcrypt, which cannot observe
+			// Release the interrupt handler before hashing, which cannot observe
 			// context cancellation. Ctrl-C must still stop an expensive hash.
 		} else {
+			limit := int64(policy.MaxLength)
+			if config.Algorithm == identity.PasswordAlgorithmBcrypt && limit > 72 {
+				limit = 72
+			}
+			// Include one optional CRLF and one byte to detect oversized input.
+			// Avoid overflow even with an operator-supplied policy length.
+			if limit > (1<<63)-4 {
+				return fmt.Errorf("invalid database password length policy")
+			}
 			var data []byte
 			if passwordFile == "-" {
-				data, err = io.ReadAll(io.LimitReader(cmd.InOrStdin(), 75))
+				data, err = io.ReadAll(io.LimitReader(cmd.InOrStdin(), limit+3))
 			} else {
-				data, err = readSecurityLocalFile(cmd.Context(), passwordFile, 74, true)
+				data, err = readSecurityLocalFile(cmd.Context(), passwordFile, limit+2, true)
 			}
 			if err != nil {
 				return fmt.Errorf("cannot read password input")
@@ -194,7 +238,20 @@ func runSecurityCredential(cmd *cobra.Command, api bool) error {
 		if err != nil {
 			return err
 		}
-		if err := validateSecurityPassword(secret, policy); err != nil {
+		if err := validateSecurityPassword(secret, policy, config.Algorithm); err != nil {
+			return err
+		}
+		if config.Algorithm == identity.PasswordAlgorithmArgon2 {
+			// This command generates from plaintext. Do not let the constructor's
+			// trusted import path bypass policy or override the requested options.
+			if identity.IsPasswordHashImport(secret) {
+				return fmt.Errorf("argon2 generation requires plaintext without a reserved password hash prefix")
+			}
+			password, err := identity.NewPasswordWithConfig(secret, "generic", config)
+			if err != nil {
+				return fmt.Errorf("cannot generate password hash")
+			}
+			_, err = fmt.Fprintf(cmd.OutOrStdout(), "password %q\n", password.EncodedHash())
 			return err
 		}
 	}
@@ -251,15 +308,25 @@ func securityPasswordPolicy(ctx context.Context, path string) (identity.Password
 	return loaded, nil
 }
 
-func validateSecurityPassword(secret string, policy identity.PasswordPolicy) error {
+func validateSecurityPassword(secret string, policy identity.PasswordPolicy, algorithm string) error {
 	if !utf8.ValidString(secret) || strings.ContainsAny(secret, "\r\n\x00") || strings.TrimSpace(secret) != secret {
 		return fmt.Errorf("password must be valid UTF-8 without line breaks, NUL, or surrounding whitespace")
 	}
-	if len(secret) == 0 || len(secret) > 72 {
+	if algorithm == identity.PasswordAlgorithmBcrypt && (len(secret) == 0 || len(secret) > 72) {
 		return fmt.Errorf("bcrypt password must contain 1-72 bytes")
 	}
-	if len(secret) < policy.MinLength || len(secret) > policy.MaxLength {
-		return fmt.Errorf("password does not satisfy database length policy")
+	// Consult the password-only library API, never a synthetic username. Retain
+	// the existing bcrypt generator's literal-prefix and character-class checks;
+	// the library treats prefixes as imports and checks only plaintext length.
+	if identity.IsPasswordHashImport(secret) {
+		if len(secret) < policy.MinLength || len(secret) > policy.MaxLength {
+			return fmt.Errorf("password does not satisfy database length policy")
+		}
+	} else {
+		db := identity.Database{Policy: identity.Policy{Password: policy}}
+		if err := db.CheckPasswordPolicyCompliance(secret); err != nil {
+			return fmt.Errorf("password does not satisfy database length policy")
+		}
 	}
 	var upper, lower, number, special bool
 	for _, c := range secret {

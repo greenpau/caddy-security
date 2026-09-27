@@ -1,0 +1,11 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+			user alice {
+				password "argon2:synthetic-import" "bcrypt:synthetic-misplaced-import"
+			}
+		}
+	}
+}

@@ -1,0 +1,42 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path users.json
+			user alice {
+				email alice@example.test
+				password "argon2:$argon2id$v=19$m=1024,t=2,p=2$mjBUxIgaxCd2UQA9tzdTUQ$z5MrHTVraToXYev67Zg47cpvqEWp/WufD0u4oyK+V+c" overwrite
+				roles authp/user
+			}
+			user environment {
+				email environment@example.test
+				password "{$SECURITY_ARGON2_PASSWORD}"
+				roles authp/user
+			}
+			user runtime {
+				email runtime@example.test
+				password "{env.SECURITY_ARGON2_PASSWORD}"
+				roles authp/user
+			}
+			user bob {
+				email bob@example.test
+				password "bcrypt:8:$2a$08$CiSseGjDibS3jp0ZVKut/u1BdLXh9UgaixdLkr9VUWk.zvCSBeOP."
+				roles authp/user
+			}
+			user plain {
+				email plain@example.test
+				password "PlaintextFixturePassword42!"
+				roles authp/user
+			}
+		}
+		authentication portal myportal {
+			crypto key sign-verify synthetic-argon2-fixture-signing-key
+			enable identity store localdb
+		}
+	}
+}
+:8443 {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

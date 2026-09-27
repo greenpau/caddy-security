@@ -1,7 +1,7 @@
 # Local Identity Compatibility
 
 This contract is qualified against the go-authcrunch revision selected in
-`go.mod`, currently published v1.3.4.
+`go.mod`, currently published v1.3.6.
 Check `go list -m -json github.com/greenpau/go-authcrunch` before attributing
 behavior to a sibling checkout. The upstream `local-password-authentication`
 skill and `pkg/identity/password_verifier.go`, `user.go`, `database.go`,
@@ -95,12 +95,15 @@ hashes/timestamps, credential versions, and unchanged legacy records through
 consumer covering the same-password reset case the management HTTP API does
 not expose.
 
-Those static-import tests currently use bcrypt. Successful Argon2 import and
-login, mixed-algorithm verifier scheduling and invalid Argon2 parameters are
-upstream capabilities, not established Caddy integration coverage. Qualifying
-that extension requires a static import through provisioning and form/JSON
-login through actual Caddy, plus rejection that preserves the active deployment.
-The repository's offline credential CLI still generates bcrypt.
+`TestPasswordImportAdaptAndResolve` and the Argon2 adaptation fixture verify
+quoted imports and both environment replacement stages. Malformed Argon2/bcrypt
+imports fail at local-store provisioning without persisting a user or disclosing
+credentials. `TestCaddyPasswordArgon2E2E` builds the actual Caddy executable and
+qualifies mixed Argon2/bcrypt HTML/native/Basic login, rejection, protected access,
+restart and overwrite, and public profile/registration import guards. The offline
+Caddy generator now supports Argon2 through the upstream parser and constructor.
+See [password hashing](../../configuration-users/references/password-hashing.md)
+for exact formats, bounds, defaults, ownership and the test coverage limits.
 
 `TestCaddyLocalIdentityE2E` launches an isolated Caddy process with verified TLS,
 private temporary identity files, management/profile APIs, and separate resource

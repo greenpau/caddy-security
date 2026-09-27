@@ -165,6 +165,7 @@ database; it is separate from Caddy configuration reload.
 
 ```sh
 bin/authcrunch security local generate password hash
+bin/authcrunch security local generate password hash --algorithm argon2
 bin/authcrunch security local generate password hash \
   --password-file private/password.txt --cost 10
 bin/authcrunch security local generate password hash \
@@ -174,23 +175,43 @@ bin/authcrunch security local generate api key --cost 10
 
 `--password-file -` reads stdin through EOF. A final LF or CRLF is removed;
 surrounding whitespace, embedded newlines, NUL, invalid UTF-8, and passwords
-over bcrypt's 72-byte limit are rejected. Plaintext passwords are never
-accepted as command arguments. A plaintext `bcrypt:` prefix is hashed
-literally rather than interpreted as a precomputed hash.
+over the selected database length policy are rejected. Bcrypt additionally
+limits plaintext to 72 bytes; Argon2 does not have that bcrypt limit. Plaintext
+is never accepted as a command argument. For compatibility the bcrypt generator
+hashes reserved prefixes literally. Argon2 generation rejects `bcrypt:`/`argon2:`
+prefixes so the library constructor cannot import an input instead of generating
+a new hash or bypass plaintext policy. This restriction is for generation; raw
+login candidates retain plaintext semantics.
 
-Password hashing prints only `password "bcrypt:<cost>:<hash>"`. Default
-minimum length comes from authcrunch (8 bytes). `--db-path` reads an existing
+Password hashing prints only `password "bcrypt:<cost>:<hash>"` or
+`password "argon2:<PHC>"`. Bcrypt remains the default. Argon2 generation uses
+`pkg/identity/password/parser.NewPasswordHashConfigFromDirectives` and
+`identity.NewPasswordWithConfig`, then `EncodedHash`; do not implement PHC parsing
+or Argon2 derivation in Caddy. Optional `--memory` (KiB), `--iterations`, and
+`--parallelism` default to 65536, 3 and 4. Explicit `--cost` with Argon2 or Argon2
+options with bcrypt fail before reading the password. Algorithm names are exact:
+trailing tabs or Unicode whitespace must be rejected, not silently trimmed.
+Always CSV-quote the algorithm string at the shared-parser boundary because
+`cfgutil.EncodeArgs` can trim unquoted trailing whitespace. Integer flags still
+use the shared encoder. See
+[password hashing](../../configuration-users/references/password-hashing.md) for
+resource bounds and trusted import syntax.
+
+Default minimum length comes from authcrunch (8 bytes). `--db-path` reads an existing
 database's length and character-class policy without creating, normalizing,
 locking, or saving that database. Missing length limits inherit upstream
-defaults. This check does not validate history or authorize a password change;
-account mutations remain the server's responsibility.
+defaults. Password policy is checked independently of username policy through
+`Database.CheckPasswordPolicyCompliance`; the host retains its existing strict
+input and character-class checks. This check does not validate history or
+authorize a password change; account mutations remain the server's responsibility.
 
 API-key generation prints `secret: <72-character alphanumeric secret>` and an
 `api key <24-character prefix> "bcrypt:<cost>:<hash>"` directive. The full
 secret authenticates the client; the prefix and hash go in its user block.
-The generator uses cryptographic randomness. Both generators accept bcrypt
-cost 8-31, default 10; higher costs grow exponentially. Neither contacts a
-server, and password generation never prints the plaintext input.
+The generator uses cryptographic randomness. Bcrypt password and API-key
+generation accept cost 8-31, default 10; higher costs grow exponentially. API
+keys do not accept Argon2 flags. Neither generator contacts a server, and
+password generation never prints the plaintext input.
 
 ## Implementation and Validation
 
@@ -207,6 +228,10 @@ server, and password generation never prints the plaintext input.
   Unicode in generated-password responses.
 - `command_local_paths_test.go`: unit and Caddy CLI checks for symlink traversal,
   cache placement, input-file preservation, hard-link aliases, and leaf symlinks.
+- `TestSecurityCredentialArgon2*` and `TestCaddyPasswordArgon2E2E`: shared parser
+  options, exact algorithm names, safe generation failures, password-only policy,
+  and actual Caddy CLI
+  Argon2 generation/import followed by TLS HTML/JSON/Basic login.
 - `TestCaddySecurityLocalE2E`: TLS Caddy portals at root, `/auth`, and `/xauth`,
   persisted users, login, CRUD, enable/disable, resets, roles/challenges, realm reload,
   admin denial, authentication with generated password hashes and API keys,

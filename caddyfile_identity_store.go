@@ -38,7 +38,7 @@ import (
 //		user <username> {
 //			name <full_name>
 //			email <address>
-//			password <plaintext_or_bcrypt_value> [overwrite]
+//			password <plaintext_or_imported_hash> [overwrite]
 //			roles <role> [<role>...]
 //			api key <24_character_key_id> <bcrypt_value>
 //			auth challenges <method> [<method>...] [if <method> [and <method>...] not available]
@@ -82,6 +82,9 @@ import (
 //
 // LDAP fallback roles apply when group mapping yields no roles. Repeating the
 // setting replaces the whole list. The local store does not support fallback.
+// Local passwords pass through unchanged: plaintext defaults to bcrypt; trusted
+// imports use bcrypt:<cost>:<hash> or argon2:<Argon2id-v19-PHC>. Quote imported
+// values. AuthCrunch validates hashes and owns password replacement semantics.
 // Local user auth challenges are ordered rule bodies validated by the shared
 // authchal parser. Methods are password, totp, u2f and mfa; portal email
 // checkpoints are unsupported. Nonempty configured rules overwrite stored
@@ -230,7 +233,7 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 						case "overwrite":
 							userMap["password_overwrite_enabled"] = true
 						default:
-							return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, userPropName+" contains unsupported "+userPropValue[1])
+							return errors.ErrMalformedDirectiveValue.WithArgs(rd, args, "password only supports the overwrite option")
 						}
 					}
 				case "roles":

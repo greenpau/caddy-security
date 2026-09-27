@@ -33,6 +33,39 @@ Test credentials are seeded before Caddy owns the database; runtime profile
 mutations cross HTTP. Changed local-store configuration restarts explicitly,
 respecting the existing prohibition on overlapping file-backed runtimes.
 
+## Argon2 passwords
+
+`password_import_test.go` and `testcase_authenticate_with_argon2` cover exact
+quoted values, adapt-time and runtime environment replacement, native JSON,
+and malformed Argon2/bcrypt provisioning with redacted diagnostics and no stored
+user. `command_password_argon2_test.go` covers shared generation options,
+exact algorithm names (including trailing tabs/Unicode spaces), random salts,
+long plaintext, invalid settings, private inputs, independent
+password policy and write failures.
+
+`TestCaddyPasswordArgon2E2E` builds `cmd/authcrunch` and starts isolated, bounded
+Caddy processes with verified TLS and temporary identity files. It covers
+CLI-generated Argon2 and bcrypt HTML/native/Basic login, independently verified
+JWTs and protected routes, wrong/missing/serialized-hash rejection, raw reserved
+prefix plaintext login, restart/history/overwrite semantics, public profile
+imports and refresh preservation/revocation, and public registration imports
+with a local file-message positive control. Rate limiting remains enabled;
+independent protocol fixtures and successful controls avoid masked failures.
+Log redaction checks include rejected password attempts, serialized imports,
+native sandbox secrets and Basic credentials. Shutdown uses Caddy's local admin
+endpoint and waits for process exit; exceeding its graceful deadline fails the
+test even if forced termination succeeds. Each waiter captures its own process
+and completion channel, independent of later fixture restarts. The new
+binary is not the instrumented Go test helper; its code does not contribute to
+parent coverage. Unit and existing instrumented command tests cover the host code.
+
+Run the focused `TestPasswordImport|TestSecurityCredentialArgon2|TestCaddyPasswordArgon2E2E`
+selection, then `make ci-check`. See
+[password hashing](../../configuration-users/references/password-hashing.md)
+for the supported formats and security boundary. Algorithm vectors and padded
+work counts remain the library's responsibility; no wall-clock equivalence is
+asserted here. Registration confirmation/approval and live SMTP remain separate.
+
 ## Authorization login redirects
 
 `TestAuthzRedirectRequestTargets` tests both redirect renderers through the Caddy
