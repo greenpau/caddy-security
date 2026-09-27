@@ -15,6 +15,17 @@ persistence fails closed. Missing storage is created privately (0700 directory,
 0600 files); existing storage must retain those private permissions and the
 service account's access.
 
+First enabling state creates a new persistent runtime; it does not import live
+volatile sessions, grants, pending requests, or replay history. Plan for fresh
+login. Existing stateless access JWTs retain only the continuity provided by
+unchanged verification keys and policy. Keeping the same directory matters for
+subsequent durable restarts, not migration from an in-memory root.
+
+A rejected live reload leaves the old deployment serving. A failed cold start
+after a complete stop has no old serving process to preserve: retain the state
+and failure evidence, correct the startup condition, and follow the recovery
+rules below. Do not promise automatic rollback or uninterrupted availability.
+
 ## Retained authority
 
 | Resource | Restart behavior |

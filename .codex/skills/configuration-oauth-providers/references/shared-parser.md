@@ -26,7 +26,7 @@ mapping. Shared scalar/list keys also accept separate words, for example
 | Existing Caddy grammar | Shared grammar / handling |
 | --- | --- |
 | `realm`, `driver`, `tenant_id`, `domain_name`, `client_id`, `client_secret`, `server_id`, `base_auth_url`, `metadata_url`, `identity_token_field_name`, `authorization_url`, `token_url`, `region`, `user_pool_id`, `user_info_roles_field_name` | Forward one exact value. |
-| `logout_url <logout_url>` (also `logout url <logout_url>`) | Recognized by `pkg/idp/oauth/parser/fields.go`, but rejected by the OAuth allowlist in `pkg/idp/config.go` in v1.3.3. Forward it unchanged to that validation. Never remove it from Params to make registration succeed. |
+| `logout_url <logout_url>` (also `logout url <logout_url>`) | Recognized by `pkg/idp/oauth/parser/fields.go`, but rejected by the OAuth allowlist in `pkg/idp/config.go` in the selected v1.3.4. Forward it unchanged to that validation. Never remove it from Params to make registration succeed. |
 | `scopes`, `user_group_filters`, `user_org_filters`, `response_type` | Preserve the old append behavior for repeated identical legacy spellings, combining them into one list statement. Mixing a spaced alias with the old spelling fails as a duplicate. |
 | `required_token_fields <fields...>` | Forward one nonempty list. Repetition fails instead of silently replacing the previous list. |
 | `delay_start`, `retry_attempts`, `retry_interval` | Forward one integer. Library validation retains driver/retry defaults and exact integer values. |
@@ -174,9 +174,12 @@ time. The hook is confined to the test child, initialized before any test TLS
 clients, and never changes the OS trust store or skips certificate verification.
 The repository pins Go 1.26; check this hook when upgrading the toolchain.
 
-Run the focused suite, then the repository's race/report workflow:
+When changing OAuth parser or trust behavior, start with the focused suite:
 
 ```sh
 go test -mod=readonly -run 'TestOAuth|TestParseCaddyfileIdentity|TestCaddyOAuthE2E|TestCaddyfileAdaptAuthenticationToJSON|TestResolveRuntimeAppConfig' .
-make test
 ```
+
+Use [testing-and-ci](../../testing-and-ci/SKILL.md) to select the required broader
+race/report checks for the implementation change. A documentation-only review
+uses source, metadata and link checks without launching OAuth processes.

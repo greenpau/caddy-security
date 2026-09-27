@@ -16,9 +16,8 @@ print credentials for local-user Caddyfile blocks; they do not add users or
 modify database files. System messaging/encryption utilities from authdbctl
 are outside this local-user command group.
 
-Use [Configuration Users](../../configuration-users/SKILL.md) for static user
-blocks and [Authentication Portal API](../../authentication-portal-api/SKILL.md)
-for the HTTP API. Keep implementation, tests, and documentation here;
+Static user blocks belong to [configuration-users](../../configuration-users/SKILL.md);
+HTTP behavior belongs to [authentication-portal-api](../../authentication-portal-api/SKILL.md). Keep implementation, tests, and documentation here;
 upstream source is a read-only reference.
 
 ## Client Configuration and Login

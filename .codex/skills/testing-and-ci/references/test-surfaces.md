@@ -1,0 +1,351 @@
+# Test surfaces and qualification evidence
+
+Read the sections matching the behavior being changed. These are existing test
+surfaces and their limits; names alone do not establish coverage for a new change.
+Source and fixture paths below are relative to the repository root.
+
+## Contents
+
+- Conditional authentication coverage
+- Shared test mechanics: CodeQL and subprocess coverage
+- Feature suites and Caddyfile adaptation/runtime resolution
+
+## Conditional authentication coverage
+
+`TestPortalTransformSharedParser`, `TestPortalTransformRejects`, the transform
+runtime tests, and local-store parser tests cover v1.3.3 grammar and rejection
+boundaries. The `testcase_authenticate_with_challenges` pair exercises adapted
+JSON and runtime resolution, including mixed environment/claim templates.
+`TestCaddyAuthenticationChallengesE2E` runs isolated actual Caddy TLS journeys
+for HTML/JSON and native conditional login, signed WebAuthn, AMR claims and
+resource authorization, portal refresh/OIDC, Basic/API-key rejection, policy failure,
+static-user creation/replacement/omission and profile rule mutations.
+`TestPortalTransformMatchAnyIdentityContext` records the upstream timestamp
+limitation and the Caddy refresh/OIDC/System API guard; its resolution fixture and E2E
+prove that rejection preserves the active deployment. System API E2E additionally
+checks encrypted assertions and rejection of unsatisfied factor policy. Its LDAPS
+peer requires real service/user binds and verifies all fallback role values.
+Native JSON regressions cover quoted/resolved unconditional matchers and
+multiline instructions: reject the latter before CSV decoding can discard a
+second record. Unit tests compare the shared parser's interpretation; Caddy
+reload E2E verifies rejection and continued access through the previous runtime.
+Test credentials are seeded before Caddy owns the database; runtime profile
+mutations cross HTTP. Changed local-store configuration restarts explicitly,
+respecting the existing prohibition on overlapping file-backed runtimes.
+
+## Shared test mechanics
+
+Automation fixtures must create their own generated parent directories before
+calling `TemporaryDirectory` or `mkdtemp`. A fresh checkout has no ignored
+`tmp/` directory; another test must not be responsible for creating it. When
+fixing fixture setup, run the affected test alone in a disposable checkout
+without `tmp/`, then run `make test-automation`. Preserve existing workspaces
+and report bundles while checking this condition.
+
+### CodeQL scanning
+
+The separate `.github/workflows/codeql.yml` analyzes Go, JavaScript/TypeScript,
+Python and Actions with the complete default suites. Local `make scan-codeql`
+uses the same checked-in configuration; `CODEQL_LANGUAGE` defaults to `go`.
+`.github/codeql/suppressions.json` records the five owner-approved findings.
+The shared SARIF filter matches exact rules, paths and CodeQL fingerprints,
+preserving raw evidence and an audit. No sibling logging exception applies
+automatically. Follow the [CodeQL workflow](../../scripts-and-automation/references/codeql.md)
+for tool selection, output boundaries, report review and GitHub activation.
+
+`assets/scripts/tests/codeql_test.py` exercises the actual shell helper with a
+fake CLI to verify stage failure propagation, per-language build selection,
+source-root isolation, quoted paths, fresh evidence and rejected output escapes.
+It runs in `make test-automation`, alongside `codeql_filter_test.py`, which
+checks approval matching, negative boundaries, retained CSV results, audit
+identity, failed-analysis refusal and evidence preservation. `make test-codeql`
+runs the real CLI against isolated sources under `.coverage/codeql/`. It
+compares raw default results to the unmodified upstream suite, then verifies
+approved suppressions and retained neighboring findings in both default and
+extended suites. The actual Python and CommonJS test harnesses are copied as
+static fixture inputs; they are not executed. Go cases retain debug/ordinary
+sensitive logging, SQL injection and other password hashes. JavaScript, Python
+and Actions retain code injection, and Actions retains an unpinned-action case.
+
+Run automation tests and real fixtures for all four languages when changing
+shared scanning behavior. CLI absence is a failure, not a skipped test. The
+CodeQL matrix verifies its own language and applies the shared filter before
+uploading reviewed primary SARIF; raw results and suppression audits are
+retained as artifacts even after failure. `make ci-check` keeps its existing tool
+requirements and does not invoke CodeQL. A successful scan can contain alerts;
+do not describe a successful scanner invocation as a vulnerability-free result.
+
+### Subprocess coverage
+
+`subprocess_coverage_test.go` owns the root package's `TestMain`. When Go enables
+coverage, it connects inherited `GOCOVERDIR` to `-test.gocoverdir`.
+`collectSubprocessCoverage(t, cmd)` assigns each child a private temporary
+directory and collects its completed files during parent test cleanup, before
+Go's native profile writer merges counters from the parent and descendants
+running the same instrumented test executable,
+including nested E2E helpers and CLI helpers that exit through `os.Exit`.
+Call the collector after setting `cmd.Env` and before starting every copy of the
+test executable, including PTY brokers that launch it. Always wait for the child
+before returning from its parent test. Cleanup publishes files atomically on
+the destination filesystem, so parallel children cannot race Go's metadata
+writes. Do not share a writable coverage directory between children or forward
+the parent's `-test.coverprofile` flag. Preserve process deadlines, exit status
+checks and isolation; never reuse a persistent counter directory across runs.
+
+This applies automatically to `go test -coverprofile=...`, `make test` and
+`make qtest`. The merged profile reaches tested before its coverage threshold,
+HTML/JSON/JUnit generation and manifest creation; `make run-reports` reuses that
+profile. There is no report rewrite or extra postprocessing step. Ordinary
+`go test` without coverage is unchanged. The `Test*Process` entries still skip
+in normal discovery because their parent tests run them in isolated processes;
+keep these truthful skip outcomes visible.
+
+Coverage is limited to the selected instrumented packages and executable.
+Separately built CLI binaries are not instrumented by this hook. Killed or
+panicking processes can lose unflushed counters; do not alter interruption tests
+or suppress their failures to obtain coverage. Official OIDC conformance remains
+separate and opt-in.
+
+`TestConfigureSubprocessCoverage` covers flag/environment precedence and inactive
+coverage. `TestCollectCoverageFiles` verifies concurrent publication, partial-file
+exclusion and collection failures. The automation test
+`assets/scripts/tests/subprocess_coverage_test.py` copies the actual bootstrap
+into a disposable module under `tmp/` and checks exact parent, parallel
+child, grandchild and CLI counters through Go and Make/tested. It also checks
+failed-child evidence, coverage thresholds, untouched code, set/count/atomic
+modes, fresh filtered runs, custom paths and quick/report regeneration. Run it
+with `make test-automation`, then use the real Caddy E2E report to validate the
+integrated change.
+
+### Feature suites
+
+`TestCaddyLoggingE2E` builds the actual race-enabled Caddy command, captures JSON
+logs and qualifies diagnostic rules through real TLS login, legacy/current
+authorization, counted protected handlers, replacements/removal, independent
+processes and persistent-session restarts. It explicitly proves that the private
+Caddy authentication middleware logger remains unfiltered in v2.11.4; a passing
+suite is not an issue #280 host-suppression fix. See
+[logging validation](../../configuration-logging/SKILL.md#validation) for focused
+unit/adaptation coverage and the upstream acceptance criteria.
+
+`TestCaddyRuntimeStateE2E` builds a real Caddy executable with production modules
+and an isolated TLS-root fixture. It tests SIGKILL/restart at the same origin,
+direct OAuth without a portal, sessions/JWKS, refresh/OIDC replay, identity
+rollback, storage failures, actual snapshot capacity and controlled reload
+rejection under in-flight callbacks and protected traffic. Read
+[configuration-state](../../configuration-state/SKILL.md#validation) for its scope
+and focused unit/adaptation companions. Never substitute upstream library tests
+or a reload-only test for process restart evidence.
+
+`TestCaddyOperatorExamplesE2E` qualifies every complete input under
+`assets/config/integration/` through Caddy adaptation, validation, provisioning
+and TLS journeys, then reloads generated native JSON independently. The
+[operator example reference](../../configuration/references/operator-examples.md)
+describes private artifact retention and the exact scenario coverage. Keep
+those examples in the default gate and test their behavior, not just JSON shape.
+
+Official OP conformance runs only through `make oidc-conformance-test`, with its
+own private artifacts. The harness and its unit tests are excluded from regular
+Go tests, `make test-automation`, and `make ci-check`. Existing local OIDC
+regressions stay in regular testing. The official runner's original nonzero
+outcome remains a failure; warnings, skips and reviews are never an all-pass claim.
+See [official OP conformance](../../configuration-oauth-applications/references/oidc-conformance.md)
+for prerequisites, isolated artifacts and all remaining non-pass modules.
+The separate `OIDC conformance` GitHub workflow is manual-only and invokes these
+same Make targets. Follow [conformance Actions](../../configuration-oauth-applications/references/oidc-conformance-actions.md)
+for the report artifact and failure-preserving upload. The workflow publishes
+the complete disposable test evidence directly in its artifact ZIP, retaining
+signed exports and hashes. Unzip once and open `index.html`; no nested archive,
+encryption key or recipient is needed. Keep its inputs
+synthetic and conformance separate from regular CI.
+OIDC conformance units live in `assets/scripts/oidc_certification_conformance_tests/`
+and use `test_oidc_conformance_*.py` filenames. Keep them out of the regular
+automation discovery directory. The browser suite tests real pinned Chrome
+startup with long evidence paths and strict TLS controls; it checks the Linux
+Unix-socket path budget even when validation runs on macOS. It also forces a
+real oversized PNG and verifies bounded viewport recapture, original evidence
+preservation and window restoration. Follow the
+[Chrome temporary-path guidance](../../configuration-oauth-applications/references/oidc-conformance-actions.md#execution-and-failure-behavior)
+when changing ChromeDriver's environment or report layout.
+`test_oidc_conformance_cleanup.py` exercises
+deletion boundaries for bundles and supplemental logs/audits/browser profiles,
+retention of custom dependencies across repeated cleanup, active-run guards and
+the real Make cleanup recipe in a disposable repository. Never delete
+historical official evidence as a unit-test
+side effect. `make oidc-conformance-cleanup` is an explicit artifact-deletion
+target; it preserves tools, the suite and caches for the next opt-in run.
+The default `TestCaddyOIDCRelyingPartyE2E` also covers v1.2.6 claims, ACR,
+registered RS256 Request Objects and OIDC refresh rotation/replay through real
+Caddy TLS. Its discovery expectations track the selected dependency's capability surface;
+these local tests do not launch the official suite.
+The same RP E2E preserves the provider-owned themed page headers at root and
+nested issuer mounts. It checks the consent referrer/CSP restrictions, unchanged
+discovery/callback headers, and rejection of null/cross-origin and forged-CSRF
+consent submissions. The official workflow additionally exercises the real
+Chrome form Origin, both authentications, and the exact screenshot evidence slots.
+`CONFORMANCE_RESULTS` selects a new private destination under this checkout's
+`tmp/`; its `index.html` links and explains the full evidence, including blocked
+or incomplete runs. Report tests are part of the same opt-in target only.
+
+MFA E2E fixtures use independent identities/databases for separate successful
+login journeys. Repeated CLI logins for the same account wait for an unused
+real TOTP time step; never clear persisted replay counters or disable MFA to
+reuse a code. The authentication-client E2E also rejects TOTP replay through
+username-case and email aliases.
+
+HTTPS delegation unit fixtures must model inbound requests: use
+`httptest.NewRequest` with an HTTPS target and an origin-form `RequestURI`.
+An outbound `http.NewRequest` has no server TLS state; an absolute-form test
+target also differs from the ordinary Caddy request. Both can fail upstream
+Origin validation before the authentication condition under test. The shared
+refresh HTTP matrix checks unauthenticated protected routes and cross-origin
+API rejection through unit delegation and actual Caddy TLS.
+
+For cross-feature changes, use the
+[composed qualification map](composition-qualification.md).
+`TestCaddyCompositionE2E` covers the actual Caddy TLS feature matrix, edge trust,
+credential-purpose isolation, replacement failure/recovery, current roles,
+reload/disposal and combined Chromium flow. Run it with the existing browser
+refresh suite under race detection; preserve its bounded single-process scope.
+Include `TestAuthzSourceTrust` for cached source-bound authorization and
+`TestCaddyRefreshBrowserTrust` for the fresh-profile trust boundary. Browser
+journeys must reject untrusted certificates and hostname mismatches before
+testing login; do not replace these controls with certificate-error allowances.
+
+`TestSecurityAuthcrunchVersion` and `TestSecurityVersionCommand` cover embedded
+dependency versions, replacements, missing metadata, command dispatch and output
+failures. `TestCaddySecurityVersionE2E` compiles the real Caddy wrapper with
+trimpath and stripped symbols, compares `security version` with Go's selected
+dependency, and runs outside the checkout without Go on PATH or user-state writes.
+Run these and the `TestSecurityCommand*`/`TestCaddySecurityCommand*` registration,
+help and redacted-error tests when changing `security version`.
+
+`cmd/caddy-authenticator/*_test.go` covers profile/configuration parsing, command
+selection, private persistence, logging and transport/input failure behavior.
+`TestCaddyAuthenticatorE2E` builds the standalone command and checks password,
+MFA, API keys, native metadata, independent authorization and profile isolation
+through actual Caddy TLS with admin/profile APIs disabled. On Unix it also runs
+the Python 3 PTY broker for pasted setup, hidden input and terminal restoration
+at password and TOTP prompts. Regressions cover symlink-sensitive CA paths,
+explicit empty home overrides and state preservation when logging rejects an
+operation. Unit tests verify the 45s default and overridden command deadlines;
+PTY tests verify non-interactive defaults and `--interactive` prompt opt-in.
+`TestCaddyAuthenticatorVersionE2E` verifies actual Go install naming, fallback
+version and linker metadata without user-state access. Automation fixtures
+check Make builds, failure propagation and fallback synchronization. Run these
+along with cached-token/expiry/forced-login and native-refresh tests, including
+lost committed responses and prevention of replay across commands,
+when changing the standalone CLI or the authclient dependency; see the
+[command validation map](../../scripts-and-automation/references/caddy-authenticator.md#validation).
+
+`TestAuthzPathDelegation` and `TestCaddyAuthorizationPathE2E` cover the v1.2.5
+authorization path contract through the provider and real Caddy TLS. Run them
+when changing gatekeeper delegation, bypasses, path claims or the selected
+dependency. They check decoded/cleaned paths before and after identity caching,
+literal wildcard grants, downstream reachability and unchanged request URIs
+over HTTP/1.1 and HTTP/2; see
+[authorization behavior](../../configuration-authorization/SKILL.md#policy-options).
+
+`TestAuthenticationClientConfigAdapter` covers the existing outbound YAML adapter
+and the dedicated public authclient parser. `TestAuthenticationClientConfigWhitespace`
+checks exact credential preservation and prevents silently repaired options;
+`TestAuthenticationClientLegacyWire`
+checks omission of the refresh extension with a strict legacy schema.
+`TestAuthnJSONLoginDelegation` compares native/JSON rejection responses with
+direct portal dispatch, checking request headers/URL and response metadata at
+root/nested mounts. Its error cases also run through Caddy TLS.
+`TestCaddyAuthenticationClientE2E` covers password/MFA and API-key JSON login
+through actual Caddy TLS with admin/profile APIs disabled, private credential
+reopening, independent resource authorization, explicit native refresh/logout,
+and the existing CLI consumer. It includes in-flight HTTP cancellation with
+server request counts, cookie-mode MFA metadata-only completion, dropped native
+transport at checkpoints, and rejected browser/native mixtures without consuming
+the refresh family. See the
+[native interoperability test map](../../authentication-portal-api/references/native-client.md#caddy-validation).
+
+Local identity provisioning/reset units are in `local_identity_test.go`.
+`profile_public_key_test.go` checks public parser metadata and binary rejection.
+`TestCaddyLocalIdentityE2E` covers TLS login identity/realm/MFA combinations,
+management/profile credential mutations, reload invalidation, stateless access,
+and persisted user public keys. See
+[local identity compatibility](../../configuration-identity-stores/references/local-identity.md#caddy-validation).
+The default `TestCaddyProfileCanonicalIdentityRegression` verifies transformed
+claims cannot select another local account after the upstream fix; see
+[profile isolation](../../authentication-portal-api/references/profile-public-keys.md#canonical-profile-identity-regression).
+
+Runtime ownership unit tests live in `app_lifecycle_test.go`.
+`TestCaddyLifecycleE2E` in `app_lifecycle_e2e_test.go` launches a bounded child
+process with real Caddy listeners and reloads; `TestCaddyLifecycleProcess` is
+its subprocess helper. Use these for app/plugin lifecycle changes, including
+drain ordering, abandoned candidates, shared providers, and worker disposal.
+Read the [runtime lifecycle reference](../../coding-directives/references/runtime-lifecycle.md#validation)
+for the precise scenarios and host limitations.
+
+Parser tests use inline Caddyfile snippets and `caddyfile.NewTestDispenser`.
+They call parser functions, unpack generated JSON into maps, and compare with
+`cmp.Diff`. Whitespace in inline `want` JSON is not semantically important.
+Add or update these tests when directive parsing behavior changes:
+
+- `caddyfile_authn_test.go`: authentication portal parsing.
+- `caddyfile_authn_oidc_test.go`: provider grammar, forward/imported application
+  references, disabled validation, and JSON restoration. `oidc_config_test.go`
+  covers conflicts across portal issuers. `TestCaddyOIDCProviderE2E` in
+  `oidc_e2e_test.go` covers actual TLS provisioning, discovery, two selected local
+  realms and an unselected realm, realm identity and session revocation when
+  switching realms in one browser, independent issuers/cookies, signed token
+  exchanges, refresh alignment, and continued service after rejected reloads.
+- `plugin_authn_test.go`: `TestAuthnOIDCDelegation` compares the middleware's
+  response and canonical URL with direct portal dispatch. `oidc_rp_test.go`
+  checks the independent RSA relying-party verifier against corrupted signatures,
+  claims and public key sets. `oidc_rp_response_test.go` checks the RP's callback
+  and form parsing against ambiguous parameters, incorrect POST forms and
+  weakened CSP; the E2E client submits the returned consent action and controls.
+- `TestCaddyOIDCRelyingPartyE2E`: bounded real Caddy TLS at root/nested mounts,
+  discovery, password/TOTP, consent, client authentication, prompts/max_age,
+  code+S256, form-post CSP, UserInfo, replay, revocation/logout, token purposes,
+  CORS and unsigned request objects. `oidc_loopback_e2e_test.go` is exercised
+  by this parent and requires actual IPv4/IPv6 ephemeral callback listeners.
+  `TestCaddyRegistrationE2E` covers process restart at the same issuer URL,
+  stable client/key identity, secret rotation and retained rollover verification.
+  Use the [OIDC validation map](../../configuration-oauth-applications/references/oidc-provider.md#validation-surfaces)
+  for the full test group and limits; local E2E is not Foundation certification.
+- `caddyfile_authn_token_refresh_test.go`: complete readable refresh grammar,
+  opt-out/defaults, imports/duplicates, placeholders and native/deferred JSON.
+  `TestCaddyTokenRefreshE2E` verifies real TLS password login and rotation at
+  parsed root/nested mounts, realm participation, cookie overrides, lifetime
+  caps, native opt-in/off, capacity/replay/rotation limits and rejected mounts.
+  Its adaptation/resolution fixture is `testcase_authenticate_with_token_refresh`.
+  See [portal refresh](../../configuration-authentication/references/token-refresh.md#validation).
+- `TestAuthnTokenRefreshDelegation` covers strict HTTP dispatch, protected APIs,
+  the exact embedded refresh asset and continuation pages. The normal Go suite
+  also runs `TestCaddyTokenRefreshBrowserE2E` with real Chrome/Chromium and Node 24;
+  `TestCaddyRefreshBrowserStartup` covers process readiness/cleanup failures.
+  See [browser validation](../../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository)
+  for two-tab coordination, committed-response loss and prerequisite overrides.
+- `caddyfile_authn_misc_test.go`: authentication misc/cookie/crypto/UI paths.
+- `caddyfile_authz_test.go`: authorization policy parsing.
+- `caddyfile_identity*_test.go`: identity stores and providers.
+- `caddyfile_credentials_test.go`: credential directives.
+- `caddyfile_messaging_test.go`: messaging directives.
+- `caddyfile_sso_provider_test.go`: SSO provider directives.
+- `caddyfile_test.go`: app-level parse coverage.
+
+Adapt tests live in `TestCaddyfileAdaptAuthenticationToJSON` in
+`caddyfile_adapt_test.go`. Each case uses
+`testdata/caddyfile_adapt/<prefix>.Caddyfile` as input and compares against
+`<prefix>.json`. Optional `<prefix>.env` files provide environment variables;
+blank lines and comments are ignored, and variables are cleaned up by the test.
+Use this path for every Caddyfile directive change, including syntax, defaults,
+validation, and config mapping.
+
+Runtime resolution tests live in `TestResolveRuntimeAppConfig` in
+`caddyfile_resolve_test.go`. Each case reads `<prefix>.json`, extracts the
+`security.config` object, runs `ResolveRuntimeAppConfig`, and compares against
+`<prefix>_resolved.json`. The test also fails if unresolved `{env...}` tokens
+remain. It writes temporary `*_tmp_input.json` and `*_tmp_output.json` files,
+removing them on success and leaving them on failure for debugging.
+
+Expected-error tests set `shouldErr: true` and compare the exact error string
+with `cmp.Diff`. Keep expected errors specific. The static secrets manager
+fixture currently expects a module-not-registered error because the external
+secrets plugin is not registered in this test binary.

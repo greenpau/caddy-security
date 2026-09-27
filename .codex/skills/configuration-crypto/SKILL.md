@@ -1,6 +1,6 @@
 ---
 name: configuration-crypto
-description: "caddy-security crypto directive configuration for authentication portals and authorization policies. Use when creating, reviewing, or debugging crypto Caddyfile lines, JWT signing or verification keys, token names and lifetimes, key IDs, HMAC/RSA/ECDSA/Ed25519 key loading, auto-generated keys, env or secrets-backed crypto values, System API crypto keys for remote Basic/API-key authentication, and authenticate/authorize key compatibility."
+description: "Configure portal/policy JWT keys, token names and lifetimes, key loading and generation, public-key discovery, and System API encryption keys. Use for signing/verification compatibility and rotation."
 ---
 
 # Configuration Crypto
@@ -9,10 +9,12 @@ description: "caddy-security crypto directive configuration for authentication p
 
 Use this skill for `crypto` directives inside
 `authentication portal <name>` and `authorization policy <name>` blocks.
-Use it together with `configuration-authentication` or
-`configuration-authorization` for the surrounding portal or policy, and with
-`configuration-runtime-resolution` or `configuration-secrets` when values come
-from `{env.*}`, `{file.*}`, or `secrets:*:*`.
+Surrounding declarations belong to
+[configuration-authentication](../configuration-authentication/SKILL.md) and
+[configuration-authorization](../configuration-authorization/SKILL.md).
+[runtime resolution](../configuration-runtime-resolution/SKILL.md) and
+[secrets](../configuration-secrets/SKILL.md) own replacement semantics and manager
+configuration; this skill owns how the resulting key material is used.
 
 Read these files when details matter:
 
@@ -45,8 +47,10 @@ that config.
 
 If no explicit `crypto key ...` lines exist, authcrunch auto-generates an ES512
 `sign-verify` key by default; other algorithms are described below. This is
-useful for single-process local setups. Prefer explicit keys for stable deployments, multiple Caddy instances, restarts where
-old tokens should survive, or any portal and policy split across instances.
+volatile by default. Explicit keys provide stable material across independent
+instances; optional [persistent state](../configuration-state/SKILL.md) can retain
+generated material across an exclusive owner's stop/start. Key persistence alone
+does not share session state or authorize concurrent owners.
 
 ## Common Pairing
 
@@ -135,8 +139,11 @@ Auto-generation defaults to tag `default` and algorithm `ES512`. It also
 accepts `EdDSA` and `Ed25519`, which generate Ed25519 material and select the
 respective JOSE signing label. Use a distinct tag when changing key families;
 reuse with an incompatible algorithm is rejected. The auto-generation tag
-is stored in authcrunch's shared in-memory key buffer, so objects in the same process can share the generated key. Do not rely on it
-across independent Caddy instances.
+identifies material shared within the runtime. With no state directory that
+material is volatile; with explicit state the generated-key record survives
+restart. `TestCaddyRuntimeStateE2E` verifies unchanged public JWKS and old JWT
+verification after SIGKILL. Independent active instances still need deliberately
+coordinated keys and cannot concurrently own the same state directory.
 
 ## Key Material
 
@@ -268,41 +275,10 @@ Use `set token sources cookie header query` to control lookup order. Use
 
 ## System API Keys
 
-`system` keys are not JWT signing keys. They encrypt and decrypt PASETO
-`v4.local` System API messages used by remote Basic/API-key authentication.
-They require a non-empty key ID and a 32-byte key encoded as 64 hex characters.
-
-Configure the same `system` key ID and value on the remote policy and the
-receiving portal:
-
-```caddyfile
-authentication portal myportal {
-	crypto key sys1 system {env.SYSTEM_API_SECRET}
-	enable identity store localdb
-}
-
-authorization policy api_policy {
-	crypto key jwt1 verify {env.JWT_SHARED_KEY}
-	crypto key sys1 system {env.SYSTEM_API_SECRET}
-	allow roles authp/user
-	with api key auth portal https://auth.example.com/auth realm local
-	with basic auth portal https://auth.example.com/auth realm local
-}
-```
-
-For file-backed System API keys, use a Caddy replacer that resolves to the file
-content, such as `crypto key sys1 system {file./etc/caddy/security_system.key}`.
-Do not use `crypto key sys1 system from file ...`; KMS file loading is for PEM
-JWT keys, not raw System API hex keys.
-
-Portals with System API keys cannot use `match any` transforms in v1.3.3:
-upstream assertion claims omit the timestamp used by that matcher. Use explicit
-realm matchers; see the [compatibility restriction](../configuration-authentication-user-transforms/SKILL.md#unconditional-matcher-restriction-in-v133).
-
-The portal chooses the `system` key from the encrypted message footer `kid`.
-The authorize-side remote authenticator currently picks the first configured
-`system` key in key-store order for remote calls, so keep rotation plans simple
-and test them explicitly.
+Remote Basic/API-key authentication uses matching `system` key IDs and 32-byte
+hex keys on the policy and portal. They encrypt PASETO assertions and do not
+sign JWTs. Read [System API key configuration](references/system-api-keys.md)
+for exact syntax, file-value handling, key selection and challenge-policy limits.
 
 ## Failure Patterns
 

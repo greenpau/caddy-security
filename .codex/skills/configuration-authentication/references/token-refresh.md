@@ -120,7 +120,7 @@ for request details.
 
 ## Session and Rotation Limits
 
-`max sessions` counts live refresh families in one portal's in-memory store,
+`max sessions` counts live refresh families in one portal's refresh store,
 shared across its selected realms and both transports. A family is one login
 session and all credentials produced by rotating it. Multiple independent
 logins by the same user can consume multiple slots; tabs sharing one family do
@@ -132,8 +132,11 @@ live family. Expired families are reclaimed opportunistically during admission;
 revocation removes a family and its credential history. A fresh browser login that
 presents an existing family with the same portal/origin/mount/transport binding
 can replace it atomically, including at capacity. Failed admission preserves
-existing live families. Separate portal runtimes have separate limits; runtime
-replacement or restart discards their stores and requires login again.
+existing live families. Separate portal runtimes have separate limits. Without
+the root `state` block, runtime replacement or restart discards their stores and
+requires login again. With persistence enabled, completed families and their
+deadlines survive a complete stop/start with the same storage and configuration;
+overlapping persistent reload is rejected. See [runtime ownership](#runtime-ownership).
 
 `max rotations` limits successful refresh exchanges per family. The initial
 credential is not a rotation: with `max rotations 1`, the first refresh succeeds
@@ -155,7 +158,8 @@ Mount the portal without stripping its prefix:
 
 ```caddyfile
 auth.example.com {
-    route /auth/* {
+    @portal path /auth /auth/*
+    route @portal {
         authenticate with myportal
     }
 }
@@ -215,10 +219,20 @@ or expand substituted values twice.
 
 ## Runtime Ownership
 
-AuthCrunch owns the bounded in-memory session/rotation store, credential hashing,
+AuthCrunch owns the bounded session/rotation store, credential hashing,
 local password/MFA evidence, signing, fresh identity checks, replay revocation,
-and cookie responses. State is process-local and does not survive replacement
-or restart. Caddy only configures and delegates to the portal.
+and cookie responses. Caddy configures the portal and owns admission/draining
+around the shared AuthCrunch runtime.
+
+Without a root `state` block, refresh state is volatile and does not survive
+runtime replacement or restart. Use
+[configuration-state](../../configuration-state/SKILL.md) to configure optional
+durable state and its required stop/start deployment boundary. With that opt-in,
+completed browser/native families, absolute and idle deadlines, spent-token
+replay history, and successful revocations survive restart. Pending login
+checkpoints do not. Restart never extends a deadline or makes an uncertain
+rotation safe to retry. Configuration changes can invalidate retained authority;
+follow the state skill's binding and recovery rules.
 
 A new independent login at capacity returns 503. Exhausting a family's rotation
 limit revokes that family and reclaims capacity. Replaying a spent refresh token
@@ -252,6 +266,10 @@ GET confirmation and POST logout, use the
   cookie name by trimming its trailing tab.
 - `TestCaddyOIDCProviderE2E`: parsed refresh configuration coexisting with the
   OP, rejected origin/mount mismatches, and browser logout revoking OP grants.
+- `TestCaddyRuntimeStateE2E` in `runtime_state_e2e_test.go`: optional persistent
+  browser/native families across fresh processes, replay revocation retained
+  across restart, and durable logout. The state skill owns its process, storage
+  and reload checks; the ordinary refresh suites above qualify volatile behavior.
 
 Run the focused group and broader repository validation from this checkout:
 

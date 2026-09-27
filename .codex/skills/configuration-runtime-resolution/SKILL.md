@@ -1,6 +1,6 @@
 ---
 name: configuration-runtime-resolution
-description: "caddy-security runtime replacement guidance for Caddyfile configuration. Use when creating, reviewing, or modifying configs that rely on Caddy replacer placeholders, env placeholders, secrets manager lookups, resolved Caddyfile fixtures, runtime credential resolution, unresolved token checks, or caddyfile_resolve behavior."
+description: "Configure and validate Caddy runtime placeholders, secret lookups, encoded instructions, and resolved fixtures. Use to determine which fields resolve and preserve exact values; manager blocks belong to secrets."
 ---
 
 # Configuration Runtime Resolution
@@ -100,7 +100,10 @@ Resolve these app config areas:
   those typed sections must already be resolved.
 - `identity_stores[].params` and `identity_providers[].params`: recursively
   replace map keys, string values, string lists, lists of maps, and nested lists
-  supported by `substitute`; non-string scalar values remain unchanged.
+  supported by `substitute`. JSON booleans and floating-point numbers remain
+  unchanged; do not assume arbitrary Go scalar or slice types are supported.
+  List handling is bounded to the shapes in `substitute`, not an unrestricted
+  recursive JSON walk.
 - `sso_providers[]`: replace `entity_id`, `cert_path`, `private_key_path`, and
   each `locations` entry. Do not assume `name` or `driver` is replaced.
 - `authentication_portals[]`: replace raw crypto key-store lines,
@@ -237,4 +240,11 @@ The Caddy lifecycle E2E suite loads both kinds of replacement, checks the runtim
 values, performs login/authorization, and verifies a missing secret leaves the
 old deployment usable.
 
-Use `configuration-secrets` for secrets manager block syntax.
+Those tests establish exact credential/sender/title values after resolution;
+they do not prove SMTP delivery or a completed signup flow. A syntactically
+malformed secret reference is not recognized by `hasSecretKey` and may survive
+as a literal value. Treat the documented three-part lookup syntax as an input
+requirement, not a promise that every `secrets:`-prefixed typo is rejected.
+
+Secrets manager block syntax belongs to
+[configuration-secrets](../configuration-secrets/SKILL.md).

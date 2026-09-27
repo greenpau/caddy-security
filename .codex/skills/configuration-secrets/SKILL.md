@@ -1,6 +1,6 @@
 ---
 name: configuration-secrets
-description: "caddy-security secrets manager Caddyfile configuration. Use when creating, reviewing, or modifying security secrets blocks, external security.secrets modules, static secrets manager examples, AWS secrets manager examples, secret IDs, secret-backed user data, authdbctl-generated password or API key hashes, secret-backed crypto keys, and integration with runtime replacement."
+description: "Configure security.secrets plugins and secret lookup values for users, credentials, and crypto. Use for static/AWS manager wiring and lookup failures; runtime field support belongs to runtime resolution."
 ---
 
 # Configuration Secrets
@@ -127,6 +127,12 @@ Resolution is strict:
 - The returned value must be a string. Non-string values cause provisioning to
   fail with `secret value is not a string`.
 
+Only a whole value matching that three-part form is recognized as a lookup.
+Malformed forms such as `secrets:smtp:password:extra` are ordinary strings to
+the current resolver; do not assume they are rejected as missing secrets.
+Check lookup spelling explicitly. A well-formed lookup with a missing manager
+or key fails provisioning rather than falling back to the literal reference.
+
 Use quotes around secret lookup strings when they contain characters that could
 be parsed unexpectedly.
 
@@ -209,8 +215,17 @@ plugin validation. The static plugin serves the configured inline map locally.
 In both cases, caddy-security only consumes the common `SecretsManager`
 interface after Caddy loads the module.
 
-Use `configuration-runtime-resolution` when explaining how `{env.*}` and
-`secrets:*:*` values are substituted after adaptation. Runtime replacement also
+External plugin behavior must be checked against the module included in the
+actual Caddy binary; these plugins are not selected by this repository's
+`go.mod`. In static manager v1.0.1, `{env.*}` expansion happens in
+the plugin's Caddyfile unmarshaler, so adapted JSON already contains the value.
+An unresolved placeholder becomes `CADDY_REPLACEMENT_FAILED` there. This differs
+from caddy-security's strict provisioning-time lookup. Do not use successful
+adaptation as proof that a plugin's environment reference resolved correctly,
+or publish adapted output containing real secrets.
+
+The [runtime resolution contract](../configuration-runtime-resolution/SKILL.md)
+identifies which fields substitute `{env.*}` and `secrets:*:*` after adaptation. Runtime replacement also
 revalidates affected authcrunch config sections after substitution, so examples
 must resolve to values acceptable to go-authcrunch parsers.
 
@@ -221,3 +236,10 @@ Use these references:
 - `testdata/caddyfile_adapt/testcase_security_with_secrets.Caddyfile` for
   static manager block and lookup shape.
 - `caddyfile_resolve_test.go`.
+
+`TestResolveRuntimeAppConfigEncodedInstructions` uses an in-process synthetic
+manager to verify exact string replacement and missing-key failure; the Caddy
+lifecycle E2E checks rejected reload recovery. Neither loads the static/AWS
+plugins or contacts AWS. Qualifying an external manager requires the intended
+module version and isolated synthetic values, including an unavailable key and
+non-string result; AWS service behavior remains outside the normal test gate.

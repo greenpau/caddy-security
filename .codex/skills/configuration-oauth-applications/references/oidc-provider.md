@@ -157,8 +157,14 @@ name, and omits copied provider client snapshots. During `App.Provision`,
 the providers to a private config copy before root/runtime validation. Native
 JSON may instead supply `authentication_portals[].oidc_provider`; do not supply
 both forms for the same portal. Explicit client credentials remain sensitive
-JSON. Disabled and absent states survive both restoration paths. Provider
-sessions and grants are process-local and do not survive successful replacement.
+JSON. Disabled and absent states survive both restoration paths. Without root
+`state`, provider sessions and grants are volatile. With root `state`, completed
+OIDC authority survives a stop/start using the same directory, origin and
+compatible configuration; pending interactions still restart. Persistent-to-
+persistent reload is rejected. Use
+[configuration-state](../../configuration-state/SKILL.md) to configure this
+independent runtime storage and its deployment/recovery boundary. OAuth
+registration records alone do not restore sessions or grants.
 
 ## Validation surfaces
 
@@ -223,7 +229,10 @@ coverage; parser tests cannot establish those behaviors.
 - `TestCaddyRegistrationE2E`: immutable client identity and signing keys across
   actual process restarts at the same issuer URL, explicit secret rotation and
   activation, and verification of an earlier ID token against retained rollover
-  keys. Sessions/grants remain process-local. Its in-memory user fixture creates
+  keys. This test omits root state, so sessions/grants remain process-local.
+  `TestCaddyRuntimeStateE2E` separately checks persistent OIDC consent, codes,
+  access/refresh grants and replay across process restarts. The registration
+  test's in-memory user fixture creates
   fresh user IDs on each load; this test does not assert user-subject persistence.
 
 The older `TestResolveRuntimeAppConfig` extracts only `security.config`; it does
@@ -253,7 +262,7 @@ that evidence itself.
 
 ### Consent response policy for v1.2.6
 
-The current published dependency, `v1.3.3`, supplies themed
+The selected published dependency, `v1.3.4`, supplies themed
 consent/form-post/error pages and the correct consent headers in the provider.
 Caddy preserves those headers. Both the official harness and normal RP E2E
 now run without the compatibility snippet below. Consent CSP retains default,

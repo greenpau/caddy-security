@@ -2,18 +2,17 @@
 
 ## Selected implementation
 
-The supported dependency is published `github.com/greenpau/go-authcrunch v1.3.4`,
-commit `a97ff2f0a4429e286c30b9cc0cd6babab109b964`, without a local replacement.
-The review baseline is `7b890459d5eb3782d1df4f035e7920a3a3ed1c71` (v1.2.5).
-Use `go list -m -json github.com/greenpau/go-authcrunch` to reestablish the
-selected version and module directory before repeating this qualification.
-The Makefile xcaddy pin and CONTRIBUTING commands must select the same release.
+Read `go.mod` and `go list -m -json github.com/greenpau/go-authcrunch` to
+establish the selected version, module directory, and any replacement. This
+checkout selects published v1.3.4; sibling source and integrated xcaddy build
+arguments can select different code and are not proof of the normal build's
+behavior. Record that distinction in qualification evidence. A dependency task
+must inspect the Makefile xcaddy argument and CONTRIBUTING examples separately.
 
-The table maps every changed upstream package family in that range to its host
-boundary. Grammar details remain in the owning skills; do not copy the standalone
+The table maps supported upstream surfaces to their Caddy host boundaries. Grammar details remain in the owning skills; do not copy the standalone
 AuthCrunch HTTP server's configuration into Caddy's app or routes.
 
-## Changed surfaces and evidence
+## Integration surfaces and evidence
 
 | Upstream surface | Caddy integration and validation |
 | --- | --- |
@@ -40,7 +39,7 @@ JWT roles and protected-resource access. Repeated directives replace the list.
 
 ## Upstream match-any limit
 
-A real Caddy TLS regression found an unresolved v1.3.3 library limitation:
+The selected v1.3.4 retains a library limitation covered by Caddy TLS regression:
 `match any` actions appear in access-only login but disappear when portal
 refresh rebuilds identity claims. Source tracing also finds the same input
 shape in the OIDC identity verifier. `pkg/acl/condition.go` implements
@@ -66,7 +65,7 @@ not full support for unconditional matching across those features.
 Separate upstream work is required: make unconditional ACL evaluation independent
 of token timestamp presence, and qualify refresh/OIDC/System API policy checks with
 untimed fresh identity maps. Do not add fictitious timestamps or relax completed
-factor checks in the host to hide the problem. No sibling files were changed.
+factor checks in the host to hide the problem.
 `TestPortalTransformMatchAnyIdentityContext` records the library behavior so an
 upstream fix forces this restriction to be reconsidered. The Caddy E2E verifies
 safe access-only matching, stable realm-based claims, and rejected replacement
@@ -77,18 +76,17 @@ replacement, and denial when realm-based policy requires a TOTP proof.
 ## Syntax qualification
 
 Follow [syntax maintenance](syntax-maintenance.md) for the complete ownership
-map and audit procedure. This update inventories all standalone Caddyfiles,
-production `Syntax:` comments, Markdown Caddyfile fences and Go inline inputs.
+map and audit procedure. Inventory standalone Caddyfiles,
+production `Syntax:` comments, Markdown Caddyfile fences and Go inline inputs
+when their grammar or selected dependency changes.
 Classify complete examples, contextual fragments, alternative catalogues,
 intentional failures and external-resource requirements before adapting them.
 
-Two previously hidden fixture errors illustrate why failure fixtures also need
-source review: an extra brace in the portal parser test made its later LDAP,
-SAML and OAuth declarations unreachable, and the external-secrets fixture's
-expected missing-module error concealed obsolete local API-key syntax. The
-portal test now parses all declarations with `driver` and correct store/provider
-attachment. `TestIdentityStoreSecretsFixture` checks the local-user block even
-when the optional external secrets plugin is absent.
+Review intentional-failure fixtures beyond their first expected error: a
+missing external module or misplaced brace can hide stale grammar in later
+blocks. `TestIdentityStoreSecretsFixture` checks the local-user block even when
+the optional external secrets plugin is absent. Keep provider declarations in
+the parsed scope and verify required `driver` and store/provider attachment.
 
 Transform replacement preserves `{claims.*}` only in encoded transform
 arguments. Recompile after replacement, reject empty arguments before encoding,
@@ -100,58 +98,43 @@ substitute untrusted claims into policy selection itself.
 
 Remaining distinctions:
 
-- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.3;
+- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.4;
   `enable logout` is supported. Keep the restriction documented and tested.
 - Local static API keys have no `overwrite` suffix. Email authentication
   checkpoints are unsupported in both conditional-policy surfaces.
 - Adaptation alone does not prove file loading, provider discovery, login or
-  credential issuance. Operator examples have disposable runtime E2E. The static-secrets fixture was
-  also adapted and provisioned in isolated storage using a separate binary with
-  `caddy-security-secrets-static-secrets-manager v1.0.1`; the ordinary binary
-  intentionally lacks that optional module. External AWS examples require their
-  module and backend; do not contact AWS to establish grammar. Never contact a
-  real identity provider just to qualify grammar.
+  credential issuance. Operator examples have disposable runtime E2E. Provision
+  an external-secrets fixture only with a binary containing its selected plugin
+  and isolated synthetic storage; the ordinary binary intentionally lacks that
+  optional module. External AWS examples require their module and backend;
+  classify that dependency without contacting AWS or a real identity provider
+  merely to qualify grammar.
 - Historical official OP-plan reports remain tied to their recorded dependency
   and non-pass outcomes. The normal unit/E2E gate is separate from
   [official conformance](../../configuration-oauth-applications/references/oidc-conformance.md).
 
-Use the [testing workflow](../../testing-and-ci/SKILL.md) for the race-enabled
+The [testing workflow](../../testing-and-ci/SKILL.md) owns the race-enabled
 full suite, automation checks, build and reports. Keep audit manifests and raw
 adapter diagnostics under this checkout's `tmp/`; they may include synthetic
-credentials. Run skill metadata/link validation and `make license`, then inspect
-the resulting diff. Do not raise the Caddy module's own release version as a
-side effect of this dependency update.
+credentials. Run skill metadata/link validation for documentation changes and
+inspect the resulting diff. Use release/license regeneration only when its inputs changed;
+a documentation-only review does not need broad source regeneration. Do not
+raise the Caddy module's own release version as a side effect of a dependency
+update.
 
+## Qualification evidence
 
-## Qualification evidence for this update
+Record the selected module/version/replacement, candidate source hashes,
+commands, original outcomes and artifact paths with each qualification run.
+Keep regular unit/E2E and automation results separate from official conformance;
+report intentional subprocess-helper skips and incomplete or interrupted runs
+without promoting them to success. Focused follow-up checks qualify only the
+changes and test surfaces they exercise, not a new full-suite result.
 
-The initial v1.3.3 `make ci-check` qualification passed version validation, all 33 automation
-tests, the complete race-enabled Go suite, and both binary builds. Go reported
-1,908 passed, zero failed, 23 subprocess-helper skips and zero incomplete entries;
-weighted profile coverage was 84.39%. Parent E2E tests exercised those helpers,
-including actual Caddy TLS, encrypted System API, LDAPS, signed WebAuthn,
-local-identity mutations, operator examples, OIDC and real Chrome refresh.
-
-A follow-up review reproduced and fixed two native JSON validation gaps:
-quoted/resolved unconditional matchers could escape the compatibility guard,
-and CSV decoding could discard later lines before transform validation.
-The focused race suite passed transform unit tests, Caddyfile adaptation,
-runtime resolution and actual Caddy challenge/reload E2E after both fixes.
-Those E2E checks preserve working resource access, refresh/OIDC sessions and
-encrypted System API assertions after rejected replacements. `go vet ./...`,
-module verification and both binary builds also passed. The full-suite counts
-above describe the initial qualification; the follow-up uses the focused suite.
-
-The final syntax inventory contains 51 standalone Caddyfiles and 102 Markdown
-fences, with 117 regular contextual adaptations plus five using the optional
-static-secrets plugin. Intentional rejections, catalogues and the AWS backend
-requirement remain separately classified. Seventeen changed skills passed
-frontmatter, metadata, invocation and link/anchor checks. `make license`, module
-verification and diff/format checks passed. Earlier failures and interrupted
-runs were retained separately; none were relabeled as successful.
-
-Local evidence is preserved in `.coverage/authcrunch-v1.3.3-complete/` and
-`tmp/authcrunch-v133/qualification.md`, including the source hashes and syntax
-manifests. Follow-up evidence is in `tmp/authcrunch-v133/review-qualification.md`.
-These generated paths are ignored and do not ship with the module;
-repeat the documented workflows to establish evidence for a later checkout.
+For syntax audits, retain the inventory and classification of complete examples,
+contextual fragments, catalogues, expected rejections and external-resource
+requirements. Verify optional-module fixtures with their actual selected plugin
+before claiming runtime evidence. Keep manifests and raw diagnostics under this
+checkout's `tmp/` and generated test reports under `.coverage/`; those ignored
+artifacts are evidence for their recorded candidate, not portable proof for a
+later checkout.

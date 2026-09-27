@@ -1,6 +1,6 @@
 ---
 name: release-and-versioning
-description: Maintain caddy-security VERSION, generated download links, versioned CI artifacts, release Make targets, tags, and GoReleaser publication. Use for version checks, release preparation or execution, release automation changes, and release CI or packaging review.
+description: "Maintain VERSION, release targets, versioned artifacts, GoReleaser packaging, and publication. Use for release preparation, version checks, and explicitly requested releases; dependency refresh is separate."
 ---
 
 # Release and Versioning

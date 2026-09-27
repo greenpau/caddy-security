@@ -1,6 +1,6 @@
 ---
 name: configuration-oauth-providers
-description: "caddy-security OAuth and OIDC identity provider Caddyfile configuration. Use when creating, reviewing, or modifying oauth identity provider blocks, Azure, GitHub, Google, LinkedIn, Discord, Facebook, Okta, Cognito, GitLab, Nextcloud, or generic OAuth providers, client IDs and secrets, scopes, id token cookies, icons, PKCE toggles, user group filters, JWKS keys, and portal enablement."
+description: "Configure external OAuth/OIDC login providers, credentials, scopes, issuer/audience trust, JWKS, PKCE, and portal enablement. Named relying-party registrations and portal OPs belong to OAuth applications."
 ---
 
 # Configuration OAuth Providers
@@ -11,7 +11,9 @@ Use this skill to configure `oauth identity provider <name>` blocks. The
 Caddyfile syntax is authoritative in `caddyfile_identity.go` and
 `caddyfile_identity_provider_oauth.go`; it delegates to the shared upstream
 OAuth parser. The provisioning behavior is authoritative in
-the local `go-authcrunch` source, especially `pkg/idp/oauth/config.go`.
+the module selected by `go.mod` and any active replacement, especially
+`pkg/idp/oauth/config.go`. A sibling checkout is read-only context and may differ
+from that selection; inspect `go list -m -json github.com/greenpau/go-authcrunch`.
 
 Do not use this skill for `sso provider <name>` blocks. Those configure the SSO
 app/SAML role-assumption feature and belong in `configuration-sso-app`. Also do
@@ -174,7 +176,7 @@ logout url <logout_url>
 ```
 
 These are aliases for one scalar in upstream `pkg/idp/oauth/parser/fields.go`.
-The selected v1.3.3 shared validator in `pkg/idp/config.go` excludes that field,
+The selected v1.3.4 shared validator in `pkg/idp/config.go` excludes that field,
 so Caddy adaptation rejects it. Keep both forms documented with that status;
 exclude them from runnable examples until shared validation supports them.
 `enable logout` / `logout enabled` remains a separate supported switch.

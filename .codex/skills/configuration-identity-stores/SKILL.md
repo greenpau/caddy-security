@@ -1,6 +1,6 @@
 ---
 name: configuration-identity-stores
-description: "caddy-security local and LDAP identity store Caddyfile configuration. Use when creating, reviewing, or modifying local identity store blocks, LDAP identity store blocks, local user records, store shortcuts, realms, user files, LDAP bind settings, servers, search filters, attributes, groups, recovery settings, support links, fallback roles, and login icons."
+description: "Configure local or LDAP identity stores, realms, databases, binds, TLS trust, searches, and group mappings. Delegates static account entries to configuration-users."
 ---
 
 # Configuration Identity Stores
@@ -11,7 +11,8 @@ Use this skill to configure `local identity store <name>` and
 `ldap identity store <name>` blocks. The dispatcher is `caddyfile_identity.go`;
 the store parser is `caddyfile_identity_store.go`.
 
-Use `configuration-users` for detailed local `user <username>` entries.
+Use [configuration-users](../configuration-users/SKILL.md) to configure static
+`user <username>` entries, password imports, API keys, and stored challenge rules.
 For password verification, credential versions, management/profile mutations,
 reload invalidation, and Caddy qualification, read
 [local identity compatibility](references/local-identity.md).
@@ -59,10 +60,11 @@ Local store-level options supported by authcrunch are `login_icon`,
 set those with `icon`, `enable username recovery`, `enable password recovery`,
 `enable contact support`, `support link`, and `support email`.
 
-When a local database path does not exist, authcrunch can create the database
-and bootstrap an administrative user. For first-run support, inspect Caddy logs
-for the generated username, email, and password. These environment variables can
-override the bootstrap account:
+Authcrunch creates a missing local database and bootstraps an administrative
+user whenever the loaded database has no administrator, including an existing
+database. Configure the bootstrap password explicitly before first startup:
+the selected library logs the created username, email and roles, but does not
+log the generated password. These environment variables set the account:
 
 ```text
 AUTHP_ADMIN_USER
@@ -87,12 +89,13 @@ either explicit `groups` or automatic group mapping. Use this practical shape:
 ldap identity store corp {
 	realm corp.example.com
 	servers {
-		ldaps://ldap.example.com ignore_cert_errors
+		ldaps://ldap.example.com
 	}
+	trusted_authority /etc/caddy/ldap/corp-ca.pem
 	username "CN=authsvc,OU=Service Accounts,DC=example,DC=com"
 	password {env.LDAP_BIND_PASSWORD}
 	search_base_dn "DC=example,DC=com"
-	search_filter "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))"
+	search_user_filter "(&(|(sAMAccountName=%s)(mail=%s))(objectclass=user))"
 	attributes {
 		name givenName
 		surname sn
@@ -125,7 +128,9 @@ seconds; the Caddyfile parser currently exposes only `ignore_cert_errors` and
 Prefer `trusted_authority <path>` for LDAPS trust over `ignore_cert_errors`.
 When collecting a server certificate chain for trust configuration, use
 `openssl s_client -showcerts` against the LDAPS endpoint, split the PEM
-certificates, and point `trusted_authority` at the required CA files.
+certificates, verify the intended CA against the directory operator's trust
+material, and point `trusted_authority` at those CA files. A certificate
+retrieved from the endpoint alone does not establish trust in that endpoint.
 
 If `search_user_filter`, `search_group_filter`, or `attributes` are omitted,
 authcrunch defaults to Active Directory-style values:
@@ -155,17 +160,18 @@ Group mapping rules:
 
 Runtime LDAP authentication flow:
 
-1. Authcrunch opens a fresh LDAP connection for the login attempt; it does not
-   keep long-lived LDAP connections open.
-2. It binds with the configured service `username` and `password`.
-3. It substitutes the submitted username/email into `search_user_filter` and
-   searches under `search_base_dn`.
-4. Authentication fails unless exactly one user object is found.
-5. It maps LDAP group DNs to roles from explicit or automatic group mapping.
+1. Identification opens a fresh service-bound connection, escapes the submitted
+   username/email for `search_user_filter`, and searches under `search_base_dn`.
+2. Identification fails unless exactly one user object is found.
+3. It maps LDAP group DNs to roles from explicit or automatic group mapping.
    If no role is produced and no supported fallback applies, authentication
    fails before token issuance.
-6. It re-binds as the found user DN with the submitted password. A successful
-   re-bind allows token issuance.
+4. Password authentication opens another fresh service-bound connection,
+   repeats the user search, then binds as the found user DN with the submitted
+   password. Completing the required challenges allows token issuance.
+
+Connections are closed after each operation; identification and password
+verification do not share a long-lived connection.
 
 This flow means a correct-looking Caddyfile can still fail because the search
 filter is too broad, group membership does not map to any role, LDAPS trust is
@@ -212,3 +218,11 @@ Use these examples:
 - `caddyfile_identity_test.go`.
 - `caddyfile_identity_store_test.go`.
 - `testdata/caddyfile_adapt/testcase_security_authentication_portal.Caddyfile`.
+
+The LDAP journey in `ldap_fallback_e2e_test.go`, invoked by
+`TestCaddyAuthenticationChallengesE2E`, checks verified LDAPS, fallback role
+claims and a protected route. It does not qualify every directory schema,
+POSIX group lookup, or production CA configuration. For those changes, verify
+exactly-one-user selection, explicit and automatic mapping, unmapped-user
+rejection or fallback, wrong-password rejection and trust failures against a
+disposable directory before claiming login compatibility.

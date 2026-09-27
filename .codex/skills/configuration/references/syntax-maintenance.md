@@ -114,8 +114,9 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 
 ## Validate at the Right Layer
 
-Use [testing-and-ci](../../testing-and-ci/SKILL.md) and
-[scripts-and-automation](../../scripts-and-automation/SKILL.md) for commands:
+Validation commands follow [testing-and-ci](../../testing-and-ci/SKILL.md);
+side effects and Make targets follow
+[scripts-and-automation](../../scripts-and-automation/SKILL.md):
 
 ```sh
 make build

@@ -60,7 +60,8 @@ independent scan of go-authcrunch or another dependency.
 ## Local execution
 
 Provide a compatible CodeQL CLI on PATH or set `CODEQL` to its absolute path.
-CodeQL 2.27.0 and Go 1.26.8 were used for the initial local validation. Keep
+Record the selected CLI/pack versions and compare the Go toolchain with the
+workflow before interpreting results. Keep
 downloaded tools under this checkout's `tmp/`; do not run sibling maintenance
 or scan scripts. Python 3.9+ and Bash run the helper. Query pack downloads may
 require network access and use the CLI's package cache. No module manifests

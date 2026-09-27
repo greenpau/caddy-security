@@ -11,12 +11,13 @@ This is a local deployment rehearsal, not OpenID certification. Never submit,
 publish, freeze certification packages, or use the certification mark as part
 of this workflow. The separate library rehearsal is reference evidence only.
 
-The current Caddy dependency pin is
-`go-authcrunch v1.3.3`, whose published tag resolves to
-commit `30985f1c9ed812218a8609cd2fc10e224b7e0f31`. Use an immutable published
-commit pin when qualifying newer upstream work; this harness rejects local
-module replacements and records the downloaded module checksums and Git origin.
-Reading a sibling checkout alone does not select it for a Caddy build.
+Establish the candidate dependency with
+`go list -m -json github.com/greenpau/go-authcrunch` and `go.mod`; the selected
+published module is v1.3.4. The harness rejects local module replacements and
+records downloaded module checksums and Git origin. Reading a sibling checkout
+alone does not select it for a Caddy build. A dependency change requires new
+candidate evidence; ordinary unit/E2E results and an older official-plan bundle
+do not establish conformance outcomes for the changed candidate.
 
 The current provider supplies themed consent, form-post and browser error pages,
 including same-origin referrer policy and callback-bound form-action. The Caddy
@@ -25,72 +26,11 @@ deployment preserves those headers without importing the older v1.2.6 snippet.
 Preflight validates CSP directives, nonce-limited styles and same-origin assets,
 and still rejects null/cross-origin and forged-CSRF submissions.
 
-The recorded official-plan rehearsals below used older dependencies. The v1.3.3
-upgrade is qualified by ordinary Caddy unit/E2E tests; those tests do not
-relabel historical conformance outcomes or establish a new official-plan run.
-
-## Verified v1.3.2 Caddy rehearsal
-
-The 2026-09-19 UTC run at
-`tmp/oidc-conformance/caddy-rehearsal-20260919/index.html` completed all
-71 instances with **65 PASSED, 6 REVIEW, zero WARNING/SKIPPED/FAILED/INTERRUPTED**
-and original runner exit **0**. It used published go-authcrunch v1.3.2, Caddy
-v2.11.4, the pinned Chrome and unchanged suite below. The six REVIEW instances
-are `oidcc-prompt-login`, `oidcc-max-age-1` and
-`oidcc-ensure-registered-redirect-uri`, once in each code-flow plan. Their actual
-Chrome screenshots, repeated authentication journeys and redirect rejection
-remain available for human review; these labels were not promoted to PASSED.
-
-Basic and Form Post each recorded 32 PASSED and 3 REVIEW; Config recorded one
-PASSED. All 142 detached signatures, six signed screenshot matches and 1,689
-evidence hashes verified. All owned process leaders were reaped and no longer
-live, and the complete evidence retained private file modes. The source archive
-includes the current uncommitted composition changes and harness sources;
-`candidate.json` and `source-manifest.json`, rather than HEAD alone, identify
-the tested build. All 64 isolated harness tests and the focused race-enabled
-application parser, JSON/PKCE restoration and public-client transition tests
-passed. The fresh run observed no Caddy-owned failures or remaining library
-capability gaps in these plans; the six visual reviews remain outstanding.
-
-An independent same-host repeat at 10:46–10:49 UTC on 2026-09-19 is retained at
-`tmp/oidc-conformance/caddy-rehearsal-20260919-repeat/index.html`. All 64 harness
-tests and all 71 official instances completed with the same outcomes and
-original runner exit 0. The freshly rebuilt Caddy binary had the same SHA-256;
-client IDs/secrets, OP keys and TLS CA were independently generated. All 142
-signatures, six signed screenshot matches, 1,699 evidence hashes and private
-file modes verified, and owned processes stopped. The previous bundle remains
-intact; neither run is an all-pass result or certification.
-
-The [manual Actions artifact workflow](oidc-conformance-actions.md) was exercised
-locally through its stage wrapper on 2026-09-18, with the same module totals.
-Its artifact is at
-`tmp/oidc-conformance-ci-v1.3.2-final/artifact/index.html`. Decryption verified all
-1,701 archived files against their original bytes, all 1,692 evidence hashes,
-and six signed screenshot slots. Both reports passed actual Chrome desktop and
-390-pixel mobile layout checks. This local macOS execution does not claim that
-the new hosted Ubuntu workflow has been dispatched.
-
-The earlier `tmp/oidc-conformance-ci-v1.3.2/` attempt remains a blocked run:
-a new CI timeout-cleanup unit exposed a transient macOS process-group probe
-error before official modules started. Its original failure and encrypted
-artifact remain intact. Cleanup now waits for the owned child to be reaped;
-preparation also unwinds independent helper sessions on SIGTERM. That run's
-isolated harness/CI validation passed 63 tests, including real encryption,
-cancellation, private-output and original-exit checks.
-
-The v1.3.2 normal race-enabled `make test` run at
-`.coverage/authcrunch-v1.3.2/index.html` passed 1,827 tests with 21 intentional
-subprocess-helper skips, zero failures and 83.31% merged coverage (3,060/3,673
-statements). Regular automation passed 16 tests; the build, module verification,
-workflow lint and all 42 Caddyfile audit classifications also passed. Compared
-with the prior published commit pin, delegated parsers and provider runtime are
-unchanged; the production library diff updates the embedded authdb version.
-
 ## Official instructions and pin
 
 The Foundation's [current OP instructions](https://openid.net/certification/connect_op_testing/)
 and [local Build & Run instructions](https://gitlab.com/openid/conformance-suite/-/wikis/Developers/Build-%26-Run)
-were reinspected on 2026-09-19 UTC. Static testing requires independent Basic clients
+define the external workflow. Static testing requires independent Basic clients
 for code binding, a POST client, and the suite's exact alias callback. The
 Foundation requires running each module and retaining warning, skip, review,
 failure and interruption outcomes. Some modules request browser evidence.
@@ -293,10 +233,6 @@ python3 assets/scripts/cleanup_oidc_conformance.py --dry-run
 
 The Make recipe and safety tests run against disposable repositories during
 development. Existing official bundles are not deleted merely to test cleanup.
-The cleanup/naming change passed 44 isolated harness tests, 12 regular automation
-tests and the actual Caddy local preflight. Its full opt-in rerun at
-`tmp/oidc-conformance/oidc-cleanup-conformance-e2e/index.html` finished all 71
-instances with 65 PASSED, 6 REVIEW, no interruptions and original runner exit 0.
 
 ## Installed prerequisites and removal
 
@@ -312,7 +248,7 @@ Everything below is relative to `tmp/oidc-conformance/`:
 | `tools/maven` | Apache Maven: builds the suite jar and downloads Java dependencies. |
 | `tools/chrome` | Pinned Chrome for Testing: headless browser for real screenshots. |
 | `tools/chromedriver` | Matching ChromeDriver: WebDriver actions and BiDi network events. |
-| `tools/` | Download archives and versioned extracted directories; the three paths above are links into them. |
+| `tools/` | Download archives and versioned extracted directories; the tool entry paths above are links into them. |
 | `suite/` | Pinned official sources and the built jar. |
 | `venv/` | Isolated Python runner dependencies. |
 | `m2/`, `pip-cache/` | Local dependency caches. |
@@ -422,8 +358,11 @@ remain recorded. There is no expected-failure list.
 Preserve the entire result directory privately. Directories use `0700`, data
 files `0600`, and the owned Caddy executable `0700`. Logs, tokens, database,
 registrations, captured pages and config are sensitive even for synthetic users.
-Only reviewed redacted material is suitable for sharing; neither a full export
-nor `summary.json` is a public report.
+For local runs, share only reviewed material; full exports and raw
+`summary.json` can contain credentials. The separate
+[manual Actions workflow](oidc-conformance-actions.md) deliberately uploads the
+complete synthetic deployment evidence to repository readers. Do not use
+production identities or credentials in that workflow.
 
 - `candidate.json`, `source-manifest.json`, `candidate.patch`, `build.txt` and
   the binary identify the Caddy candidate, untracked additions, Go build and
@@ -472,265 +411,53 @@ machine kill cannot guarantee cleanup; retained process IDs and private data
 allow diagnosis. Do not delete evidence or rerun only passing modules to clear
 the workflow. It does not call certification package or publishing endpoints.
 
-## Current upstream qualification (2026-09-18)
+## Review criteria and known boundaries
 
-The `authcrunch-3e28980-complete` run tested Caddy v2.11.4 with the immutable
-go-authcrunch revision selected above, Go 1.26.8 and headless Chrome
-153.0.8010.47. All 71 official module instances finished, with original runner
-exit **0**, **65 PASSED and 6 REVIEW**, and no WARNING, SKIPPED, FAILED or
-INTERRUPTED modules. This is not an all-pass result or certification.
+Determine a run's result from its `execution.json`, every signed module
+instance and the exact `candidate.json` provenance. Keep validation summaries
+with their run bundles. Dated totals, old dependency results and ignored local
+report paths are not current compatibility contracts. A new rehearsal must
+preserve failed or blocked earlier attempts in their original destinations.
 
-| Plan | PASSED | REVIEW |
-| --- | ---: | ---: |
-| Basic OP code | 32 | 3 |
-| Config OP | 1 | 0 |
-| Form Post OP code | 32 | 3 |
+The pinned plans can require visual review for these modules in both code-flow
+plans; use the actual outcome of each instance rather than assuming a count:
 
-Every remaining REVIEW is an explicit visual check, once in each code plan:
+| Module | Required evidence |
+| --- | --- |
+| `oidcc-prompt-login` | Actual second login screen and completed password/consent/callback interaction after `prompt=login`. |
+| `oidcc-max-age-1` | Actual reauthentication after the suite's age limit, using the same browser profile for both authorizations. |
+| `oidcc-ensure-registered-redirect-uri` | Provider rejection page and network evidence that the browser did not navigate to an unregistered redirect. |
 
-- `oidcc-prompt-login`: inspect the second login screen and subsequent password
-  interaction after `prompt=login`.
-- `oidcc-max-age-1`: inspect reauthentication after the suite's age limit.
-- `oidcc-ensure-registered-redirect-uri`: inspect the provider's error page and
-  confirm no navigation to the unregistered redirect URI.
+REVIEW remains REVIEW until the external review process resolves it. Runner exit
+zero, a screenshot upload and matching module totals are not certification.
+The Request Object redirect-precedence case may validate its callback and pass
+while retaining an unused optional error-page slot or a placeholder REVIEW
+event in its signed logs. Preserve both the final instance outcome and its
+original conditions; never attach a login page as rejection evidence.
 
-The private HTML entry point is
-`tmp/oidc-conformance/authcrunch-3e28980-complete/index.html`. Each review links
-the original Chrome screenshot, browser/network timeline and official checks.
-All six uploaded screenshots match their signed exports byte for byte; all
-142 detached export signatures verify. Evidence hashes and offline report
-links were checked, and all owned processes were reaped. The provider supplies
-its own consent headers; no Caddy header override is active.
+Read current supported capabilities and exclusions in the
+[provider contract](oidc-provider.md#http-mount-and-protocol-contract). Optional
+profile claims require explicit fixture attributes; do not fabricate user data
+to remove a warning. Qualify a new capability through both local Caddy journeys
+and a new official-plan run before describing its conformance result. Library
+rehearsals alone do not establish the Caddy integration's result.
 
-The preceding `authcrunch-3e28980-initial` attempt stopped at preflight because
-the harness expected the old unstyled CSP. `authcrunch-3e28980-browser` then
-stopped on the official 500 KiB screenshot limit. Both attempts and their
-original outcomes remain in separate bundles. The correction validates the
-themed policy and captures a smaller, unmodified Chrome viewport; it does not
-change suite checks or reinterpret incomplete attempts as passes. The first
-successful run, `authcrunch-3e28980-viewport`, has the same totals. A subsequent
-`authcrunch-3e28980-final` attempt stopped in harness unit tests after a callback
-variable was mistakenly removed during cleanup; it ran no official modules.
-The variable was restored before the complete run, whose 52 isolated harness
-unit tests also passed.
+HtmlUnit success does not prove that Chrome completes consent. Verify actual
+browser-generated Origin, response Referrer-Policy and callback-bound
+form-action, including cross-origin/forged-CSRF rejection. The selected provider
+owns these headers; the current harness does not import a compatibility snippet.
+For a reported v1.2.6 deployment only, consult the
+[version-scoped consent response policy](oidc-provider.md#consent-response-policy-for-v126).
+Do not accept null Origin, rewrite request headers or weaken consent/CSRF checks.
 
-The final regular unit/race/E2E run also passed:
-`.coverage/authcrunch-3e28980-validated/index.html`, **1,787 PASSED**, 21 skipped
-subprocess entry points exercised by their parent E2E tests, zero failures,
-all four packages passed, and **82.68% coverage**. It qualified real TOTP replay
-protection, canonical profile isolation, credential invalidation after role
-changes, all nine cookie roles, provider-owned themed page policies, HTTPS
-Origin rejection and TCP/QUIC port selection. Regular automation passed all 12
-tests; all 42 standalone Caddyfile audits matched their expected behavior.
-Build, module verification, license and skill metadata/link checks passed.
-The private overview at `tmp/oidc-upstream-3e28980-diagnostics/index.html` links
-the final and intermediate results without replacing their recorded outcomes.
-
-## Historical Caddy rehearsals and non-pass modules
-
-The first full Caddy run on 2026-09-17 used Caddy **v2.11.4** and authcrunch
-**v1.2.5**, not a sibling replacement. All 71 modules completed, with the
-following original outcomes and a nonzero official runner result:
-
-| Plan | PASSED | WARNING | SKIPPED | REVIEW | FAILED | INTERRUPTED |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Basic OP | 24 | 3 | 4 | 4 | 0 | 0 |
-| Config OP | 0 | 1 | 0 | 0 | 0 | 0 |
-| Form Post OP code | 24 | 3 | 4 | 4 | 0 | 0 |
-| Total | 48 | 7 | 8 | 8 | 0 | 0 |
-
-The following accounts for every non-pass result in that historical v1.2.5 run.
-Except the single Config
-module, each row occurs once in Basic and once in Form Post:
-
-| Module | Result | Explanation / ownership |
-| --- | --- | --- |
-| `oidcc-scope-profile` | WARNING | Library/local identity model does not supply every optional profile claim. Do not fabricate attributes. |
-| `oidcc-ensure-request-with-acr-values-succeeds` | WARNING | Library does not advertise/assert an authentication-context vocabulary or return `acr`; `amr` is separate. |
-| `oidcc-claims-essential` | WARNING | Library advertises `claims_parameter_supported=false`; individual `name` requests do not override approved scopes. |
-| `oidcc-discovery-endpoint-verification` (Config only) | WARNING | Library supports unsigned by-value Request Objects, not the recommended RS256-signed Request Objects/client verification keys. ID tokens themselves are RS256 signed. |
-| `oidcc-scope-address` | SKIPPED | Optional address scope is not advertised. |
-| `oidcc-scope-phone` | SKIPPED | Optional phone scope is not advertised. |
-| `oidcc-scope-all` | SKIPPED | Required optional scopes are not all advertised. |
-| `oidcc-refresh-token` | SKIPPED | OIDC refresh grant is not implemented; portal refresh is a separate protocol. |
-| `oidcc-prompt-login` | REVIEW | Captured actual repeated-login page; review remains required. |
-| `oidcc-max-age-1` | REVIEW | Captured actual reauthentication page after the suite's wait; review remains required. |
-| `oidcc-ensure-registered-redirect-uri` | REVIEW | Captured actual rejection page for an unregistered redirect. |
-| `oidcc-ensure-request-object-with-redirect-uri` | REVIEW | The original harness incorrectly attached a login page to an optional error-page slot; callback validation subsequently succeeded. This was not redirect rejection. |
-
-The capability gaps above were addressed upstream in v1.2.6. No Caddy runtime
-failure was observed in those modules. Initial harness startup/collection
-failures are retained as failed attempts, including a terminated runner that
-could not authenticate to the suite API; they are not module passes. Inspect
-the latest run's `execution.json` and signed results before reporting a new
-candidate's outcome. A matching count from the library run is not evidence
-for Caddy, and these counts do not establish OpenID certification.
-
-### Earlier HtmlUnit rehearsal with released go-authcrunch v1.2.6
-
-The September 17 `v1.2.6-caddy` run used the published v1.2.6 module without a
-replacement, Caddy v2.11.4, and the same clean suite revision. The actual Make
-target completed all 71 modules with original runner exit **0** and Make exit
-**0**:
-
-| Plan | PASSED | REVIEW | WARNING | SKIPPED | FAILED | INTERRUPTED |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Basic OP | 32 | 3 | 0 | 0 | 0 | 0 |
-| Config OP | 1 | 0 | 0 | 0 | 0 | 0 |
-| Form Post OP code | 32 | 3 | 0 | 0 | 0 | 0 |
-| Total | 65 | 6 | 0 | 0 | 0 | 0 |
-
-All six remaining non-pass modules require visual review: `oidcc-prompt-login`,
-`oidcc-max-age-1`, and `oidcc-ensure-registered-redirect-uri`, once in each
-code-flow plan. The first two preserve actual fresh-login page source; the
-third preserves the unregistered-redirect `invalid_request` page. Review the
-captured behavior and meet any additional Foundation screenshot requirements.
-Do not relabel these REVIEW outcomes or infer certification from runner exit 0.
-
-Both `oidcc-ensure-request-object-with-redirect-uri` instances now pass through
-real callback validation. Their unused optional error-page slots and original
-placeholder REVIEW events remain in the exports; neither is a failed module or
-a reason to attach unrelated evidence. All original v1.2.5 bundles remain intact.
-
-Private entry point: `tmp/oidc-conformance/v1.2.6-caddy/index.html`. The collector
-verified 142 signatures across the overlapping plan/per-instance ZIPs, covering
-all 71 distinct instances. This is Caddy deployment evidence independent of the
-earlier library rehearsal; nothing was submitted or published.
-
-The earlier report-validation run at `tmp/oidc-conformance/v1.2.6 final/index.html`
-reproduced these exact outcomes and exit 0, using a destination containing a
-space. All 23 opt-in harness tests passed. Its six captures were checked against
-their requested evidence slots, every HTML link resolved, all 253 artifact
-hashes/private modes verified, and every owned process was reaped and exited.
-The selected release origin is `ba3696f476bcc99650df7c523e583679272589b5`;
-Caddy v2.11.4's origin is `e2eee6a7fce366321294c9c2a79f3146891dcbdf`.
-Candidate commit `deeac190d49426ab16ec6587aec946763d5df5e9` plus the retained
-patch, source manifest and binary identify the uncommitted Caddy candidate.
-The HTML explains why an unused optional error-page slot and a placeholder
-REVIEW event can coexist with a PASSED Request Object module.
-
-### Original headless Chrome run exposed a consent blocker
-
-The real-browser rehearsal of the same released v1.2.6 produced **65 PASSED,
-2 REVIEW, 4 INTERRUPTED**, original runner exit **1**. All 71 instances executed;
-all 142 overlapping plan/per-instance signatures verified. The two remaining
-REVIEW instances are `oidcc-ensure-registered-redirect-uri`, one per code plan.
-Each has a real Chrome PNG in its exact signed evidence slot. The four interrupted
-instances are `oidcc-prompt-login` and `oidcc-max-age-1` in both code plans.
-
-Those four reach password authentication and consent on their first authorization,
-but the consent POST returns `403 invalid_request`. The screenshot timeline and
-BiDi records show the actual chain: consent GET response `Referrer-Policy:
-no-referrer`, Chrome form POST `Origin: null`, then 403. This matches the
-[Fetch Origin-header algorithm](https://fetch.spec.whatwg.org/#append-a-request-origin-header).
-In go-authcrunch v1.2.6, `pkg/oidc/http.go:oidcHeaders` sets that policy;
-`pkg/oidc/authorization.go` requires `sameOrigin` for consent, and
-`pkg/oidc/provider.go:sameOrigin` rejects the resulting null origin. The same
-browser conflict was seen in an earlier diagnostic before the Chrome preference
-was established. No provider/security checks were disabled.
-
-This is **upstream work**: serve consent with a policy that preserves the
-same-origin form Origin (for example `same-origin` on that page), retain the
-origin and CSRF-token checks, and add real headless Chrome consent/reauthentication
-regressions. Validate cross-origin rejection and lack of cross-origin referrer
-leakage before releasing. Do not accept null Origin as a workaround. Caddy-owned
-harness fixes do not authorize editing the sibling repository.
-
-The original headless Chrome report was recorded at
-`tmp/oidc-conformance/chrome-evidence/index.html`; the `chrome-3` diagnostic and
-all earlier attempts are retained. The final run records all 71 instances,
-18 real screenshots, two signed official PNG uploads, original runner exit 1,
-and four explicit consent blockers. All 33 opt-in harness units passed. The
-independent audit verified 142 export signatures, 1,542 private artifact hashes,
-360 archived source files, 1,828 HTML/image links and stopped owned processes.
-The final HTML also passed real Chrome desktop/mobile checks for image loading,
-expandable network records, blocker explanations and layout. The audit and UI
-check outputs are under `tmp/oidc-chrome-evidence-audit.json` and
-`tmp/oidc-chrome-viewer-final/`, outside the immutable evidence bundle. Earlier HtmlUnit counts above are
-historical and do not prove successful real-browser consent. A subsequent
-deployment or released upstream fix must be rerun through this exact Caddy workflow before
-claiming that the interrupted cases complete. Screenshots cannot complete
-second-login review while the first consent is blocked.
-
-### Caddy deployment correction
-
-The harness now includes the reusable
-[v1.2.6 consent response policy](oidc-provider.md#consent-response-policy-for-v126)
-in its actual adapted Caddy deployment. It uses standard Caddy response-header
-matching to emit `Referrer-Policy: same-origin` only on successful consent HTML.
-The same responses retain restrictive CSP with form-action limited to `'self'`
-and the registered suite callback's exact HTTPS origin. Chrome checks that
-policy on the post-consent redirect as well; the original self-only value
-aborts the valid cross-origin callback. No wildcard or scheme-wide source is used.
-It leaves `authenticate` delegation and all provider security checks intact.
-The library and suite remain unmodified. Other Caddy deployments need to import
-the documented snippet explicitly; this does not change the library default.
-
-`consent-policy.json` records the exact paths, callback origin, scope and snippet hash. The HTML
-report explains the deployment policy and links its Caddyfile and local E2E
-evidence. Before starting the official plans, each of the three clients must
-reject `Origin: null`, a different Origin and a forged CSRF token, then complete
-consent with the correct Origin/CSRF and reject code replay. Actual Chrome
-submits its own headers during the official password/consent/reauthentication
-flows. Preserve the earlier interrupted runs as historical evidence; never
-reinterpret those outcomes after changing deployment configuration.
-
-The referrer-only diagnostic at `tmp/oidc-conformance/chrome-consent-fixed`
-preserves 14 PASSED and one unfinished UNKNOWN instance, with the remaining
-modules not run. Chrome emitted the correct Origin but aborted the consent
-redirect under the original self-only CSP. The browser worker stopped, the
-owned runner was terminated (original exit `-15`, shell result 143), and the
-report records `EVIDENCE_ERROR`. This attempt is not a complete plan result.
-The combined referrer/form-action deployment uses a separate destination.
-
-`suite-access.private.jsonl` records Caddy's incoming suite requests privately.
-Use it to verify actual callback headers: Chrome BiDi redirect events can retain
-headers from an earlier request even when the redirected wire request omits
-them. In particular, inspect headless Chrome callback navigations separately
-from the suite's HtmlUnit traffic and same-origin callback-page JavaScript.
-The raw BiDi events remain unchanged, alongside the server's observations.
-
-### Verified combined-policy rehearsal
-
-The completed `make oidc-conformance-test` run at
-`tmp/oidc-conformance/chrome-consent-final/index.html` records **65 PASSED,
-6 REVIEW, zero WARNING/SKIPPED/FAILED/INTERRUPTED**, with original runner exit
-**0**. All 71 instances finished. It used the published go-authcrunch v1.2.6,
-Caddy v2.11.4, pinned Chrome 153.0.8010.47 and the unchanged suite revision above.
-The preceding `chrome-consent-complete` run also completed with 65 PASSED and
-6 REVIEW; the final run adds private server access evidence and the corrected
-mobile report layout. Each bundle retains its own exact source/build evidence.
-
-| Plan | PASSED | REVIEW | INTERRUPTED |
-| --- | ---: | ---: | ---: |
-| Basic OP | 32 | 3 | 0 |
-| Config OP | 1 | 0 | 0 |
-| Form Post OP | 32 | 3 | 0 |
-
-The six remaining outcomes are `oidcc-prompt-login`, `oidcc-max-age-1`, and
-`oidcc-ensure-registered-redirect-uri`, once in each code-flow plan. The first
-two now complete both password/consent/callback sequences using the same Chrome
-profile and attach the actual second-login screenshot. The redirect case
-attaches the provider's actual rejection page. These are the suite's visual
-review requirements, not hidden failures or automatic PASSED results. Review
-their linked timelines, network records and signed conditions; do not change
-the recorded REVIEW labels or claim certification.
-
-The independent audit in `tmp/oidc-consent-final-audit.json` verified 142 export
-signatures, all 1,668 private artifact hashes, 361 archived source files, 2,033
-HTML/image links, 34 screenshots and all six PNGs in their signed evidence slots.
-All eight real Chrome consent submissions carried the correct Origin, and
-Caddy received all eight Chrome callback navigations without cross-origin
-Referer. Thirteen recorded owned PIDs were stopped. Seven final HTML pages
-passed actual Chrome desktop and 390-pixel mobile checks, including image
-loading, expanded details and overflow. UI evidence is outside the immutable
-bundle at `tmp/oidc-consent-report-ui-final/`.
-
-Validation for this correction passed 35 isolated harness/report units and
-50 focused Go tests, including adaptation/delegation units and the actual
-Caddy TLS RP E2E at both mounts. Its report is
-`.coverage/oidc-consent-redirect/index.html`. The regular testing targets still
-do not launch official conformance.
+Use `suite-access.private.jsonl` to confirm the suite's received callback
+headers. Chrome BiDi redirect events can retain headers from an earlier request
+even when the redirected wire request omits them. Distinguish Chrome navigations
+from HtmlUnit requests and same-origin callback-page JavaScript; retain raw BiDi
+events alongside server observations. Independently verify signed screenshot
+bytes, export signatures, evidence hashes, source manifests, report links and
+owned-process shutdown. Never edit an immutable run bundle to make a later fix
+appear to have passed in that earlier run.
 
 ## Regression validation
 
@@ -779,7 +506,8 @@ suite's limit. The browser E2E uses a deterministic noisy page to force the
 oversized-image path on macOS as well as Linux. Themed errors are recognized
 from the real OP error-page heading/alert; login/password/consent forms take
 precedence and must never fill a redirect-error evidence slot.
-A real Chrome conformance execution is required in addition to these units.
+Changes to browser execution require a real Chrome conformance run in addition
+to these units; documentation-only updates do not launch the official plans.
 
 `test_oidc_conformance_cleanup.py` covers default/custom/legacy/blocked bundles,
 loose logs/audits/helpers and browser-report profiles, retained prerequisites
@@ -794,11 +522,3 @@ directory is `assets/scripts/oidc_certification_conformance_tests/`. Browser
 workers, installers and renderers use explicit `oidc_conformance_*` module names.
 The Foundation checkout and its own filenames remain unmodified. Historical
 signed bundles keep their original filenames and source snapshots.
-
-The v1.2.6 upgrade also passed the full normal `make test` unit/E2E workflow
-(`.coverage/authcrunch-v1.2.6-final/index.html`): zero failures, 81.7% coverage,
-and 21 subprocess-helper entry points skipped in the parent run and exercised
-through their E2E parents. Regular automation passed all 12 tests. Restrictive
-umask coverage exposed two nonprivate-key rejection fixtures that now explicitly
-set their intended `0644` mode; the production permission check remains intact.
-The earlier failed test log is retained under `tmp/` alongside the successful rerun.

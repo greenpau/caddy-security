@@ -1,6 +1,6 @@
 ---
 name: configuration-registrations
-description: "caddy-security user registration Caddyfile configuration. Use when creating, reviewing, or modifying user registration blocks, registration titles and codes, dropbox files, terms and privacy links, accepted email domains, MX checks, email provider wiring, admin notification addresses, and identity store targets."
+description: "Configure local user signup, domain/MX rules, terms, confirmation, dropbox storage, and messaging. Use for registration versus account activation; OAuth client registration is separate."
 ---
 
 # Configuration Registrations
@@ -105,10 +105,20 @@ name, optional registration code, and required terms acceptance, then receives
 an email confirmation link and short passcode. The confirmation passcode is
 time-limited in authcrunch; when it expires, the user must register again.
 
-After email confirmation, current docs still describe administrator approval as
-manual: review the dropbox file and move approved user data into the target
-local identity store database or another management path. Do not promise a full
-admin approval UI unless the current go-authcrunch implementation provides it.
+After email confirmation, the handler consumes the pending registration, adds
+the user to the dropbox database and attempts an administrator notification.
+That database is separate from the target login store. Approval and transfer
+into the login store remain a separate management operation; no full approval
+UI is implemented here. Do not edit a serving identity database as a routine
+approval step. Use a supported management path or arrange an offline import and
+explicit reload. A notification failure after the dropbox commit is logged and
+does not undo the committed registration.
+
+Pending registrations are held in the registry's in-memory cache. Reload or
+restart discards them; the durable dropbox only contains confirmed entries.
+An expired or lost pending registration must be started again. A supplied
+password must be plaintext: v1.3.4 rejects reserved password-hash import prefixes
+on the public registration path, while trusted static-user imports are separate.
 
 When multiple registrations target different identity stores or realms, use
 separate dropbox paths. The portal exposes realm-specific registration URLs,
@@ -119,11 +129,12 @@ for example:
 /auth/register/userpool1.localdomain
 ```
 
-For local validation without a real SMTP server, `smtp-debug-server` from
-`github.com/emersion/go-smtp/cmd/smtp-debug-server` can listen on
-`127.0.0.1:1025` and print raw registration email content. This is useful for
-verifying confirmation links, passcodes, BCC handling, and registration
-metadata. Installing it may require network access.
+For local validation without SMTP, point `email provider` at a file messaging
+provider whose `root_dir` is a disposable path under this checkout's `tmp/`.
+Inspect the confirmation link and passcode in its `.eml` output using synthetic
+identities and separate temporary dropbox/login databases. This does not check
+SMTP authentication, TLS, sender headers or BCC delivery; the messaging skill
+documents those limits.
 
 ## Fixtures
 
@@ -131,3 +142,12 @@ Use these examples:
 
 - `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`.
 - `assets/config/registrations_local.json`.
+
+The adaptation/resolution fixture verifies configuration shape and defaults,
+not a registration journey. The lifecycle tests exercise registry ownership
+and replacement, but this checkout has no complete user-signup E2E. Do not
+confuse `TestCaddyRegistrationE2E`, which covers persisted OAuth client
+registrations, with user signup. A future user-signup acceptance case should
+reject wrong codes and disallowed domains, confirm one emitted link/passcode,
+verify only the dropbox receives the account, reject replay or lost pending
+state, and observe the administrator notification and separate activation.

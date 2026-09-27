@@ -1,6 +1,6 @@
 ---
 name: configuration-authentication
-description: "caddy-security authentication portal Caddyfile configuration. Use when creating, reviewing, or modifying security authentication portal blocks, route-level authenticate directives, portal crypto, token refresh blocks, enabled identity stores, OAuth or SAML identity providers, SSO app providers, trusted redirects, source address validation, or portal wiring. For cookies, UI, and user transforms use the focused authentication subskills."
+description: "Configure authentication portals, backend selection, redirect trust, refresh, and portal wiring. Delegates cookies, UI, transforms, crypto, and OIDC provider details to focused skills."
 ---
 
 # Configuration Authentication
@@ -10,9 +10,9 @@ description: "caddy-security authentication portal Caddyfile configuration. Use 
 Use this skill to configure `authentication portal <name>` blocks and the
 route-level `authenticate with <portal>` handler.
 
-Use `configuration-http-integrations` for route placement, matcher forms,
-same-host or split-host portal wiring, portal/protected route separation, and
-directive-order guardrails when attaching the portal to HTTP routes.
+Use [configuration-http-integrations](../configuration-http-integrations/SKILL.md)
+to place portal routes, select matchers, wire same-host or split-host portals,
+separate portal/protected routes, and check directive ordering.
 
 Read these files when details matter:
 
@@ -33,25 +33,30 @@ Read these files when details matter:
 
 Use focused repo-local skills for specialized portal sub-blocks:
 
-- `configuration-oauth-applications` for portal `oidc provider` blocks, named
-  client selection, private registrations, and dedicated provider signing keys.
+- Use [configuration-oauth-applications](../configuration-oauth-applications/SKILL.md)
+  to configure portal `oidc provider` blocks, named client selection, private
+  registrations, and dedicated provider signing keys.
   Its [provider reference](../configuration-oauth-applications/references/oidc-provider.md)
   covers explicit realm participation and separate issuers/cookie scopes across
   portals; attaching a store for portal login does not enable its realm for OIDC.
-- `configuration-crypto` for portal `crypto` defaults, JWT signing keys,
-  auto-generated keys, token names and lifetimes, secret-backed key material,
-  and System API `system` keys.
-- `configuration-authentication-cookies` for `cookie` and token-cookie naming.
-- `configuration-authentication-ui` for `ui` blocks, templates, static assets,
-  custom CSS/JS/HTML, themes, languages, logos, and private links.
-- `configuration-authentication-user-transforms` for `transform user` blocks,
-  ACL matchers, typed claims, conditional challenge selection, additive legacy
-  requirements, claim replacements and transform UI links.
-  Use `configuration-users` for persisted local-user challenge rules.
-- `configuration-saml-providers` for `saml identity provider <name>` login
-  providers enabled by the portal.
-- `authentication-portal-api` for JSON login, `/whoami`, `/beacon`, refresh
-  token, and admin/server API endpoint behavior.
+- Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure
+  portal `crypto` defaults, JWT signing keys, auto-generated keys, token names
+  and lifetimes, secret-backed key material, and System API `system` keys.
+- Use [configuration-authentication-cookies](../configuration-authentication-cookies/SKILL.md)
+  to configure `cookie` directives and token-cookie naming.
+- Use [configuration-authentication-ui](../configuration-authentication-ui/SKILL.md)
+  to configure `ui` blocks, templates, static assets, custom CSS/JS/HTML, themes,
+  languages, logos, and private links.
+- Use [configuration-authentication-user-transforms](../configuration-authentication-user-transforms/SKILL.md)
+  to configure `transform user` blocks, ACL matchers, typed claims, conditional
+  challenge selection, additive legacy requirements, claim replacements, and
+  transform UI links. Persisted local-user challenge rules belong to
+  [configuration-users](../configuration-users/SKILL.md).
+- Use [configuration-saml-providers](../configuration-saml-providers/SKILL.md)
+  to configure `saml identity provider <name>` login providers enabled by the portal.
+- Use [authentication-portal-api](../authentication-portal-api/SKILL.md) to build
+  or troubleshoot JSON login, `/whoami`, `/beacon`, refresh token, and admin/server
+  API interactions.
 
 ## Shape
 
@@ -72,7 +77,8 @@ Use focused repo-local skills for specialized portal sub-blocks:
 }
 
 example.com {
-	route /auth* {
+	@portal path /auth /auth/*
+	route @portal {
 		authenticate with myportal
 	}
 }
@@ -181,3 +187,13 @@ values. `testcase_authenticate_with_redirect_trust_malformed` must fail adaptati
 with a parser error, not a panic. The redirect-trust subtest in
 `TestCaddyOAuthE2E` verifies separate login/logout behavior over TLS and confirms
 that rejected reconfiguration leaves the running portal usable.
+
+## Acceptance criteria
+
+- A portal with explicitly selected, enabled backends serves login at its exact
+  mount; a disabled or unknown backend is rejected rather than silently replaced.
+- Trusted redirect rules retain their intended login/logout scope and matcher
+  semantics after adaptation and runtime replacement.
+- Refresh/OIDC participation is explicit per local realm. A portal-only syntax
+  fixture does not qualify renewal, provider exchanges, or durable restart;
+  those outcomes use the linked feature's Caddy unit and E2E evidence.

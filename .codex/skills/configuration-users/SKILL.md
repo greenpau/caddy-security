@@ -1,6 +1,6 @@
 ---
 name: configuration-users
-description: "caddy-security local user account Caddyfile configuration. Use when creating, reviewing, or modifying local identity store user entries, usernames, display names, email addresses, plaintext or bcrypt passwords, overwrite behavior, roles, static API key prefixes and payloads, authentication challenge rules, and secret-backed user attributes."
+description: "Configure static local accounts, required identity fields, trusted password imports, bcrypt API keys, roles, and stored challenge rules. Use for Caddyfile-owned users; online administration belongs to scripts-and-automation."
 ---
 
 # Configuration Users
@@ -9,11 +9,13 @@ description: "caddy-security local user account Caddyfile configuration. Use whe
 
 Use this skill for `user <username>` entries inside `local identity store`
 blocks. The Caddyfile syntax is authoritative in `caddyfile_identity_store.go`;
-the provisioning behavior is authoritative in the local `go-authcrunch` source,
+the provisioning behavior is authoritative in the selected `go-authcrunch` module,
 especially `pkg/ids/local/user.go`, `pkg/ids/local/authenticator.go`, and
 `pkg/identity/database.go`.
 
-Use `configuration-identity-stores` for the surrounding store.
+The surrounding store belongs to
+[configuration-identity-stores](../configuration-identity-stores/SKILL.md);
+account changes do not require reloading that router unless store settings change.
 
 ## Shape
 
@@ -43,15 +45,17 @@ The current Caddyfile parser supports only these subdirectives:
 - `name <full name>` with one or more words; multi-word names are joined with
   spaces.
 - `email <address>`.
-- `password <plain_text_or_bcrypt_value> [overwrite]`.
+- `password <plaintext_or_imported_hash> [overwrite]`.
 - `roles <role> [<role>...]`.
 - `api key <key_id> <bcrypt_value_or_secret_reference>`.
 - `auth challenges <rule body>`; repeat to append ordered rules.
 
 Use `overwrite` when the configured password should replace the existing stored
-password during provisioning. Passwords may be plaintext or
-`bcrypt:<cost>:<hash>` values; authcrunch hashes plaintext passwords before
-storing them.
+password during provisioning. With selected go-authcrunch v1.3.4, passwords may
+be plaintext, `bcrypt:<cost>:<hash>`, or `argon2:<PHC>` imports. The unchanged
+plaintext path creates bcrypt hashes. Static API-key payloads remain bcrypt;
+password-import support does not change their format. The local identity
+reference distinguishes upstream import support from Caddy qualification.
 
 Duplicate password updates can reuse the active hash while still advancing the
 account's credential version. Legacy records without `credential_version`
@@ -112,8 +116,8 @@ api key kid123456789012345678901 "secrets:users/alice:api_key"
 Make sure API key placeholders and secret lookups resolve to a value in the
 `bcrypt:<cost>:<hash>` form.
 
-Use `configuration-secrets` and `configuration-runtime-resolution` for
-secret-backed values.
+Secret-backed values follow the [manager contract](../configuration-secrets/SKILL.md)
+and [runtime field contract](../configuration-runtime-resolution/SKILL.md).
 
 ## Review Checklist
 
@@ -123,8 +127,13 @@ Check generated local user entries against these code-backed constraints:
 - The username is present and compatible with the local database policy; the
   default policy requires length 3-50.
 - New users have a password compatible with the local database policy; the
-  default policy requires length 8-128.
-- `email`, when present, is a single valid email address.
+  default policy requires length 8-128. The default bcrypt creation path also
+  rejects plaintext longer than 72 bytes; the policy's upper bound does not
+  override that algorithm limit. Trusted imported hashes use their own format
+  validation because the underlying plaintext length is unavailable.
+- `email` is a single valid address. Although its presence is not checked by
+  the Caddyfile parser, new-user provisioning requires it; an existing user's
+  configured username and email must identify the same stored account.
 - `roles` has at least one role when used.
 - Repeated `auth challenges` rules form one validated, ordered policy.
 - `password overwrite` has only the literal `overwrite` as its second argument.

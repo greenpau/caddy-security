@@ -1,21 +1,15 @@
----
-name: skill-authoring-patterns
-description: Create, port, rewrite, review, or validate caddy-security repo-local skills, agents/openai.yaml metadata, AGENTS.md routing, and focused configuration, implementation, or workflow guidance.
----
-
-# Skill Authoring Patterns
+# caddy-security Skill Authoring Supplement
 
 ## Scope and Structure
 
-Use this skill with the default `$skill-creator`; read that skill completely
-first. Locate it through the active skills catalog rather than embedding a
-developer-specific home directory. Apply `coding-directives` when the task
-also changes or reviews application code, and `testing-and-ci` when selecting
-repository tests or updating fixtures. Skill-only changes need metadata and
-source checks, not a Go build or broad source regeneration.
+Locate the default `$skill-creator` through the active skills catalog rather
+than embedding a developer-specific home directory. Application code follows
+[coding-directives](../../coding-directives/SKILL.md); test selection and fixture
+changes follow [testing-and-ci](../../testing-and-ci/SKILL.md). Skill-only changes need
+metadata and source checks, not a Go build or broad source regeneration.
 
-Apply the [repository scope](../coding-directives/SKILL.md#repository-scope) to
-skill work as well as code. Read sibling agent files and skills as references;
+Apply the [repository scope](../../coding-directives/SKILL.md#repository-scope)
+to skill work as well as code. Read sibling agent files and skills as references;
 port or adapt guidance into `.codex/skills` here. Do not edit the source
 repository's skills, metadata, `AGENTS.md`, or automation when porting. Preserve
 both the read-only boundary and the named `../xcaddy-caddy-security` build
@@ -23,16 +17,12 @@ workspace exception in new skills. Audit imported commands for working
 directories, cleanup, generated output, and any instruction to change or test
 another repository; the xcaddy exception does not authorize upstream edits.
 
-Default repo-local skills to `.codex/skills`. Use lowercase hyphen-case names
-under 64 characters, with matching folder and frontmatter names. New
-frontmatter needs `name` and a concise `description` that distinguishes the
-requests the skill handles. Preserve supported existing metadata when editing.
-
-Use `agents/openai.yaml` for quoted `display_name`, `short_description`, and
-`default_prompt` values. Keep the short description within 25–64 characters
-and have the prompt name the exact `$skill-name` and a useful task. Follow the
-default skill-creator's metadata reference and generator for new interfaces;
-preserve existing invocation policy and dependencies when updating a file.
+Keep UI metadata values quoted. The short description must be 25–64 characters,
+and the default prompt must name the exact `$skill-name` and a useful task.
+Follow the default skill-creator's metadata reference and generator for new
+interfaces; preserve existing invocation policy and dependencies when updating
+a file. The [hierarchy contract](hierarchy-contract.md) owns repo-local
+frontmatter requirements.
 
 Keep routers short and leaf skills focused. Add a `references/` file only for
 substantial conditional detail and link it where its use becomes relevant.
@@ -41,11 +31,10 @@ TODO/TBD content, creation history, or an extra README to a skill directory.
 
 ## Ownership and Routing
 
-Route from `AGENTS.md` and broad concern skills to narrow owners. Keep generic
-repository rules in concern skills and concrete grammar, config mapping,
-runtime contracts, and validation in the owning feature skill. Split a concern
-only when distinct behavior justifies it. Avoid leaf-to-router reloads and
-duplicating the same rule across skills.
+Keep generic repository rules in concern skills and concrete grammar, config
+mapping, runtime contracts, and validation in the owning feature skill. Split
+a concern only when distinct behavior justifies it. Avoid leaf-to-router
+reloads and duplicating the same rule across skills.
 
 Use the existing ownership map when extending guidance:
 
@@ -62,16 +51,15 @@ Use the existing ownership map when extending guidance:
   `authentication-portal-api` owns programmatic portal integration;
   `source-code-management` owns commit-message rules and files.
 
-Update `AGENTS.md` and the relevant parent routing whenever discoverability
-changes. Keep `AGENTS.md` to repository orientation, shared invariants, and
-routing; keep `README.md` and `CONTRIBUTING.md` useful for human onboarding.
-Keep repository documentation in the relevant repo-local skill under
-`.codex/skills` or its linked `references/` files. Do not create or retain
-Markdown documentation in `docs/` or `assets/docs/`. When moving existing
-guidance, preserve its useful content in the owning skill and update inbound
-links. Extend an existing skill when its scope fits; create a focused skill and
-update routing when no existing owner fits. Keep README/CONTRIBUTING onboarding
-and AGENTS routing brief, with links to the owning skills for details.
+Keep `AGENTS.md` to repository orientation, shared invariants, and routing;
+keep `README.md` and `CONTRIBUTING.md` useful for human onboarding. Keep
+repository documentation in the relevant repo-local skill under `.codex/skills`
+or its linked `references/` files. Do not create or retain Markdown documentation
+in `docs/` or `assets/docs/`. When moving existing guidance, preserve its useful
+content in the owning skill and update inbound links. Extend an existing skill
+when its scope fits; create a focused skill and update routing when no existing
+owner fits. Keep README/CONTRIBUTING onboarding and AGENTS routing brief, with
+links to the owning skills for details.
 
 `assets/docs/` may hold non-Markdown assets such as images. Preserve those assets
 unless their relocation or removal is part of the task.
@@ -85,9 +73,9 @@ parser and into the authcrunch config constructor, field, raw instruction, or
 in `plugin_authn.go` and `plugin_authz.go`. Identify concrete grammar/defaults,
 argument errors, Caddy JSON shape, and provisioning behavior as relevant.
 
-Use `coding-directives` for parser conventions and the
-[syntax maintenance workflow](../configuration/references/syntax-maintenance.md)
-for grammar ownership. Cookie, admin API, and OAuth configuration use shared
+Parser conventions belong to [coding-directives](../../coding-directives/SKILL.md);
+the [syntax maintenance workflow](../../configuration/references/syntax-maintenance.md)
+identifies grammar ownership. Cookie, admin API, and OAuth configuration use shared
 parsers; crypto, messaging, registration, ACLs, transforms, and auth proxy
 settings also delegate grammar or validation. Inspect both the Caddy wrapper
 and the selected upstream parser, shared dispatcher, and runtime consumer.
@@ -108,7 +96,7 @@ Anchor examples and checks in existing `caddyfile_*_test.go` tests and
 `testdata/caddyfile_adapt/` fixtures. Distinguish parsed JSON (`.json`) from
 runtime-resolved expectations (`_resolved.json`) and identify the tests that
 actually exercise the fixture. Feature guidance must identify the unit and E2E
-test surfaces required by [testing-and-ci](../testing-and-ci/SKILL.md#required-coverage-for-code-changes),
+test surfaces required by [testing-and-ci](../../testing-and-ci/SKILL.md#required-coverage-for-code-changes),
 plus adaptation cases for Caddyfile directive changes. Do not imply E2E coverage
 solely from parser/adapt fixtures or sibling-module tests. Preserve the
 app/plugin boundary: `app.go` provisions shared authcrunch objects; the HTTP
@@ -130,15 +118,14 @@ statement to its declaration or owning skill, then remove obsolete prose and
 links. Avoid requiring unrelated validation, release operations, or renewed
 approval for actions already authorized by the user.
 
-Validate every changed skill with the default skill-creator's
-`scripts/quick_validate.py`. Also parse UI metadata, check the exact skill
-invocation, inspect relative links and concrete source paths, and verify
-command semantics against the Makefile/scripts. The quick validator does not
-establish those behavioral claims. Review likely requests for routing gaps,
-unsupported commands, sibling-only contracts, and unintended side effects.
+Beyond the default skill validator, parse UI metadata, check the exact skill
+invocation, inspect relative links and concrete source paths, and verify command
+semantics against the Makefile/scripts. The quick validator does not establish
+those behavioral claims. Review likely requests for routing gaps, unsupported
+commands, sibling-only contracts, and unintended side effects.
 
 Run added or changed automation with checks proportional to its effects. Use
 disposable repositories and local bare remotes for release behavior; never
 publish as a validation step. For skill-only edits, metadata/link checks,
-source comparison, and `git diff --check` are sufficient. Report validation
-performed and any behavior that could not be verified.
+source comparison, routing audits, and `git diff --check` are sufficient. Report
+validation performed and any behavior that could not be verified.

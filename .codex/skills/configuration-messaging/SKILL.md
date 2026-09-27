@@ -1,6 +1,6 @@
 ---
 name: configuration-messaging
-description: "caddy-security messaging provider Caddyfile configuration. Use when creating, reviewing, or modifying messaging email provider or messaging file provider blocks, SMTP settings, passwordless email, senders, BCC addresses, message templates, root directories, and registration email wiring."
+description: "Configure email and file messaging providers, SMTP transport, sender/authentication, templates, and registration delivery wiring. Use to distinguish parsed settings from actual delivery behavior."
 ---
 
 # Configuration Messaging
@@ -48,27 +48,28 @@ Email providers require:
 Use `passwordless` instead of `credentials <name>` when the SMTP server does
 not require authentication.
 
-Coordinate `credentials <name>` with `configuration-credentials`.
+In selected go-authcrunch v1.3.4, `smtp` opens a plaintext SMTP connection;
+the sender does not negotiate STARTTLS. `smtps` uses implicit TLS with
+certificate verification. A server requiring STARTTLS is not supported by
+switching `protocol smtp` to port 587. Use an endpoint that supports the chosen
+transport; there is no Caddyfile STARTTLS or custom SMTP CA directive here.
 
-For local registration or MFA email testing, run a mock SMTP server on the
-configured address:
+The referenced `credentials <name>` object follows
+[configuration-credentials](../configuration-credentials/SKILL.md).
 
-```bash
-go install github.com/emersion/go-smtp/cmd/smtp-debug-server@latest
-smtp-debug-server
-```
-
-The common docs examples use `127.0.0.1:1025` with `protocol smtp` and
-`passwordless`. The debug server prints raw SMTP conversations and rendered
-messages, which helps verify confirmation links, passcodes, BCC recipients,
-sender identity, and registration metadata. Installing the tool may require
-network access; use an existing local binary when available.
+For local registration message checks, use the built-in file provider below
+with a disposable `root_dir` under this checkout's `tmp/`; no SMTP tool install
+is needed. This verifies rendered content, not SMTP authentication, TLS or
+recipient delivery. When the task requires SMTP evidence, use an explicitly
+configured loopback test server and synthetic credentials, inspect its envelope
+recipients as well as message headers, and stop it after the check. Keep any
+added test tooling and its output in the repository and pin its version.
 
 ## File Provider
 
 ```caddyfile
 messaging file provider local_outbox {
-	root_dir assets/config/messages
+	root_dir tmp/registration-messages
 	sender root@example.com "Example Auth Portal"
 	template registration_confirmation templates/registration_confirmation.tmpl
 	template registration_ready templates/registration_ready.tmpl
@@ -80,9 +81,12 @@ File providers write `.eml` messages under `root_dir`. Authcrunch requires both
 `root_dir <path>` and `sender <email> [display_name]`. File providers do not use
 `credentials` or `passwordless`.
 
-Email providers use `bcc <email>...` when constructing outgoing SMTP messages.
-File providers parse and preserve `bcc`, but the current file sender writes only
-the `To` recipients into the generated `.eml` file.
+In v1.3.4, email providers put `bcc <email>...` into a `Bcc` message header but
+do not add those addresses to SMTP `RCPT TO`. Do not rely on it for copy
+delivery or recipient privacy: recipients can see that header. This is an
+upstream sender limitation, not configurable Caddy behavior. File providers
+parse and preserve `bcc`, but the file sender writes only `To`; it also omits
+the configured sender from the `.eml` content.
 
 Both email and file providers validate and preserve these template IDs:
 
@@ -137,7 +141,8 @@ user registration signup {
 }
 ```
 
-Use `configuration-registrations` for the registration block.
+The registration block belongs to
+[configuration-registrations](../configuration-registrations/SKILL.md).
 
 ## Fixtures
 
@@ -145,3 +150,11 @@ Use these examples:
 
 - `caddyfile_messaging_test.go`.
 - `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`.
+
+The parser test checks encoded instructions. Adapt/resolution and lifecycle
+tests verify configuration and replacement, not message delivery. This checkout
+has no complete user-registration SMTP E2E. Acceptance for a sender change
+needs a disposable recipient server that observes the negotiated transport,
+authentication, envelope recipients and rendered confirmation link; a `Bcc`
+header alone is not delivery evidence. File-provider acceptance checks private
+`.eml` output and content, and reports SMTP behavior as untested.

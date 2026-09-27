@@ -1,6 +1,6 @@
 ---
 name: break-fix-troubleshooting
-description: "caddy-security break-fix triage and support-report workflow. Use when diagnosing reported configuration, deployment, or runtime failures; analyzing Caddyfiles, Caddy logs, redirect loops, login failures, authorization denials, OAuth/OIDC/SAML/LDAP/local-user issues, module-version mismatches, or secret/runtime placeholder problems; preparing GitHub issue Markdown files for .github/ISSUE_TEMPLATE/break-fix.md under tmp/breakfix/; or identifying gaps in repository skills after troubleshooting."
+description: "Diagnose caddy-security deployment and runtime failures from configs, logs, versions, and HTTP evidence. Use for focused fixes, unresolved support handoffs, or preparing break-fix issue reports."
 ---
 
 # Break-Fix Troubleshooting
@@ -24,30 +24,32 @@ separate work, and continue any correction that can be completed in this module.
    behavior, and whether the failure happens during Caddyfile adaptation,
    provisioning, login, callback handling, authorization, upstream proxying, or
    token/session validation.
-2. Gather evidence before diagnosing:
-   full Caddyfile, relevant Caddy logs, browser or HTTP status details,
-   `caddy version`, `caddy list-modules --versions | grep -E "(auth|security)"`,
-   operating environment, recently changed config, and last known working
-   version when available.
+2. Inspect supplied evidence first and gather only missing details that can
+   distinguish the likely causes: relevant Caddyfile, logs, HTTP/browser status,
+   `caddy version`, `caddy security version`,
+   `caddy list-modules --versions | rg '(auth|security)'`, operating environment,
+   recent changes, and last known working version. Use the actual installed
+   binary name; older binaries may lack `security version`.
 3. Redact secrets while preserving directive names, route structure, identity
    provider names, policy names, cookie names, issuer URLs, redirect paths,
    roles, claim names, and module versions.
-4. Load the relevant repository skills:
-   `configuration` for Caddyfile analysis, then the specific domain skills for
-   authentication portals, authorization policies, identity stores, OAuth
-   providers, SSO/SAML, credentials, messaging, users, secrets, registrations,
-   or runtime resolution. Use `testing-and-ci` when validation requires tests,
-   fixtures, or CI reproduction.
+4. Use [configuration](../configuration/SKILL.md) to analyze Caddyfiles and
+   select the affected authentication, authorization, identity, or runtime domain.
+   Test selection and fixture/CI mechanics follow the
+   [testing contract](../testing-and-ci/SKILL.md).
 5. Compare the configuration to the parser files and fixtures named by the
    loaded skills. Prefer the smallest valid corrected configuration over a broad
    rewrite.
 6. Validate with the narrowest available command. Use Caddy adaptation or
    focused Go tests when local context supports it; otherwise describe the exact
-   command the reporter should run.
+   command the reporter should run. Adaptation does not prove runtime behavior;
+   `validate` and `run` may open identity files or contact providers. Reproduce
+   with disposable local data before provisioning a supplied deployment config.
 7. Report the root cause, the minimal fix, validation performed, remaining
    uncertainty, and any repository-skill gap discovered during the work.
-8. Write a GitHub-issue-ready Markdown report under `tmp/breakfix/` unless the
-   user explicitly asks not to create files.
+8. For an issue-preparation request or a useful unresolved handoff, write the
+   report under `tmp/breakfix/`. A direct explanation or completed small fix does
+   not automatically require an issue artifact; honor the requested deliverable.
 
 ## Symptom Checks
 
@@ -169,3 +171,12 @@ enough for the issue, capture:
 
 Prefer turning repeated support issues into skill improvements so future agents
 can generate secure, production-ready guidance on the first attempt.
+
+## Acceptance criteria
+
+- A supplied reproduction leads to the smallest evidence-backed correction or
+  an explicit unresolved boundary; observed facts and hypotheses stay distinct.
+- A missing plugin, provider outage, or upstream defect is not described as
+  fixed by parser success. Sensitive inputs remain redacted in any handoff.
+- A report request produces a self-contained issue artifact. A quick explanation
+  can finish without one, and diagnosis does not activate a live deployment.

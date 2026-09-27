@@ -12,10 +12,11 @@ references. Keep implementation and tests here; report upstream fixes separately
 
 Keep form and JSON password authentication delegated through the local store's
 `AuthenticateUser` to `identity.Database.AuthenticateUser`. The database builds
-its bcrypt comparison schedule across enabled accounts and active passwords,
-using costs encoded in hashes, including mixed costs and multiple active hashes.
-Missing, disabled, and present users receive that schedule. A match does not
-short-circuit it. Do not replace this with `User.VerifyPassword` in a Caddy
+its comparison schedule across enabled accounts and active passwords. In
+v1.3.4 this includes encoded bcrypt costs and Argon2 parameter profiles, including
+mixed algorithms and multiple active hashes. Missing, disabled, and present
+users receive that schedule. A match does not short-circuit it.
+Do not replace this with `User.VerifyPassword` in a Caddy
 handler or copy authdbctl management/terminal code into the server.
 
 The Caddy tests assert outcomes, persistence, and credential invalidation; they
@@ -24,8 +25,9 @@ isolate synthetic homogeneous and mixed-cost data, warm the verifier, interleave
 samples, report distributions, and keep exact timing assertions out of CI.
 
 Creation/import trims surrounding password whitespace; authentication compares
-the supplied plaintext. The `bcrypt:<cost>:<hash>` import format describes a
-stored credential, not an alternative plaintext login. Duplicate updates reuse
+the supplied plaintext. The `bcrypt:<cost>:<hash>` and `argon2:<PHC>` import
+formats describe stored credentials, not alternative plaintext logins.
+Duplicate updates reuse
 the active hash and creation timestamp but still advance the database credential
 version. Reset creates a fresh password record even for the same plaintext or
 import. The admin HTTP reset endpoint generates a password: do not invent a
@@ -92,6 +94,13 @@ hashes/timestamps, credential versions, and unchanged legacy records through
 `App.Provision`. `TestLocalIdentitySamePasswordReset` is a public database
 consumer covering the same-password reset case the management HTTP API does
 not expose.
+
+Those static-import tests currently use bcrypt. Successful Argon2 import and
+login, mixed-algorithm verifier scheduling and invalid Argon2 parameters are
+upstream capabilities, not established Caddy integration coverage. Qualifying
+that extension requires a static import through provisioning and form/JSON
+login through actual Caddy, plus rejection that preserves the active deployment.
+The repository's offline credential CLI still generates bcrypt.
 
 `TestCaddyLocalIdentityE2E` launches an isolated Caddy process with verified TLS,
 private temporary identity files, management/profile APIs, and separate resource

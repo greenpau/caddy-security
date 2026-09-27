@@ -2,12 +2,16 @@
 
 ## Ownership and selection
 
-The selected go-authcrunch v1.3.3 owns checkpoint selection, credential evidence
+The go-authcrunch module selected by `go.mod` owns checkpoint selection, credential evidence
 and the profile handlers. Caddy exposes
 [`require auth challenges`](../../configuration-authentication-user-transforms/SKILL.md)
 in portal transforms and [`auth challenges`](../../configuration-users/SKILL.md)
 in static local users. No new HTTP route or profile API enable directive is
-needed. Existing `enable/disable profile api` controls access.
+needed. Caddyfile portals enable the profile API by default and expose no
+`enable profile api` or `disable profile api` directive. Native portal JSON can
+disable it with `"api": {"profile_enabled": false}`; preserve any independently
+configured admin settings in that object. Disabled profile access does not
+disable login or conditional challenge selection.
 
 A matching portal policy replaces the backend/user selection with its first
 eligible rule. With no eligible rule, login fails without issuing credentials.

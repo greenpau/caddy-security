@@ -1,6 +1,6 @@
 ---
 name: configuration
-description: "caddy-security Caddyfile configuration generation for the security app and authenticate or authorize HTTP directives. Use when creating, reviewing, or modifying Caddyfile configs for authentication portals, authorization policies, identity stores, OAuth or SAML identity providers, SSO app providers, users, registration flows, messaging, credentials, secrets, diagnostic logging, or runtime replacement in this repository."
+description: "Build or review caddy-security Caddyfiles and select focused configuration skills. Use for security app declarations and authenticate/authorize route wiring."
 ---
 
 # Configuration
@@ -54,22 +54,19 @@ syntax catalogues with these placeholders are not runnable examples.
 
 1. Identify the requested auth flow: local login, LDAP, OAuth/OIDC, SAML, API
    keys, basic auth, registration, SSO app, or policy-only authorization.
-2. Load only the relevant `configuration-*` domain skills from the Domain Map
-   before drafting the Caddyfile.
-   Load `configuration-http-integrations` whenever adding route-level
-   `authenticate` or `authorize` handlers.
-   Load `configuration-saml-providers` for `saml identity provider <name>`
-   blocks; do not substitute the SSO app skill.
-   Load `authentication-portal-api` when the request involves Portal API,
-   JSON login, `/whoami`, `/beacon`, or admin/server API endpoints.
+2. Follow only the matching Domain Map routes before drafting the Caddyfile.
+   HTTP handler placement includes the HTTP integration route; external SAML
+   login follows the SAML provider route, separately from portal SSO apps.
+   Authentication's narrower routes cover portal sub-blocks. HTTP client/API
+   contracts belong to [authentication-portal-api](../authentication-portal-api/SKILL.md).
 3. Start from the smallest valid `security` app block, then add route handlers
    that reference the configured portal or policy by name.
 4. Prefer environment placeholders or secret lookups for passwords, API keys,
    client secrets, signing keys, and private material.
 5. Check generated syntax against the local wrappers, selected upstream grammar
    and validators, and the fixtures under
-   `testdata/caddyfile_adapt/`. Use the `testing-and-ci` skill if validation
-   requires running tests or updating fixtures.
+   `testdata/caddyfile_adapt/`. Test and fixture changes follow the
+   [testing contract](../testing-and-ci/SKILL.md).
 
 ## Common Shape
 
@@ -95,7 +92,8 @@ syntax catalogues with these placeholders are not runnable examples.
 }
 
 example.com {
-	route /auth* {
+	@portal path /auth /auth/*
+	route @portal {
 		authenticate with myportal
 	}
 
@@ -109,69 +107,80 @@ example.com {
 Use the optional matcher forms only when needed:
 
 ```caddyfile
-authenticate /auth* with myportal
+@portal path /auth /auth/*
+authenticate @portal with myportal
 authorize /api/* with api_policy
 ```
 
 ## Domain Map
 
-- Diagnostic skip rules: [configuration-logging](../configuration-logging/SKILL.md),
-  parsed by `caddyfile_logging.go`; AuthCrunch component filtering is supported,
-  while Caddy's independent authentication middleware logger needs an upstream hook.
-- Persistent runtime state: [configuration-state](../configuration-state/SKILL.md),
-  parsed by `caddyfile_state.go`; stop/start persistence also supports policy-only OAuth.
-- HTTP integrations: `configuration-http-integrations`, parsed by
-  `plugin_authn.go` and `plugin_authz.go`.
-- Authentication portals: `configuration-authentication`, parsed by
-  `caddyfile_authn.go` and `caddyfile_authn_*.go`.
-- Authorization policies: `configuration-authorization`, parsed by
-  `caddyfile_authz.go` and `caddyfile_authz_*.go`.
-- Crypto directives and token or System API keys:
-  `configuration-crypto`, parsed by `caddyfile_authn_crypto.go` and
-  `caddyfile_authz_crypto.go`, implemented by local
+- Use [configuration-logging](../configuration-logging/SKILL.md) to configure
+  diagnostic skip rules, parsed by `caddyfile_logging.go`. AuthCrunch component
+  filtering is supported; Caddy's independent authentication middleware logger
+  needs an upstream hook.
+- Use [configuration-state](../configuration-state/SKILL.md) to configure
+  persistent runtime state, parsed by `caddyfile_state.go`. Stop/start persistence
+  also supports policy-only OAuth.
+- Use [configuration-http-integrations](../configuration-http-integrations/SKILL.md)
+  to place `authenticate` and `authorize` HTTP routes, parsed by `plugin_authn.go`
+  and `plugin_authz.go`.
+- Use [configuration-authentication](../configuration-authentication/SKILL.md)
+  to configure authentication portals, parsed by `caddyfile_authn.go` and
+  `caddyfile_authn_*.go`. Its routes own cookies, UI, transforms, and Portal APIs.
+- Use [configuration-authorization](../configuration-authorization/SKILL.md)
+  to configure authorization policies, parsed by `caddyfile_authz.go` and
+  `caddyfile_authz_*.go`.
+- Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure
+  crypto directives and token or System API keys, parsed by
+  `caddyfile_authn_crypto.go` and `caddyfile_authz_crypto.go`, implemented by
   `go-authcrunch/pkg/kms`, and resolved by `caddyfile_resolve.go`.
-- Reusable generic credentials: `configuration-credentials`, parsed by
-  `caddyfile_credentials.go`.
-- Local and LDAP stores: `configuration-identity-stores`, parsed by
-  `caddyfile_identity.go` and `caddyfile_identity_store.go`.
-- Messaging providers: `configuration-messaging`, parsed by
-  `caddyfile_messaging.go`.
-- OAuth/OIDC identity providers: `configuration-oauth-providers`, parsed by
+- Use [configuration-credentials](../configuration-credentials/SKILL.md) to
+  configure reusable generic credentials, parsed by `caddyfile_credentials.go`.
+- Use [configuration-identity-stores](../configuration-identity-stores/SKILL.md)
+  to configure local and LDAP stores, parsed by `caddyfile_identity.go` and
+  `caddyfile_identity_store.go`.
+- Use [configuration-messaging](../configuration-messaging/SKILL.md) to
+  configure messaging providers, parsed by `caddyfile_messaging.go`.
+- Use [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md)
+  to configure external OAuth/OIDC identity providers, parsed by
   `caddyfile_identity.go`, `caddyfile_identity_provider.go`, and
   `caddyfile_identity_provider_oauth.go`, delegated to
   `go-authcrunch/pkg/idp/parser` and `pkg/idp/oauth/parser`.
-- Named OAuth applications: `configuration-oauth-applications`, parsed by
-  `caddyfile_oauth_application.go`, delegated to `go-authcrunch/pkg/oidc/parser`
-  and `Config.AddOAuthApplication`. These register clients with explicit
-  or persisted credentials; the same skill owns private provisioning and the
-  portal `oidc provider` block that selects clients.
-- OAuth registration storage: `configuration-oauth-applications`, parsed by
-  `caddyfile_oauth_registration_store.go` as `oauth registration store`; app JSON
-  uses `oauth_registration_store`. This holds application credentials and provider
-  keys independently of user registration and sessions.
-- SAML login identity providers: `configuration-saml-providers`, parsed by
-  `caddyfile_identity.go` and `caddyfile_identity_provider.go`, implemented by
-  local `go-authcrunch/pkg/idp/saml`.
-- User registrations: `configuration-registrations`, parsed by
-  `caddyfile_user.go` and `caddyfile_user_registration.go`.
-- Runtime placeholder and secret resolution: `configuration-runtime-resolution`,
-  applied by `caddyfile_resolve.go`.
-- Secrets managers and secret lookup syntax: `configuration-secrets`, parsed by
-  `caddyfile_secrets.go` and resolved by `caddyfile_resolve.go`.
-- SSO app providers: `configuration-sso-app`, parsed by
-  `caddyfile_sso_provider.go`.
-- Local user entries in identity stores: `configuration-users`, parsed inside
-  `caddyfile_identity_store.go`.
-- Portal JSON/admin APIs: `authentication-portal-api`, implemented by local
-  `go-authcrunch/pkg/authn/handle_*` handlers and enabled in Caddyfile by
-  authentication portal options.
+- Use [configuration-oauth-applications](../configuration-oauth-applications/SKILL.md)
+  to register named OAuth clients, configure private registration storage and
+  portal `oidc provider` blocks, or provision credentials through the CLI.
+  `caddyfile_oauth_application.go` delegates client parsing to
+  `go-authcrunch/pkg/oidc/parser` and `Config.AddOAuthApplication`. Clients have
+  explicit or persisted credentials. `caddyfile_oauth_registration_store.go`
+  parses `oauth registration store`; app JSON uses `oauth_registration_store`.
+  This holds application credentials and provider keys independently of user
+  registration and sessions.
+- Use [configuration-saml-providers](../configuration-saml-providers/SKILL.md)
+  to configure SAML login identity providers, parsed by `caddyfile_identity.go`
+  and `caddyfile_identity_provider.go`, implemented by `go-authcrunch/pkg/idp/saml`.
+- Use [configuration-registrations](../configuration-registrations/SKILL.md) to
+  configure user registrations, parsed by `caddyfile_user.go` and
+  `caddyfile_user_registration.go`.
+- Use [configuration-runtime-resolution](../configuration-runtime-resolution/SKILL.md)
+  to configure runtime placeholder and secret resolution, applied by
+  `caddyfile_resolve.go`.
+- Use [configuration-secrets](../configuration-secrets/SKILL.md) to configure
+  secrets managers and secret lookups, parsed by `caddyfile_secrets.go` and
+  resolved by `caddyfile_resolve.go`.
+- Use [configuration-sso-app](../configuration-sso-app/SKILL.md) to configure
+  SSO app providers, parsed by `caddyfile_sso_provider.go`.
 
-Keep this map synchronized with every directory matching
-`.codex/skills/configuration-*`.
+Portal JSON/admin API contracts belong to
+[authentication-portal-api](../authentication-portal-api/SKILL.md), routed from
+`configuration-authentication`. The upstream `go-authcrunch/pkg/authn/handle_*`
+handlers implement them; authentication portal options enable them in Caddyfile.
 
-SAML identity-provider blocks are distinct from SSO app providers. Use
-`configuration-saml-providers` for login through external SAML IdPs and
-`configuration-sso-app` for portal-provided SAML SSO app endpoints.
+Keep this map and its intermediate authentication routes synchronized with every
+directory matching `.codex/skills/configuration-*`.
+
+SAML identity-provider blocks are distinct from SSO app providers: the SAML
+provider route configures external login, while the SSO app route configures
+portal-provided SAML app endpoints.
 
 ## Fixtures
 
@@ -191,3 +200,13 @@ Use these examples for orientation:
   for registration, messaging, local users, and portal wiring.
 - `testdata/caddyfile_adapt/testcase_security_with_secrets.Caddyfile` for
   secrets manager values consumed by users and crypto keys.
+
+## Acceptance criteria
+
+- A requested login/provider combination has one owning route; external SAML
+  login, SAML SSO apps, external OAuth login, and portal OIDC clients remain distinct.
+- Complete examples include global security declarations, matching portal/policy
+  names, and exact portal mounts. Fragments state the enclosing scope and missing
+  wiring; successful adaptation alone is not reported as successful login.
+- Runtime values are checked against the fields that actually resolve. Missing
+  plugins or unsupported upstream behavior remain explicit qualification limits.

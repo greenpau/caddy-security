@@ -1,6 +1,6 @@
 ---
 name: configuration-authentication-user-transforms
-description: "caddy-security authentication portal transform configuration. Use for transform user matchers, typed custom claims, role changes, conditional authentication challenge policies, MFA requirements, deny actions, UI links, and claim placeholders."
+description: "Configure portal user transforms: matchers, typed claims, role actions, conditional challenges, MFA, and deny rules. Use for authentication-time policy; stored account rules belong to configuration-users."
 ---
 
 # Configuration Authentication User Transforms
@@ -11,10 +11,11 @@ module's `pkg/authn/transformer/parser`; provisioning resolves individual
 arguments and compiles the result again. Inspect `go list -m -json github.com/greenpau/go-authcrunch` before relying on sibling source. The
 published v1.3.3 supports the grammar below.
 
-Use [portal configuration](../configuration-authentication/SKILL.md) for wiring,
-[static users](../configuration-users/SKILL.md) for stored challenge rules, and
-[authentication flows](../authentication-portal-api/references/authentication-flows.md)
-for login and profile API contracts.
+The surrounding [portal configuration](../configuration-authentication/SKILL.md)
+owns wiring; [static users](../configuration-users/SKILL.md) own stored challenge
+rules. The [authentication flow contract](../authentication-portal-api/references/authentication-flows.md)
+owns login and profile API behavior. Load those details only when changing the
+corresponding boundary, rather than reloading the portal router for a transform.
 
 ## Matchers and actions
 

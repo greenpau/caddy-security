@@ -1,6 +1,6 @@
 ---
 name: scripts-and-automation
-description: caddy-security repository automation, Makefile targets, build/test/report workflows, CodeQL scans, caddy-authenticator profile login, and security local CLI administration. Use for standalone portal authentication, local-user, password, and API-key commands; repository scripts; local go-authcrunch replacement workflows; generated artifacts; or routing release tasks to release-and-versioning.
+description: "Choose or maintain repository Make/script workflows, builds, dependency selection, generated artifacts, and security CLI tools. Routes release work and documents local administration and standalone login commands."
 ---
 
 # Scripts and Automation
@@ -28,10 +28,13 @@ profile-based portal login, private credentials/token/log storage, and the
 command's user guide. Its implementation reuses `go-authcrunch/pkg/authclient`;
 it does not load Caddy server modules or require the portal admin API.
 
-Use [release-and-versioning](../release-and-versioning/SKILL.md) for version
-authority, release target side effects, release CI, and publication. Use
-[skill-authoring-patterns](../skill-authoring-patterns/SKILL.md) when creating
-or updating the skills that document a workflow.
+Use [release-and-versioning](../release-and-versioning/SKILL.md) to maintain
+version authority, release targets, release CI, packaging, and publication.
+After changing commands, scripts, CI, build behavior, or selected dependencies,
+review and update the affected repo-local skills and references in the same
+change. Follow [keeping skills current](../skill-authoring/SKILL.md#keep-skills-current-after-code-changes)
+so documented commands, side effects, prerequisites, and validation match the
+resulting workflow.
 
 Prefer narrow `go test` commands for quick validation while editing. Use the
 Makefile targets when the user asks for the repository workflow, reports,
@@ -156,7 +159,7 @@ task.
 ## Local go-authcrunch Development
 
 For an explicitly requested published version, use a targeted upgrade from this
-repository, for example `go get github.com/greenpau/go-authcrunch@v1.2.6`, then
+repository: `go get github.com/greenpau/go-authcrunch@<requested-version>`, then
 `go mod tidy` and `go mod verify`. Inspect the dependency diff and keep the
 versioned replacement examples in `CONTRIBUTING.md` and the xcaddy argument in
 `Makefile` aligned. Do not use `make upgrade` for a single-module request: it
@@ -271,8 +274,9 @@ coverage and writes reports; never patch a finished bundle's coverage percentage
 The reusable `.github/workflows/build.yml` runs `make dep` and `make ci-check`,
 checks source remains unchanged, and uploads the complete `.coverage/` bundle
 after an attempted gate, including failure evidence. Release CI requires this
-same gate. Follow `testing-and-ci` for local reproduction and
-`release-and-versioning` for artifact identities and tag requirements.
+same gate. The [testing contract](../testing-and-ci/SKILL.md) owns local
+reproduction; [release ownership](../release-and-versioning/SKILL.md) covers
+artifact identities and tag requirements.
 
 The CLA workflow may update `assets/cla/signatures.json` through GitHub
 automation. Do not edit CLA signatures or consent files unless the user asks.
@@ -316,3 +320,14 @@ Use [Local user commands](references/local-user-commands.md) for
 account creation/deletion, password resets, roles/challenges, realm reload,
 and offline password/API-key generation. Remote operations use the portal's
 admin API; generators work offline and never modify database files.
+
+## Acceptance criteria
+
+- A normal build creates both commands with their correct version identities
+  and leaves source unchanged; explicit maintenance is chosen for source rewrites.
+- A requested dependency change selects only the requested version/module and
+  records any replacement. A sibling VERSION does not override user intent.
+- Test/report failures retain their status and original evidence. Cleanup does
+  not happen as an incidental validation step or erase another run's bundle.
+- Local administration, OAuth provisioning, standalone login, and release tasks
+  reach their distinct owners and respect their different input/side-effect scopes.

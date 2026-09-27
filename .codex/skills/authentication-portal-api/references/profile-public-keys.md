@@ -66,13 +66,12 @@ exercise hardware authenticators or WebAuthn assertions.
 
 ## Canonical Profile Identity Regression
 
-The go-authcrunch commit `3e28980b0f5a78463953b674241f154bb77c6679`, included
-in selected v1.3.3, fixed the earlier v1.2.5 profile ownership defect. Profile access now uses the
+Profile access uses the
 canonical authenticated local identity and its current security version, even
 when token transforms replace `sub` and `email` with another real account.
 Caddy continues to delegate this decision to the library.
 
-`local_identity_profile_regression_test.go` is now part of the default suite.
+`local_identity_profile_regression_test.go` is part of the default suite.
 `TestCaddyProfileCanonicalIdentityRegression` logs in as Alice, applies colliding
 Bob claims, reads Alice's profile and verifies that a public-key upload changes
 only Alice's persisted record. Run it directly with:
@@ -82,6 +81,5 @@ go test -mod=readonly -race -count=1 -timeout=2m \
   -run '^TestCaddyProfileCanonicalIdentityRegression$' .
 ```
 
-The old `identity_profile_regression` build tag is no longer required. Keep the
-ownership assertions enabled; do not infer identity from transformed claims in
+Keep the ownership assertions enabled; do not infer identity from transformed claims in
 Caddy or duplicate the library's profile handler.

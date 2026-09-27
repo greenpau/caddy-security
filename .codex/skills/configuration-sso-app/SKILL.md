@@ -1,6 +1,6 @@
 ---
 name: configuration-sso-app
-description: "caddy-security SSO app Caddyfile configuration for Single Sign-On with SAML. Use when creating, reviewing, or modifying sso provider blocks, AWS SAML app drivers, SAML entity IDs, signing certificates, PKCS8 private keys, SSO metadata locations, authentication portal enablement, /apps/sso endpoints, and AWS role naming."
+description: "Configure portal-provided SAML SSO apps, AWS role names, metadata, certificates, and PKCS8 keys. Use for sso provider blocks and their runtime limits; external SAML login providers are separate."
 ---
 
 # Configuration SSO App
@@ -11,15 +11,14 @@ Use this skill to configure the SSO app feature, expressed in Caddyfile as
 `sso provider <name>`. This is the Single Sign-On with SAML app path, not OAuth
 login provider setup.
 
-Use `configuration-oauth-providers` for `oauth identity provider <name>` blocks
-such as Azure, GitHub, Google, LinkedIn, or generic OIDC.
-
-For `saml identity provider <name>` login-provider blocks, inspect
-`caddyfile_identity_provider.go` and local `go-authcrunch/pkg/idp/saml`; those
-blocks are not the SSO app either.
+External OAuth/OIDC login belongs to
+[configuration-oauth-providers](../configuration-oauth-providers/SKILL.md).
+External `saml identity provider <name>` login belongs to
+[configuration-saml-providers](../configuration-saml-providers/SKILL.md).
+Those are separate configurations, not prerequisites for an SSO app change.
 
 The Caddyfile syntax is authoritative in `caddyfile_sso_provider.go`; the
-provisioning behavior is authoritative in the local `go-authcrunch` source,
+provisioning behavior is authoritative in the selected `go-authcrunch` module,
 especially `pkg/sso/config.go`, `pkg/sso/provider.go`, `pkg/sso/request.go`,
 `pkg/sso/metadata.go`, and `pkg/authn/handle_http_apps_sso.go`.
 
@@ -122,7 +121,7 @@ For example, a local user might have:
 roles authp/user aws/123456789012/Administrator
 ```
 
-The current local authcrunch assume-role handler returns a placeholder response
+The selected authcrunch assume-role handler returns a placeholder response
 for `<base-path>/apps/sso/<provider>/assume/...`. Do not promise complete AWS
 federation behavior from configuration alone unless the handler implementation
 changes.
@@ -156,3 +155,11 @@ Use these examples:
   JSON.
 - `go-authcrunch/pkg/sso/config_test.go` for authcrunch validation behavior.
 - `go-authcrunch/pkg/sso/request_test.go` for SSO URL parsing behavior.
+
+The Caddy parser tests establish field mapping, not certificate loading or an
+AWS federation journey. This checkout has no app-side SAML SSO E2E. A local
+runtime check should verify that readable certificate/PKCS8 inputs produce the
+configured metadata URLs, unauthenticated requests redirect to login, and an
+authenticated session can obtain metadata. Report the assume-role placeholder
+as unavailable federation behavior; a successful HTTP 200 containing
+`ASSUME ROLE` is not an AWS login.

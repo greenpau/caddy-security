@@ -2,8 +2,9 @@
 
 Use this suite when changing the interaction between portal login, refresh,
 downstream OIDC, upstream OAuth, authorization, edge metadata, or Caddy reload.
-The selected dependencies are Caddy v2.11.4 and go-authcrunch v1.3.3; these tests
-run in caddy-security, without running or modifying sibling repositories.
+Read the selected Caddy and go-authcrunch versions from `go.mod` and any active
+replacement. These tests run in caddy-security, without running or modifying
+sibling repositories. Record the selected versions with qualification evidence.
 
 ```sh
 go test -mod=readonly -race -count=1 -parallel=4 -timeout=10m \
@@ -35,7 +36,7 @@ No OP key is added to a portal verification set to make a JWT test pass.
 | Edge | `composition_edge_e2e_test.go`: direct TLS, untrusted hostile/duplicate hints, real TLS proxy, Caddy `trusted_proxies_strict`, alternate `client_ip_headers`, retained Origin/issuer/TLS checks, raw/encoded and look-alike paths. Source-bound authorization is checked before/after identity caching and after removing proxy trust; forged `X-Real-IP` or lower-priority address hints cannot restore a grant |
 | Reload | Missing-key candidate fails without displacing active grants/families or a pending password-completed authorization; successful replacement preserves immutable registration bytes and key files, invalidates pending authorizations, refresh/OP grants and unredeemed codes, and still verifies compatible stateless access JWTs |
 | Disposal | `composition_lifecycle_e2e_test.go`: two bounded requests held inside real AuthCrunch calls; replacement serves while old cleanup waits; released old refresh responses do not create authority in the new runtime |
-| Browser | The `composition` scenario in `testdata/browser/token_refresh_browser_e2e.cjs`, driven through Chromium/CDP, reuses the existing task-12 browser coordinator: two-tab rotation, realm/OP-cookie replacement at capacity, committed-response loss without retry/lookup recovery, fresh login, logout, HttpOnly privacy and legacy-path cleanup |
+| Browser | The `composition` scenario in `testdata/browser/token_refresh_browser_e2e.cjs`, driven through Chromium/CDP, reuses the shared browser refresh coordinator: two-tab rotation, realm/OP-cookie replacement at capacity, committed-response loss without retry/lookup recovery, fresh login, logout, HttpOnly privacy and legacy-path cleanup |
 
 The existing `TestCaddyTokenRefreshBrowserE2E` also runs default root, custom
 nested, and expired-access continuation scenarios. Chrome/Chromium and Node 24
@@ -83,9 +84,11 @@ family, but that does not promise rollback of an earlier account replacement,
 external effects, or arbitrary failures in every component. Browser uncertainty
 after a committed response is handled by fresh login, never replay or lookup.
 
-These are single-process stores and lifecycle guarantees. Refresh families,
+These composition fixtures use the default in-memory runtime: refresh families,
 OP sessions, pending requests, codes and grants are volatile across replacement
-or restart. They are not shared between active instances. Private registration
+or restart. Explicit [persistent state](../../configuration-state/SKILL.md) has
+a separate stop/start contract and process-level restart suite. Neither mode
+shares mutable runtime state between active instances. Private registration
 revisions and configured signing-key files survive independently. Compatible
 access JWTs remain valid until their normal expiry/policy boundary.
 

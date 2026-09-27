@@ -1,6 +1,6 @@
 ---
 name: coding-directives
-description: caddy-security repository coding standards and implementation directives for Go/Caddy code, including Caddy module boundaries, security app lifecycle, authenticate/authorize plugin behavior, Caddyfile parser patterns, authcrunch integration, runtime replacement and secrets handling, errors, logging, imports, comments, tests, and fixtures. Use when creating, modifying, or reviewing application code in this repository or when deciding coding patterns for Caddyfile directives, Caddy modules, authcrunch config mapping, HTTP handlers, or Go tests.
+description: "Implement or review caddy-security Go code, Caddy modules, parsers, lifecycle, and HTTP delegation. Use for app/plugin boundaries, authcrunch integration, errors, logging, and code conventions."
 ---
 
 # Coding Directives
@@ -12,13 +12,17 @@ small, idiomatic Go changes that preserve Caddy module boundaries, delegate auth
 logic to `go-authcrunch`, and keep parser behavior covered by focused tests and
 fixtures.
 
-Use the repo-local `testing-and-ci` skill when choosing or running tests. Use
-`scripts-and-automation` for Makefile targets, generated artifacts, dependency
-workflow, or local `go-authcrunch` replacement work.
+The [testing contract](../testing-and-ci/SKILL.md) governs test selection and
+coverage. [Automation ownership](../scripts-and-automation/SKILL.md) covers Make
+targets, generated artifacts, and dependency/replacement workflows.
 
-Document implementation and operational guidance in the relevant repo-local
-skill or its linked references. Do not add Markdown documentation to `docs/`
-or `assets/docs/`; use [skill-authoring-patterns](../skill-authoring-patterns/SKILL.md#ownership-and-routing)
+After code changes, review and update the relevant repo-local skills and linked
+references in the same change so implementation and operational guidance match
+the final behavior. This is part of completing the code work; follow
+[keeping skills current](../skill-authoring/SKILL.md#keep-skills-current-after-code-changes)
+for scope, evidence, and cases where existing guidance remains accurate.
+Do not add Markdown documentation to `docs/` or `assets/docs/`; follow the
+[skill-authoring ownership guidance](../skill-authoring/references/caddy-security.md#ownership-and-routing)
 for documentation ownership and placement.
 
 ## Repository Scope
@@ -94,10 +98,14 @@ For HTTP middleware config fields, preserve matching `json`, `xml`, and `yaml`
 tags unless the surrounding type intentionally differs. Keep runtime-only fields
 unexported and untagged.
 
-In `Provision`, resolve the `security` app through Caddy context, validate nil
-app/config cases, apply Caddy replacer substitutions where needed, retrieve
-named authcrunch objects, and return contextual errors. Let `Validate` check
-required names and provisioned runtime pointers.
+In `Provision`, resolve the `security` app through Caddy context, validate
+app/config cases, apply Caddy replacer substitutions where needed, and validate
+named declarations. The default in-memory app can provide runtime objects during
+provisioning; persistent state defers root construction until `App.Start` owns
+storage. A declared portal or policy can therefore be valid before its runtime
+pointer exists. Preserve deferred lookup and request admission checks; do not
+reject persistent candidates merely because `Provision` has no runtime object.
+The [lifecycle contract](references/runtime-lifecycle.md) owns the ordering.
 
 ## Caddyfile Parsers
 
@@ -213,7 +221,7 @@ Use zap structured logging for app lifecycle and runtime diagnostics. Log
 identifiers, paths, directive names, and types; never log secrets or token
 payloads.
 
-For diagnostic suppression, follow [configuration-logging](../configuration-logging/SKILL.md).
+Diagnostic suppression is governed by [configuration-logging](../configuration-logging/SKILL.md).
 Delegate rule parsing and immutable filters to AuthCrunch. Its root logger
 wrapping does not reach Caddy's private authentication middleware logger, and
 Caddy v2.11.4's custom cores only tee output. Keep that upstream limitation
@@ -236,9 +244,10 @@ third-party packages, and local module packages. Use side-effect imports only
 for module registration or command bootstrapping, and keep the reason obvious
 from local context.
 
-Run `make license` after changing repository files and before final review. It
-adds license headers to Go files and regenerates README download links, so
-inspect the resulting diff and keep only intentional changes.
+Keep the existing license on edited Go files and include it in new Go files.
+`make license` rewrites all selected Go headers and README download links; run
+it only when that maintenance is part of the task. Skill-only edits require no
+license regeneration. Review any generated diff for unintended changes.
 
 Prefer small, unexported helpers for parser branches and runtime plumbing.
 Export only Caddy module types, public interfaces, and functions that are
@@ -254,8 +263,8 @@ blocks. Avoid comments that merely restate the code.
 ## Tests And Fixtures
 
 Code changes require relevant unit tests and E2E tests that exercise the changed
-behavior. Follow [testing-and-ci](../testing-and-ci/SKILL.md#required-coverage-for-code-changes)
-to add or amend coverage and run the applicable checks in this repository.
+behavior under the [required coverage contract](../testing-and-ci/SKILL.md#required-coverage-for-code-changes).
+Add or amend missing coverage and run the applicable checks in this repository.
 
 Add focused parser coverage in the closest `caddyfile_*_test.go` when changing
 Caddyfile syntax or validation. Include malformed cases when the parser has a
@@ -277,3 +286,13 @@ requires formatted output.
 
 After fixture or parser work, run the narrow relevant test first, then broaden
 according to the `testing-and-ci` skill.
+
+## Acceptance criteria
+
+- Valid in-memory and persistent configurations follow their distinct construction
+  timing. Requests cannot use a runtime before admission opens or after cleanup.
+- A rejected candidate preserves the serving app; cleanup drains admitted calls
+  before releasing resources. Validate through the lifecycle unit/E2E surfaces.
+- Parser changes preserve encoded values, report malformed input, and have
+  adaptation plus runtime/user-flow evidence where applicable. Skill-only work
+  neither regenerates licenses nor mutates sibling source.

@@ -1,6 +1,6 @@
 ---
 name: configuration-authentication-cookies
-description: "caddy-security authentication portal cookie Caddyfile configuration. Use when creating, reviewing, or modifying authentication portal cookie directives, cookie domains, paths, lifetimes, SameSite, insecure cookies, guessed or stripped domains, token cookie names, cookie name prefixes, access token cookie validation, or authcrunch cookie defaults."
+description: "Configure portal cookie names, prefixes, domains, paths, attributes, and refresh overrides. Use for cookie precedence and coordination with authorization token discovery."
 ---
 
 # Configuration Authentication Cookies
@@ -14,8 +14,9 @@ translation in `caddyfile_authn_cookie.go` preserves legacy Caddy spellings;
 It replaces previous cookie settings, rather than merging individual lines.
 Portal construction wires the final access name into its grantor and validator.
 
-Use `configuration-authentication` for portal wiring and
-`configuration-authorization` for policies. Upstream source is read-only.
+Portal wiring belongs to [configuration-authentication](../configuration-authentication/SKILL.md)
+and policy behavior to [configuration-authorization](../configuration-authorization/SKILL.md).
+Upstream source is read-only.
 
 ## Set Every Default Name with One Prefix
 

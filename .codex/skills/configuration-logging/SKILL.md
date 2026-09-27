@@ -1,6 +1,6 @@
 ---
 name: configuration-logging
-description: "Configure and validate root security logging skip rules, AuthCrunch diagnostic filtering, JSON persistence and Caddy logger ownership. Use for noisy authentication logs and issue #280; excludes access-log configuration and authorization behavior changes."
+description: "Configure AuthCrunch diagnostic skip rules and explain the Caddy middleware logger boundary. Use for component/message filtering; access logs and authorization outcomes are separate concerns."
 ---
 
 # Configuration Logging
@@ -15,13 +15,11 @@ Current `authorize` Caddyfiles use `http.handlers.authorization`; the legacy
 JSON authentication-provider chain is still supported and emits the host error.
 Do not change that chain's behavior to silence it.
 
-The selected published AuthCrunch v1.3.4 already contains `Config.Logging`,
-`pkg/logging`, the shared parser, and root logger wrapping (feature commit
-`8e8e35b66ad1a699e239575e42cbbcd603a2894d`, included in release commit
-`a97ff2f0a4429e286c30b9cc0cd6babab109b964`). No local replacement or library
-release is required. Recheck `go list -m -json` when dependencies change;
-follow [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development).
-Sibling source and skills remain read-only references.
+Published AuthCrunch v1.3.4 supplies `Config.Logging`, `pkg/logging`, the shared
+parser, and root logger wrapping. No local replacement or library release is
+needed for these interfaces. Recheck `go list -m -json` when dependencies change;
+the [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development)
+owns selection changes. Sibling source and skills remain read-only references.
 
 ## Configuration
 

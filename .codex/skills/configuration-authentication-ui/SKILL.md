@@ -1,6 +1,6 @@
 ---
 name: configuration-authentication-ui
-description: "caddy-security authentication portal UI Caddyfile configuration. Use when creating, reviewing, or modifying authentication portal ui blocks, templates, metadata, private links, static assets, themes, languages, logos, auto_redirect_url, custom CSS, custom JavaScript, or custom HTML header injection."
+description: "Configure portal UI templates, static assets, themes, languages, links, and custom CSS/JS/HTML. Use for branding and refresh-aware templates; transform-generated links belong to user transforms."
 ---
 
 # Configuration Authentication UI
@@ -30,9 +30,11 @@ Read these files when details matter:
 - `../go-authcrunch/pkg/authn/ui/static.go` for
   static asset loading and content-type handling.
 
-Use `configuration-authentication` for the surrounding portal and
-`configuration-authentication-user-transforms` for `ui link` entries emitted by
-user transforms.
+The surrounding portal belongs to
+[configuration-authentication](../configuration-authentication/SKILL.md).
+Transform-generated `ui link` entries belong to
+[configuration-authentication-user-transforms](../configuration-authentication-user-transforms/SKILL.md);
+they are separate from static links in this UI block.
 
 ## Supported UI Forms
 
@@ -82,7 +84,11 @@ custom js path ui/custom.js
 
 These become `assets/css/custom.css` and `assets/js/custom.js`. `custom html
 header path <path>` injects file content into the built-in templates immediately
-in the parser path.
+in the parser path. That injection mutates process-global template data; custom
+CSS/JS and static assets also use a global asset registry. Do not promise
+independent branding for portals registering the same asset paths or repeatable
+header injection across adaptations. Qualify coexistence and reload behavior
+before relying on that isolation; adaptation success alone does not prove it.
 
 Do not invent UI directives from authcrunch struct fields unless
 `caddyfile_authn_ui.go` parses them. The Caddyfile parser does not currently
@@ -136,7 +142,7 @@ ui {
 }
 ```
 
-The supported language set and message keys come from local go-authcrunch
+The supported language set and message keys come from the selected module
 translation data, especially `pkg/translate/data/messages.json`. Check that
 file when validating whether a language or message is available; do not infer
 support from screenshots alone.
@@ -154,3 +160,16 @@ assumptions, JSON `Accept` headers, role checks, and failure behavior.
 Use this fixture as the main example:
 
 - `testdata/caddyfile_adapt/testcase_authenticate_with_ui.Caddyfile`
+
+## Acceptance and qualification limits
+
+The UI fixture proves parser/adapted JSON behavior. It does not qualify custom
+CSS/JS/HTML execution, missing-file failures, or simultaneous portal branding;
+this repository has no dedicated Caddy E2E coverage for those customizations.
+When changing them, verify served paths/content types, intended page inclusion,
+missing-input failure, and behavior across two portals and reload. Keep global
+asset/template effects visible rather than asserting per-portal isolation.
+
+For custom refresh templates, preserve the embedded client's conditional script
+and metadata plus fresh-login recovery. Existing browser-refresh journeys cover
+the built-in templates; a custom template needs its own actual browser evidence.

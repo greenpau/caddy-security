@@ -53,9 +53,9 @@ explicit exception. Do not reuse suite credentials as public examples.
 ## Vulnerability analysis and interpretation
 
 Pin `golang.org/x/vuln/cmd/govulncheck` explicitly and install it into the private
-evidence directory. Use the same effective Go toolchain as the artifact. The
-2026-09-19 run used v1.8.0; a later qualification must deliberately select and
-record its scanner and current database rather than inherit a clean claim.
+evidence directory. Use the same effective Go toolchain as the artifact.
+Record the scanner version and database timestamp for each qualification;
+a previous candidate's result cannot establish that this candidate is clean.
 With `SCAN` set to that executable and `ARTIFACT` to each final binary, preserve:
 
 ```sh
@@ -89,99 +89,48 @@ and [Go release history](https://go.dev/doc/devel/release). Preserve the scanner
 raw advisory descriptions and fixed ranges with the report, since the database
 can change independently of source.
 
-## Recorded candidate: 2026-09-19
+## Qualification decision and retained findings
 
-The private bundle is `tmp/release-qualification-20260919/`. Its source snapshot
-identifies dirty HEAD `127e8df10616a0d0f77b183b08021e91aa5fb066`, repository
-`VERSION` 1.1.64, Caddy v2.11.4 and go-authcrunch v1.3.2, without replacements.
-Go 1.26.8 built all six Caddy release targets (Darwin/Linux/Windows, amd64/arm64)
-with stripped and matching symbol variants. All twelve builds succeeded; every
-artifact has a SHA-256, build metadata and raw scan. The embedded main module is
-`v1.1.65-0.20260919015759-127e8df10616+dirty`; this is not a VERSION bump.
+Evaluate the exact candidate against its own evidence. Keep dated run totals,
+source hashes, credentials, scanner output, screenshot IDs, and temporary paths
+in the private qualification bundle rather than this workflow. A prior passing
+build, local gate, or zero scanner status does not qualify a new dependency
+selection or close an unresolved finding.
 
-The final local `make ci-check` returned zero: 33 automation tests passed,
-1,840 Go tests passed, 22 subprocess helper entry points skipped in the parent
-run, no failures, and 83.31% statement coverage. It included the actual browser,
-native, composed, lifecycle and operator-example journeys under race detection.
-The finalized tested report is preserved in the private bundle's `ci-report/`.
+Carry forward unresolved advisory assessments from previous reports until there
+is a recorded, source-backed disposition. Prior reports identified this module's
+GO-2024-2549 and GO-2024-2557 through GO-2024-2565 advisories; do not infer a fixed
+range or remediation from a version bump, a feature test, or an unversioned source
+scan. Recheck the actual affected ranges and code paths with current official
+advisory data during release qualification. Preserve upstream dependency findings
+and distinguish affected modules, linked packages, affected symbols, and proven
+exploitability. This workflow does not itself declare any advisory resolved.
 
-The gate's actual host `bin/authcrunch` was separately copied and scanned. Its
-SHA-256 is `a2ad8b936dc3fc815698c609a68fff4740893c310c4d1bc43e634a0de17e6659`,
-identical to both official conformance rehearsal executables. Its JSON scan
-returned zero and converted report returned 3, retaining the same advisory
-findings below. This host build uses CGO=1; the six release-style target builds
-use CGO=0. The conformance binary identity does not imply execution of the
-foreign or differently flagged artifacts.
+Official conformance requires the actual Caddy candidate and its original runner
+status, complete module outcomes, signed exports, hashes, and browser evidence.
+A `REVIEW`, `WARNING`, `SKIPPED`, `UNKNOWN`, interruption, or failure remains
+visible even when the runner exits zero. In particular, inspect actual browser
+reauthentication, expired authentication age, and unregistered callback rejection
+when the suite requires human review. A library run or an older candidate is
+not evidence for the current Caddy artifact. Follow the
+[conformance review criteria](../../configuration-oauth-applications/references/oidc-conformance.md)
+for the selected suite and retain incomplete attempts.
 
-All twelve Caddyfile/native-JSON operator journeys passed under the race detector.
-The host release-style executable also passed eighteen separate commands:
-adaptation and Caddyfile/native-JSON validation for each of the six profiles.
-An initial test assertion incorrectly expected a cookie for access-only JSON
-login; the test was corrected to use its returned access token. The original
-failed run is retained alongside the successful run, not relabeled as passed.
+Apply the [composition limits](../../testing-and-ci/references/composition-qualification.md)
+and distinguish the default in-memory runtime from explicitly configured
+[persistent state](../../configuration-state/SKILL.md). Neither mode promises
+active/active sharing or a transaction across every component. Validate the
+chosen stop/start or reload boundary, current identity policy, and logging/edge
+trust limits for the candidate being qualified.
 
-The vulnerability database timestamp was `2026-09-16T18:00:43Z`. Original JSON
-scan statuses were zero; converted module and binary reports returned 3. The
-source report returned zero at symbol level while retaining package/module
-findings. These are **not clean scans**:
+## Acceptance evidence
 
-| Finding | Evidence and remaining work |
-| --- | --- |
-| [GO-2024-2549](https://pkg.go.dev/vuln/GO-2024-2549) | Reflected XSS advisory against this module; unresolved release triage. |
-| [GO-2024-2557](https://pkg.go.dev/vuln/GO-2024-2557) | Session expiration advisory; unresolved release triage. |
-| [GO-2024-2558](https://pkg.go.dev/vuln/GO-2024-2558) | Authentication bypass/spoofing advisory; unresolved release triage. |
-| [GO-2024-2559](https://pkg.go.dev/vuln/GO-2024-2559) | XSS advisory; unresolved release triage. |
-| [GO-2024-2560](https://pkg.go.dev/vuln/GO-2024-2560) | Open redirect advisory; unresolved release triage. |
-| [GO-2024-2561](https://pkg.go.dev/vuln/GO-2024-2561) | SSRF advisory; unresolved release triage. |
-| [GO-2024-2562](https://pkg.go.dev/vuln/GO-2024-2562) | HTTP header neutralization advisory; unresolved release triage. |
-| [GO-2024-2563](https://pkg.go.dev/vuln/GO-2024-2563) | Excessive authentication attempts advisory; unresolved release triage. |
-| [GO-2024-2564](https://pkg.go.dev/vuln/GO-2024-2564) | Array-index validation advisory; unresolved release triage. |
-| [GO-2024-2565](https://pkg.go.dev/vuln/GO-2024-2565) | Insufficient randomness advisory; unresolved release triage. |
-| [GO-2026-6094](https://pkg.go.dev/vuln/GO-2026-6094) | cel-go v0.28.1; fixed v0.30.0. `ext` is imported, but source analysis found no affected call and matching binaries found no affected symbol. Retain the package finding for dependency remediation. |
-| [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932) | x/crypto v0.57.0 contains obsolete OpenPGP packages with no fixed version. Module-only finding in source/full-symbol analysis; no production target imports OpenPGP. Stripped wildcard frames are fallback, not package linkage. |
-
-The ten caddy-security advisories have no fixed range in the recorded database.
-All six symbol builds matched three packages and 22 symbols for each of these
-broadly scoped advisories. Those matches do not establish ten exploitable paths,
-but neither the feature suite nor the unversioned source scan closes them.
-Advisory-specific security triage/remediation is an explicit release blocker.
-No suppressions or dependency substitutions were applied.
-
-Every stripped artifact had zero extractable package symbols. The matching
-builds retained 77,694–78,287 symbols. Stripped CEL function names and OpenPGP
-wildcards must therefore remain labeled as conservative module fallback.
-
-## Official conformance findings retained
-
-The two actual Caddy rehearsals are retained at
-`tmp/oidc-conformance/caddy-rehearsal-20260919/` and its `-repeat` sibling under
-the same repository temporary area. Both used unmodified suite v5.2.4,
-`e3b5558d6d5e0c17ab578a47b955fd3b405f902b`, with Basic OP, Config OP and Form Post
-OP code-flow plans. Each recorded **65 PASSED and 6 REVIEW**, zero other outcomes,
-runner status zero, and `all_passed: false`. This supersedes neither the suite's
-review decisions nor any library-only rehearsal.
-
-| Remaining module | Basic OP | Form Post OP | Required assessment |
-| --- | --- | --- | --- |
-| `oidcc-prompt-login` | REVIEW | REVIEW | Human review of the actual reauthentication interaction and screenshots. |
-| `oidcc-max-age-1` | REVIEW | REVIEW | Human review that the expired authentication age caused the required interaction. |
-| `oidcc-ensure-registered-redirect-uri` | REVIEW | REVIEW | Human review of the displayed rejection for the unregistered callback. |
-
-The report retains all 71 module outcomes, browser evidence, signed exports,
-142 verified signatures and six matched signed screenshots per run. No review
-was turned into an expected pass. Browser and harness TLS trust controls passed;
-the unmodified suite's own permissive internal HTTPS client is a separate limit,
-so do not present this as comprehensive suite-side TLS validation. There is no
-certification or submission. The remaining reviews are release-readiness findings
-and prevent an all-pass conformance claim.
-
-Preserve the [composition limitations](../../testing-and-ci/references/composition-qualification.md):
-single-process volatile grants, no active/active OP/refresh support, nontransactional
-cross-component completion, persistent identity-file reload restrictions, and
-INFO-level upstream OAuth logging. Two library-owned gaps remain separate work:
-DEBUG OAuth logging can disclose callback/token credentials, and the forwarded
-address parser mishandles some IPv6 representations outside the tested compressed
-case. Do not expand the tested INFO/edge guarantees to those cases. Security
-findings and protocol reviews belong
-in the release decision even when the required local gate succeeds. Publication
-requires a separate instruction; this qualification performs none.
+- A report identifies the precise dirty or clean source, selected modules,
+  toolchain, target flags, and hashes for every artifact. Cross-built artifacts
+  are not described as executed on foreign platforms.
+- A stripped binary with no extractable symbols retains conservative findings
+  and the matching symbol build; it is not declared clean from missing frames.
+- A zero runner status with unresolved conformance reviews remains a non-all-pass
+  result. Release readiness states each unresolved assessment and its owner.
+- Qualification leaves VERSION, tags, remote refs, and certification submission
+  unchanged. Publication is a separate requested operation.

@@ -1,6 +1,6 @@
 ---
 name: configuration-credentials
-description: "caddy-security reusable generic credentials Caddyfile configuration. Use when creating, reviewing, or modifying security credentials blocks for reusable username/password credentials, optional domains, SMTP or email messaging authentication, registration email provider credentials, environment placeholders, or secret-backed credential values."
+description: "Configure reusable named username/password credentials for messaging consumers, including optional domains and runtime values. LDAP bind credentials belong to identity stores."
 ---
 
 # Configuration Credentials
@@ -24,8 +24,9 @@ caddy-security resolves during provisioning.
 
 The two can be combined: put `password "secrets:smtp:password"` inside a
 `credentials smtp_root` block when the consumer needs a named credential, but
-the password should come from a secrets manager. Use `configuration-secrets`
-for the manager block and lookup rules.
+the password should come from a secrets manager.
+[configuration-secrets](../configuration-secrets/SKILL.md) owns manager blocks
+and lookup rules.
 
 ## Shape
 
@@ -84,8 +85,7 @@ label.
 Use labels that describe the consumer, such as `smtp_root`,
 `registration_smtp`, or `mailgun_smtp`, rather than the secret value itself.
 
-When the credential is consumed by email messaging, coordinate with
-`configuration-messaging`. Non-passwordless email providers require a
+Email consumption follows [configuration-messaging](../configuration-messaging/SKILL.md). Non-passwordless email providers require a
 `credentials <credential_name>` reference; passwordless email providers must
 not also set credentials.
 
@@ -100,3 +100,10 @@ Use these examples:
 - `caddyfile_credentials_test.go`.
 - `testdata/caddyfile_adapt/testcase_authenticate_with_credentials.Caddyfile`.
 - `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`.
+
+`TestResolveRuntimeAppConfigEncodedInstructions` and the lifecycle E2E check
+that an environment or secret-backed password containing spaces, quotes and a
+newline remains one exact credential value. They also reject a missing secret;
+the reload case preserves the serving deployment. These checks do not contact
+SMTP or establish that a server accepts the credential. Validate SMTP delivery
+separately when changing the consumer or its transport settings.

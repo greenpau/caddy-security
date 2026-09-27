@@ -1,6 +1,6 @@
 ---
 name: configuration-oauth-applications
-description: Configure and provision named OAuth applications, durable private registration storage, and portal OIDC providers in caddy-security. Use for oauth application blocks, security CLI commands, credential rotation, and provider key rollover; external login providers belong to configuration-oauth-providers.
+description: "Register named OAuth clients, manage private registration storage, and configure portal OIDC providers. Owns security oauth/oidc provisioning commands; external login providers and security local are separate."
 ---
 
 # Configuration OAuth Applications
@@ -232,6 +232,6 @@ synthetic credentials in a temporary private directory. Runtime reference
 resolution is tested through the complete App and Caddy lifecycle, since the
 older root-config-only resolution helper does not load host-owned references.
 
-Follow [testing-and-ci](../testing-and-ci/SKILL.md) for validation commands and
+Validation commands follow [testing-and-ci](../testing-and-ci/SKILL.md), with
 [syntax maintenance](../configuration/references/syntax-maintenance.md) when
 changing the Caddy wrapper or selected upstream grammar.

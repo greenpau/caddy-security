@@ -111,13 +111,13 @@ modules register from package `init` hooks.
 
 ## Coding Directives
 
-Use the repo-local `coding-directives` skill when creating, modifying, or
-reviewing application code, Caddyfile directives, Caddy modules, authcrunch
-config mapping, HTTP handlers, or Go tests in this repository.
+Use [coding-directives](.codex/skills/coding-directives/SKILL.md) to create,
+modify, or review application code, Caddyfile directives, Caddy modules,
+authcrunch config mapping, HTTP handlers, or Go tests in this repository.
 
 ## Configuration
 
-Use the repo-local `configuration` skill when creating, reviewing, or modifying
+Use [configuration](.codex/skills/configuration/SKILL.md) to create, review, or modify
 Caddy Caddyfile configurations for caddy-security authentication portals,
 authorization policies, identity stores, OAuth and SAML identity providers, SSO
 app providers, local users, registration flows, messaging, credentials, secrets
@@ -129,37 +129,49 @@ When changing syntax or updating Caddy/go-authcrunch, follow
 to audit Caddyfiles, parser syntax comments, delegated upstream grammar, and
 the corresponding configuration skills together.
 
-Use `configuration-oauth-applications` for `oauth application <nickname>`
+The configuration router delegates `oauth application <nickname>`
 registrations, private `oauth registration store` configuration, the
-`security oauth` and `security oidc` CLI commands, and portal `oidc provider` blocks;
-`configuration-oauth-providers` owns external login providers.
+`security oauth` and `security oidc` CLI commands, and portal `oidc provider` blocks
+to [configuration-oauth-applications](.codex/skills/configuration-oauth-applications/SKILL.md);
+[configuration-oauth-providers](.codex/skills/configuration-oauth-providers/SKILL.md)
+owns external login providers.
 
-Use `configuration-state` for the root `state` block, restart persistence,
-exclusive runtime ownership and the stop/start deployment boundary. Direct
-OAuth without a portal belongs to `configuration-authorization`.
+[configuration-state](.codex/skills/configuration-state/SKILL.md) owns the root
+`state` block, restart persistence, exclusive runtime ownership and the
+stop/start deployment boundary. Direct OAuth without a portal belongs to
+[configuration-authorization](.codex/skills/configuration-authorization/SKILL.md).
 
-Use `configuration-logging` for root diagnostic skip rules and issue #280's
-logger ownership boundary. AuthCrunch component filtering does not suppress
+[configuration-logging](.codex/skills/configuration-logging/SKILL.md) owns root
+diagnostic skip rules and issue #280's logger ownership boundary.
+AuthCrunch component filtering does not suppress
 Caddy v2.11.4's independent authentication middleware logger.
+
+## Portal API Integration
+
+Use [authentication-portal-api](.codex/skills/authentication-portal-api/SKILL.md)
+to implement or troubleshoot JSON/native login, token refresh, profile/admin API
+calls, and public JWKS clients. Portal declarations and route mounting retain
+their configuration owners.
 
 ## Break-Fix Troubleshooting
 
-Use the repo-local `break-fix-troubleshooting` skill when diagnosing reported
-configuration, deployment, or runtime failures; analyzing Caddyfiles, Caddy
-logs, redirect loops, login failures, authorization denials, OAuth/OIDC/SAML,
-LDAP, local-user, module-version, or runtime secret issues; or preparing
+Use [break-fix-troubleshooting](.codex/skills/break-fix-troubleshooting/SKILL.md)
+to diagnose reported configuration, deployment, or runtime failures; analyze
+Caddyfiles, Caddy logs, redirect loops, login failures, authorization denials,
+OAuth/OIDC/SAML, LDAP, local-user, module-version, or runtime secret issues; or prepare
 responses for `.github/ISSUE_TEMPLATE/break-fix.md`.
 
 ## Source Code Management
 
-Use the repo-local `source-code-management` skill for commit message rules and
-for the workflow used when asked to create a commit message for a change.
+Use [source-code-management](.codex/skills/source-code-management/SKILL.md) to
+create or review commit messages and their required message files.
 
 ## Scripts and Automation
 
-Use the repo-local `scripts-and-automation` skill when choosing, running, or
-documenting Makefile targets, repository scripts, build/test/report workflows,
-generated artifacts, dependency automation, or release/version procedures.
+Use [scripts-and-automation](.codex/skills/scripts-and-automation/SKILL.md) to
+choose, run, or document Makefile targets, repository scripts, build/test/report
+workflows, generated artifacts, dependency automation, or release/version
+procedures.
 
 Use its [local user command reference](.codex/skills/scripts-and-automation/references/local-user-commands.md)
 for `security local` user-store administration and offline credential generation.
@@ -170,9 +182,10 @@ Keep the utility's user-facing usage in `cmd/caddy-authenticator/README.md`.
 
 ## Versioning and Releases
 
-Use the repo-local `release-and-versioning` skill for `VERSION`, generated
-download links, versioned CI artifacts, release preparation and execution,
-release Make targets, GoReleaser packaging, and publication workflows.
+The scripts-and-automation router delegates `VERSION`, generated download
+links, versioned CI artifacts, release preparation and execution, release Make
+targets, GoReleaser packaging, and publication workflows to
+[release-and-versioning](.codex/skills/release-and-versioning/SKILL.md).
 
 ## Skill Authoring
 
@@ -180,16 +193,18 @@ Keep repository documentation in the relevant repo-local skill or its linked
 references under `.codex/skills/`. Do not place Markdown documentation in
 `docs/` or `assets/docs/`.
 
-Use the repo-local `skill-authoring-patterns` skill with the default
-`skill-creator` when creating, porting, reviewing, or validating repo-local
-skills, `agents/openai.yaml` metadata, or `AGENTS.md` skill routing.
+Use [skill-authoring](.codex/skills/skill-authoring/SKILL.md) to create, port,
+review, or validate repo-local skills, `agents/openai.yaml` metadata, and
+actionable skill routing from `AGENTS.md`. Apply it with the default
+`skill-creator`; its linked caddy-security supplement owns local authoring details.
+Diagrams are optional and are not a requirement for skill authoring or audits.
 
 ## Testing and CI
 
-Use the repo-local `testing-and-ci` skill when choosing or running tests,
-adding or updating test coverage, maintaining Caddyfile adapt or runtime
-resolution fixtures, interpreting CI failures, reproducing GitHub Actions
-locally, or documenting validation for a change.
+Use [testing-and-ci](.codex/skills/testing-and-ci/SKILL.md) to choose or run tests,
+add or update test coverage, maintain Caddyfile adapt or runtime resolution
+fixtures, interpret CI failures, reproduce GitHub Actions locally, or document
+validation for a change.
 
 Code changes must have unit and E2E coverage. Caddyfile directive changes also
 require new or amended adaptation cases in `testdata/caddyfile_adapt/`. Follow

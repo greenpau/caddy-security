@@ -1,6 +1,6 @@
 ---
 name: configuration-state
-description: Configure durable AuthCrunch runtime state in Caddy, including the root state adapter, restart persistence, exclusive ownership, reload rejection, failure handling, and process-level regression tests.
+description: "Configure durable AuthCrunch runtime state, exclusive storage ownership, stop/start persistence, reload rejection, and recovery. Use for root state blocks and process-level restart guarantees."
 ---
 
 # Persistent Runtime State
@@ -67,8 +67,8 @@ resources. Close neither flushes nor deletes committed data. Preserve handled
 503/protocol failures and never issue fallback credentials or retry rotations.
 
 Policy-only OAuth needs neither a placeholder portal nor a local database.
-Use [direct OAuth policies](../configuration-authorization/SKILL.md#direct-oauth-without-a-portal)
-and mount their callback/logout namespace through the same policy.
+The [direct OAuth policy contract](../configuration-authorization/SKILL.md#direct-oauth-without-a-portal)
+owns those settings; mount callback/logout paths through the same policy.
 
 ## Validation
 
@@ -98,7 +98,10 @@ before changing the contract. Library tests alone do not certify this host.
   sessions remain separate phases. The snapshot-capacity fixture writes tens
   of MiB.
 
-Run the focused unit/adaptation tests and
+When changing the state parser or runtime implementation, run focused
+unit/adaptation tests and
 `go test -mod=readonly -race -count=1 -timeout=8m -run 'TestCaddyRuntimeStateE2E|TestPersistentApp' .`.
-Retain the existing OAuth, lifecycle, composition and browser refresh suites.
-Use [testing-and-ci](../testing-and-ci/SKILL.md) for full regression/report runs.
+Retain the existing OAuth, lifecycle, composition and browser refresh coverage.
+Ordinary configuration review uses the relevant grammar, path/ownership and
+deployment checks; skill-only changes need metadata/link/source validation.
+Full regression/report runs follow [testing-and-ci](../testing-and-ci/SKILL.md).

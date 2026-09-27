@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Authoring"
+  short_description: "Author task-routed repo-local skills"
+  default_prompt: "Use $skill-authoring to create repo-local skills connected by task-specific routing statements."

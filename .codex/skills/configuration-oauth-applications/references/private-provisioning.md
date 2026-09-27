@@ -92,8 +92,10 @@ selector. Help and incomplete command groups perform no provisioning.
 ## Minimal create and load workflow
 
 These commands assume `/var/lib/caddy` already exists and is writable by the
-Caddy service account. Keep the deployment paths outside the repository. The
-same grammar is exercised with temporary absolute paths by
+Caddy service account. They illustrate an operator's deployment layout; for
+repository validation, substitute private absolute paths under this checkout's
+`tmp/` rather than creating or changing deployment storage. The same grammar
+is exercised with temporary absolute paths by
 `TestCaddyRegistrationE2E` and the adaptation fixtures.
 
 ```sh
@@ -222,8 +224,13 @@ There is no mutable `active.json` pointer in the store. The active Caddy
 configuration selects immutable revisions; Caddy owns activation and autosave.
 Failed adaptation, provisioning, or app start cannot replace stored v1. A rejected
 reload preserves the active provider and its autosave. Explicitly select v1 again
-to roll back, while it remains retained and appropriate for use. Provider sessions
-and outstanding grants are process-local and are not restored from registrations.
+to roll back, while it remains retained and appropriate for use. Registration
+records do not restore provider sessions or outstanding grants. Those are
+volatile unless the independent root `state` block is enabled. Use
+[configuration-state](../../configuration-state/SKILL.md) to configure persistent
+authority and plan stop/start activation. Credential/configuration changes may
+invalidate the previous session epoch; durable registrations alone promise
+neither session continuity nor a dual-secret transition.
 
 Writers hold an exclusive `.writer-lock` directory, bounded by the command's
 30-second context. They sync a private temporary file, publish by hard link
