@@ -245,9 +245,18 @@ password generation never prints the plaintext input.
 - `TestSecurityTerminalEncoding` and `FuzzSecurityTerminalEncoding`: byte
   preservation and rejection of corrupt input, including split UTF-8 sequences.
 
+The terminal broker keeps secret checks on the complete terminal transcript.
+Successful login stdout must be exactly the success object with the token path
+selected by the test; preserve duplicate-field rejection and reject extra output.
+Do not search that public path for a six-digit TOTP: temporary directory names
+and cache filenames can contain the same digits by chance. The automation
+regressions in `assets/scripts/tests/terminal_output_test.py` cover this collision
+and ensure unexpected fields, changed paths, and leaked text still fail.
+
 Run focused tests, then the repository suite:
 
 ```sh
+python3 -m unittest discover -s assets/scripts/tests -p 'terminal_output_test.py' -v
 go test -mod=readonly -run 'TestSecurity(Local|Credential|Terminal)|TestCaddySecurityLocal' .
 make test
 make build

@@ -43,8 +43,14 @@ func securityTerminalCommand(t *testing.T, mode string, args ...string) []byte {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 	defer cancel()
+	var tokenPath string
+	if mode == "login" || mode == "login-mfa" {
+		// The broker checks the complete response against this known public path.
+		tokenPath = filepath.Join(t.TempDir(), "token.json")
+		args = append(args, "--token-path", tokenPath)
+	}
 	cmd := exec.CommandContext(ctx, python, append([]string{"testdata/security_cli/terminal.py", os.Args[0], mode}, args...)...)
-	cmd.Env = append(os.Environ(), "SECURITY_LOCAL_TEST_TOTP_SECRET="+securityTerminalMFASecret)
+	cmd.Env = append(os.Environ(), "SECURITY_LOCAL_TEST_TOTP_SECRET="+securityTerminalMFASecret, "SECURITY_TERMINAL_TOKEN_PATH="+tokenPath)
 	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 2 * time.Second
 	output, err := cmd.CombinedOutput()

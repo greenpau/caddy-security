@@ -12,6 +12,8 @@ import sys
 import termios
 import time
 
+from terminal_output import assert_connect_output
+
 master, slave = pty.openpty()
 original = termios.tcgetattr(slave)
 process = None
@@ -20,6 +22,10 @@ mode = sys.argv[2]
 success = mode in ("success", "unicode", "crlf", "paste", "login", "login-mfa")
 interactive_mfa = mode in ("login-mfa", "login-mfa-terminate", "login-totp-timeout")
 code = None
+expected_token_path = None
+if mode in ("login", "login-mfa"):
+    # The CLI resolves symlinked ancestors (including macOS temporary roots).
+    expected_token_path = os.path.realpath(os.environ["SECURITY_TERMINAL_TOKEN_PATH"])
 if mode == "unicode":
     secret = "Terminal-秘密-é-123".encode()
 elif mode in ("invalid-utf8", "login-invalid-utf8"):
@@ -111,8 +117,13 @@ try:
         raise RuntimeError("command failed to restore terminal settings")
     if secret in transcript or secret in output:
         raise RuntimeError("command exposed the input password")
-    if code is not None and (code in transcript or code in output):
+    if code is not None and code in transcript:
         raise RuntimeError("command exposed the authenticator code")
+    if mode in ("login", "login-mfa"):
+        # A short numeric TOTP can occur in the public token path by chance.
+        # Check the entire expected response, including the exact chosen path,
+        # rather than exempting arbitrary paths from secret-output checks.
+        assert_connect_output(output, expected_token_path)
     if mode in ("login-invalid-utf8", "login-replacement"):
         if b"private config or password file" not in transcript:
             raise RuntimeError("login did not explain safe file input")

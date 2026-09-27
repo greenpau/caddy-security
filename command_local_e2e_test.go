@@ -288,7 +288,14 @@ func TestSecurityLocalPortalProcess(t *testing.T) {
 				if !json.Valid(output) || !bytes.Contains(output, []byte(`"success"`)) {
 					t.Fatal("interactive MFA login did not return successful JSON")
 				}
-				jsonCall("metadata") // The interactively obtained credentials authorize real admin requests.
+				var connected struct {
+					TokenPath string `json:"token_path"`
+				}
+				if json.Unmarshal(output, &connected) != nil || connected.TokenPath == "" {
+					t.Fatal("interactive MFA login omitted the credential path")
+				}
+				// The interactively obtained credentials authorize real admin requests.
+				jsonCall("metadata", "--token-path", connected.TokenPath)
 			})
 			writeMFAConfig("mfaadmin-reload", "Terminal-secret-123", 6)
 			// API-key generation output is accepted by the real local store and
