@@ -392,18 +392,14 @@ func TestCaddyfileOAuthApplicationAssembly(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "explicit or persisted client_id") {
 		t.Fatalf("applications were not collected first: %v", err)
 	}
-	// Even if Caddy supplies a previous value, adaptation uses only declarations.
-	d := caddyfile.NewTestDispenser("security {\n" + portal + store + "}\n")
-	raw, err := parseCaddyfile(d, first)
-	if err != nil {
-		t.Fatal(err)
-	}
-	encoded, err := json.Marshal(raw)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bytes.Contains(encoded, []byte("oauth_applications")) {
+	// A fresh adaptation uses only its own declarations. Caddy's previous
+	// value denotes a duplicate security block in the same configuration.
+	fresh := adaptApplicationTestConfig(t, portal+store)
+	if len(fresh.Config.OAuthApplications) != 0 {
 		t.Fatal("removed application survived adaptation")
+	}
+	if len(first.Config.OAuthApplications) != 1 || first.Config.OAuthApplications[0].Name != "web" {
+		t.Fatal("fresh adaptation mutated the previous application registry")
 	}
 }
 
