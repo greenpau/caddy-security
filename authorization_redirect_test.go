@@ -31,17 +31,56 @@ import (
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"golang.org/x/net/html"
 )
 
 func redirectTargets() []string {
 	return []string{"/", "/nested/resource", "/files/a%2fb?x=one%26two&x=three+four", "//other.example/private", "/empty?"}
 }
 
+// Parse the synthetic redirect page as HTML so tag casing, attributes and
+// script-like text in comments do not change which program the harness runs.
+func parseAuthorizationRedirectScript(body string) (string, error) {
+	doc, err := html.Parse(strings.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("parse redirect HTML: %w", err)
+	}
+	var script *html.Node
+	for node := range doc.Descendants() {
+		if node.Type != html.ElementNode || node.Data != "script" {
+			continue
+		}
+		if script != nil {
+			return "", fmt.Errorf("expected one redirect program")
+		}
+		for _, attr := range node.Attr {
+			if attr.Key == "src" {
+				return "", fmt.Errorf("expected an inline redirect program")
+			}
+		}
+		script = node
+	}
+	if script == nil {
+		return "", fmt.Errorf("expected one redirect program")
+	}
+	var program strings.Builder
+	for child := script.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == html.TextNode {
+			program.WriteString(child.Data)
+		}
+	}
+	return program.String(), nil
+}
+
 // Execute the emitted program, including its encodeURIComponent and fragment
 // logic. Extracting quoted values alone would not test what a browser follows.
 func executeAuthorizationRedirect(t *testing.T, body, fragment string) string {
 	t.Helper()
-	input, err := json.Marshal(map[string]string{"body": body, "fragment": fragment})
+	script, err := parseAuthorizationRedirectScript(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := json.Marshal(map[string]string{"script": script, "fragment": fragment})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,6 +93,49 @@ func executeAuthorizationRedirect(t *testing.T, body, fragment string) string {
 		t.Fatalf("execute redirect script: %v\n%s", err, output)
 	}
 	return string(output)
+}
+
+func TestAuthorizationRedirectScriptHTML(t *testing.T) {
+	const script = `window.location = "/login?value=&amp;" + window.location.hash;`
+	for _, tc := range []struct {
+		name string
+		body string
+	}{
+		{"lowercase", "<script>" + script + "</script>"},
+		{"uppercase", "<SCRIPT>" + script + "</SCRIPT>"},
+		{"mixed case", "<ScRiPt>" + script + "</sCrIpT>"},
+		{"attributes", `<script type="text/javascript" data-label=">">` + script + "</script>"},
+		{"end tag whitespace", "<script>" + script + "</script \n>"},
+		{"end tag attributes", "<script>" + script + `</script data-label="ignored">`},
+		{"comment decoy", `<!-- <script>throw new Error("comment");</script> -->` + "<script>" + script + "</script>"},
+		{"comment end bang", `<!-- <script>throw new Error("comment");</script> --!>` + "<script>" + script + "</script>"},
+		{"textarea decoy", `<textarea><script>throw new Error("text");</script></textarea>` + "<script>" + script + "</script>"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := executeAuthorizationRedirect(t, tc.body, "#part%202"); got != "/login?value=&amp;#part%202" {
+				t.Fatalf("redirect = %q", got)
+			}
+		})
+	}
+}
+
+func TestAuthorizationRedirectScriptRejectsUnexpectedPrograms(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+	}{
+		{"missing", "<p>No redirect program</p>"},
+		{"comment only", "<!-- <script>window.location = '/login';</script> -->"},
+		{"textarea only", "<textarea><script>window.location = '/login';</script></textarea>"},
+		{"multiple", "<script></script><SCRIPT></SCRIPT>"},
+		{"external", `<script SRC="redirect.js"></script>`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := parseAuthorizationRedirectScript(tc.body); err == nil {
+				t.Fatal("accepted a page without exactly one inline redirect program")
+			}
+		})
+	}
 }
 
 func assertAuthorizationRedirect(t *testing.T, location, authURL, parameter, target string) {

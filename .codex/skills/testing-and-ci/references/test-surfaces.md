@@ -74,6 +74,13 @@ absolute-URL/origin-target representation. JavaScript runs in Node rather than
 being inferred from template strings. Requests must remain unchanged and a
 handled redirect must never call the protected handler.
 
+The Go harness parses redirect HTML with `golang.org/x/net/html` and passes
+exactly one inline script to Node. Keep HTML extraction out of regular
+expressions. `TestAuthorizationRedirectScriptHTML` covers tag casing,
+attributes, permissive closing tags, comment/textarea decoys and literal script
+text; `TestAuthorizationRedirectScriptRejectsUnexpectedPrograms` rejects missing,
+multiple or external scripts before execution.
+
 `TestCaddyAuthorizationRedirectE2E` runs a bounded real Caddy subprocess with
 separate TLS app/portal hostnames, exact app-authority redirect trust, shared
 access-cookie scope and signing/verification material. Each HTTP version runs
