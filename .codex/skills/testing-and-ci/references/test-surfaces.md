@@ -33,6 +33,37 @@ Test credentials are seeded before Caddy owns the database; runtime profile
 mutations cross HTTP. Changed local-store configuration restarts explicitly,
 respecting the existing prohibition on overlapping file-backed runtimes.
 
+## Authorization login redirects
+
+`TestAuthzRedirectRequestTargets` tests both redirect renderers through the Caddy
+authorization handler, including origin-form, absolute-form and quic-go's
+absolute-URL/origin-target representation. JavaScript runs in Node rather than
+being inferred from template strings. Requests must remain unchanged and a
+handled redirect must never call the protected handler.
+
+`TestCaddyAuthorizationRedirectE2E` runs a bounded real Caddy subprocess with
+separate TLS app/portal hostnames, exact app-authority redirect trust, shared
+access-cookie scope and signing/verification material. Each HTTP version runs
+HEAD and GET probes and cookie-preserving local password and synthetic OAuth
+callback journeys for root, nested, escaped/raw-query, authority-looking and
+empty-query targets. Only a completed login may reach the protected resource.
+It checks custom/disabled redirect queries, configured status, untrusted return
+destinations, and a TLS proxy before/after Caddy proxy trust is configured.
+Forwarded host/proto use Caddy's last-field rule; independent port/prefix hints
+cannot change the returned origin or mount.
+
+The HTTP/3 client uses UDP/QUIC with no TCP fallback and verifies both client
+and Caddy protocol evidence. Chrome independently completes local, OAuth and
+JavaScript-fragment journeys over each protocol, using private certificate
+trust and rejecting an untrusted certificate and a wrong hostname first.
+Missing Chrome/Node or failed HTTP/3 negotiation fails the suite. Do not call
+HTTP/2 fallback HTTP/3 coverage; inspect `curl --version` before using manual
+`--http3-only` probes. The synthetic provider itself uses verified HTTP/1.1;
+the selected protocol is asserted on all app and portal exchanges.
+
+Run `make qtest TEST='TestAuthzRedirectRequestTargets|TestCaddyAuthorizationRedirectE2E'`
+for race-enabled regression reports, then the normal `make ci-check` gate.
+
 ## Shared test mechanics
 
 Automation fixtures must create their own generated parent directories before

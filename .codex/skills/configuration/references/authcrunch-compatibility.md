@@ -4,7 +4,7 @@
 
 Read `go.mod` and `go list -m -json github.com/greenpau/go-authcrunch` to
 establish the selected version, module directory, and any replacement. This
-checkout selects published v1.3.4; sibling source and integrated xcaddy build
+checkout selects published v1.3.6; sibling source and integrated xcaddy build
 arguments can select different code and are not proof of the normal build's
 behavior. Record that distinction in qualification evidence. A dependency task
 must inspect the Makefile xcaddy argument and CONTRIBUTING examples separately.
@@ -13,6 +13,19 @@ The table maps supported upstream surfaces to their Caddy host boundaries. Gramm
 AuthCrunch HTTP server's configuration into Caddy's app or routes.
 
 ## Integration surfaces and evidence
+
+The v1.3.4 → v1.3.6 source comparison leaves delegated Caddyfile parsers,
+configuration shapes and defaults unchanged. Runtime hardening and the HTTP/3
+return-URL fix arrive through the dependency; no new directive or Caddy redirect
+builder is needed. The module keeps its existing quic-go v0.63.0 selection and
+qpack v0.6.0: Caddy v2.11.4 requests quic-go v0.59.1 and AuthCrunch v1.3.6
+requests v0.62.0 for its protocol tests. Do not downgrade the selected transport.
+quic-go v0.63.0 leaves ordinary request URLs relative, masking the old
+AuthCrunch bug in live traffic. The wrapper unit regression deliberately also
+covers v0.62.0's absolute URL with origin-form `RequestURI`; live E2E keeps the
+selected transport and never changes server request fields.
+`TestAuthzRedirectRequestTargets` and `TestCaddyAuthorizationRedirectE2E` qualify
+the host integration; see [authorization options](../../configuration-authorization/SKILL.md#policy-options).
 
 | Upstream surface | Caddy integration and validation |
 | --- | --- |
@@ -39,7 +52,7 @@ JWT roles and protected-resource access. Repeated directives replace the list.
 
 ## Upstream match-any limit
 
-The selected v1.3.4 retains a library limitation covered by Caddy TLS regression:
+The selected v1.3.6 retains a library limitation covered by Caddy TLS regression:
 `match any` actions appear in access-only login but disappear when portal
 refresh rebuilds identity claims. Source tracing also finds the same input
 shape in the OIDC identity verifier. `pkg/acl/condition.go` implements
@@ -98,7 +111,7 @@ substitute untrusted claims into policy selection itself.
 
 Remaining distinctions:
 
-- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.4;
+- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.6;
   `enable logout` is supported. Keep the restriction documented and tested.
 - Local static API keys have no `overwrite` suffix. Email authentication
   checkpoints are unsupported in both conditional-policy surfaces.

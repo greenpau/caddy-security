@@ -195,6 +195,22 @@ Use the same-host portal path such as `/auth` or `/xauth`, or the full URL for
 a split-host or root-mounted dedicated auth host. The HTTP integration route
 above owns mount selection and auth URL alignment.
 
+go-authcrunch v1.3.6 preserves the full application return URL over HTTP/1.1,
+HTTP/2 and HTTP/3, including authority/port, escaped path and raw query. The
+configured auth URL remains the outer destination, including direct portal
+OAuth callback URLs. Decode `redirect_url` once to inspect the return URL.
+An authority-looking path such as `//other.example/private` stays on the
+application origin. JavaScript redirects also preserve the browser fragment.
+The library classifies `RequestURI`, since HTTP/3 can populate an absolute
+`r.URL` for an origin-form request target. Keep this logic in AuthCrunch;
+do not rewrite Caddy request fields, build another redirect, or disable HTTP/3.
+
+Split-host completion still requires compatible access-token keys, cookie
+domain/path and an explicit trusted application return destination. A correct
+redirect does not relax the portal allowlist. Forwarded origin selection follows
+[Caddy edge trust](../configuration-http-integrations/references/edge-trust.md);
+separate forwarded port/prefix hints remain stripped.
+
 `set redirect status` accepts only 300 through 308. When `set forbidden url` is
 present, access-denied decisions redirect with status `303`; `{uri}`,
 `{http.request.uri}`, and `{url}` placeholders are replaced at request time.
@@ -229,7 +245,7 @@ actual source: bearer/named header, Basic/API-key header, query or cookie.
 Unrelated request headers, query arguments and cookies remain. Token sources
 and validation still determine which credential can authorize the request.
 
-The selected go-authcrunch v1.3.4 checks every original, decoded and cleaned
+The selected go-authcrunch v1.3.6 checks every original, decoded and cleaned
 path interpretation whenever method/path or token path-claim validation is
 enabled. Every interpretation must satisfy the policy and any required claim;
 this also applies to cached identities. Cleaning must not turn
@@ -337,6 +353,16 @@ adapts policies and exercises real Caddy TLS over HTTP/1.1 and HTTP/2: bypasses,
 method/path rules, token path claims, cached identities, encoded traversal,
 invalid UTF-8 and concurrent literal wildcard grants. Denials assert that the
 downstream handler was never reached; successful requests retain their URI.
+
+`TestAuthzRedirectRequestTargets` exercises the actual authorization wrapper
+with origin-form, absolute-form and HTTP/3 request representations, both
+renderers and unchanged downstream request fields. `TestCaddyAuthorizationRedirectE2E`
+checks separate app/portal hosts over verified HTTP/1.1, HTTP/2 and UDP/QUIC
+HTTP/3, HEAD/GET redirects, local password and synthetic OAuth login, shared
+cookies and final resource authorization. Its Chrome journeys assert the
+negotiated protocol and execute JavaScript fragment redirects. The suite also
+retains untrusted-return rejection, custom/disabled queries, status selection
+and proxy trust. See [redirect qualification](../testing-and-ci/references/test-surfaces.md#authorization-login-redirects).
 
 ## Acceptance criteria
 

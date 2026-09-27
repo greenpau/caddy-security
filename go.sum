@@ -216,8 +216,8 @@ github.com/googleapis/gax-go/v2 v2.25.0 h1:77gyzCOrTyzPKfzGZJG/V5DO4/Kuamek8W+cY
 github.com/googleapis/gax-go/v2 v2.25.0/go.mod h1:sMKqnMesnKH+3wiRJROcttA+cJoZoGbZl1vDQ8XYtGk=
 github.com/greenpau/caddy-trace v1.1.13 h1:sQveqzDt+O1/ZpfpJddXJ5S2UHtcvSVDKZRgZ9wGo/k=
 github.com/greenpau/caddy-trace v1.1.13/go.mod h1:K6lD24evCjgCFqz8KYJbXMvMAQ8wFEG0+Z4EEqDU1dA=
-github.com/greenpau/go-authcrunch v1.3.4 h1:ZTy+j1rkTyKyIqaNWNnL75ZA/877czBwRIPG4fyyHcw=
-github.com/greenpau/go-authcrunch v1.3.4/go.mod h1:hltvpTWECLpLNvmRq/AA+vSmp7K5wqX+C+p3tT1B5dU=
+github.com/greenpau/go-authcrunch v1.3.6 h1:MF9+vQIwiJXmal7PUgkva6cEwDzpwNJRUqq7qM91gkk=
+github.com/greenpau/go-authcrunch v1.3.6/go.mod h1:+go5teWjOJQBcY/wecDVCkDIbzBAuGY2941nLV8rSiU=
 github.com/greenpau/tested v1.0.2 h1:YRriBDmzu947L5ZrZPzye0M4roHfK/S1CNK25vlGEVc=
 github.com/greenpau/tested v1.0.2/go.mod h1:fdzGBL91Z6KDQ0b89AARxzHm/T0nxW8JPrJgUx41ovg=
 github.com/greenpau/versioned v1.0.36 h1:EE9SXCLPqJpSCiNv5eAY4q6YWVIonN+j2/jRjEbpVrI=
