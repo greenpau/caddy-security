@@ -16,11 +16,9 @@ package security
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	oauthparser "github.com/greenpau/go-authcrunch/pkg/authz/oauth/parser"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -52,9 +50,15 @@ const (
 //		oauth maximum pending logins <count>
 //	}
 //
-// At least one ACL rule is required. Additional enable, disable, validate, set,
-// and with forms are documented at parseCaddyfileAuthorizationMisc.
-func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+// At least one ACL rule is required.
+// Each OAuth statement may occur once, without a nested block. The shared parser
+// owns defaults and validation. Complete bodies containing runtime references
+// survive Caddy JSON and are parsed after replacement, before policy validation.
+// OAuth sessions default to 900 absolute seconds and capacities to 10000 sessions
+// and 1024 pending logins per policy; expiry requires another provider login.
+// Additional enable, disable, validate, set, and with forms are documented at
+// parseCaddyfileAuthorizationMisc.
+func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 	var rootDirective string
 	args := d.RemainingArgs()
 	if len(args) != 2 {
@@ -76,7 +80,10 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config)
 					}
 					d.Prev()
 				}
-				oauthStatements = append(oauthStatements, cfgutil.EncodeArgs(args))
+				if err := validateOAuthDirectiveTokens(args); err != nil {
+					return d.Errf("%v", err)
+				}
+				oauthStatements = append(oauthStatements, encodeOAuthDirective(args))
 			case cryptoKeyword:
 				v := d.RemainingArgs()
 				if err := parseCaddyfileAuthorizationCrypto(d, p, rootDirective, v); err != nil {
@@ -110,14 +117,24 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, cfg *authcrunch.Config)
 				return errors.ErrMalformedDirective.WithArgs(rootDirective, d.RemainingArgs())
 			}
 		}
-		oauth, err := oauthparser.NewOAuthAuthorizationConfigFromDirectives(p.Name, oauthStatements)
-		if err != nil {
-			return d.Errf("%v", err)
+		if cookieDirectivesNeedResolution(oauthStatements) {
+			if app.OAuthAuthorizationDirectives == nil {
+				app.OAuthAuthorizationDirectives = make(map[string][]string)
+			}
+			if _, exists := app.OAuthAuthorizationDirectives[p.Name]; exists {
+				return d.Errf("duplicate OAuth authorization policy %q", p.Name)
+			}
+			app.OAuthAuthorizationDirectives[p.Name] = oauthStatements
+		} else {
+			oauth, err := oauthparser.NewOAuthAuthorizationConfigFromDirectives(p.Name, oauthStatements)
+			if err != nil {
+				return d.Errf("%v", err)
+			}
+			if err := p.ConfigureOAuth(oauth); err != nil {
+				return d.Errf("%v", err)
+			}
 		}
-		if err := p.ConfigureOAuth(oauth); err != nil {
-			return d.Errf("%v", err)
-		}
-		if err := cfg.AddAuthorizationPolicy(p); err != nil {
+		if err := app.Config.AddAuthorizationPolicy(p); err != nil {
 			return err
 		}
 	default:

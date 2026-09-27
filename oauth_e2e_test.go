@@ -283,6 +283,17 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		}
 		access := map[string]any{"iss": f.tokenIssuer, "aud": f.accessAudience, "azp": f.clientID, "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"resource/editor"}}
 		switch f.failure {
+		case "identity no roles":
+			delete(id, "roles")
+		case "identity missing nonce":
+			delete(id, "nonce")
+		case "identity missing subject":
+			delete(id, "sub")
+		case "identity malformed":
+			id["sub"] = []string{"invalid"}
+		case "provider error":
+			http.Error(w, "synthetic provider error", http.StatusBadRequest)
+			return
 		case "identity issuer":
 			id["iss"] = "https://wrong.example"
 		case "identity audience":

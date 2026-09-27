@@ -40,23 +40,18 @@ func (AuthorizationHandler) CaddyModule() caddy.ModuleInfo {
 
 // ServeHTTP only runs downstream after explicit authorization or bypass.
 func (m AuthorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+	release, ok := m.app.acquireRequest()
+	if !ok {
+		return authorizationError(w, r, caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down")))
+	}
+	defer release()
 	response := caddyhttp.NewResponseRecorder(w, nil, nil)
-	user, authorized, err := m.Authenticate(response, r)
+	user, authorized, err := m.authenticate(response, r)
 	if response.Status() != 0 {
 		return nil // Preserve handled status, cookies, body and protocol failures.
 	}
 	if err != nil || !authorized {
-		w.Header().Set("Cache-Control", "no-store")
-		if err != nil {
-			// Retain the authentication provider's error placeholder for existing
-			// handle_errors routes when no response has already been handled.
-			repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
-			repl.Set("http.auth."+authzPluginName+".error", err.Error())
-		}
-		if err == nil {
-			err = fmt.Errorf("not authenticated")
-		}
-		return caddyhttp.Error(http.StatusUnauthorized, err)
+		return authorizationError(w, r, err)
 	}
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	repl.Set("http.auth.user.id", user.ID)
@@ -66,7 +61,21 @@ func (m AuthorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, 
 	return next.ServeHTTP(w, r)
 }
 
+// Preserve the legacy error placeholder for unhandled failures, including app
+// admission. Caddy's Error helper retains an existing HandlerError status.
+func authorizationError(w http.ResponseWriter, r *http.Request, err error) error {
+	w.Header().Set("Cache-Control", "no-store")
+	if err != nil {
+		repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+		repl.Set("http.auth."+authzPluginName+".error", err.Error())
+	} else {
+		err = fmt.Errorf("not authenticated")
+	}
+	return caddyhttp.Error(http.StatusUnauthorized, err)
+}
+
 var (
+	_ caddy.Module                = (*AuthorizationHandler)(nil)
 	_ caddy.Provisioner           = (*AuthorizationHandler)(nil)
 	_ caddy.Validator             = (*AuthorizationHandler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*AuthorizationHandler)(nil)

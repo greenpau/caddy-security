@@ -1,0 +1,24 @@
+{
+	security {
+		oauth identity provider linkedin {
+			realm linkedin
+			driver linkedin
+			client_id {env.LINKEDIN_APP_CLIENT_ID}
+			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
+		}
+		authorization policy linkedin_oauth_policy {
+			use oauth identity provider linkedin
+			# authp/user permits every account authenticated by LinkedIn.
+			allow roles authp/admin authp/user
+		}
+	}
+}
+
+# Register exactly this provider redirect URI:
+# https://app.example.com/_authcrunch/oauth2/linkedin_oauth_policy/authorization-code-callback
+app.example.com {
+	route {
+		authorize with linkedin_oauth_policy
+		reverse_proxy 127.0.0.1:5001
+	}
+}

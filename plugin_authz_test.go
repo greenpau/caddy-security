@@ -281,3 +281,80 @@ func TestAuthzPathDelegation(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthorizationHandlerAdmissionAndDrain(t *testing.T) {
+	policy := &authz.PolicyConfig{Name: "drain", AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}}, BypassConfigs: []*bypass.Config{{MatchType: "exact", URI: "/public"}}}
+	app := provisionLifecycleApp(t, &authcrunch.Config{AuthorizationPolicies: []*authz.PolicyConfig{policy}})
+	gate, err := app.getGatekeeper("drain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := AuthorizationHandler{AuthzMiddleware: AuthzMiddleware{app: app, gatekeeper: gate}}
+	request := func() *http.Request {
+		r := httptest.NewRequest("GET", "https://app.example/public", nil)
+		return r.WithContext(context.WithValue(r.Context(), caddy.ReplacerCtxKey, caddy.NewReplacer()))
+	}
+	entered, release, finished := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		finished <- handler.ServeHTTP(httptest.NewRecorder(), request(), caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { close(entered); <-release; return nil }))
+	}()
+	<-entered
+	cleanup := make(chan error, 1)
+	go func() { cleanup <- app.Cleanup() }()
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	// Observe admission closing before testing retained handlers, without racing
+	// request acquisition against a cleanup goroutine that has not started yet.
+	tick := time.NewTicker(time.Millisecond)
+	defer tick.Stop()
+	for {
+		app.mu.Lock()
+		disposing := app.disposing
+		app.mu.Unlock()
+		if disposing {
+			break
+		}
+		select {
+		case <-tick.C:
+		case <-deadline.C:
+			close(release)
+			t.Fatal("cleanup did not close admission")
+		}
+	}
+	response := httptest.NewRecorder()
+	calls := 0
+	retained := request()
+	err = handler.ServeHTTP(response, retained, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { calls++; return nil }))
+	denial, ok := err.(caddyhttp.HandlerError)
+	if !ok || denial.StatusCode != 503 || calls != 0 {
+		close(release)
+		t.Fatal("retained handler admitted shutdown request")
+	}
+	if value, ok := retained.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer).Get("http.auth.authorizer.error"); !ok || value == "" {
+		close(release)
+		t.Fatal("shutdown denial lost the error-route placeholder")
+	}
+	select {
+	case <-cleanup:
+		close(release)
+		t.Fatal("runtime disposed before downstream returned")
+	default:
+	}
+	close(release)
+	select {
+	case err := <-finished:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-deadline.C:
+		t.Fatal("handler did not return")
+	}
+	select {
+	case err := <-cleanup:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-deadline.C:
+		t.Fatal("request reference leaked (or double acquired)")
+	}
+}

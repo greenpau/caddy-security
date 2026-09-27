@@ -75,6 +75,10 @@ type App struct {
 	// so driver defaults never become part of an unresolved secret lookup.
 	OAuthProviderDirectives map[string][]string `json:"oauth_provider_directives,omitempty"`
 
+	// OAuthAuthorizationDirectives retains complete policy statements with
+	// runtime references. Resolve once before applying direct OAuth validation.
+	OAuthAuthorizationDirectives map[string][]string `json:"oauth_authorization_directives,omitempty"`
+
 	SecretsManagerConfigs []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
 	secretsManagers       []SecretsManager
 
@@ -156,7 +160,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.logger); err != nil {
+	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.OAuthAuthorizationDirectives, app.logger); err != nil {
 		return err
 	}
 	// Apply resolved snapshots last so substituted paths are not expanded twice.
@@ -282,7 +286,7 @@ func (app *App) Cleanup() error {
 	return app.cleanupErr
 }
 
-// acquireRequest pins the runtime for one portal/gatekeeper call. Admission and
+// acquireRequest pins the runtime for an admitted handler/authenticator. Admission and
 // WaitGroup.Add share the disposal lock, so no Add can race the cleanup Wait.
 func (app *App) acquireRequest() (release func(), ok bool) {
 	if app == nil {

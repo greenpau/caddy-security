@@ -115,10 +115,16 @@ Resolve these app config areas:
   Resolve domain-map keys into a fresh map and reject collisions before replacing
   the map; in-place key updates can silently overwrite settings or process a newly
   inserted key twice.
-- `authorization_policies[]`: replace raw crypto key-store lines only; the
-  subsequent validation rebuilds `crypto_key_store_config`. Pin absent cookie
-  names to `AUTHP_SESSION_ID` and the default access-cookie list before server
-  construction, preventing implicit cross-portal discovery.
+- `authorization_policies[]`: replace raw crypto key-store lines and direct
+  `oauth` string fields (provider, public origin, base path and cookie names).
+  Complete runtime-backed OAuth bodies live in `oauth_authorization_directives`,
+  resolve each token once, and reparse before policy defaults/validation; typed
+  `oauth` and deferred directives are mutually exclusive. Literal-only bodies
+  adapt directly to typed config. See [direct OAuth](../configuration-authorization/references/direct-oauth.md).
+  The subsequent policy validation rebuilds `crypto_key_store_config`. For
+  JWT-only policies, pin absent cookie names to `AUTHP_SESSION_ID` and the
+  default access-cookie list before construction, preventing implicit
+  cross-portal discovery. Never add those JWT defaults to direct OAuth policies.
 
 Cookie Caddyfile statements containing runtime placeholders are held separately
 in `App.PortalCookieDirectives` (`portal_cookie_directives` in Caddy JSON), keyed

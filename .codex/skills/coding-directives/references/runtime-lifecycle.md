@@ -59,15 +59,17 @@ not reinterpret that configuration as synchronous discovery.
 
 ## Request draining and failures
 
-Each `AuthnMiddleware.ServeHTTP` and `AuthzMiddleware.Authenticate` call acquires
+Each `AuthnMiddleware.ServeHTTP`, `AuthorizationHandler.ServeHTTP`, and legacy
+`AuthzMiddleware.Authenticate` call acquires
 one app request reference before touching a borrowed runtime object. Admission
 and reference acquisition share the cleanup mutex. Cleanup disables admission
 before waiting, which prevents new references from racing the wait. The request
 releases its reference on return, including errors and panic unwinding.
 
-Tracking covers the AuthCrunch call. A protected upstream handler that runs
-after authorization uses Caddy's copied user metadata and no longer needs the
-AuthCrunch runtime. Calls that have not entered AuthCrunch when retirement
+The route authorization handler keeps its single reference through downstream
+completion and releases on return or panic. It delegates to an already-admitted
+authentication helper, avoiding double acquisition during retirement. The legacy
+authenticator can track only its own call through Caddy's authentication chain. Calls that have not entered AuthCrunch when retirement
 starts fail closed. An authentication portal returns a Caddy 503 error. The
 authorization provider returns an error and no authenticated user; Caddy's
 authentication middleware normally turns that rejection into 401. The route

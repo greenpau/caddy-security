@@ -413,3 +413,17 @@ Expected-error tests set `shouldErr: true` and compare the exact error string
 with `cmp.Diff`. Keep expected errors specific. The static secrets manager
 fixture currently expects a module-not-registered error because the external
 secrets plugin is not registered in this test binary.
+
+## Direct OAuth policies
+
+`TestCaddyDirectOAuthE2E` builds the production Caddy command with a private CA
+fixture, runs without a portal, and restores adapted Caddy JSON. A counted TLS
+upstream proves handled redirects/callbacks/denials/logout never reach the app or
+append `handle_errors` pages. Generic OIDC keeps nonce and S256 enabled and signs
+assertions independently. The suite includes a real Chrome cookie journey,
+policy ACL/source checks, wrong-origin/browser transplants, replays, provider
+failures, capacity, absolute expiry, logout during exchange and volatile reload.
+See the [direct OAuth acceptance surface](../../configuration-authorization/references/direct-oauth.md#consumer-validation)
+for parser fixtures, admission/draining units and protocol scope. Separate
+built commands are outside parent instrumentation. Existing portal, Basic,
+API-key and remote-authenticator regressions remain in the normal full suite.

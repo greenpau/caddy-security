@@ -1,0 +1,168 @@
+{
+	"apps": {
+		"http": {
+			"servers": {
+				"srv0": {
+					"listen": [
+						":443"
+					],
+					"routes": [
+						{
+							"match": [
+								{
+									"host": [
+										"app.example.com"
+									]
+								}
+							],
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"handler": "subroute",
+													"routes": [
+														{
+															"handle": [
+																{
+																	"gatekeeper_name": "linkedin_oauth_policy",
+																	"handler": "authorization",
+																	"route_matcher": "*"
+																},
+																{
+																	"handler": "reverse_proxy",
+																	"upstreams": [
+																		{
+																			"dial": "127.0.0.1:5001"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									]
+								}
+							],
+							"terminal": true
+						}
+					]
+				}
+			}
+		},
+		"security": {
+			"config": {
+				"authorization_policies": [
+					{
+						"oauth": {
+							"identity_provider": "linkedin",
+							"base_path": "/_authcrunch/oauth2/linkedin_oauth_policy",
+							"session_cookie_name": "AUTHZ_linkedin_oauth_policy_SESSION",
+							"login_cookie_name": "AUTHZ_linkedin_oauth_policy_LOGIN",
+							"session_lifetime": 900,
+							"max_sessions": 10000,
+							"max_pending_logins": 1024
+						},
+						"name": "linkedin_oauth_policy",
+						"auth_url_path": "/auth",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match roles authp/admin authp/user"
+								],
+								"action": "allow log debug"
+							}
+						],
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					},
+					{
+						"name": "custom",
+						"auth_url_path": "/auth",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match roles authp/user"
+								],
+								"action": "allow log debug"
+							}
+						],
+						"crypto_key_store_config": {
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"validate_method_path": true,
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					}
+				],
+				"identity_providers": [
+					{
+						"name": "linkedin",
+						"kind": "oauth",
+						"params": {
+							"base_auth_url": "https://www.linkedin.com/oauth/",
+							"client_id": "{env.LINKEDIN_APP_CLIENT_ID}",
+							"client_secret": "{env.LINKEDIN_APP_CLIENT_SECRET}",
+							"driver": "linkedin",
+							"identity_token_field_name": "id_token",
+							"login_icon": {
+								"background_color": "#1e88e5",
+								"class_name": "lab la-linkedin la-2x",
+								"color": "white",
+								"text": "LinkedIn",
+								"text_color": "#37474f"
+							},
+							"metadata_url": "https://www.linkedin.com/oauth/.well-known/openid-configuration",
+							"realm": "linkedin",
+							"required_token_fields": [
+								"access_token",
+								"id_token"
+							],
+							"response_type": [
+								"code"
+							],
+							"scopes": [
+								"openid",
+								"email",
+								"profile"
+							]
+						}
+					}
+				]
+			},
+			"oauth_provider_directives": {
+				"linkedin": [
+					"realm linkedin",
+					"driver linkedin",
+					"client_id {env.LINKEDIN_APP_CLIENT_ID}",
+					"client_secret {env.LINKEDIN_APP_CLIENT_SECRET}"
+				]
+			},
+			"oauth_authorization_directives": {
+				"custom": [
+					"use oauth identity provider linkedin",
+					"oauth public origin {env.DIRECT_OAUTH_ORIGIN}",
+					"oauth base path /app/oauth",
+					"oauth session cookie name __Host-APP_SESSION",
+					"oauth login cookie name __Host-APP_LOGIN",
+					"oauth session lifetime {env.DIRECT_OAUTH_LIFETIME}",
+					"oauth maximum sessions 10000",
+					"oauth maximum pending logins 1024"
+				]
+			}
+		}
+	}
+}

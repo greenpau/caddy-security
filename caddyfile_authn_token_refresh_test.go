@@ -208,7 +208,7 @@ func TestPortalTokenRefreshPlaceholders(t *testing.T) {
 			if mode != "environment" && app.Config.AuthenticationPortals[0].RefreshTokens != nil {
 				t.Fatal("unresolved config attached")
 			}
-			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: values}}, app.Config, nil, app.PortalTokenRefreshDirectives, zap.NewNop()); err != nil {
+			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: values}}, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop()); err != nil {
 				t.Fatal(err)
 			}
 			want := &authn.TokenRefreshConfig{Enabled: true, Realms: []string{"employees"}, PublicOrigin: values["ORIGIN"], BasePath: "/auth", CookieName: "CUSTOM_REFRESH", AccessLifetimeSeconds: 45, IdleTimeoutSeconds: 90, AbsoluteTimeoutSeconds: 240, BodyTransportEnabled: true, MaxSessions: 2, MaxRotations: 3}
@@ -250,7 +250,7 @@ func TestPortalTokenRefreshRuntimeRejects(t *testing.T) {
 			t.Setenv("TOKEN_REFRESH_UNSET", "")
 			app := tokenRefreshTestApp(t, tokenRefreshTestBlock("disabled\ncookie name secrets:oauth:name"))
 			tc.change(app)
-			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": "A", "overflow": "999999999999999999999999"}}}, app.Config, nil, app.PortalTokenRefreshDirectives, zap.NewNop())
+			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": "A", "overflow": "999999999999999999999999"}}}, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop())
 			if err == nil {
 				t.Fatal("accepted invalid runtime refresh")
 			}
@@ -261,7 +261,7 @@ func TestPortalTokenRefreshRuntimeRejects(t *testing.T) {
 	for _, value := range []string{"", "NAME\nbody transport enabled", "NAME\r", "NAME\x00", "NAME\t", "NAME\u00a0", "NAME extra"} {
 		t.Run(fmt.Sprintf("value %q", value), func(t *testing.T) {
 			app := tokenRefreshTestApp(t, tokenRefreshTestBlock(tokenRefreshTestRequired+"cookie name secrets:oauth:name"))
-			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": value}}}, app.Config, nil, app.PortalTokenRefreshDirectives, zap.NewNop())
+			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": value}}}, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop())
 			if err == nil {
 				t.Fatal("invalid replacement was accepted or normalized")
 			}
@@ -288,7 +288,7 @@ func TestPortalTokenRefreshReplacementIsNotExpandedTwice(t *testing.T) {
 	app := tokenRefreshTestApp(t, tokenRefreshTestBlock("disabled\ncookie name secrets:oauth:name"))
 	const literal = "{env.TOKEN_REFRESH_LITERAL}"
 	t.Setenv("TOKEN_REFRESH_LITERAL", "EXPANDED")
-	if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": literal}}}, app.Config, nil, app.PortalTokenRefreshDirectives, zap.NewNop()); err != nil {
+	if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": literal}}}, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop()); err != nil {
 		t.Fatal(err)
 	}
 	if app.Config.AuthenticationPortals[0].RefreshTokens.CookieName != literal {
@@ -315,7 +315,7 @@ func TestPortalTokenRefreshCookieOverrideBeforeValidation(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, nil, app.PortalTokenRefreshDirectives, zap.NewNop()); err != nil {
+				if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop()); err != nil {
 					t.Fatal(err)
 				}
 				if err := resolvePortalCookieDirectives(t.Context(), caddy.NewReplacer(), nil, app.Config, app.PortalCookieDirectives, zap.NewNop()); err != nil {
@@ -360,7 +360,7 @@ func TestPortalTokenRefreshCookieOverrideRejects(t *testing.T) {
 				}
 				app, err := parseCookieApp(cookiePortalInput(tc.cookies + "\n" + tokenRefreshTestBlock(body)))
 				if err == nil {
-					err = resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, nil, app.PortalTokenRefreshDirectives, zap.NewNop())
+					err = resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop())
 				}
 				if err == nil {
 					err = resolvePortalCookieDirectives(t.Context(), caddy.NewReplacer(), nil, app.Config, app.PortalCookieDirectives, zap.NewNop())

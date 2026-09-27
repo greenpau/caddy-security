@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "direct OAuth settings", inputFileNamePrefix: "testcase_authorize_oauth"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},
 		{
 			name:                "match any refresh combination fails before runtime construction",
@@ -222,7 +223,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, logger)
+			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, document.Apps.Security.OAuthAuthorizationDirectives, logger)
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)

@@ -1,0 +1,32 @@
+{
+	security {
+		authorization policy linkedin_oauth_policy {
+			use oauth identity provider linkedin
+			allow roles authp/admin authp/user
+		}
+		authorization policy custom {
+			use oauth identity provider linkedin
+			oauth public origin {env.DIRECT_OAUTH_ORIGIN}
+			oauth base path /app/oauth
+			oauth session cookie name __Host-APP_SESSION
+			oauth login cookie name __Host-APP_LOGIN
+			oauth session lifetime {env.DIRECT_OAUTH_LIFETIME}
+			oauth maximum sessions 10000
+			oauth maximum pending logins 1024
+			validate method path
+			allow roles authp/user
+		}
+		oauth identity provider linkedin {
+			realm linkedin
+			driver linkedin
+			client_id {env.LINKEDIN_APP_CLIENT_ID}
+			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
+		}
+	}
+}
+app.example.com {
+	route {
+		authorize with linkedin_oauth_policy
+		reverse_proxy 127.0.0.1:5001
+	}
+}
