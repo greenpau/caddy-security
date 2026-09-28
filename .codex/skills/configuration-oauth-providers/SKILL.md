@@ -132,6 +132,28 @@ When `scopes` is omitted, authcrunch defaults by driver:
   `jwks key <kid> <pem_path>` together. Static and combined key sources retain
   TLS, nonce, PKCE, and signature verification. Explicit static IDs override colliding discovery keys.
 
+## GitHub identity claims
+
+With go-authcrunch v1.3.8, authenticated GitHub `/user` IDs also appear as the
+lossless string claim `github_id`. Numeric `metadata.id` and login-based
+`sub` remain unchanged. A rename therefore does not change ID matching; missing
+IDs cannot match, and malformed supplied IDs reject login.
+
+For organization claims, add `user_org_filters .*` (or narrower login-name
+regexes) inside the GitHub provider. Only returned organizations passing those
+filters populate `github_orgs`; existing `github.com/<org>/members` groups remain.
+No filter means no organization lookup. The existing endpoint exposes a single
+page of public memberships; this feature adds no pagination or private
+membership discovery, and adding `read:org` alone does not change the endpoint.
+
+Use [configuration-authentication-user-transforms](../configuration-authentication-user-transforms/SKILL.md#github-identity-matchers)
+to assign roles with `match github id <exact|regex> <value>` and
+`match github org <exact|regex> <value>`. The actual backend driver establishes
+trust; naming another driver's realm `github` does not grant these claims.
+Transforms cannot mutate either claim, including through nested actions.
+`TestCaddyGithubTransformsE2E` qualifies these contracts through Caddy and a
+local TLS OAuth fixture, including lookup denial and provider impersonation.
+
 ## Provider-Side Claim Notes
 
 Some OAuth failures require changes in the upstream provider console, not the

@@ -1,0 +1,40 @@
+{
+	security {
+		oauth identity provider github {
+			realm engineering
+			driver github
+			client_id synthetic-github-client
+			client_secret synthetic-github-secret
+			user_org_filters ^(acme|acme-labs)$
+		}
+		authentication portal myportal {
+			enable identity provider github
+			crypto key sign-verify synthetic-github-signing-key
+			transform user {
+				match github id exact 12345678
+				match github org exact acme
+				action add role authp/admin
+			}
+			transform users {
+				match github id regex ^(12345678|87654321)$
+				match github org regex "^(acme|acme-labs){1,2}$"
+				match realm engineering
+				action add role authp/user
+			}
+		}
+		authorization policy members {
+			crypto key verify synthetic-github-signing-key
+			set auth url /auth/login
+			allow roles authp/admin authp/user
+		}
+	}
+}
+:8443 {
+	route /auth/* {
+		authenticate with myportal
+	}
+	route /app/* {
+		authorize with members
+		respond protected
+	}
+}

@@ -9,7 +9,7 @@ Use for `transform user` or `transform users` inside an authentication portal.
 `caddyfile_authn_transform.go` forwards the complete block to the selected
 module's `pkg/authn/transformer/parser`; provisioning resolves individual
 arguments and compiles the result again. Inspect `go list -m -json github.com/greenpau/go-authcrunch` before relying on sibling source. The
-published v1.3.3 supports the grammar below.
+published v1.3.8 supports the grammar below.
 
 The surrounding [portal configuration](../configuration-authentication/SKILL.md)
 owns wiring; [static users](../configuration-users/SKILL.md) own stored challenge
@@ -21,8 +21,9 @@ corresponding boundary, rather than reloading the portal router for a transform.
 
 Every block needs at least one matcher and one action. Conditions combine as
 match-all. Ordinary bare `match` retains the historical `exact match` spelling
-in adapted JSON; `match any` stays unconditional. Classification uses the
-shared parser, so a claim value containing the word `match` remains an action.
+in adapted JSON; `match any` stays unconditional and `match github` retains its
+provider-specific spelling, including malformed statements for shared validation.
+Classification uses the shared parser, so a claim value containing the word `match` remains an action.
 These are alternative statements inside a transform, not a complete config:
 
 ```caddyfile
@@ -75,6 +76,68 @@ one line; reject CR/LF before decoding so a later CSV record cannot disappear.
 Resolved multiline transform values also fail shared validation. Caddy does not
 recursively expand inserted replacement data. See
 [runtime resolution](../configuration-runtime-resolution/SKILL.md).
+
+## GitHub identity matchers
+
+Inside a portal, require both a stable account ID and organization membership:
+
+```caddyfile
+transform user {
+	match github id exact 12345678
+	match github org exact acme
+	action add role authp/admin
+}
+```
+
+For alternatives, use separate blocks. An organization-only block can use regex:
+
+```caddyfile
+transform user {
+	match github org regex ^(acme|acme-labs)$
+	action add role authp/user
+}
+```
+
+The four forms are `match github id exact <id>`,
+`match github id regex <pattern>`, `match github org exact <login>` and
+`match github org regex <pattern>`. Each accepts exactly one operand. Quote
+patterns containing spaces or Caddy delimiters. Exact IDs are canonical positive
+uint64 decimals: zero, signs, leading zeros, fractions, exponent notation and
+overflow are rejected. Organization operands are login names, not display names
+or numeric organization IDs. Matching is case-sensitive; regex uses Go regexp
+search semantics. Anchor whole-value matches; request case folding with `(?i)`.
+Distinct conditions in one block are ANDed. One organization condition succeeds
+if any eligible organization matches. Missing claims never satisfy these positive
+matchers, even `regex .*`. Duplicate conditions for the same field, invalid
+regex and malformed arguments fail shared validation without exposing operands.
+
+Organization matching requires the existing provider-body setting:
+
+```caddyfile
+user_org_filters .*
+```
+
+Use narrower filters for eligible organizations. With no filter, lookup is
+disabled and organization conditions cannot match. The lookup reads one page of
+public membership from GitHub's `organizations_url`; it adds neither pagination
+nor private membership discovery. Adding `read:org` alone does not change that
+endpoint. See [GitHub's list-user-organizations API](https://docs.github.com/en/rest/orgs/orgs#list-organizations-for-a-user)
+and the [provider claim contract](../configuration-oauth-providers/SKILL.md#github-identity-claims).
+
+`github_id` is a lossless string derived from `/user`'s numeric ID; `metadata.id`
+remains numeric and `sub` remains `github.com/<login>`. Renaming an account leaves
+ID matching stable. An absent ID does not match; a supplied malformed ID rejects
+login. `github_orgs` contains filtered organization logins; existing
+`github.com/<org>/members` groups remain available. The portal establishes trust
+from the selected backend's driver, not realm names, `origin`, roles or groups.
+Both claims are read-only to transform actions, including nested writes.
+
+The shared compiler owns lowering and validation for Caddyfile and persisted
+JSON configurations. Never implement a second GitHub parser in Caddy or rewrite
+serialized matchers. Lower-level `exact match github_id ...` and
+`regex match github_orgs ...` remain supported. A direct transformer factory
+caller must supply trusted provider claims; arbitrary caller-created maps do
+not establish authenticated GitHub identity.
 
 ## Unconditional matcher restriction in v1.3.3
 
@@ -160,3 +223,16 @@ root/nested mounts, HTML/JSON and native clients, TOTP/U2F-only selection,
 password fallback, AMR authorization, refresh/OIDC, Basic/API-key rejection, no eligible
 rule, stored policies and profile edits. WebAuthn uses signed assertions and
 rejects wrong origin and signature. Keep these boundaries when extending syntax.
+
+`TestPortalTransformGithubMatchers` and `TestPortalTransformGithubRejects`
+check provider syntax, quote boundaries, persisted matchers, ordinary ACL
+compatibility, shared errors and reserved claims. The
+`testcase_authenticate_with_github_transforms` adaptation fixture contains all
+four forms. `TestCaddyGithubTransformsE2E` adapts and provisions Caddy, follows
+OAuth code exchange over verified local TLS, independently verifies
+the signed portal token and checks a protected route. It covers exact/regex
+matches and misses, AND semantics, renamed and large IDs, missing/malformed
+claims, filtered/empty/denied organization lookup and a different driver using
+a realm named `github`. Fixed provider URLs terminate at a bounded loopback
+CONNECT proxy in an isolated subprocess; no production endpoint or trust
+overrides are added.

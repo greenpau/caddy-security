@@ -73,6 +73,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		{name: "direct OAuth minimal and deferred settings", inputFileNamePrefix: "testcase_authorize_oauth"},
 		{name: "persistent state and portal-free OAuth", inputFileNamePrefix: "testcase_security_state"},
 		{name: "match any System API combination defers rejection to provisioning", inputFileNamePrefix: "testcase_authenticate_with_match_any_system"},
+		{name: "GitHub ID and organization transforms", inputFileNamePrefix: "testcase_authenticate_with_github_transforms"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},
 		{name: "match any refresh combination defers rejection to provisioning", inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh"},
 		{name: "portal token refresh settings, defaults, disabled and deferred", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},

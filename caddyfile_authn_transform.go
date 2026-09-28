@@ -32,6 +32,7 @@ import (
 //	transform <user|users> {
 //		[no] [exact|partial|prefix|suffix|regex] match [any] <field> <value> [<value>...]
 //		match any
+//		match github <id|org> <exact|regex> <value>
 //		field <field> [not] exists
 //		[action] add <field> <value> [<value>...]
 //		[action] overwrite <known_field> <value> [<value>...]
@@ -50,6 +51,12 @@ import (
 //
 // Blocks require a matcher and an action. Ordinary bare match retains the
 // historical exact spelling in JSON; match any stays an unconditional matcher.
+// GitHub matchers retain their provider-specific spelling for the shared compiler,
+// including malformed forms. Each accepts one value; exact IDs are positive
+// canonical uint64 decimals. Organization operands are login names drawn from
+// the provider's user_org_filters lookup. Distinct conditions are ANDed; missing
+// claims do not match. The shared compiler validates regex and protects the
+// read-only github_id and github_orgs claims from transform actions.
 // Repeated rules/actions preserve order. Conditional methods are password,
 // totp, u2f and mfa; email checkpoints are unsupported. The first eligible rule
 // across matching transforms replaces backend challenges; legacy require actions
@@ -74,7 +81,9 @@ func parseCaddyfileAuthPortalTransform(h *caddyfile.Dispenser, portal *authn.Por
 		}
 		statements := make([]string, 0, len(body))
 		for _, trArgs := range body {
-			if trArgs[0] == "match" && !(len(trArgs) == 2 && trArgs[1] == "any") {
+			githubMatch := len(trArgs) >= 2 && trArgs[0] == "match" && trArgs[1] == "github"
+			matchAny := len(trArgs) == 2 && trArgs[0] == "match" && trArgs[1] == "any"
+			if trArgs[0] == "match" && !matchAny && !githubMatch {
 				trArgs = append([]string{"exact"}, trArgs...)
 			}
 			statements = append(statements, cfgutil.EncodeArgs(trArgs))

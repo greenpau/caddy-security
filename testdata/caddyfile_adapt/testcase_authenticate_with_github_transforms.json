@@ -1,0 +1,202 @@
+{
+	"apps": {
+		"http": {
+			"servers": {
+				"srv0": {
+					"listen": [
+						":8443"
+					],
+					"routes": [
+						{
+							"match": [
+								{
+									"path": [
+										"/auth/*"
+									]
+								}
+							],
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"handler": "authenticator",
+													"portal_name": "myportal",
+													"route_matcher": "*"
+												}
+											]
+										}
+									]
+								}
+							]
+						},
+						{
+							"match": [
+								{
+									"path": [
+										"/app/*"
+									]
+								}
+							],
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"gatekeeper_name": "members",
+													"handler": "authorization",
+													"route_matcher": "*"
+												},
+												{
+													"body": "protected",
+													"handler": "static_response"
+												}
+											]
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"security": {
+			"config": {
+				"authentication_portals": [
+					{
+						"name": "myportal",
+						"ui": {},
+						"user_transformer_configs": [
+							{
+								"matchers": [
+									"match github id exact 12345678",
+									"match github org exact acme"
+								],
+								"actions": [
+									"action add role authp/admin"
+								]
+							},
+							{
+								"matchers": [
+									"match github id regex ^(12345678|87654321)$",
+									"match github org regex ^(acme|acme-labs){1,2}$",
+									"exact match realm engineering"
+								],
+								"actions": [
+									"action add role authp/user"
+								]
+							}
+						],
+						"cookie_config": {
+							"session_id_cookie_name": "AUTHP_SESSION_ID",
+							"referer_cookie_name": "AUTHP_REDIRECT_URL",
+							"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+							"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+							"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+							"cookie_name_prefix": "AUTHP"
+						},
+						"identity_providers": [
+							"github"
+						],
+						"token_validator_options": {},
+						"raw_crypto_key_store_config": [
+							"crypto key sign-verify synthetic-github-signing-key"
+						],
+						"crypto_key_store_config": {
+							"raw_key_configs": [
+								"crypto key sign-verify synthetic-github-signing-key"
+							],
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"token_grantor_options": {},
+						"portal_admin_roles": {
+							"authp/admin": true
+						},
+						"portal_user_roles": {
+							"authp/user": true
+						},
+						"portal_guest_roles": {
+							"authp/guest": true
+						},
+						"api": {
+							"profile_enabled": true
+						}
+					}
+				],
+				"authorization_policies": [
+					{
+						"name": "members",
+						"auth_url_path": "/auth/login",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match roles authp/admin authp/user"
+								],
+								"action": "allow log debug"
+							}
+						],
+						"raw_crypto_key_store_config": [
+							"crypto key verify synthetic-github-signing-key"
+						],
+						"crypto_key_store_config": {
+							"raw_key_configs": [
+								"crypto key verify synthetic-github-signing-key"
+							],
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					}
+				],
+				"identity_providers": [
+					{
+						"name": "github",
+						"kind": "oauth",
+						"params": {
+							"authorization_url": "https://github.com/login/oauth/authorize",
+							"base_auth_url": "https://github.com/login/oauth/",
+							"client_id": "synthetic-github-client",
+							"client_secret": "synthetic-github-secret",
+							"driver": "github",
+							"identity_token_field_name": "id_token",
+							"login_icon": {
+								"background_color": "#24292f",
+								"class_name": "lab la-github la-2x",
+								"color": "#f6f8fa",
+								"text": "Github",
+								"text_color": "#37474f"
+							},
+							"realm": "engineering",
+							"required_token_fields": [
+								"access_token"
+							],
+							"response_type": [
+								"code"
+							],
+							"scopes": [
+								"read:user"
+							],
+							"token_url": "https://github.com/login/oauth/access_token",
+							"user_org_filters": [
+								"^(acme|acme-labs)$"
+							]
+						}
+					}
+				]
+			}
+		}
+	}
+}
