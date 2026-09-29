@@ -10,6 +10,36 @@ Source and fixture paths below are relative to the repository root.
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
 
+## Typed custom authorization fields
+
+`TestAuthorizationACLFields`, `TestAuthorizationACLFieldRejects` and
+`TestAuthorizationACLFieldLiteralResolution` cover typed adaptation and errors;
+`TestAuthorizationACLFieldNames` covers valid identifier boundaries. Failed
+policies must preserve the whole app, including deferred OAuth statements.
+`TestAuthorizationACLFieldPolicyBoundaries` rejects quoted policy braces before
+publication; `TestAuthorizationACLFieldImports` checks imported literals,
+duplicate aliases and no inheritance from another policy. Validation diagnostics
+retain their underlying error identity and source location.
+`testcase_authorize_acl_fields` and its duplicate/extra-block/quoted-policy-brace
+rejection fixtures join the public adapt suite. The lifecycle malformed JSON
+matrix includes null fields.
+`TestCaddyAuthorizationFieldsE2E` adds default-suite Caddy TLS, an actual counted
+upstream, independent JWT signing, all eight guardians, cache observation,
+malformed values, identity headers, concurrent isolation and native JSON reloads.
+Upstream receipts are correlated per request, so unexpected grants and denials
+cannot cancel in an aggregate count, even during concurrent policy checks.
+Two path-claim-only guardian combinations use native JSON: Caddyfile
+`validate path acl` also sets method/path validation. The test checks options
+both after adaptation and after provisioning to establish eight distinct cases.
+It also checks imported declarations, adaptation failure before startup/reload
+(including quoted enclosing policy braces), and source-address
+enforcement when one cached token arrives from different trusted client addresses.
+Keep its default-rule ordering regression visible: v1.3.10 skips `match any`
+against normalized users, so the required deny-after-compact-allow case fails.
+See [typed ACL fields](../../configuration-authorization/references/typed-acl-fields.md)
+for the exact boundary and upstream work. Do not waive this failure because
+library or adapter tests pass.
+
 ## Conditional authentication coverage
 
 `TestPortalTransformSharedParser`, `TestPortalTransformRejects`, the transform

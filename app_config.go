@@ -131,6 +131,7 @@ func validatePortalConfigObjects(cfg *authn.PortalConfig, path string) error {
 
 func validatePolicyConfigObjects(cfg *authz.PolicyConfig, path string) error {
 	for _, err := range []error{
+		validateConfigSlice(path+".access_list_fields", cfg.AccessListFields, nil),
 		validateConfigSlice(path+".access_list_rules", cfg.AccessListRules, nil),
 		validateConfigSlice(path+".bypass_configs", cfg.BypassConfigs, nil),
 		validateConfigSlice(path+".header_injection_configs", cfg.HeaderInjectionConfigs, nil),

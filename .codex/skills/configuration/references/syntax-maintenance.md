@@ -55,7 +55,7 @@ when documenting a restriction. Do not infer grammar from JSON fields alone.
 | Portal UI | `caddyfile_authn_ui.go` | `pkg/authn/ui`, `pkg/translate`, portal asset/template loading |
 | User transforms | `caddyfile_authn_transform.go` | `pkg/authn/transformer/parser`, `pkg/authchal/parser`, `pkg/acl`, transformer runtime |
 | Portal/policy crypto | `caddyfile_authn_crypto.go`, `caddyfile_authz_crypto.go` | `pkg/kms/crypto_keystore_config.go`, `crypto_key_config.go`, `crypto_key.go` |
-| Policy ACL rules and shortcuts | `caddyfile_authz_acl.go`, `caddyfile_authz_acl_shortcuts.go` | `pkg/acl` conditions, fields, actions |
+| Policy ACL fields, rules and shortcuts | `caddyfile_authz_acl.go`, `caddyfile_authz_acl_shortcuts.go` | `pkg/acl/parser.NewACLFieldConfigFromDirectives` → one `PolicyConfig.ConfigureAccessListFields` call before rule compilation; `pkg/acl` conditions/actions |
 | Direct policy OAuth | `caddyfile_authz.go`, `plugin_authorization.go` | `pkg/authz/oauth/parser` → `PolicyConfig.ConfigureOAuth`; route handler preserves authorization, bypass and handled responses |
 | Policy options, bypass, headers, auth proxy | `caddyfile_authz_misc.go`, `caddyfile_authz_bypass.go`, `caddyfile_authz_inject.go` | `pkg/authz`, `pkg/authz/bypass`, `pkg/authz/injector`, `pkg/authproxy` |
 | Local/LDAP stores and static users | `caddyfile_identity_store.go` | `pkg/ids/config.go`, `pkg/ids/local`, `pkg/ids/ldap`, `pkg/authn/icons` |
@@ -143,7 +143,10 @@ static PEM files; custom HTML header parsing reads its file. External secrets
 plugins may perform their own I/O. Inspect those paths before choosing checks.
 Never require disabled TLS, nonce, PKCE, or signature checks for a syntax audit.
 
-Known fixture outcomes: `testcase_authenticate_with_argon2_malformed`,
+Known fixture outcomes: `testcase_authorize_acl_fields_duplicate`,
+`testcase_authorize_acl_fields_blocks`,
+`testcase_authorize_acl_fields_policy_brace`,
+`testcase_authenticate_with_argon2_malformed`,
 `testcase_authenticate_malformed`,
 `testcase_authenticate_with_admin_api_malformed`,
 `testcase_authenticate_with_token_refresh_cookie_whitespace`,

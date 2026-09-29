@@ -1,0 +1,243 @@
+{
+	"apps": {
+		"http": {
+			"servers": {
+				"srv0": {
+					"listen": [
+						":443"
+					],
+					"routes": [
+						{
+							"match": [
+								{
+									"host": [
+										"app.example.test"
+									]
+								}
+							],
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"handler": "subroute",
+													"routes": [
+														{
+															"handle": [
+																{
+																	"gatekeeper_name": "alternate",
+																	"handler": "authorization",
+																	"route_matcher": "*"
+																},
+																{
+																	"body": "alternate protected resource",
+																	"handler": "static_response"
+																}
+															]
+														}
+													]
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/alternate/*"
+													]
+												}
+											]
+										},
+										{
+											"handle": [
+												{
+													"handler": "subroute",
+													"routes": [
+														{
+															"handle": [
+																{
+																	"gatekeeper_name": "standard",
+																	"handler": "authorization",
+																	"route_matcher": "*"
+																},
+																{
+																	"body": "standard protected resource",
+																	"handler": "static_response"
+																}
+															]
+														}
+													]
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/standard/*"
+													]
+												}
+											]
+										},
+										{
+											"handle": [
+												{
+													"handler": "subroute",
+													"routes": [
+														{
+															"handle": [
+																{
+																	"gatekeeper_name": "custom",
+																	"handler": "authorization",
+																	"route_matcher": "*"
+																},
+																{
+																	"body": "custom protected resource",
+																	"handler": "static_response"
+																}
+															]
+														}
+													]
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/custom/*"
+													]
+												}
+											]
+										}
+									]
+								}
+							],
+							"terminal": true
+						}
+					]
+				}
+			}
+		},
+		"security": {
+			"config": {
+				"authorization_policies": [
+					{
+						"name": "custom",
+						"auth_url_path": "/auth",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match external_roles admin",
+									"match department engineering"
+								],
+								"action": "allow stop"
+							},
+							{
+								"conditions": [
+									"match any"
+								],
+								"action": "deny"
+							}
+						],
+						"access_list_fields": [
+							{
+								"name": "external_roles",
+								"claim": "https://example.org/roles",
+								"type": "string_list"
+							},
+							{
+								"name": "department",
+								"claim": "https://example.org/profile.department|value, literal",
+								"type": "string"
+							}
+						],
+						"raw_crypto_key_store_config": [
+							"crypto key verify synthetic-acl-fields-fixture-key"
+						],
+						"crypto_key_store_config": {
+							"raw_key_configs": [
+								"crypto key verify synthetic-acl-fields-fixture-key"
+							],
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"validate_bearer_header": true,
+						"pass_claims_with_headers": true,
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					},
+					{
+						"name": "alternate",
+						"auth_url_path": "/auth",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match external_roles blocked"
+								],
+								"action": "deny stop log warn"
+							},
+							{
+								"conditions": [
+									"match external_roles admin"
+								],
+								"action": "allow log debug"
+							}
+						],
+						"access_list_fields": [
+							{
+								"name": "external_roles",
+								"claim": "https://other.example/roles",
+								"type": "string_list"
+							}
+						],
+						"raw_crypto_key_store_config": [
+							"crypto key verify synthetic-acl-fields-fixture-key"
+						],
+						"crypto_key_store_config": {
+							"raw_key_configs": [
+								"crypto key verify synthetic-acl-fields-fixture-key"
+							],
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					},
+					{
+						"name": "standard",
+						"auth_url_path": "/auth",
+						"auth_redirect_query_param": "redirect_url",
+						"auth_redirect_status_code": 302,
+						"access_list_rules": [
+							{
+								"conditions": [
+									"match roles viewer"
+								],
+								"action": "allow log debug"
+							},
+							{
+								"conditions": [
+									"match role admin"
+								],
+								"action": "allow log debug"
+							}
+						],
+						"raw_crypto_key_store_config": [
+							"crypto key verify synthetic-acl-fields-fixture-key"
+						],
+						"crypto_key_store_config": {
+							"raw_key_configs": [
+								"crypto key verify synthetic-acl-fields-fixture-key"
+							],
+							"auto_generate_tag": "default",
+							"auto_generate_algo": "ES512"
+						},
+						"api_key_header_name": "X-Api-Key",
+						"auth_realm_header_name": "X-Auth-Realm"
+					}
+				]
+			}
+		}
+	}
+}

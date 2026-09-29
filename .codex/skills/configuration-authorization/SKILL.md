@@ -58,6 +58,8 @@ example.com {
 ```
 
 The policy name must match the `authorize with <policy>` reference.
+The policy requires a block with unquoted opening and closing braces; quoted
+brace tokens must not terminate or open a policy.
 Put auth proxy settings inside the policy block, not inside a block under the
 route-level `authorize` directive. The current route parser only reads the
 directive arguments.
@@ -91,6 +93,10 @@ the lookup priority. `validate bearer header` enables `Authorization: Bearer
 <token>` parsing but is not itself a token source name.
 
 ## ACLs
+
+Read [typed custom ACL fields](references/typed-acl-fields.md) for `acl field`
+declarations, literal claim keys, typed JSON, adapter ownership and Caddy TLS
+qualification. It also records v1.3.10's failing default-action ordering boundary.
 
 Prefer concise shortcuts for common role, origin, issuer, method, and path
 matches:
@@ -144,7 +150,10 @@ Explicit actions must start with `allow` or `deny`, and may include `any`,
 `stop`, `log [debug|info|warn|error]`, `counter`, and `tag <value>`. With
 multiple conditions, the default is match-all; add `any` to the action for
 match-any. A matched deny denies immediately. A matched allow grants access only
-if no later deny overrides it, unless `stop` is used.
+if no later matching deny overrides it, unless `stop` is used. In v1.3.10,
+`acl default`/`match any` rules are skipped on the validator's normalized user
+data; do not rely on an explicit default deny to override a compact allow.
+The typed-field reference owns the failing regression and required upstream fix.
 
 Use `amr` to require verified methods, for example inside a policy:
 

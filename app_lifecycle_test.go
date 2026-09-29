@@ -158,6 +158,7 @@ var lifecycleInvalidConfigs = []struct{ name, patch, want string }{
 	{"oidc_client", `{"authentication_portals":[{"oidc_provider":{"clients":[null]}}]}`, "oidc_provider.clients[0]"},
 	{"oauth_application", `{"oauth_applications":[null]}`, "oauth_applications[0]"},
 	{"policy_acl", `{"authorization_policies":[{"access_list_rules":[null]}]}`, "access_list_rules[0]"},
+	{"policy_acl_field", `{"authorization_policies":[{"access_list_fields":[null]}]}`, "access_list_fields[0]"},
 	{"bypass", `{"authorization_policies":[{"bypass_configs":[null]}]}`, "bypass_configs[0]"},
 	{"header", `{"authorization_policies":[{"header_injection_configs":[null]}]}`, "header_injection_configs[0]"},
 	{"proxy_realm", `{"authorization_policies":[{"auth_proxy_config":{"realms":{"local":null}}}]}`, `auth_proxy_config.realms["local"]`},

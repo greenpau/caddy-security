@@ -16,6 +16,7 @@ package security
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	oauthparser "github.com/greenpau/go-authcrunch/pkg/authz/oauth/parser"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -36,6 +37,7 @@ const (
 //		set auth url <url>
 //		allow roles <role> [<role>...]
 //		deny <field> <value> [<value>...]
+//		acl field <name> { ... }
 //		acl rule { ... }
 //		acl default <allow|deny>
 //		bypass uri <exact|partial|prefix|suffix|regex> <path>
@@ -50,7 +52,8 @@ const (
 //		oauth maximum pending logins <count>
 //	}
 //
-// At least one ACL rule is required.
+// One block with unquoted structural braces and at least one ACL rule is required.
+// Validate the complete policy before publishing it or its deferred settings.
 // Each OAuth statement may occur once, without a nested block. The shared parser
 // owns defaults and validation. Complete bodies containing runtime references
 // survive Caddy JSON and are parsed after replacement, before policy validation.
@@ -67,8 +70,14 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 	switch args[0] {
 	case "policy":
 		p := &authz.PolicyConfig{Name: args[1]}
+		if !d.Next() || d.Val() != "{" || d.Token().Quoted() {
+			return d.Errf("authorization policy %q requires an unquoted block", p.Name)
+		}
+		d.Prev()
+		var fields []*acl.FieldConfig
 		var oauthStatements []string
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
+		nesting := d.Nesting()
+		for d.NextBlock(nesting) {
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
@@ -91,8 +100,12 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 				}
 			case "acl":
 				v := d.RemainingArgs()
-				if err := parseCaddyfileAuthorizationACL(d, p, rootDirective, v); err != nil {
+				field, err := parseCaddyfileAuthorizationACL(d, p, rootDirective, v)
+				if err != nil {
 					return err
+				}
+				if field != nil {
+					fields = append(fields, field)
 				}
 			case "allow", "deny":
 				v := d.RemainingArgs()
@@ -117,14 +130,17 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 				return errors.ErrMalformedDirective.WithArgs(rootDirective, d.RemainingArgs())
 			}
 		}
-		if cookieDirectivesNeedResolution(oauthStatements) {
-			if app.OAuthAuthorizationDirectives == nil {
-				app.OAuthAuthorizationDirectives = make(map[string][]string)
-			}
+		if d.Nesting() != nesting || d.Val() != "}" || d.Token().Quoted() {
+			return d.Errf("authorization policy %q requires an unquoted closing brace", p.Name)
+		}
+		if err := p.ConfigureAccessListFields(fields); err != nil {
+			return d.Errf("authorization policy %q: %v", p.Name, err)
+		}
+		deferredOAuth := cookieDirectivesNeedResolution(oauthStatements)
+		if deferredOAuth {
 			if _, exists := app.OAuthAuthorizationDirectives[p.Name]; exists {
 				return d.Errf("duplicate OAuth authorization policy %q", p.Name)
 			}
-			app.OAuthAuthorizationDirectives[p.Name] = oauthStatements
 		} else {
 			oauth, err := oauthparser.NewOAuthAuthorizationConfigFromDirectives(p.Name, oauthStatements)
 			if err != nil {
@@ -135,7 +151,15 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 			}
 		}
 		if err := app.Config.AddAuthorizationPolicy(p); err != nil {
-			return err
+			return d.WrapErr(err)
+		}
+		// Publish deferred settings only after validation accepts the policy.
+		// A failed ACL must not leave an orphaned entry or prevent a retry.
+		if deferredOAuth {
+			if app.OAuthAuthorizationDirectives == nil {
+				app.OAuthAuthorizationDirectives = make(map[string][]string)
+			}
+			app.OAuthAuthorizationDirectives[p.Name] = oauthStatements
 		}
 	default:
 		return errors.ErrMalformedDirective.WithArgs(authzPrefix, args)

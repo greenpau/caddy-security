@@ -4,7 +4,7 @@
 
 Read `go.mod` and `go list -m -json github.com/greenpau/go-authcrunch` to
 establish the selected version, module directory, and any replacement. This
-checkout selects published v1.3.8; sibling source and integrated xcaddy build
+checkout selects published v1.3.10; sibling source and integrated xcaddy build
 arguments can select different code and are not proof of the normal build's
 behavior. Record that distinction in qualification evidence. A dependency task
 must inspect the Makefile xcaddy argument and CONTRIBUTING examples separately.
@@ -13,6 +13,15 @@ The table maps supported upstream surfaces to their Caddy host boundaries. Gramm
 AuthCrunch HTTP server's configuration into Caddy's app or routes.
 
 ## Integration surfaces and evidence
+
+The v1.3.8 → v1.3.10 comparison adds typed custom ACL definitions, shared field
+parsing and guardian claim projection. Caddy exposes `acl field`, serializes
+`access_list_fields`, applies the collection once before policy validation and
+rejects null field entries. Other delegated Caddyfile grammar is unchanged;
+standalone HTTP-host validation, upstream test/automation changes and identity
+comment cleanup do not add Caddy directives. See
+[typed ACL fields](../../configuration-authorization/references/typed-acl-fields.md)
+for grammar, TLS coverage and the upstream default-rule ordering blocker.
 
 The v1.3.6 → v1.3.8 comparison adds GitHub ID/organization claims, shared
 provider matcher compilation and reserved-claim validation. Caddy preserves
@@ -61,7 +70,7 @@ JWT roles and protected-resource access. Repeated directives replace the list.
 
 ## Upstream match-any limit
 
-The selected v1.3.8 retains a library limitation covered by Caddy TLS regression:
+The selected v1.3.10 retains a library limitation covered by Caddy TLS regression:
 `match any` actions appear in access-only login but disappear when portal
 refresh rebuilds identity claims. Source tracing also finds the same input
 shape in the OIDC identity verifier. `pkg/acl/condition.go` implements
@@ -120,7 +129,7 @@ substitute untrusted claims into policy selection itself.
 
 Remaining distinctions:
 
-- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.8;
+- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.10;
   `enable logout` is supported. Keep the restriction documented and tested.
 - Local static API keys have no `overwrite` suffix. Email authentication
   checkpoints are unsupported in both conditional-policy surfaces.

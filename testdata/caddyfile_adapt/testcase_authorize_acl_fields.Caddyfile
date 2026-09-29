@@ -1,0 +1,52 @@
+{
+	security {
+		authorization policy custom {
+			crypto key verify synthetic-acl-fields-fixture-key
+			validate bearer header
+			inject headers with claims
+			acl rule {
+				match external_roles admin
+				match department engineering
+				allow stop
+			}
+			acl default deny
+			acl field external_roles {
+				claim "https://example.org/roles"
+				type string list
+			}
+			acl field department {
+				type string
+				claim "https://example.org/profile.department|value, literal"
+			}
+		}
+		authorization policy alternate {
+			crypto key verify synthetic-acl-fields-fixture-key
+			deny external_roles blocked
+			allow external_roles admin
+			acl field external_roles {
+				claim "https://other.example/roles"
+				type string list
+			}
+		}
+		authorization policy standard {
+			crypto key verify synthetic-acl-fields-fixture-key
+			allow roles viewer
+			allow role admin
+		}
+	}
+}
+
+https://app.example.test {
+	route /custom/* {
+		authorize with custom
+		respond "custom protected resource"
+	}
+	route /alternate/* {
+		authorize with alternate
+		respond "alternate protected resource"
+	}
+	route /standard/* {
+		authorize with standard
+		respond "standard protected resource"
+	}
+}

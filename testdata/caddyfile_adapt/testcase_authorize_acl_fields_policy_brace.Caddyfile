@@ -1,0 +1,11 @@
+{
+	security {
+		authorization policy custom {
+			allow external_roles admin
+			acl field external_roles {
+				claim "https://example.org/roles"
+				type string list
+			}
+		"}"
+	}
+}

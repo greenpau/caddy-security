@@ -64,6 +64,13 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "duplicate typed ACL alias is rejected", inputFileNamePrefix: "testcase_authorize_acl_fields_duplicate", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': authorization policy \"custom\": acl field configuration error: duplicate name, at Caddyfile:13")},
+		{name: "typed custom ACL fields and policy isolation", inputFileNamePrefix: "testcase_authorize_acl_fields"},
+		{name: "typed ACL field requires exactly one block", inputFileNamePrefix: "testcase_authorize_acl_fields_blocks", shouldErr: true,
+			err: fmt.Errorf("Unexpected '{' on a new line; did you mean to place the '{' on the previous line?, at Caddyfile:9")},
+		{name: "typed ACL policy requires an unquoted closing brace", inputFileNamePrefix: "testcase_authorize_acl_fields_policy_brace", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': authorization policy \"custom\" requires an unquoted closing brace, at Caddyfile:9")},
 		{name: "password option error redacts imports", inputFileNamePrefix: "testcase_authenticate_with_argon2_malformed", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': malformed \"security.identity.store[localdb].user\" directive with [alice]: password only supports the overwrite option")},
 		{name: "Argon2, bcrypt and plaintext local passwords", inputFileNamePrefix: "testcase_authenticate_with_argon2"},

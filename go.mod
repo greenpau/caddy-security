@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.3.8
+	github.com/greenpau/go-authcrunch v1.3.10
 	github.com/greenpau/versioned v1.0.36
 	github.com/quic-go/quic-go v0.63.0
 	github.com/spf13/cobra v1.10.2

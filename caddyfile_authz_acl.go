@@ -15,17 +15,25 @@
 package security
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	aclparser "github.com/greenpau/go-authcrunch/pkg/acl/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// parseCaddyfileAuthorizationACL collects conditions/actions for go-authcrunch/pkg/acl.
+// parseCaddyfileAuthorizationACL adapts fields, conditions and actions for go-authcrunch/pkg/acl.
 //
 // Syntax:
+//
+//	acl field <name> {
+//		claim <literal-top-level-key>
+//		type string [list]
+//	}
 //
 //	acl rule {
 //		comment <text> [<text>...]
@@ -42,21 +50,55 @@ import (
 // conditions, field aliases, and actions are owned by the upstream ACL parser.
 // amr is a list of verified methods: pwd (password), otp (TOTP), hwk (WebAuthn).
 // Match role and amr in the same rule when both identity and factor are required.
-func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) error {
+// Fields require exactly one flat block, one claim and one type, in either order.
+// The shared parser owns names, reserved aliases, types and setting validation.
+// Claim keys stay literal, including punctuation and runtime placeholder text.
+// The caller collects fields and applies them once before compiling policy rules.
+func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfig, rootDirective string, args []string) (*acl.FieldConfig, error) {
 	if len(args) == 0 {
-		return h.Errf("%s directive has no value", rootDirective)
+		return nil, h.Errf("%s directive has no value", rootDirective)
 	}
 	switch args[0] {
+	case "field":
+		if len(args) != 2 || strings.TrimSpace(args[1]) == "" {
+			return nil, h.Errf("authorization policy %q: acl field requires one name and a block", p.Name)
+		}
+		body, err := readFlatDirectiveBlock(h, "ACL field")
+		if err != nil {
+			return nil, fmt.Errorf("authorization policy %q: %w", p.Name, err)
+		}
+		if h.Next() {
+			if h.Val() == "{" {
+				return nil, h.Errf("authorization policy %q: acl field requires exactly one block", p.Name)
+			}
+			h.Prev()
+		}
+		statements := make([]string, 0, len(body))
+		for _, statement := range body {
+			encoded := cfgutil.EncodeArgs(statement)
+			// The shared codec trims record-edge whitespace. Reject any lossy
+			// encoding instead of silently changing a literal key or keyword.
+			decoded, err := cfgutil.DecodeArgs(encoded)
+			if err != nil || !slices.Equal(statement, decoded) {
+				return nil, h.Errf("authorization policy %q: invalid ACL field argument encoding", p.Name)
+			}
+			statements = append(statements, encoded)
+		}
+		field, err := aclparser.NewACLFieldConfigFromDirectives(args[1], statements)
+		if err != nil {
+			return nil, h.Errf("authorization policy %q: %v", p.Name, err)
+		}
+		return field, nil
 	case "rule":
 		if len(args) > 1 {
-			return h.Errf("%s directive %q is too long", rootDirective, strings.Join(args, " "))
+			return nil, h.Errf("%s directive %q is too long", rootDirective, strings.Join(args, " "))
 		}
 		rule := &acl.RuleConfiguration{}
 		for subNesting := h.Nesting(); h.NextBlock(subNesting); {
 			k := h.Val()
 			rargs := h.RemainingArgs()
 			if len(rargs) == 0 {
-				return h.Errf("%s %s directive %v has no values", rootDirective, args[0], k)
+				return nil, h.Errf("%s %s directive %v has no values", rootDirective, args[0], k)
 			}
 			rargs = append([]string{k}, rargs...)
 			switch k {
@@ -71,7 +113,7 @@ func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfi
 		p.AccessListRules = append(p.AccessListRules, rule)
 	case "default":
 		if len(args) != 2 {
-			return h.Errf("%s directive %q is too long", rootDirective, strings.Join(args, " "))
+			return nil, h.Errf("%s directive %q is too long", rootDirective, strings.Join(args, " "))
 		}
 		rule := &acl.RuleConfiguration{
 			Conditions: []string{"match any"},
@@ -80,11 +122,11 @@ func parseCaddyfileAuthorizationACL(h *caddyfile.Dispenser, p *authz.PolicyConfi
 		case "allow", "deny":
 			rule.Action = args[1]
 		default:
-			return h.Errf("%s directive %q must have either allow or deny", rootDirective, strings.Join(args, " "))
+			return nil, h.Errf("%s directive %q must have either allow or deny", rootDirective, strings.Join(args, " "))
 		}
 		p.AccessListRules = append(p.AccessListRules, rule)
 	default:
-		return h.Errf("%s directive value of %q is unsupported", rootDirective, strings.Join(args, " "))
+		return nil, h.Errf("%s directive value of %q is unsupported", rootDirective, strings.Join(args, " "))
 	}
-	return nil
+	return nil, nil
 }
