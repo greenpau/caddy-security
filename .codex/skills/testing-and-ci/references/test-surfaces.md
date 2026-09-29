@@ -131,7 +131,23 @@ HTTP/2 fallback HTTP/3 coverage; inspect `curl --version` before using manual
 `--http3-only` probes. The synthetic provider itself uses verified HTTP/1.1;
 the selected protocol is asserted on all app and portal exchanges.
 
-Run `make qtest TEST='TestAuthzRedirectRequestTargets|TestCaddyAuthorizationRedirectE2E'`
+The Chrome driver retries only read-only DOM observations that lose their
+execution context during navigation. Retry only recognized `Runtime.evaluate`
+context-unavailable errors, within the original polling deadline. Login/form
+actions are issued once; DOM exceptions, closed targets, command timeouts and
+unrelated protocol errors must still fail. Diagnostics identify the command,
+code and journey phase without printing evaluated expressions, arguments or
+raw protocol error data.
+`TestAuthorizationRedirectBrowserPolling` runs the Node unit cases in the
+default Go suite. The real browser journey also navigates while a read is pending,
+requires actual context destruction, and observes the replacement page before
+continuing the unchanged TLS, login, redirect and protocol assertions.
+
+Repeat the isolated `TestCaddyAuthorizationRedirectE2E` parent when investigating
+intermittent failures. Repeating its process helper in one Go process can carry
+Caddy's global TLS/runtime state between runs and is not equivalent evidence.
+
+Run `make qtest TEST='TestAuthzRedirectRequestTargets|TestAuthorizationRedirectBrowserPolling|TestCaddyAuthorizationRedirectE2E'`
 for race-enabled regression reports, then the normal `make ci-check` gate.
 
 ## Shared test mechanics
