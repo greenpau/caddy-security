@@ -51,13 +51,14 @@ func TestPortalCookieDirectives(t *testing.T) {
  cookie refresh token name LOGIN_REFRESH
  cookie oidc session id name LOGIN_SESSION
  cookie oidc request id name LOGIN_REQUEST
- cookie saml session id name LOGIN_SAML`
+ cookie saml session id name LOGIN_SAML
+ cookie cross-device session id name LOGIN_TRANSFER`
 	for _, lines := range []string{names + "\ncookie prefix PORTAL", "cookie prefix PORTAL\n" + names} {
 		app, err := parseCookieApp(cookiePortalInput(lines))
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := &cookie.Config{CookieNamePrefix: "PORTAL", SessionIDCookieName: "AUTHP_SESSION_ID", RefererCookieName: "NEXT", SandboxIDCookieName: "CHALLENGE", IdentityTokenCookieName: "IDENTITY", AccessTokenCookieName: "LOGIN_ACCESS", RefreshTokenCookieName: "LOGIN_REFRESH", OIDCSessionIDCookieName: "LOGIN_SESSION", OIDCRequestIDCookieName: "LOGIN_REQUEST", SAMLSessionIDCookieName: "LOGIN_SAML"}
+		want := &cookie.Config{CookieNamePrefix: "PORTAL", SessionIDCookieName: "AUTHP_SESSION_ID", RefererCookieName: "NEXT", SandboxIDCookieName: "CHALLENGE", IdentityTokenCookieName: "IDENTITY", AccessTokenCookieName: "LOGIN_ACCESS", RefreshTokenCookieName: "LOGIN_REFRESH", OIDCSessionIDCookieName: "LOGIN_SESSION", OIDCRequestIDCookieName: "LOGIN_REQUEST", SAMLSessionIDCookieName: "LOGIN_SAML", CrossDeviceSessionIDCookieName: "LOGIN_TRANSFER"}
 		if diff := cmp.Diff(want, app.Config.AuthenticationPortals[0].CookieConfig); diff != "" {
 			t.Fatal(diff)
 		}
@@ -177,7 +178,10 @@ func TestPortalCookieMalformedDirectives(t *testing.T) {
 		`cookie "session id" name SESSION`, `cookie "same site" lax`, `cookie path /a extra`,
 		`cookie access token name "bad name"`, `cookie path "/bad;path"`, `cookie domain bad/domain`,
 		`cookie prefix path /app`, `cookie session path /app`, `cookie lifetime many`, `cookie same site unsupported`, `cookie insecure maybe`, `cookie guess domain on`,
-		`cookie domain example.com guess domain enabled`, `cookie strip path`,
+		`cookie domain example.com guess domain enabled`, `cookie cross-device path /app`,
+		`cookie cross-device session id name "bad name"`,
+		"cookie cross-device session id name FIRST\ncookie cross-device session id name SECOND",
+		"cookie access token name SAME\ncookie cross-device session id name SAME", `cookie strip path`,
 		"cookie prefix A\ncookie prefix B", "set cookie name prefix a\ncookie prefix B",
 		"cookie referer name A\ncookie redirect url name B", "cookie identity token name A\ncookie id token name B",
 		"set access_token cookie name A\ncookie access token name B",
@@ -272,16 +276,17 @@ func TestPortalCookieLegacyPrefixAllRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := &cookie.Config{
-		CookieNamePrefix:        "PORTAL",
-		SessionIDCookieName:     "PORTAL_SESSION_ID",
-		RefererCookieName:       "PORTAL_REDIRECT_URL",
-		SandboxIDCookieName:     "PORTAL_SANDBOX_ID",
-		IdentityTokenCookieName: "PORTAL_ID_TOKEN",
-		AccessTokenCookieName:   "PORTAL_ACCESS_TOKEN",
-		RefreshTokenCookieName:  "PORTAL_REFRESH_TOKEN",
-		OIDCSessionIDCookieName: "PORTAL_OIDC_SESSION_ID",
-		OIDCRequestIDCookieName: "PORTAL_OIDC_REQUEST_ID",
-		SAMLSessionIDCookieName: "PORTAL_SAML_SESSION_ID",
+		CookieNamePrefix:               "PORTAL",
+		SessionIDCookieName:            "PORTAL_SESSION_ID",
+		RefererCookieName:              "PORTAL_REDIRECT_URL",
+		SandboxIDCookieName:            "PORTAL_SANDBOX_ID",
+		IdentityTokenCookieName:        "PORTAL_ID_TOKEN",
+		AccessTokenCookieName:          "PORTAL_ACCESS_TOKEN",
+		RefreshTokenCookieName:         "PORTAL_REFRESH_TOKEN",
+		OIDCSessionIDCookieName:        "PORTAL_OIDC_SESSION_ID",
+		OIDCRequestIDCookieName:        "PORTAL_OIDC_REQUEST_ID",
+		SAMLSessionIDCookieName:        "PORTAL_SAML_SESSION_ID",
+		CrossDeviceSessionIDCookieName: "PORTAL_CROSS_DEVICE_SESSION_ID",
 	}
 	if diff := cmp.Diff(want, app.Config.AuthenticationPortals[0].CookieConfig); diff != "" {
 		t.Fatal(diff)

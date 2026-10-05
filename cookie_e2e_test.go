@@ -321,7 +321,7 @@ func TestCaddyCookiesProcess(t *testing.T) {
 		{name: "defaults", host: "login.example.com", session: "AUTHP_SESSION_ID", access: "AUTHP_ACCESS_TOKEN", path: "/"},
 		{name: "legacy_prefix_only", host: "login.example.com", directives: "set cookie name prefix portal", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", path: "/"},
 		{name: "explicit_authp_names", host: "login.example.com", directives: "cookie session id name AUTHP_SESSION_ID\ncookie access token name AUTHP_LOGIN_ACCESS", session: "AUTHP_SESSION_ID", access: "AUTHP_LOGIN_ACCESS", path: "/"},
-		{name: "prefix", host: "login.example.com", directives: "cookie prefix PORTAL\ncookie saml session id name PORTAL_LOGIN_SAML", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", path: "/"},
+		{name: "prefix", host: "login.example.com", directives: "cookie prefix PORTAL\ncookie saml session id name PORTAL_LOGIN_SAML\ncookie cross-device session id name PORTAL_LOGIN_TRANSFER", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", path: "/"},
 		{name: "explicit_before_prefix", host: "login.example.com", directives: "cookie access token name LOGIN_ACCESS\ncookie session id name LOGIN_SESSION\ncookie prefix PORTAL", session: "LOGIN_SESSION", access: "LOGIN_ACCESS", path: "/"},
 		{name: "explicit_old_default", host: "login.example.com", directives: "cookie access token name AUTHP_ACCESS_TOKEN\ncookie prefix PORTAL", session: "PORTAL_SESSION_ID", access: "AUTHP_ACCESS_TOKEN", path: "/"},
 		{name: "domain_and_path", host: "login.example.com", directives: "cookie prefix PORTAL\ncookie domain example.com path /app\ncookie domain example.com lifetime 600\ncookie domain example.com same site strict", session: "PORTAL_SESSION_ID", access: "PORTAL_ACCESS_TOKEN", domain: "example.com", path: "/app", sibling: true},
@@ -419,7 +419,7 @@ func TestCaddyCookiesProcess(t *testing.T) {
 			// A valid access JWT in another role or transport must not authenticate.
 			jar := f.client.Jar
 			f.client.Jar = nil
-			for _, name := range []string{tc.session, "AUTHP_REFRESH_TOKEN", "PORTAL_REFRESH_TOKEN", "AUTHP_ID_TOKEN", "PORTAL_OIDC_SESSION_ID", "OTHER_ACCESS_TOKEN"} {
+			for _, name := range []string{tc.session, "AUTHP_REFRESH_TOKEN", "PORTAL_REFRESH_TOKEN", "AUTHP_ID_TOKEN", "PORTAL_OIDC_SESSION_ID", "PORTAL_LOGIN_TRANSFER", "AUTHP_CROSS_DEVICE_SESSION_ID", "OTHER_ACCESS_TOKEN"} {
 				f.request(t, "GET", protectedPath, nil, http.Header{"Cookie": {name + "=" + token}}, 302)
 			}
 			f.request(t, "GET", protectedPath, nil, http.Header{"Authorization": {"Bearer " + token}}, 302)
@@ -454,6 +454,10 @@ func TestCaddyCookiesProcess(t *testing.T) {
 				f.rejectCookieReload(t, func(app *App) {
 					cookies := app.Config.AuthenticationPortals[0].CookieConfig
 					cookies.SAMLSessionIDCookieName = cookies.AccessTokenCookieName
+				})
+				f.rejectCookieReload(t, func(app *App) {
+					cookies := app.Config.AuthenticationPortals[0].CookieConfig
+					cookies.CrossDeviceSessionIDCookieName = cookies.AccessTokenCookieName
 				})
 				f.rejectCookieReload(t, func(app *App) {
 					cookies := app.Config.AuthenticationPortals[0].CookieConfig

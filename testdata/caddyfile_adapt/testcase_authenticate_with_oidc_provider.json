@@ -195,6 +195,7 @@
 							"oidc_session_id_cookie_name": "FIRST_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "FIRST_OIDC_REQUEST_ID",
 							"saml_session_id_cookie_name": "FIRST_SAML_SESSION_ID",
+							"cross_device_session_id_cookie_name": "FIRST_CROSS_DEVICE_SESSION_ID",
 							"cookie_name_prefix": "FIRST"
 						},
 						"identity_stores": [
@@ -241,6 +242,7 @@
 							"oidc_session_id_cookie_name": "SECOND_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "SECOND_OIDC_REQUEST_ID",
 							"saml_session_id_cookie_name": "SECOND_SAML_SESSION_ID",
+							"cross_device_session_id_cookie_name": "SECOND_CROSS_DEVICE_SESSION_ID",
 							"cookie_name_prefix": "SECOND"
 						},
 						"identity_stores": [
@@ -284,6 +286,7 @@
 							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
 							"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+							"cross_device_session_id_cookie_name": "AUTHP_CROSS_DEVICE_SESSION_ID",
 							"cookie_name_prefix": "AUTHP"
 						},
 						"identity_stores": [
@@ -321,6 +324,7 @@
 							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
 							"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+							"cross_device_session_id_cookie_name": "AUTHP_CROSS_DEVICE_SESSION_ID",
 							"cookie_name_prefix": "AUTHP"
 						},
 						"identity_stores": [

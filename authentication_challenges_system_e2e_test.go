@@ -79,26 +79,27 @@ func testCaddySystemChallengePolicy(t *testing.T, cert, tlsKey string, roots *x5
 		}
 		result, ok := message.(*system.AuthResponseMessage)
 		if !ok || !result.Authenticated || result.UserData["sub"] != "alice" || result.UserData["label"] != "system-policy" {
-			t.Fatal("System API lost identity or realm transform")
+			t.Fatal("System API lost identity or unconditional transform")
 		}
 		if diff := cmp.Diff([]any{"pwd"}, result.UserData["amr"]); diff != "" {
 			t.Fatal(diff)
 		}
 	}
 	authenticate(http.StatusOK)
-	candidate := strings.Replace(f.input, "match realm local", "match any", 1)
+	f.input = strings.Replace(f.input, "match realm local", "match any", 1)
+	candidate := f.input
 	config, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte(candidate), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := caddy.Load(config, true); err == nil || !strings.Contains(err.Error(), "match any transforms are unsupported with System API keys") {
-		t.Fatal("unsafe System API replacement escaped provisioning guard")
-	}
-	for _, matcher := range []string{`"match any"`, "{env.CHALLENGE_NATIVE_MATCHER}"} {
+	for _, matcher := range []string{"match any", `"match any"`, "{env.CHALLENGE_NATIVE_MATCHER}"} {
 		t.Setenv("CHALLENGE_NATIVE_MATCHER", "match any")
 		candidate := challengeNativeMatcher(t, config, matcher)
-		if err := caddy.Load(candidate, true); err == nil || !strings.Contains(err.Error(), "match any transforms are unsupported with System API keys") {
-			t.Fatal("encoded native JSON matcher bypassed System API guard")
+		if err := caddy.Stop(); err != nil {
+			t.Fatal(err)
+		}
+		if err := caddy.Load(candidate, true); err != nil {
+			t.Fatal(err)
 		}
 		authenticate(http.StatusOK)
 	}

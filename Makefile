@@ -9,17 +9,32 @@ LATEST_GIT_COMMIT:=$(shell git log --format="%H" -n 1 | head -1)
 BUILD_USER:=$(shell whoami)
 BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BUILD_DIR:=$(shell pwd)
-CADDY_VERSION="v2.11.4"
+CADDY_VERSION="v2.11.7"
 
 PYTHON ?= python3
 TEST ?= .
 TEST_DIR ?= ./...
 # Go applies this limit to the whole package, including its serial Caddy E2E journeys.
 TEST_TIMEOUT ?= 45m
+# Bound compilers, tests, and their browser/CLI children together.
+TEST_PACKAGE_PARALLELISM ?= 1
+TEST_PARALLELISM ?= 2
+TEST_GOMAXPROCS ?= 2
+TEST_GO_MEMORY_MB ?= 512
+# Leave room around the package timeout for compilation and reports.
+TEST_WALL_TIMEOUT ?= 3300
+TEST_MAX_PROCESSES ?= 128
+TEST_ARTIFACT_MB ?= 256
 QUICK_TEST_DIR ?= .
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1
 export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
+export TEST_PACKAGE_PARALLELISM TEST_PARALLELISM TEST_GOMAXPROCS TEST_GO_MEMORY_MB
+export TEST_WALL_TIMEOUT TEST_MAX_PROCESSES TEST_ARTIFACT_MB
+# An unset memory budget is computed from physical RAM by the guard.
+ifneq ($(origin TEST_MEMORY_MB),undefined)
+export TEST_MEMORY_MB
+endif
 export PLUGIN_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -50,7 +65,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.3.10=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.3.11=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 
@@ -73,9 +88,10 @@ install-test-tools:
 
 .PHONY: run-tests
 run-tests:
-	@go tool tested run --output-dir "$$COVERAGE_DIR" \
+	@$(PYTHON) assets/scripts/test_guard.py run go tool tested run --output-dir "$$COVERAGE_DIR" \
 		--title "Caddy Security Go tests" --minimum-coverage "$$MINIMUM_COVERAGE" \
-		-- -mod=readonly -race -count=1 -timeout "$$TEST_TIMEOUT" -v -run "$$TEST" $$TEST_DIR
+		-- -mod=readonly -race -count=1 -p "$$TEST_PACKAGE_PARALLELISM" \
+		-parallel "$$TEST_PARALLELISM" -timeout "$$TEST_TIMEOUT" -v -run "$$TEST" $$TEST_DIR
 
 .PHONY: run-quick-tests
 run-quick-tests:
@@ -83,7 +99,7 @@ run-quick-tests:
 
 .PHONY: run-reports
 run-reports:
-	@go tool tested report --output-dir "$$COVERAGE_DIR" --title "Caddy Security Go tests"
+	@$(PYTHON) assets/scripts/test_guard.py report go tool tested report --output-dir "$$COVERAGE_DIR" --title "Caddy Security Go tests"
 
 
 .PHONY: test

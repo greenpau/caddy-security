@@ -150,8 +150,8 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 		declarations = append(declarations, declaration)
 	}
 	// A child parser must not consume this block's closing brace and let EOF
-	// masquerade as a completed security block. Quoted brace-valued arguments
-	// can otherwise pass Caddy's initial brace counting with the wrong scopes.
+	// masquerade as a completed security block, including direct Dispenser
+	// callers that have not passed through Caddy's complete-file parser.
 	if d.Nesting() != 0 {
 		return nil, d.Errf("unterminated security block")
 	}

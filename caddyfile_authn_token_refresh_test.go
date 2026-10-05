@@ -83,13 +83,53 @@ func TestPortalTokenRefresh(t *testing.T) {
 	}
 }
 
+func TestPortalQuotedBraceArguments(t *testing.T) {
+	for _, value := range []string{"{", "}"} {
+		t.Run(value, func(t *testing.T) {
+			// Disabled blocks retain literal configuration without activating it.
+			body := "oidc provider {\ndisabled\nissuer " + fmt.Sprintf("%q", value) + "\n}\n" +
+				tokenRefreshTestBlock("disabled\ncookie name "+fmt.Sprintf("%q", value)) +
+				"cookie access token name FOLLOWING_ACCESS"
+			input := cookiePortalInput(body)
+			app, err := parseCookieApp(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := app.resolveOAuthRegistrationConfig(t.Context(), app.Config); err != nil {
+				t.Fatal(err)
+			}
+			// Opening braces also defer raw settings for runtime replacement.
+			if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop()); err != nil {
+				t.Fatal(err)
+			}
+			if err := resolvePortalCookieDirectives(t.Context(), caddy.NewReplacer(), nil, app.Config, app.PortalCookieDirectives, zap.NewNop()); err != nil {
+				t.Fatal(err)
+			}
+			portal := app.Config.AuthenticationPortals[0]
+			if portal.OIDCProvider == nil || portal.RefreshTokens == nil || portal.CookieConfig == nil {
+				t.Fatal("quoted brace lost portal configuration")
+			}
+			if portal.OIDCProvider.Enabled || portal.RefreshTokens.Enabled || portal.OIDCProvider.Issuer != value || portal.RefreshTokens.CookieName != value || portal.CookieConfig.AccessTokenCookieName != "FOLLOWING_ACCESS" {
+				t.Fatal("quoted brace changed a value, feature state or portal boundary")
+			}
+			if data, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte("{\n"+input+"\n}\n"), nil); err != nil || len(data) == 0 {
+				t.Fatalf("public adapter rejected literal brace: %v", err)
+			}
+			// Direct callers still require the owned security closing brace.
+			if app, err := parseCookieApp(strings.TrimSuffix(input, "}")); err == nil || app != nil {
+				t.Fatal("quoted value hid an unterminated security block")
+			}
+		})
+	}
+}
+
 func TestPortalTokenRefreshRejects(t *testing.T) {
 	cases := []string{
 		tokenRefreshTestBlock(""), tokenRefreshTestBlock("disabled") + tokenRefreshTestBlock("disabled"),
 		tokenRefreshTestBlock("") + tokenRefreshTestBlock("disabled"),
 		"token refresh extra {\ndisabled\n}", "token other {\ndisabled\n}", "token refresh", "token refresh \"{\"\ndisabled\n}",
 		tokenRefreshTestBlock("disabled {\nrealms ignored\n}"), "token refresh {\ndisabled\n} realms ignored",
-		"token refresh {\nrealms }\n", "token refresh {\ndisabled\ncookie name \"}\"\n",
+		"token refresh {\nrealms }\n",
 	}
 	for _, line := range []string{
 		"mystery value", "enabled true", "disabled false", "enabled\ndisabled", "base_path /auth", "max_sessions 1", "store distributed",

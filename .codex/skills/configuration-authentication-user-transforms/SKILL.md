@@ -139,32 +139,25 @@ serialized matchers. Lower-level `exact match github_id ...` and
 caller must supply trusted provider claims; arbitrary caller-created maps do
 not establish authenticated GitHub identity.
 
-## Unconditional matcher restriction in v1.3.3
+## Unconditional matching
 
-`match any` is accepted for access-only portals without System API keys. Caddy
-rejects it when portal refresh or the OIDC provider is enabled, or a portal
-crypto key has `system` usage. This provisioning check covers Caddyfile and
-native JSON, including quoted or runtime-resolved matcher encodings and
-runtime-resolved key usage. The check follows the ACL's decoded argument meaning,
-not the serialized spelling. Disabled/absent renewable
-features remain supported when no System API key is configured.
+`match any` applies without requiring token timestamps in selected AuthCrunch
+v1.3.11. It is supported with portal refresh, OIDC and System API keys as well
+as ordinary access-only login. The earlier Caddy compatibility restriction is
+removed. Use realm matchers when policy should apply only to selected backends;
+do not fabricate `exp` or rewrite matchers to make unconditional rules run.
 
-The upstream ACL implements this matcher through the `exp` field. Ordinary
-login provides it, but refresh/OIDC identity checks and encrypted System API
-assertions transform fresh backend claims before timestamps exist. That can silently skip claims or challenge
-requirements. Use an explicit `match realm local` (or the intended realm list)
-with those features. Caddy does not rewrite matchers or fabricate timestamps.
-
-`TestPortalTransformMatchAnyIdentityContext` records the upstream behavior and
-checks the guard for each feature independently; `TestPortalTransformMatchAnyEncoding`
-checks equivalent native JSON encodings. The challenge E2E verifies
-access-only matching and rejected replacement while the active refresh/OIDC
-session remains usable. The adapt/resolution fixture
-`testcase_authenticate_with_match_any_refresh` and
-`testcase_authenticate_with_match_any_system` accept syntax and reject runtime
-resolution. System API E2E checks encrypted password assertions, realm-based
-claims, rejected replacement and denial when the selected policy requires TOTP. See the [upstream work needed](../configuration/references/authcrunch-compatibility.md#upstream-match-any-limit)
-before removing this restriction.
+`TestPortalTransformMatchAnyIdentityContext` and
+`TestPortalTransformMatchAnyEncoding` check timed and untimed claims through
+Caddy resolution, including quoted and runtime-resolved native JSON matchers.
+The `testcase_authenticate_with_match_any_refresh` and
+`testcase_authenticate_with_match_any_system` fixtures adapt and resolve.
+The challenge TLS journey checks unconditional factor selection and claims in
+login and refresh, successful OIDC identity revalidation, and Basic rejection
+without the required proof. System API E2E checks unconditional transformed
+claims and rejects password-only assertions when the policy requires TOTP.
+Malformed multiline transforms still reject replacement without disturbing the
+serving app. See the [dependency qualification](../configuration/references/authcrunch-compatibility.md#unconditional-matching).
 
 ## Conditional authentication
 

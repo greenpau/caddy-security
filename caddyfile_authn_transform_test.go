@@ -231,10 +231,19 @@ func TestPortalTransformRuntimeBoundaries(t *testing.T) {
 	}
 }
 
+// Supply a complete provider so unrelated validation cannot mask matcher behavior.
+func transformTestOIDCConfig(t *testing.T) *authn.OIDCProviderConfig {
+	t.Helper()
+	app, err := parseOIDCTestPortal(t, oidcTestBlock(oidcTestBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return app.Config.AuthenticationPortals[0].OIDCProvider
+}
+
 func TestPortalTransformMatchAnyIdentityContext(t *testing.T) {
-	// Record the selected library's limitation independently of Caddy's guard.
-	// Remove the restriction only after upstream and actual Caddy refresh/OP
-	// flows apply the same policy with and without token timestamps present.
+	// Unconditional transforms must apply before token timestamps exist, as
+	// they do during refresh, OIDC identity checks and System API assertions.
 	app, err := parseCookieApp(cookiePortalInput("transform user {\nmatch any\nadd label matched as string\n}"))
 	if err != nil {
 		t.Fatal(err)
@@ -251,8 +260,8 @@ func TestPortalTransformMatchAnyIdentityContext(t *testing.T) {
 		if err := factory.Transform(claims); err != nil {
 			t.Fatal(err)
 		}
-		if (claims["label"] == "matched") != timed {
-			t.Fatal("upstream match-any contract changed; requalify and remove the compatibility guard")
+		if claims["label"] != "matched" {
+			t.Fatalf("unconditional transform was skipped (timed=%v)", timed)
 		}
 	}
 	for _, mode := range []string{"absent", "disabled", "refresh", "oidc", "both", "system", "resolved system", "signing", "defaults"} {
@@ -275,16 +284,13 @@ func TestPortalTransformMatchAnyIdentityContext(t *testing.T) {
 			}
 			if mode != "absent" {
 				p.RefreshTokens = &authn.TokenRefreshConfig{Enabled: mode == "refresh" || mode == "both", Realms: []string{"local"}, PublicOrigin: "https://example.test", BasePath: "/auth"}
-				p.OIDCProvider = &authn.OIDCProviderConfig{Enabled: mode == "oidc" || mode == "both"}
+				p.OIDCProvider = transformTestOIDCConfig(t)
+				p.OIDCProvider.Enabled = mode == "oidc" || mode == "both"
 			}
 			// Exercise the same exported resolution entry point used by native JSON.
 			err = ResolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, zap.NewNop())
-			if mode == "absent" || mode == "disabled" || mode == "signing" || mode == "defaults" {
-				if err != nil {
-					t.Fatal(err)
-				}
-			} else if err == nil || !strings.Contains(err.Error(), "match any transforms are unsupported") {
-				t.Fatalf("unsupported combination escaped the guard: %v", err)
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
@@ -307,17 +313,11 @@ func TestPortalTransformMatchAnyEncoding(t *testing.T) {
 				case "refresh":
 					p.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: "https://example.test", BasePath: "/auth"}
 				case "oidc":
-					p.OIDCProvider = &authn.OIDCProviderConfig{Enabled: true}
+					p.OIDCProvider = transformTestOIDCConfig(t)
 				case "system":
 					p.AddRawCryptoKeyStoreConfig("crypto key internal system " + strings.Repeat("a", 64))
 				}
 				err = ResolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, app.Config, zap.NewNop())
-				if mode != "access" {
-					if err == nil || !strings.Contains(err.Error(), "match any transforms are unsupported") {
-						t.Fatalf("encoded unconditional matcher escaped %s guard: %v", mode, err)
-					}
-					return
-				}
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -333,8 +333,8 @@ func TestPortalTransformMatchAnyEncoding(t *testing.T) {
 					if err := factory.Transform(claims); err != nil {
 						t.Fatal(err)
 					}
-					if (claims["label"] == "matched") != timed {
-						t.Fatal("encoded matcher no longer has the upstream timestamp limitation")
+					if claims["label"] != "matched" {
+						t.Fatalf("encoded unconditional transform was skipped (timed=%v)", timed)
 					}
 				}
 			})

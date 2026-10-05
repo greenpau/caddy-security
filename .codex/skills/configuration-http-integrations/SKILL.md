@@ -38,6 +38,31 @@ Read these files when details matter:
   `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`
   for focused adapt fixtures.
 
+## Caddy Host Defaults
+
+The selected Caddy v2.11.7 limits request headers to 16 KiB by default and
+defaults idle request-body reads and response writes to 60 seconds. Review
+large JWT/cookie sets and slow uploads or streams when upgrading. Tune Caddy's
+global `servers` options (`max_header_size`, `timeouts read_body_idle` and
+`timeouts write_idle`) only for a measured deployment need; these are host
+settings, not `security` directives. An idle deadline measures stalled I/O,
+not the whole request duration.
+
+Caddy drops incoming dot-containing headers by default and controls underscore
+headers separately. Prefer ordinary hyphenated names for identity and proxy
+metadata. If a trusted integration needs other spellings, configure the host's
+`expected_dot_headers` or `expected_underscore_headers` deliberately and review
+hyphen/underscore/dot aliases together. The allowlists do not establish trust in
+client-supplied identity; trusted-proxy and authorization rules still apply.
+
+The legacy Caddy authentication chain buffers individual provider responses
+when several providers are configured. Only the successful provider's response
+headers are retained; a failed provider must not contaminate another provider's
+success. Current `authorize` routes use `AuthorizationHandler` directly and
+preserve handled gatekeeper responses. See the published
+[v2.11.6 changes](https://github.com/caddyserver/caddy/releases/tag/v2.11.6) and
+[v2.11.7 fixes](https://github.com/caddyserver/caddy/releases/tag/v2.11.7).
+
 ## Route Roles
 
 `authenticate` serves the authentication portal. Put it on the portal host or

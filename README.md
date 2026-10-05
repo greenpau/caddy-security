@@ -53,6 +53,11 @@ tool, then `make test` for race-enabled Go tests and coverage. Open
 `.coverage/index.html` for the report dashboard. `make run-reports` rebuilds
 reports from recorded evidence without rerunning tests.
 
+Test and report workflows require Python 3.9+ and macOS or Linux. They stream
+progress and monitor resource usage, with one guarded run per checkout. See
+[test resource controls](.codex/skills/scripts-and-automation/references/test-resources.md)
+for limits, overrides and interruption evidence.
+
 `make ci-check` runs version checks, automation fixtures, the full Go suite,
 and the Caddy binary build. GitHub Actions uploads the complete report bundle
 with a versioned name, including failure evidence, and retains it for 14 days.

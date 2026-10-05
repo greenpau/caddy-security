@@ -16,17 +16,19 @@ ROOT = Path(__file__).resolve().parents[3]
 class SubprocessCoverageTests(unittest.TestCase):
     def setUp(self):
         (ROOT / 'tmp').mkdir(exist_ok=True)
-        directory = tempfile.TemporaryDirectory(prefix='subprocess-coverage-', dir=ROOT / 'tmp')
+        directory = tempfile.TemporaryDirectory(prefix='_subprocess-coverage-', dir=ROOT / 'tmp')
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.env = {key: value for key, value in os.environ.items()
-                    if not key.startswith('GIT_') and key not in (
+                    if not key.startswith(('GIT_', 'TEST_')) and key not in (
                         'MAKEFLAGS', 'MFLAGS', 'MAKELEVEL', 'GOFLAGS', 'GOCOVERDIR',
                         'TEST_TIMEOUT', 'CADDY_COVERAGE_FIXTURE_PROCESS')}
         self.env.update(PYTHONDONTWRITEBYTECODE='1', TEST='.', TEST_DIR='./...',
                         QUICK_TEST_DIR='.', COVERAGE_DIR='.coverage', MINIMUM_COVERAGE='1')
         for name in ('Makefile', 'subprocess_coverage_test.go'):
             shutil.copyfile(ROOT / name, self.root / name)
+        (self.root / 'assets/scripts').mkdir(parents=True)
+        shutil.copyfile(ROOT / 'assets/scripts/test_guard.py', self.root / 'assets/scripts/test_guard.py')
         for path in (ROOT / 'testdata/subprocess_coverage').glob('*.go'):
             shutil.copyfile(path, self.root / path.name)
         (self.root / 'VERSION').write_text('1.0.0\n')

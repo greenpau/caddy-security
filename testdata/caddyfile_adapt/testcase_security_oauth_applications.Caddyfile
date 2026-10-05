@@ -32,7 +32,8 @@
 
 		oauth application service {
 			client_id service-protocol-id
-			client_name "Service Display Name"
+			# Regression: a quoted brace is a literal display name, not a block opener.
+			client_name "{"
 			client_secret synthetic-application-secret-0123456789
 			token_endpoint_auth_method client_secret_post
 			redirect_uri https://service.example.test/callback
@@ -43,6 +44,8 @@
 
 		oauth application native {
 			client_id native-protocol-id
+			# The matching literal must not close this or the enclosing security block.
+			client_name "}"
 			token_endpoint_auth_method none
 			redirect_uri http://127.0.0.1:49152/callback?next=%2F
 			redirect_uri http://[::1]/callback

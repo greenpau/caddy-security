@@ -130,13 +130,8 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 	}{
 		{name: "direct OAuth settings", inputFileNamePrefix: "testcase_authorize_oauth"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},
-		{
-			name:                "match any refresh combination fails before runtime construction",
-			inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh",
-			shouldErr:           true,
-			err:                 fmt.Errorf("portal %q transform 0: match any transforms are unsupported with portal refresh or OIDC; use an explicit realm matcher", "myportal"),
-		},
-		{name: "match any System API keys fail provisioning", inputFileNamePrefix: "testcase_authenticate_with_match_any_system", shouldErr: true, err: fmt.Errorf("portal %q transform 0: match any transforms are unsupported with System API keys; use an explicit realm matcher", "myportal")},
+		{name: "match any refresh policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh"},
+		{name: "match any System API policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_system"},
 		{name: "token refresh snapshots and typed config", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},
 		{name: "named OAuth application credentials remain exact", inputFileNamePrefix: "testcase_security_oauth_applications"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},

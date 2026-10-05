@@ -421,9 +421,8 @@ func TestCaddyAuthorizationFieldsProcess(t *testing.T) {
 		request(t, "legacy", "GET", "/private/document", sign(bad, secret), true)
 		request(t, "unused", "GET", "/private/document", sign(bad, secret), true)
 	})
-	// These are required contract assertions, not expected successes for the
-	// v1.3.10 bug. Keep failures visible until upstream unconditional evaluation
-	// no longer depends on exp in the normalized ACL map.
+	// Default rules must evaluate even though normalized ACL data omits exp.
+	// Preserve ordering and deny malformed custom claims before any allow.
 	t.Run("default deny overrides shortcut allow", func(t *testing.T) {
 		request(t, "ordered", "GET", "/private/document", token, false)
 	})

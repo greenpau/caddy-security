@@ -224,7 +224,7 @@ payloads.
 Diagnostic suppression is governed by [configuration-logging](../configuration-logging/SKILL.md).
 Delegate rule parsing and immutable filters to AuthCrunch. Its root logger
 wrapping does not reach Caddy's private authentication middleware logger, and
-Caddy v2.11.4's custom cores only tee output. Keep that upstream limitation
+Caddy v2.11.7's custom cores only tee output. Keep that upstream limitation
 explicit; never change authentication results to silence a host log.
 
 ## Style

@@ -215,10 +215,10 @@ Empty replacements must fail before the codec can drop a token and change its
 meaning. Reject CR/LF in raw transform instructions before decoding, since the
 CSV decoder can discard later records. Shared validation also rejects multiline
 resolved transform values. Native JSON transformers receive the same validation.
-With refresh or OIDC enabled, or with System API crypto keys, reject `match any`
-by its decoded ACL meaning, including quoted and runtime-resolved encodings: the selected upstream
-identity checks lack the timestamp that matcher assumes. Use explicit realm
-matchers; see the [compatibility restriction](../configuration-authentication-user-transforms/SKILL.md#unconditional-matcher-restriction-in-v133).
+Selected AuthCrunch v1.3.11 supports `match any` without timestamps, including
+refresh/OIDC/System API identity checks and quoted/runtime-resolved encodings.
+Keep shared compilation and single-line validation; see
+[unconditional matching](../configuration-authentication-user-transforms/SKILL.md#unconditional-matching).
 
 `TestPortalTransformRuntimeValues` and `TestPortalTransformRuntimeBoundaries`
 cover mixed environment/claim values, quoted secrets, empty/unknown tokens,

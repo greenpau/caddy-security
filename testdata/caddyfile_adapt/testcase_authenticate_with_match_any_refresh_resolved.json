@@ -1,52 +1,19 @@
 {
-	"credentials": {
-		"raw_credential_configs": [
-			[
-				"name root@localhost",
-				"username root",
-				"password \"synthetic \"\"resolved\"\" password with spaces\""
-			],
-			[
-				"name foo@localhost",
-				"username foo",
-				"password \"synthetic \"\"resolved\"\" password with spaces\"",
-				"domain example.com"
-			],
-			[
-				"name literal",
-				"username literal",
-				"password \"synthetic \"\"literal\"\" password with spaces\""
-			]
-		],
-		"generic": [
-			{
-				"name": "root@localhost",
-				"username": "root",
-				"password": "synthetic \"resolved\" password with spaces"
-			},
-			{
-				"name": "foo@localhost",
-				"username": "foo",
-				"password": "synthetic \"resolved\" password with spaces",
-				"domain": "example.com"
-			},
-			{
-				"name": "literal",
-				"username": "literal",
-				"password": "synthetic \"literal\" password with spaces"
-			}
-		]
-	},
 	"authentication_portals": [
 		{
 			"name": "myportal",
 			"ui": {},
+			"user_transformer_configs": [
+				{
+					"matchers": [
+						"match any"
+					],
+					"actions": [
+						"require auth challenges password"
+					]
+				}
+			],
 			"cookie_config": {
-				"domains": {
-					"contoso.com": {
-						"domain": "contoso.com"
-					}
-				},
 				"session_id_cookie_name": "AUTHP_SESSION_ID",
 				"referer_cookie_name": "AUTHP_REDIRECT_URL",
 				"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
@@ -63,13 +30,7 @@
 				"localdb"
 			],
 			"token_validator_options": {},
-			"raw_crypto_key_store_config": [
-				"crypto key sign-verify foo"
-			],
 			"crypto_key_store_config": {
-				"raw_key_configs": [
-					"crypto key sign-verify foo"
-				],
 				"auto_generate_tag": "default",
 				"auto_generate_algo": "ES512"
 			},
@@ -85,15 +46,28 @@
 			},
 			"api": {
 				"profile_enabled": true
+			},
+			"refresh_tokens": {
+				"enabled": true,
+				"realms": [
+					"local"
+				],
+				"public_origin": "https://auth.example.test",
+				"base_path": "/auth",
+				"access_lifetime_seconds": 300,
+				"idle_timeout_seconds": 1800,
+				"absolute_timeout_seconds": 28800,
+				"max_sessions": 10000,
+				"max_rotations": 1024
 			}
 		}
 	],
 	"identity_stores": [
 		{
-			"name": "local",
+			"name": "localdb",
 			"kind": "local",
 			"params": {
-				"path": "assets/config/users.json",
+				"path": ":memory:",
 				"realm": "local"
 			}
 		}

@@ -96,7 +96,7 @@ the lookup priority. `validate bearer header` enables `Authorization: Bearer
 
 Read [typed custom ACL fields](references/typed-acl-fields.md) for `acl field`
 declarations, literal claim keys, typed JSON, adapter ownership and Caddy TLS
-qualification. It also records v1.3.10's failing default-action ordering boundary.
+qualification, including the unconditional default-action fix in v1.3.11.
 
 Prefer concise shortcuts for common role, origin, issuer, method, and path
 matches:
@@ -150,10 +150,9 @@ Explicit actions must start with `allow` or `deny`, and may include `any`,
 `stop`, `log [debug|info|warn|error]`, `counter`, and `tag <value>`. With
 multiple conditions, the default is match-all; add `any` to the action for
 match-any. A matched deny denies immediately. A matched allow grants access only
-if no later matching deny overrides it, unless `stop` is used. In v1.3.10,
-`acl default`/`match any` rules are skipped on the validator's normalized user
-data; do not rely on an explicit default deny to override a compact allow.
-The typed-field reference owns the failing regression and required upstream fix.
+if no later matching deny overrides it, unless `stop` is used. Selected v1.3.11
+evaluates `acl default`/`match any` even when normalized user data omits `exp`.
+The typed-field reference owns the default-rule ordering regressions.
 
 Use `amr` to require verified methods, for example inside a policy:
 

@@ -57,8 +57,8 @@ come from the library's validated AMR vocabulary (`pwd`, `otp`, `hwk`, `swk`,
 `mfa`, `sms`, `tel`, `email`, `fpt`, `face`, `pin`, `rba`, `sc`, `user`, `wia`).
 
 Check the enclosing portal's closing boundary as well as the provider body.
-Caddy's segment collection counts quoted brace-valued arguments as braces;
-such a value must not make a truncated portal pass adaptation.
+Caddy v2.11.7 keeps quoted brace-valued arguments literal. Preserve those
+values in disabled settings and still reject a missing owned closing brace.
 
 A standalone `disabled` requires no issuer, realms, keys, or applications.
 Syntax and explicitly selected applications still validate: unknown or nil
@@ -179,7 +179,7 @@ coverage; parser tests cannot establish those behaviors.
   providers, selected/unselected realms, all settings, zero defaults, disabled,
   and absent providers. Key paths are synthetic; adaptation performs no key I/O.
 - `testcase_authenticate_with_oidc_unterminated.Caddyfile` and `.json`: a
-  negative adapter fixture for quoted braces concealing a missing portal close.
+  negative adapter fixture for an incomplete enclosing block with quoted values.
 - `testcase_authenticate_with_oidc_noncanonical_issuer.Caddyfile` and `.json`:
   a negative adapter fixture for a port that browsers rewrite.
 - `oidc_config_test.go`: issuer route and cookie-path conflicts, including

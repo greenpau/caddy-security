@@ -268,9 +268,9 @@ func TestCaddyfileOAuthApplicationBlockBoundaries(t *testing.T) {
 }
 
 func TestCaddyfileOAuthApplicationEnclosingBlock(t *testing.T) {
-	// Caddy's initial parser counts brace-valued quoted arguments as structural
-	// braces. The application can then consume the security block's closing
-	// brace, so the global adapter must check its own nesting after collection.
+	// Quoted braces are literal arguments in Caddy v2.11.7. Omit an owned
+	// closing brace so the test reaches a real incomplete declaration, rather
+	// than depending on the outer Caddy global block's EOF handling.
 	for _, field := range []string{"client_id", "client_name"} {
 		t.Run(field, func(t *testing.T) {
 			block := applicationTestBlock("web", "")
@@ -278,17 +278,42 @@ func TestCaddyfileOAuthApplicationEnclosingBlock(t *testing.T) {
 				block = strings.Replace(block, "client_id protocol-id\n", "", 1)
 			}
 			block = strings.TrimSuffix(block, "}\n") + field + " \"}\"\n"
-			data, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte("{\nsecurity {\n"+block+"}\n}\n"), nil)
+			data, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte("{\nsecurity {\n"+block+"}\n"), nil)
 			if err == nil || len(data) != 0 {
 				t.Fatal("unterminated security block returned a configuration")
 			}
 			if strings.Contains(err.Error(), applicationTestSecret) {
 				t.Fatal("enclosing-block error exposed client secret")
 			}
-			if !strings.Contains(err.Error(), "unterminated security block") {
+			if !strings.Contains(err.Error(), "unexpected EOF") {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestCaddyfileOAuthApplicationQuotedBraces(t *testing.T) {
+	for _, value := range []string{"{", "}"} {
+		for _, field := range []string{"client_id", "client_name"} {
+			t.Run(field+"/"+value, func(t *testing.T) {
+				block := applicationTestBlock("web", field+" "+fmt.Sprintf("%q", value))
+				if field == "client_id" {
+					block = strings.Replace(block, "client_id protocol-id\n", "", 1)
+				}
+				app := adaptApplicationTestConfig(t, block+applicationTestBlock("following", ""))
+				if len(app.Config.OAuthApplications) != 2 || app.Config.OAuthApplications[1].Name != "following" {
+					t.Fatal("quoted value changed application boundaries")
+				}
+				client := app.Config.OAuthApplications[0].Client
+				got := client.ClientID
+				if field == "client_name" {
+					got = client.ClientName
+				}
+				if got != value {
+					t.Fatal("quoted brace value was not preserved")
+				}
+			})
+		}
 	}
 }
 

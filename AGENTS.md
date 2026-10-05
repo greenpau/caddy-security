@@ -144,7 +144,7 @@ stop/start deployment boundary. Direct OAuth without a portal belongs to
 [configuration-logging](.codex/skills/configuration-logging/SKILL.md) owns root
 diagnostic skip rules and issue #280's logger ownership boundary.
 AuthCrunch component filtering does not suppress
-Caddy v2.11.4's independent authentication middleware logger.
+Caddy v2.11.7's independent authentication middleware logger.
 
 ## Portal API Integration
 

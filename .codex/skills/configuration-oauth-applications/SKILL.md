@@ -26,9 +26,13 @@ Reject unquoted closing braces among header/body arguments too. `RemainingArgs`
 accepts them as values, so a missing `client_id` could otherwise become `}` and
 shift which enclosing block supplies the application's closing brace.
 After collection, also require the enclosing `security` dispenser's nesting
-to return to zero. Caddy's initial brace counting treats quoted `"}"` values
-as structural, so a child parser can consume the enclosing closing brace;
-EOF must not turn that incomplete security block into a valid configuration.
+to return to zero, including for direct dispenser callers. Caddy v2.11.7 treats
+quoted `"{"` and `"}"` arguments as literal values. Preserve those values and
+following declarations; EOF must still reject an incomplete owned block. Test
+missing security/portal delimiters separately from the host global block.
+The `testcase_security_oauth_applications` fixture deliberately uses `"{"` and
+`"}"` as client display names. These are valid literal values for parser and
+provisioning regressions, not recommended operator-facing application names.
 The published go-authcrunch module selected in `go.mod` supports these APIs and
 repeated singular `redirect_uri` statements. No local replacement is required;
 follow the [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development)

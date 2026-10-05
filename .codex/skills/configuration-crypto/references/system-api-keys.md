@@ -32,9 +32,9 @@ content, such as `crypto key sys1 system {file./etc/caddy/security_system.key}`.
 Do not use `crypto key sys1 system from file ...`; KMS file loading is for PEM
 JWT keys, not raw System API hex keys.
 
-Portals with System API keys cannot use `match any` transforms in v1.3.3:
-upstream assertion claims omit the timestamp used by that matcher. Use explicit
-realm matchers; see the [compatibility restriction](../../configuration-authentication-user-transforms/SKILL.md#unconditional-matcher-restriction-in-v133).
+Portals with System API keys support `match any` transforms in selected
+v1.3.11. They apply to untimed assertion claims and cannot bypass an unsatisfied
+factor policy; see [unconditional matching](../../configuration-authentication-user-transforms/SKILL.md#unconditional-matching).
 
 The portal chooses the `system` key from the encrypted message footer `kid`.
 The authorize-side remote authenticator currently picks the first configured

@@ -27,7 +27,7 @@ authentication portal myportal {
 }
 ```
 
-That one statement covers all nine roles:
+That one statement covers all ten roles:
 
 | Role | Effective cookie name |
 | --- | --- |
@@ -40,6 +40,7 @@ That one statement covers all nine roles:
 | OIDC session ID | `PORTAL_OIDC_SESSION_ID` |
 | OIDC request ID | `PORTAL_OIDC_REQUEST_ID` |
 | SAML session ID | `PORTAL_SAML_SESSION_ID` |
+| Cross-device session ID | `PORTAL_CROSS_DEVICE_SESSION_ID` |
 
 `set cookie name prefix portal` preserves the legacy uppercasing behavior.
 The shared spelling `cookie prefix PORTAL` preserves the supplied case.
@@ -51,6 +52,14 @@ The SAML session cookie binds a SAML login to its initiating browser. It uses
 host-only scope, path `/`, Secure, HttpOnly, SameSite=None and a 300-second
 lifetime. Its name participates in shared prefix, override and collision checks;
 changing its name does not weaken SAML state or assertion validation.
+
+The cross-device cookie role is supplied by the v1.3.11 shared parser and uses
+`cookie cross-device session id name <name>`. It participates in prefix,
+uniqueness and runtime resolution just like the other names. Naming this cookie
+does not enable cross-device login. That optional upstream feature is disabled
+by default and has no Caddyfile enable directive yet; its typed JSON field is
+inherited but a complete Caddy login journey remains separate integration work.
+
 
 ## Explicit Names and Precedence
 
@@ -65,6 +74,7 @@ authentication portal myportal {
     cookie oidc session id name AUTHP_LOGIN_SESSION
     cookie oidc request id name AUTHP_LOGIN_REQUEST
     cookie saml session id name AUTHP_LOGIN_SAML
+    cookie cross-device session id name AUTHP_LOGIN_TRANSFER
     cookie refresh token name AUTHP_LOGIN_REFRESH
     cookie referer name AUTHP_LOGIN_REDIRECT
     cookie sandbox id name AUTHP_LOGIN_SANDBOX
@@ -75,7 +85,7 @@ authentication portal myportal {
 An explicit name wins independently of statement order, including one equal
 to an old default. For example, `cookie session id name AUTHP_SESSION_ID`
 plus `set cookie name prefix PORTAL` leaves that session name unchanged and
-sets all eight omitted names to `PORTAL_<SUFFIX>`.
+sets all nine omitted names to `PORTAL_<SUFFIX>`.
 `cookie access token name LOGIN_ACCESS` is also valid and stays exactly
 `LOGIN_ACCESS`; use `AUTHP_LOGIN_ACCESS` when the intended convention is AUTHP.
 
@@ -85,7 +95,7 @@ Legacy `set <role> cookie name <name>` supports `session_id`, `redirect_url`,
 
 Each prefix, name (including aliases), and attribute per scope may be set
 once. Duplicate statements are errors even when the values agree. Final
-names must be valid HTTP cookie names and distinct across all nine roles.
+names must be valid HTTP cookie names and distinct across all ten roles.
 Names may be explicitly unprefixed. `__Host-` and `__Secure-` remain optional
 compatibility cases; a name alone does not establish the required attributes.
 

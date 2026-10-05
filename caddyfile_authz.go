@@ -64,6 +64,10 @@ const (
 func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 	var rootDirective string
 	args := d.RemainingArgs()
+	// Caddy treats a quoted opening brace as an argument, not a block token.
+	if len(args) == 3 && args[0] == "policy" && args[2] == "{" && d.Token().Quoted() {
+		return d.Errf("authorization policy %q requires an unquoted block", args[1])
+	}
 	if len(args) != 2 {
 		return d.ArgErr()
 	}
@@ -81,6 +85,8 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
+			case "}":
+				return d.Errf("authorization policy %q requires an unquoted closing brace", p.Name)
 			case "use", "oauth":
 				args := append([]string{k}, d.RemainingArgs()...)
 				if d.Next() {

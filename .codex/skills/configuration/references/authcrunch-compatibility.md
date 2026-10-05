@@ -4,7 +4,7 @@
 
 Read `go.mod` and `go list -m -json github.com/greenpau/go-authcrunch` to
 establish the selected version, module directory, and any replacement. This
-checkout selects published v1.3.10; sibling source and integrated xcaddy build
+checkout selects published v1.3.11; sibling source and integrated xcaddy build
 arguments can select different code and are not proof of the normal build's
 behavior. Record that distinction in qualification evidence. A dependency task
 must inspect the Makefile xcaddy argument and CONTRIBUTING examples separately.
@@ -14,6 +14,31 @@ AuthCrunch HTTP server's configuration into Caddy's app or routes.
 
 ## Integration surfaces and evidence
 
+Caddy v2.11.7 is selected in both the Go module and xcaddy build arguments.
+It requires Go 1.26 and the already-selected quic-go v0.63.0/qpack v0.6.0.
+The v2.11.4 → v2.11.7 upgrade changes quoted-brace tokenization, HTTP header
+and idle-transfer defaults, authentication-provider response isolation and
+shutdown coordination. Quoted brace arguments remain literal; policy block
+delimiters still must be unquoted. Unit/adapt tests retain source diagnostics
+and reject incomplete owned blocks; OAuth application E2E preserves literal
+client names through TLS login and replacement. The Caddy lifecycle and private
+logger ownership were rechecked against the published source. See
+[HTTP integration defaults](../../configuration-http-integrations/SKILL.md#caddy-host-defaults)
+and [runtime lifecycle](../../coding-directives/references/runtime-lifecycle.md).
+
+The v1.3.10 → v1.3.11 comparison fixes unconditional ACL evaluation without
+requiring `exp` in normalized or fresh identity claims. Caddy removes its older
+refresh/OIDC/System API transform restriction and retains ordering, claim and
+factor-policy regressions through real TLS. The shared cookie parser adds
+`cookie cross-device session id name`; initialized cookie snapshots now contain
+that tenth role, including prefixed defaults. Cookie unit/adapt/runtime tests
+cover naming, collisions and token-role isolation. Cross-device login itself is
+disabled by default. Its new typed `cross_device_login` JSON field is inherited
+from AuthCrunch, but Caddy has no enable/disable directive or dedicated login
+journey qualification for it; adding that adapter feature is separate work.
+The dependency also requires go-crypto v1.5.2 and etree v1.8.1. The Caddy upgrade below is qualified separately; the selected quic-go and
+qpack versions remain unchanged.
+
 The v1.3.8 → v1.3.10 comparison adds typed custom ACL definitions, shared field
 parsing and guardian claim projection. Caddy exposes `acl field`, serializes
 `access_list_fields`, applies the collection once before policy validation and
@@ -21,7 +46,7 @@ rejects null field entries. Other delegated Caddyfile grammar is unchanged;
 standalone HTTP-host validation, upstream test/automation changes and identity
 comment cleanup do not add Caddy directives. See
 [typed ACL fields](../../configuration-authorization/references/typed-acl-fields.md)
-for grammar, TLS coverage and the upstream default-rule ordering blocker.
+for grammar, TLS coverage and the default-rule ordering regression.
 
 The v1.3.6 → v1.3.8 comparison adds GitHub ID/organization claims, shared
 provider matcher compilation and reserved-claim validation. Caddy preserves
@@ -29,7 +54,8 @@ provider matcher compilation and reserved-claim validation. Caddy preserves
 skills own grammar, trust and lookup limits. Adapter/unit tests and
 `TestCaddyGithubTransformsE2E` qualify persisted matchers and signed-token
 resource authorization through actual Caddy. The upstream generated ACL
-changes preserve existing grammar; the match-any restriction below remains.
+changes preserve existing grammar; unconditional evaluation is corrected in
+v1.3.11 as described above.
 
 The earlier v1.3.4 → v1.3.6 source comparison leaves delegated Caddyfile parsers,
 configuration shapes and defaults unchanged. Runtime hardening and the HTTP/3
@@ -46,7 +72,7 @@ the host integration; see [authorization options](../../configuration-authorizat
 
 | Upstream surface | Caddy integration and validation |
 | --- | --- |
-| `Config.Logging`, `pkg/logging`, `pkg/logging/parser` | Root `logging` preserves typed rules and delegates parsing/validation. AuthCrunch component filters are instance-owned; built-command tests qualify scope, reload, removal and persistent sessions. Caddy v2.11.4's private authentication logger lacks a supported wrapping hook, so issue #280 remains open. See [configuration-logging](../../configuration-logging/SKILL.md). |
+| `Config.Logging`, `pkg/logging`, `pkg/logging/parser` | Root `logging` preserves typed rules and delegates parsing/validation. AuthCrunch component filters are instance-owned; built-command tests qualify scope, reload, removal and persistent sessions. Caddy v2.11.7's private authentication logger lacks a supported wrapping hook, so issue #280 remains open. See [configuration-logging](../../configuration-logging/SKILL.md). |
 | `Config.State`, `pkg/state/parser` | Root `state` adapter delegates grammar and preserves library JSON. Persistent runtime construction occurs in Start; Caddy rejects overlapping persistent reload before candidate route startup. `TestCaddyRuntimeStateE2E` qualifies built-command restarts, storage/capacity failures and revocation. See configuration-state. |
 | `PolicyConfig.OAuth`, `pkg/authz/oauth/parser` | Complete `use oauth`/`oauth` statements select portal-free provider login. The new authorization route handler preserves all three outcomes; parser/adapt, response-contract and built-command tests cover the host boundary. |
 | `pkg/authchal`, `pkg/authn/transformer` | Complete transform blocks use the shared parser. Conditional replacement, additive legacy requirements, field existence, `match any`, typed custom/nested claims and deletion are exposed. Static local users accept repeated rule bodies. Unit/adapt/resolution tests and `TestCaddyAuthenticationChallengesE2E` cover actual selection and rejection. |
@@ -57,7 +83,7 @@ the host integration; see [authorization options](../../configuration-authorizat
 | `pkg/acl`, `pkg/authz`, `pkg/authproxy` | `amr` is a list field accepted by rules and shortcuts. Existing Caddy authz delegation preserves path checks, accepted-token stripping and clearing configured claim headers before bypass/deny. Authorization-path and composed portal/resource E2E validate the route boundary; challenge E2E verifies factor-specific access. |
 | `pkg/oidc` including shared parsers | Existing named application and provider wrappers expose `request_object_key`, `request_object_signing_alg`, `acr`, `refresh lifetime`, `max refresh tokens` and the expanded scopes. Relying-party capability E2E verifies signed requests, claims, ACR and rotating refresh. Challenge E2E additionally verifies factor-only AMR in independently checked ID tokens. Current policy is reevaluated in OP and backchannel contexts. |
 | `pkg/idp` OAuth and SAML | Shared OAuth parsing and existing SAML mapping remain current. Nonce/signature/redirect hardening comes through library delegation. OAuth and composition E2E retain origin, callback, signature and role boundaries. The SAML session cookie is already exposed by the shared cookie parser and covered by cookie/composition tests. |
-| `pkg/authn/cookie` | Existing shared parser exposes `cookie saml session id name`; prefix, uniqueness, scope and cleanup rules use the library factory. No new cookie role is missing. |
+| `pkg/authn/cookie` | Existing shared parser exposes `cookie saml session id name`; prefix, uniqueness, scope and cleanup rules use the library factory. `cookie cross-device session id name` is also exposed by v1.3.11; naming it does not enable cross-device login. |
 | `pkg/authn` UI/assets and OIDC pages | Embedded themed UI, SVG profile assets, same-origin consent policy and redirect/MFA rendering fixes are consumed automatically. `theme basic` is still the only registered theme. Existing browser refresh and OIDC E2E check the delivered pages and flow; do not invent light/dark Caddy directives. |
 | `pkg/authclient` | The standalone authenticator uses the public client; factor-only password/TOTP behavior is covered by challenge E2E, with native transport/API-key interoperability in the existing client suite. WebAuthn requires an assertion-capable client. |
 | `pkg/util` | Randomness and supporting hardening are inherited by portal/session/key operations. Existing key, refresh, registration and client E2E exercise these consumers; Caddy has no replacement random source. |
@@ -68,41 +94,25 @@ The LDAP fallback correction is also covered here: `fallback roles` now retains
 its first value, and a disposable LDAPS peer proves service bind, user bind,
 JWT roles and protected-resource access. Repeated directives replace the list.
 
-## Upstream match-any limit
+## Unconditional matching
 
-The selected v1.3.10 retains a library limitation covered by Caddy TLS regression:
-`match any` actions appear in access-only login but disappear when portal
-refresh rebuilds identity claims. Source tracing also finds the same input
-shape in the OIDC identity verifier. `pkg/acl/condition.go` implements
-`match any` using the `exp` field, and `pkg/acl/rule.go` checks that the field
-exists before calling the always-match condition.
-`pkg/authn/token_refresh_runtime.go:WithIdentity` and
-`pkg/authn/oidc_runtime.go:WithIdentity` omit timestamps while applying
-transforms. The encrypted System API path in
-`handle_api_system.go:respondSystemAuthentication` also passes untimed claims.
-This can skip policy as well as ordinary claim actions.
+Selected v1.3.11 evaluates `match any` independently of timestamp presence.
+The generated ACL evaluator reaches an always-true condition even when `exp`
+is absent. This applies both to default authorization rules over normalized
+users and to portal transforms over untimed backend identity claims.
 
-Caddy rejects this combination at runtime resolution, before creating a new
-runtime or displacing a working deployment. The guard covers Caddyfiles and
-native JSON, either enabled renewable feature or System API key usage, and
-normalized/resolved matcher arguments, including a native JSON condition encoded
-as one quoted `"match any"` argument. Compare the decoded ACL meaning, not the
-serialized spelling. Shared KMS parsing identifies key usage;
-raw key material is never treated as a usage keyword. Absent/disabled renewable
-features still permit `match any` when no System API key is present. Use explicit
-realm matchers for refresh/OIDC/System API configurations. This is an upstream compatibility restriction,
-not full support for unconditional matching across those features.
-
-Separate upstream work is required: make unconditional ACL evaluation independent
-of token timestamp presence, and qualify refresh/OIDC/System API policy checks with
-untimed fresh identity maps. Do not add fictitious timestamps or relax completed
-factor checks in the host to hide the problem.
-`TestPortalTransformMatchAnyIdentityContext` records the library behavior so an
-upstream fix forces this restriction to be reconsidered. The Caddy E2E verifies
-safe access-only matching, stable realm-based claims, and rejected replacement
-without losing the active refresh/OIDC session. The encrypted System API E2E
-verifies password assertions and transformed claims, rejection of the unsafe
-replacement, and denial when realm-based policy requires a TOTP proof.
+Caddy accepts these transforms with portal refresh, OIDC and System API keys.
+Do not inject synthetic timestamps or rewrite policy in the host.
+`TestPortalTransformMatchAnyIdentityContext` and
+`TestPortalTransformMatchAnyEncoding` cover timestamp-free evaluation and
+quoted/runtime-resolved native JSON. The challenge TLS journey applies the
+same unconditional factor policy during login, refresh and OIDC, checks renewed
+claims, and still rejects unsatisfied Basic authentication. System API E2E
+checks encrypted password assertions, unconditional claims and denial when
+policy requires an unproved TOTP factor. Malformed multiline instructions still
+fail resolution before CSV decoding, preserving the active deployment.
+See [transform semantics](../../configuration-authentication-user-transforms/SKILL.md#unconditional-matching)
+and [ACL ordering](../../configuration-authorization/references/typed-acl-fields.md#default-action-ordering).
 
 ## Syntax qualification
 
@@ -129,7 +139,7 @@ substitute untrusted claims into policy selection itself.
 
 Remaining distinctions:
 
-- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.10;
+- OAuth `logout_url` is still rejected by the shared IdP allowlist in v1.3.11;
   `enable logout` is supported. Keep the restriction documented and tested.
 - Local static API keys have no `overwrite` suffix. Email authentication
   checkpoints are unsupported in both conditional-policy surfaces.

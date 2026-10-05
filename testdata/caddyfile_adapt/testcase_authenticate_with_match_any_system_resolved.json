@@ -1,52 +1,19 @@
 {
-	"credentials": {
-		"raw_credential_configs": [
-			[
-				"name root@localhost",
-				"username root",
-				"password \"synthetic \"\"resolved\"\" password with spaces\""
-			],
-			[
-				"name foo@localhost",
-				"username foo",
-				"password \"synthetic \"\"resolved\"\" password with spaces\"",
-				"domain example.com"
-			],
-			[
-				"name literal",
-				"username literal",
-				"password \"synthetic \"\"literal\"\" password with spaces\""
-			]
-		],
-		"generic": [
-			{
-				"name": "root@localhost",
-				"username": "root",
-				"password": "synthetic \"resolved\" password with spaces"
-			},
-			{
-				"name": "foo@localhost",
-				"username": "foo",
-				"password": "synthetic \"resolved\" password with spaces",
-				"domain": "example.com"
-			},
-			{
-				"name": "literal",
-				"username": "literal",
-				"password": "synthetic \"literal\" password with spaces"
-			}
-		]
-	},
 	"authentication_portals": [
 		{
 			"name": "myportal",
 			"ui": {},
+			"user_transformer_configs": [
+				{
+					"matchers": [
+						"match any"
+					],
+					"actions": [
+						"require auth challenges password"
+					]
+				}
+			],
 			"cookie_config": {
-				"domains": {
-					"contoso.com": {
-						"domain": "contoso.com"
-					}
-				},
 				"session_id_cookie_name": "AUTHP_SESSION_ID",
 				"referer_cookie_name": "AUTHP_REDIRECT_URL",
 				"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
@@ -64,11 +31,11 @@
 			],
 			"token_validator_options": {},
 			"raw_crypto_key_store_config": [
-				"crypto key sign-verify foo"
+				"crypto key internal system 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 			],
 			"crypto_key_store_config": {
 				"raw_key_configs": [
-					"crypto key sign-verify foo"
+					"crypto key internal system 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 				],
 				"auto_generate_tag": "default",
 				"auto_generate_algo": "ES512"
@@ -90,10 +57,10 @@
 	],
 	"identity_stores": [
 		{
-			"name": "local",
+			"name": "localdb",
 			"kind": "local",
 			"params": {
-				"path": "assets/config/users.json",
+				"path": ":memory:",
 				"realm": "local"
 			}
 		}

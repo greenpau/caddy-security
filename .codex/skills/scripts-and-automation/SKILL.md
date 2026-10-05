@@ -57,9 +57,11 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
 - Use `make` when the user asks for the default build; it runs `info` and
   `build`.
 - Use `make test` for uncached, race-enabled Go tests and complete reports
-  through pinned `go tool tested`. `TEST` is a regex, `TEST_DIR` accepts package
-  patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `45m`).
+  through pinned `go tool tested` and the resource guard. `TEST` is a regex,
+  `TEST_DIR` accepts package patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `45m`).
   `MINIMUM_COVERAGE=1` checks for nonzero coverage; it is not a coverage goal.
+  Read [test resource controls](references/test-resources.md) for concurrency,
+  memory, wall-time limits, cancellation, live output and resource evidence.
 - Use `make qtest` for the root package (`.`) by default, or set
   `QUICK_TEST_DIR` and `TEST` for another scope. Reports go to `.coverage/quick`.
 - Use `make run-reports` to rebuild presentations from recorded tested evidence.
@@ -123,7 +125,7 @@ executable. Missing browser/Node prerequisites fail the test; no sibling UI
 build or npm dependency installation is needed. See
 [browser validation](../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository).
 
-`go.mod` and `go.sum` pin `github.com/greenpau/tested` and the release tool
+`go.mod` and `go.sum` pin `github.com/greenpau/tested` v1.1.0 and the release tool
 `github.com/greenpau/versioned/cmd/versioned`; use `go tool tested` and
 `go tool versioned`. `make dep` downloads/verifies module
 dependencies and resolves tested. `make install-test-tools` runs its version
@@ -257,9 +259,10 @@ Formatted Caddyfiles, README download links, `VERSION`, `go.mod`, and
 diff before deciding whether to keep them.
 
 `COVERAGE_DIR` selects the report directory. Keep overrides inside this checkout;
-independent concurrent runs need separate directories. Let tested refresh only
-its managed artifacts: do not recursively delete report directories in test
-targets. Full, quick, and custom bundles and unrelated investigation files must
+guarded runs in one checkout are serialized by `.coverage/test-resource.lock`,
+even when output directories differ. Keep this lock in place during validation.
+Let tested refresh only its managed artifacts: do not recursively delete report
+directories in test targets. Full, quick, and custom bundles and unrelated investigation files must
 survive one another's runs.
 Whole-directory cleanup belongs to the explicitly requested `make clean`.
 

@@ -395,7 +395,9 @@ oauth identity provider upstream {
 		{"duplicate blocks", oidcTestBlock("disabled") + oidcTestBlock("disabled"), "already configured"},
 		{"disabled unknown application", oidcTestBlock("disabled\napplications missing"), "unregistered oidc application"},
 		{"disabled invalid integer", oidcTestBlock("disabled\nmax grants several"), "invalid oidc provider integer"},
-		{"unterminated portal", "oidc provider {\ndisabled\nissuer \"}\"\n", "unterminated authentication portal block"},
+		// Caddy preserves the quoted value. The missing provider close shifts
+		// the following identity store into the portal, where it must fail.
+		{"missing provider close", "oidc provider {\ndisabled\nissuer \"}\"\n", `malformed "security.authentication.portal.local" directive`},
 	} {
 		t.Run("rejected adaptation/"+tc.name, func(t *testing.T) {
 			// Replace the existing provider, so a second block cannot mask the

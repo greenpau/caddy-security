@@ -52,7 +52,7 @@ are constructed by `App.Start`, not `Provision`, so adaptation and validation
 do not initialize keys or state files. Route provisioning validates declared
 names; admission stays closed until `NewServer` succeeds.
 
-Caddy v2.11.4 provisions and starts a replacement before retiring the old app.
+Caddy v2.11.7 provisions and starts a replacement before retiring the old app.
 There is no atomic drain/construct/rollback facility. A candidate persistent
 app checks Caddy's active app during provisioning and rejects replacement of a
 live persistent runtime before candidate HTTP routes start. This deliberately

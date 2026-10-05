@@ -13,11 +13,11 @@ result, including cleanup errors.
 
 ## Host lifecycle traced
 
-This qualification uses the pinned Caddy v2.11.4 and AuthCrunch v1.3.4.
+This qualification uses the pinned Caddy v2.11.7 and AuthCrunch v1.3.11.
 The relevant Caddy paths are
-[`Context.LoadModuleByID` and context cancellation](https://github.com/caddyserver/caddy/blob/v2.11.4/context.go),
-[`run`, `provisionContext`, `unsyncedDecodeAndRun`, `unsyncedStop`, and `Validate`](https://github.com/caddyserver/caddy/blob/v2.11.4/caddy.go),
-and the [HTTP app's `Stop` and `Cleanup`](https://github.com/caddyserver/caddy/blob/v2.11.4/modules/caddyhttp/app.go).
+[`Context.LoadModuleByID` and context cancellation](https://github.com/caddyserver/caddy/blob/v2.11.7/context.go),
+[`run`, `provisionContext`, `unsyncedDecodeAndRun`, `unsyncedStop`, and `Validate`](https://github.com/caddyserver/caddy/blob/v2.11.7/caddy.go),
+and the [HTTP app's `Stop` and `Cleanup`](https://github.com/caddyserver/caddy/blob/v2.11.7/modules/caddyhttp/app.go).
 
 | Event | Caddy behavior | Security behavior |
 | --- | --- | --- |
@@ -33,6 +33,12 @@ Caddy iterates apps and module cleanup in unspecified order. The HTTP app's
 exiting. During a reload, returning from HTTP `Stop` or canceling the module
 context does **not** prove that HTTP requests have finished. HTTP grace-period
 expiry is also not proof that a handler has returned.
+
+Caddy v2.11.7 also waits for HTTP servers retired by earlier reloads when the
+process exits. This does not replace security's per-instance admission and
+draining: HTTP shutdown may reach its grace deadline before a handler returns.
+`caddy.Stop` clears the active context before stopping apps, so cleanup must
+use its owned references rather than rediscovering its runtime globally.
 
 The host already owns publication and listener replacement, so the security app
 does not add its own global active-server pointer or swap runtimes inside an app.

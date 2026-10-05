@@ -96,7 +96,7 @@ go test -run TestResolveRuntimeAppConfig ./...
 ```
 
 Use `make test` for the repository report lifecycle. `go.mod` pins
-`github.com/greenpau/tested`, invoked as `go tool tested`; it owns `-json`,
+`github.com/greenpau/tested` v1.1.0, invoked as `go tool tested`; it owns `-json`,
 `-coverprofile`, child-process status, and coherent reports. Do not reintroduce
 `go test | tee`, log-grep success detection, richgo, tparse, or go-test-report.
 
@@ -109,7 +109,14 @@ make test-automation
 make ci-check
 ```
 
-Lifecycle runs use `-mod=readonly -race -count=1 -timeout 45m -v`.
+Lifecycle runs use `-mod=readonly -race -count=1 -p 1 -parallel 2
+-timeout 45m -v`. The macOS/Linux resource guard bounds the whole process tree,
+including compilers, browser/CLI children and report rendering. Read
+[test resource controls](../scripts-and-automation/references/test-resources.md)
+when changing defaults or investigating an interrupted run. The default wall
+limit is 3,300 seconds, allowing compilation/report time around the 45-minute
+package limit. Keep live tested output enabled; the guard also prints progress
+every ten seconds.
 `TEST` is a regex (default `.`), `TEST_DIR` accepts package patterns (default
 `./...`), and `TEST_TIMEOUT` overrides the quoted per-package limit.
 `MINIMUM_COVERAGE` defaults to 1 percent as a nonzero-profile check, matching
@@ -125,7 +132,8 @@ Go package limit.
 
 Reports land in `.coverage`. `make qtest` defaults to the root package (`.`) with
 reports in `.coverage/quick`; override `QUICK_TEST_DIR` and `TEST` for another
-scope. Use `COVERAGE_DIR` to isolate independent concurrent runs. Let tested
+scope. Use `COVERAGE_DIR` for separate evidence bundles; guarded runs in the same
+checkout cannot overlap, even with different output directories. Let tested
 refresh its managed files without deleting other bundles or investigation
 notes. `make run-reports` regenerates presentations from recorded evidence
 and preserves failures; `make coverage` aliases it without rerunning tests.
@@ -226,8 +234,12 @@ The existing `make linter` remains a placeholder and is not a gate.
 When changing tested or its invocation, run `make test-automation`. It exercises
 real Make/tested processes in disposable repositories: filtering, full/quick/
 custom bundle isolation, assertion failures, compile failures, short timeouts,
-and failed offline reports. Version fixtures exercise the public artifact
-command and validated `GITHUB_OUTPUT` values without publishing remotely.
+and failed offline reports. A live-log handshake proves output reaches Make
+before the selected Go test completes. Guard unit and Make E2E fixtures cover
+accounting, process cleanup, resource refusal, cancellation, lock contention,
+nonblocking output and Linux process-exit races. The subprocess fixture retains
+exact descendant coverage through guarded test and report invocations.
+Version fixtures exercise the public artifact command and validated `GITHUB_OUTPUT` values without publishing remotely.
 Archive-checker unit fixtures cover missing targets, checksum failures, mixed
 binaries, incorrect documents and Unix executable permissions. For GoReleaser
 packaging changes, also run a real snapshot release and the archive checker per
@@ -263,6 +275,9 @@ bin/caddy-authenticator
 .coverage/stderr.log
 .coverage/run.json
 .coverage/manifest.json
+.coverage/resource-usage.json
+.coverage/resource-report-usage.json
+.coverage/test-resource.lock
 testdata/caddyfile_adapt/*_tmp_input.json
 testdata/caddyfile_adapt/*_tmp_output.json
 ```
@@ -270,7 +285,10 @@ testdata/caddyfile_adapt/*_tmp_output.json
 The manifest is published last for a coherent generation; a failed run can
 leave only partial evidence. Inspect `run.json`, `stderr.log`, and
 `test_output.jsonl` before rerunning so failures are not overwritten without
-review. Test output and coverage sources are unredacted; use synthetic fixtures.
+review. Also inspect `resource-usage.json` for budget or monitoring failures.
+A running or aborted guard record prevents offline reporting from accepting older tested
+evidence. Preserve interrupted bundles and rerun into a fresh directory.
+Test output and coverage sources are unredacted; use synthetic fixtures.
 
 Formatted Caddyfiles and JSON fixtures can be intentional source changes.
 Review the diff after explicit format or fixture updates. Skill-only edits use

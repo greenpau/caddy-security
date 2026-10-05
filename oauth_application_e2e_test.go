@@ -138,6 +138,11 @@ func TestCaddyOAuthApplicationsProcess(t *testing.T) {
 			t.Fatal(err)
 		}
 		if i == 0 {
+			for _, application := range app.Config.OAuthApplications {
+				if application.Name == "service" && application.Client.ClientName != "{" || application.Name == "native" && application.Client.ClientName != "}" {
+					t.Fatal("Caddy lost a literal brace during provisioning")
+				}
+			}
 			expected = app.Config.OAuthApplications
 		}
 		if diff := cmp.Diff(expected, app.Config.OAuthApplications); diff != "" {
@@ -158,7 +163,7 @@ func TestCaddyOAuthApplicationsProcess(t *testing.T) {
 		{"grouped kind", `oauth "application website" ` + applicationTestSecret + " {\n}\n", "expected oauth application, oauth registration store, or oauth identity provider header"},
 		{"grouped header", `"oauth application ` + applicationTestSecret + `" website {` + "\n}\n", "unsupported security directive"},
 		{"empty application", "oauth application empty {\n}\n", "explicit or persisted client_id"},
-		{"quoted opening brace", strings.Replace(applicationTestBlock("quoted", ""), " {", ` "{"`, 1), "requires a block"},
+		{"quoted opening brace", strings.Replace(applicationTestBlock("quoted", ""), " {", ` "{"`, 1), "expected oauth application header with one nickname"},
 		{"consent outside application", strings.Replace(applicationTestBlock("trailing", ""), "}\n", "} skip_consent on\n", 1), "closing brace must end its line"},
 		{"closing brace as client id", "oauth application incomplete {\nclient_secret " + applicationTestSecret + "\nredirect_uri https://app.example.test/callback\nclient_id }\n", "unexpected closing brace"},
 	} {
@@ -184,7 +189,7 @@ func TestCaddyOAuthApplicationsProcess(t *testing.T) {
 		// Put the malformed application last, so another declaration cannot
 		// happen to reject it before the global parser checks its own scope.
 		block := strings.TrimSuffix(applicationTestBlock("dangling", ""), "}\n") + "client_name \"}\"\n"
-		invalid := strings.Replace(input, "\n\t}\n}\n", "\n"+block+"\t}\n}\n", 1)
+		invalid := strings.Replace(input, "\n\t}\n}\n", "\n"+block+"\t}\n", 1)
 		data, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte(invalid), nil)
 		if err == nil || len(data) != 0 {
 			t.Fatal("unterminated security block was accepted")
@@ -192,7 +197,7 @@ func TestCaddyOAuthApplicationsProcess(t *testing.T) {
 		if strings.Contains(err.Error(), applicationTestSecret) {
 			t.Fatal("security block error exposed client secret")
 		}
-		if !strings.Contains(err.Error(), "unterminated security block") {
+		if !strings.Contains(err.Error(), "unexpected EOF") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if active() != previous {

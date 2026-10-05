@@ -6,4 +6,3 @@
 			redirect_uri https://app.example.test/callback
 			client_name "}"
 	}
-}

@@ -10,6 +10,22 @@ Source and fixture paths below are relative to the repository root.
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
 
+## Caddy v2.11.7 compatibility
+
+`TestCaddyfileOAuthApplicationQuotedBraces` and
+`TestPortalQuotedBraceArguments` preserve literal opening/closing brace values,
+following declarations, disabled settings and deferred runtime resolution.
+The OAuth application fixture carries literal brace client names through
+`TestCaddyOAuthApplicationsE2E` provisioning, TLS login and replacement.
+Incomplete enclosing-block fixtures omit an owned closing delimiter; policy
+boundary tests retain contextual errors for quoted delimiters. Do not restore
+the older host parser's treatment of quoted argument values as structural braces.
+
+The lifecycle, logging, cookie and authorization response/redirect suites cover
+the existing app/plugin boundaries against this host. Caddy's new HTTP header
+and idle-transfer defaults remain enabled during these checks. Official OP
+conformance stays a separate opt-in workflow.
+
 ## Typed custom authorization fields
 
 `TestAuthorizationACLFields`, `TestAuthorizationACLFieldRejects` and
@@ -34,11 +50,11 @@ both after adaptation and after provisioning to establish eight distinct cases.
 It also checks imported declarations, adaptation failure before startup/reload
 (including quoted enclosing policy braces), and source-address
 enforcement when one cached token arrives from different trusted client addresses.
-Keep its default-rule ordering regression visible: v1.3.10 skips `match any`
-against normalized users, so the required deny-after-compact-allow case fails.
-See [typed ACL fields](../../configuration-authorization/references/typed-acl-fields.md)
-for the exact boundary and upstream work. Do not waive this failure because
-library or adapter tests pass.
+Keep its default-rule ordering regression visible: selected v1.3.11 evaluates
+unconditional rules over normalized users without `exp`, so a default deny
+overrides a compact non-stopping allow. See
+[typed ACL fields](../../configuration-authorization/references/typed-acl-fields.md)
+for both ordering assertions and malformed-claim denial.
 
 ## Conditional authentication coverage
 
@@ -50,15 +66,14 @@ JSON and runtime resolution, including mixed environment/claim templates.
 for HTML/JSON and native conditional login, signed WebAuthn, AMR claims and
 resource authorization, portal refresh/OIDC, Basic/API-key rejection, policy failure,
 static-user creation/replacement/omission and profile rule mutations.
-`TestPortalTransformMatchAnyIdentityContext` records the upstream timestamp
-limitation and the Caddy refresh/OIDC/System API guard; its resolution fixture and E2E
-prove that rejection preserves the active deployment. System API E2E additionally
+`TestPortalTransformMatchAnyIdentityContext` checks unconditional matching
+without timestamps in the selected v1.3.11 library. Its resolution fixtures and
+TLS E2E qualify Caddy refresh/OIDC/System API usage. Quoted and runtime-resolved
+native JSON matchers exercise the same policy and claims. System API E2E also
 checks encrypted assertions and rejection of unsatisfied factor policy. Its LDAPS
 peer requires real service/user binds and verifies all fallback role values.
-Native JSON regressions cover quoted/resolved unconditional matchers and
-multiline instructions: reject the latter before CSV decoding can discard a
-second record. Unit tests compare the shared parser's interpretation; Caddy
-reload E2E verifies rejection and continued access through the previous runtime.
+Multiline instructions remain rejected before CSV decoding can discard a second
+record; reload E2E verifies continued access through the previous runtime.
 Test credentials are seeded before Caddy owns the database; runtime profile
 mutations cross HTTP. Changed local-store configuration restarts explicitly,
 respecting the existing prohibition on overlapping file-backed runtimes.
@@ -240,7 +255,7 @@ integrated change.
 logs and qualifies diagnostic rules through real TLS login, legacy/current
 authorization, counted protected handlers, replacements/removal, independent
 processes and persistent-session restarts. It explicitly proves that the private
-Caddy authentication middleware logger remains unfiltered in v2.11.4; a passing
+Caddy authentication middleware logger remains unfiltered in v2.11.7; a passing
 suite is not an issue #280 host-suppression fix. See
 [logging validation](../../configuration-logging/SKILL.md#validation) for focused
 unit/adaptation coverage and the upstream acceptance criteria.

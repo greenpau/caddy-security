@@ -36,7 +36,7 @@ import (
 )
 
 const challengePolicy = `transform user {
- match realm local
+ match any
  field email exists
  require auth challenges u2f
  require auth challenges totp if u2f not available
@@ -46,7 +46,7 @@ const challengePolicy = `transform user {
  add nested metadata label with "literal value" as string
 }
 transform users {
- match realm local
+ match any
  add unconditional matched as string
 }`
 
@@ -153,17 +153,29 @@ func TestCaddyAuthenticationChallengesProcess(t *testing.T) {
 		}
 		f.noCredentials(t)
 	})
-	for _, tc := range []struct{ mount, flow, refresh, oidc string }{
-		{"", "html", "", ""}, {"/auth", "json", "local", "local"},
+	for _, tc := range []struct{ name, mount, flow, refresh, oidc, matcher string }{
+		{"literal", "", "html", "", "", ""}, {"literal", "/auth", "json", "local", "local", ""},
+		{"quoted", "/auth", "json", "local", "local", `"match any"`},
+		{"resolved", "/auth", "json", "local", "local", "{env.CHALLENGE_NATIVE_MATCHER}"},
 	} {
-		t.Run("conditional-"+tc.flow, func(t *testing.T) {
+		t.Run("conditional-"+tc.flow+"/"+tc.name, func(t *testing.T) {
 			f := newLocalIdentityFixture(t, localIdentityOptions{mount: tc.mount, mfa: true, refreshRealm: tc.refresh, oidcRealm: tc.oidc}, cert, key, roots)
 			f.input = challengePolicyInput(f.input, challengePolicy)
-			if tc.refresh == "" && tc.oidc == "" {
-				f.input = strings.Replace(f.input, "match realm local\n add unconditional", "match any\n add unconditional", 1)
-			}
 			f.input = strings.Replace(f.input, "allow roles authp/user", "acl rule {\nmatch amr otp\nallow stop\n}", 1)
 			challengeRestart(t, f)
+			if tc.matcher != "" {
+				t.Setenv("CHALLENGE_NATIVE_MATCHER", "match any")
+				config, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte(f.input), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := caddy.Stop(); err != nil {
+					t.Fatal(err)
+				}
+				if err := caddy.Load(challengeNativeMatcher(t, config, tc.matcher), true); err != nil {
+					t.Fatal(err)
+				}
+			}
 			// An account with no enrolled factor selects the password fallback. Its
 			// token cannot enter an application requiring verified OTP evidence.
 			passwordToken := f.formLogin(t, "bob", localIdentityBobPassword, false)
@@ -206,30 +218,15 @@ func TestCaddyAuthenticationChallengesProcess(t *testing.T) {
 					f.assertResource(t, token)
 				}
 			}
-			if tc.refresh != "" || tc.oidc != "" {
-				candidate := strings.Replace(f.input, "match realm local\n add unconditional", "match any\n add unconditional", 1)
-				config, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte(candidate), nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := caddy.Load(config, true); err == nil || !strings.Contains(err.Error(), "match any transforms are unsupported") {
-					t.Fatal("unsafe match-any refresh/OIDC replacement was not rejected at resolution")
-				}
-				for _, matcher := range []string{`"match any"`, "{env.CHALLENGE_NATIVE_MATCHER}"} {
-					t.Setenv("CHALLENGE_NATIVE_MATCHER", "match any")
-					candidate := challengeNativeMatcher(t, config, matcher)
-					if err := caddy.Load(candidate, true); err == nil || !strings.Contains(err.Error(), "match any transforms are unsupported") {
-						t.Fatal("encoded native JSON matcher bypassed refresh/OIDC guard")
-					}
-					f.assertResource(t, token)
-				}
-				f.assertResource(t, token)
-			}
+
 			// Refresh and OIDC tokens retain evidence of the selected factor even
 			// when the backend ordinarily requires both password and TOTP.
 			if tc.refresh != "" {
 				f.json(t, f.client, "/api/refresh_token", map[string]any{}, "", http.Header{"X-Authcrunch-Refresh": {"1"}}).requireStatus(t, 200)
-				challengeClaims(t, f, f.cookie("AUTHP_ACCESS_TOKEN"), "otp")
+				claims := challengeClaims(t, f, f.cookie("AUTHP_ACCESS_TOKEN"), "otp")
+				if claims["unconditional"] != "matched" {
+					t.Fatal("match any did not apply during refresh")
+				}
 			}
 			if tc.oidc != "" {
 				params := f.authorization("trusted")
@@ -361,8 +358,8 @@ func challengeNativeMatcher(t *testing.T, input []byte, matcher string) []byte {
 				}
 			}
 		}
-		if replaced != 1 {
-			t.Fatalf("native matcher fixture replaced %d conditions, want one", replaced)
+		if replaced == 0 {
+			t.Fatal("native matcher fixture did not replace any conditions")
 		}
 	})
 }

@@ -40,6 +40,14 @@ validation → runtime consumer. A field can be recognized by one layer and
 rejected or deferred by the next. Record the layer and the selected version
 when documenting a restriction. Do not infer grammar from JSON fields alone.
 
+Caddy v2.11.7 treats quoted braces as literal tokens. Qualify both sides of that
+contract: preserve literal brace arguments and following declarations, while
+requiring unquoted block delimiters and rejecting missing owned closing braces.
+Direct dispenser tests and the public adapter exercise different boundaries;
+do not mistake a missing outer Caddy global brace for a missing `security` or
+portal brace. Keep source context and credential redaction when diagnostics
+change with the selected host parser.
+
 ## Grammar Ownership
 
 | Surface | Caddy owner | Selected upstream owner / next validation |
@@ -163,8 +171,9 @@ Known fixture outcomes: `testcase_authorize_acl_fields_duplicate`,
 `testcase_security_with_secrets` requires an external module absent from the
 normal test binary; `testcase_authenticate_malformed_replacement` adapts but
 fails runtime resolution. `testcase_authenticate_with_match_any_refresh` and
-`testcase_authenticate_with_match_any_system` also adapt but fail resolution due to the v1.3.3 upstream unconditional-matcher
-limitation; see the compatibility map. Check test registrations if these outcomes change.
+`testcase_authenticate_with_match_any_system` adapt and resolve with selected
+v1.3.11; the library now evaluates unconditional rules without timestamps.
+Check test registrations if these outcomes change.
 `testcase_security_oauth_registration_store` needs
 `SECURITY_TEST_REGISTRATION_PATH` set to an isolated private store containing
 the `website` application's `v1` revision. Its registered Go test provisions
@@ -181,7 +190,8 @@ restrictions without claiming that parsing tests prove runtime behavior.
 ## Known Boundaries
 
 Recheck these against the selected implementation when dependencies change.
-The following were verified with published go-authcrunch v1.3.3. Use the
+The original inventory used published v1.3.3; changed boundaries are qualified
+against the selected version below. Use the
 [dependency compatibility map](authcrunch-compatibility.md) for changed surfaces
 and their Caddy validation:
 
@@ -204,11 +214,9 @@ and their Caddy validation:
   Bare ordinary `match` retains historical exact spelling in JSON. Static
   local users expose repeated `auth challenges <rule body>`. Both surfaces
   reject unsupported email checkpoints; neither setting enrolls credentials.
-- `match any` transforms are rejected at provisioning when portal refresh or
-  OIDC is enabled, or System API keys are configured: upstream identity checks
-  and encrypted assertions omit the `exp` field used by that matcher. Access-only
-  portals without System API keys remain supported; use explicit realm matchers
-  with refresh/OIDC until the upstream limitation is corrected.
+- Selected v1.3.11 supports `match any` transforms with refresh, OIDC and System
+  API keys: unconditional evaluation no longer requires timestamps. Keep the
+  positive policy/claims and unsatisfied-factor regressions in the Caddy suite.
 - `{claims.*}` placeholders survive Caddy resolution only in transform
   arguments. Resolved transforms are compiled again, including native JSON.
 - Portal `ui logo url` / `logo description` are valid; JSON field spellings

@@ -8,7 +8,7 @@ description: "Configure AuthCrunch diagnostic skip rules and explain the Caddy m
 ## Supported Scope
 
 The root `security logging` block configures AuthCrunch component diagnostics.
-**Caddy v2.11.4's independent `http.handlers.authentication` logger remains
+**Caddy v2.11.7's independent `http.handlers.authentication` logger remains
 unfiltered. Issue #280 is not fixed by this adapter.** Read the host boundary
 below before recommending the issue's message/error patterns to an operator.
 Current `authorize` Caddyfiles use `http.handlers.authorization`; the legacy
@@ -119,7 +119,7 @@ or error during provisioning. Caddy would retain a clone per provider and use
 it for that provider's actual error call. The authorizer could then supply
 `logging.NewFilter(config.Logging).WrapLogger(base)`. Install it before any
 With/WithLazy fields; retain the base logger and existing Sync owner. This is a
-proposed upstream contract, not an API available in v2.11.4.
+proposed upstream contract, not an API available in v2.11.7.
 
 A supported scoped core-wrapper hook is another option, provided it wraps the
 existing core rather than tees beside it and is isolated to the correct

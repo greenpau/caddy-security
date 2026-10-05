@@ -154,7 +154,6 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 				return errors.ErrMalformedDirective.WithArgs(rootDirective, v)
 			}
 		}
-		// NextSegment counts quoted brace-valued arguments as structural tokens.
 		// A truncated segment must not let a child's closing brace also satisfy
 		// this portal's boundary merely because NextBlock reached EOF.
 		if d.Nesting() != nesting {
