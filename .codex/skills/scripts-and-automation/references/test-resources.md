@@ -27,6 +27,15 @@ uncached execution, test selection and tested's authoritative exit status remain
 enabled. On an 8 GiB host the default aggregate budget is 3 GiB, leaving 5 GiB
 outside the test budget. Smaller hosts can legitimately refuse large fixtures.
 
+The reusable GitHub Actions build workflow explicitly sets `TEST_MEMORY_MB=6144`
+(6 GiB) for its public `ubuntu-24.04` runner, including release validation.
+[GitHub documents 16 GB RAM for this runner](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
+This gives the race-enabled Caddy and Chrome process tree additional headroom;
+local defaults, Go's per-process soft target, concurrency and all other guards
+remain unchanged. Do not copy this override onto an 8 GiB host: the guard rejects
+budgets above half of detected physical RAM. Reassess the override if the runner
+type or repository visibility changes.
+
 The full suite runs Caddy journeys sequentially; cross-device expiration alone
 waits five minutes. Keep the 60-minute package budget inside the 70-minute guard
 budget and the 75-minute CI job budget, leaving time for compilation, reports,

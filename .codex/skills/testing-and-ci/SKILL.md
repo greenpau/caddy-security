@@ -207,6 +207,10 @@ It selects Ubuntu 24.04 and Go `1.26.8` with
 runner's Google Chrome installation for browser E2E. It resolves a versioned
 artifact identity, runs `make dep` and `make ci-check`, and checks that
 validation did not modify tracked source or add untracked source files.
+The reusable job sets `TEST_MEMORY_MB=6144` (6 GiB) for the public Ubuntu runner;
+release validation inherits that budget. Local resource defaults remain unchanged.
+See [test resource controls](../scripts-and-automation/references/test-resources.md)
+for the runner capacity and the guard's physical-memory reserve.
 
 After the gate is attempted, it always uploads `.coverage/`, including hidden
 files and partial failure evidence, with 14-day retention. Missing artifacts
