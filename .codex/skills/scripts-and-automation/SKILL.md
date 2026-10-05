@@ -58,7 +58,7 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   `build`.
 - Use `make test` for uncached, race-enabled Go tests and complete reports
   through pinned `go tool tested` and the resource guard. `TEST` is a regex,
-  `TEST_DIR` accepts package patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `45m`).
+  `TEST_DIR` accepts package patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `60m`).
   `MINIMUM_COVERAGE=1` checks for nonzero coverage; it is not a coverage goal.
   Read [test resource controls](references/test-resources.md) for concurrency,
   memory, wall-time limits, cancellation, live output and resource evidence.

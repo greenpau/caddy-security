@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -39,7 +40,7 @@ class TestTimeoutTests(unittest.TestCase):
                        TEST_DIR='./pkg/example', QUICK_TEST_DIR='./pkg/quick',
                        COVERAGE_DIR='reports with spaces', MINIMUM_COVERAGE='1')
             cases = (
-                ('default', None, None, '45m'),
+                ('default', None, None, '60m'),
                 ('environment', '7m', None, '7m'),
                 ('command line', '7m', '90s', '90s'),
             )
@@ -69,6 +70,16 @@ class TestTimeoutTests(unittest.TestCase):
                         ])
                         self.assertEqual(arguments[arguments.index('--output-dir') + 1],
                                          'reports with spaces/quick' if quick else 'reports with spaces')
+                        if name == 'default':
+                            output = root / arguments[arguments.index('--output-dir') + 1]
+                            budget = json.loads((output / 'resource-usage.json').read_text())
+                            package_seconds = int(expected.removesuffix('m')) * 60
+                            # Compilation/reporting must fit outside the package
+                            # deadline; CI also needs setup/build/upload time.
+                            self.assertGreaterEqual(budget['timeout_seconds'], package_seconds + 600)
+                            workflow = (ROOT / '.github/workflows/build.yml').read_text()
+                            job_minutes = int(re.search(r'^\s+timeout-minutes: (\d+)$', workflow, re.M)[1])
+                            self.assertGreaterEqual(job_minutes * 60, budget['timeout_seconds'] + 300)
 
 
 if __name__ == '__main__':

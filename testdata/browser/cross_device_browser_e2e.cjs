@@ -8,6 +8,7 @@ const { origin } = config;
 const passwords = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
 const password = passwords.alice;
 const { BrowserProtocolError, waitForRead } = require("./authorization_redirect_cdp.cjs");
+const { disposeBrowserContexts } = require("./browser_contexts.cjs");
 const socket = new WebSocket(endpoint);
 const pending = new Map();
 let sequence = 0;
@@ -72,10 +73,10 @@ async function navigate(page, path, sessionClient = false) {
     socket.addEventListener('open', resolve, { once: true });
     socket.addEventListener('error', () => reject(new Error('browser socket failed')), { once: true });
   });
-  const contexts = [];
+  const contexts = new Set();
   try {
-    const first = await command('Target.createBrowserContext'); contexts.push(first.browserContextId);
-    const second = await command('Target.createBrowserContext'); contexts.push(second.browserContextId);
+    const first = await command('Target.createBrowserContext'); contexts.add(first.browserContextId);
+    const second = await command('Target.createBrowserContext'); contexts.add(second.browserContextId);
     const requester = await page(first.browserContextId);
     const approver = await page(second.browserContextId);
     // Exercise the real fetch/abort protocol without the newer static helpers,
@@ -233,20 +234,30 @@ async function navigate(page, path, sessionClient = false) {
       assert.equal(polls.get(requester), count, 'stopped page restarted polling');
     }
 
+    stage = 'release completed scenario devices';
+    // The stale-form scenario needs four simultaneous tabs of its own. Keeping
+    // the completed devices alive exceeds the CI process-tree memory budget.
+    await disposeBrowserContexts(command, contexts);
+    assert.deepEqual((await command('Target.getBrowserContexts')).browserContextIds, []);
+    const remaining = (await command('Target.getTargets')).targetInfos;
+    assert.ok(!remaining.some(target => [first.browserContextId, second.browserContextId].includes(target.browserContextId)),
+      'completed scenario retained a browser target');
+
     stage = 'two accounts cannot approve a stale form in another tab';
+    const approval = await command('Target.createBrowserContext'); contexts.add(approval.browserContextId);
     const requestContexts = [];
     const requestPages = [];
     const links = [];
     for (let i = 0; i < 2; i++) {
       const context = await command('Target.createBrowserContext');
-      contexts.push(context.browserContextId); requestContexts.push(context.browserContextId);
+      contexts.add(context.browserContextId); requestContexts.push(context.browserContextId);
       const tab = await page(context.browserContextId); requestPages.push(tab);
       await navigate(tab, '/auth/cross-device');
       await waitFor(() => evaluate(tab, () => document.getElementById('cross-device-details')?.hidden === false));
       links.push(await evaluate(tab, () => document.getElementById('cross-device-link').value));
     }
-    const aliceTab = await page(second.browserContextId);
-    const bobTab = await page(second.browserContextId);
+    const aliceTab = await page(approval.browserContextId);
+    const bobTab = await page(approval.browserContextId);
     async function signIn(tab, link, username) {
       await navigate(tab, link.slice(origin.length));
       await evaluate(tab, () => document.querySelector('form button').click());
@@ -276,7 +287,7 @@ async function navigate(page, path, sessionClient = false) {
     assert.ok(!(await command('Storage.getCookies', { browserContextId: requestContexts[0] })).cookies.some(c => c.name === 'AUTHP_ACCESS_TOKEN'), 'Bob reached the wrong requester');
     process.stdout.write(JSON.stringify({ passed: true }));
   } finally {
-    for (const browserContextId of contexts) await command('Target.disposeBrowserContext', { browserContextId });
-    socket.close();
+    try { await disposeBrowserContexts(command, contexts); }
+    finally { socket.close(); }
   }
 })().catch(error => { console.error('Stage: ' + stage + '\n' + error.message + '\n' + JSON.stringify(beginDiagnostics)); socket.close(); process.exitCode = 1; });

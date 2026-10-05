@@ -110,11 +110,11 @@ make ci-check
 ```
 
 Lifecycle runs use `-mod=readonly -race -count=1 -p 1 -parallel 2
--timeout 45m -v`. The macOS/Linux resource guard bounds the whole process tree,
+-timeout 60m -v`. The macOS/Linux resource guard bounds the whole process tree,
 including compilers, browser/CLI children and report rendering. Read
 [test resource controls](../scripts-and-automation/references/test-resources.md)
 when changing defaults or investigating an interrupted run. The default wall
-limit is 3,300 seconds, allowing compilation/report time around the 45-minute
+limit is 4,200 seconds, allowing compilation/report time around the 60-minute
 package limit. Keep live tested output enabled; the guard also prints progress
 every ten seconds.
 `TEST` is a regex (default `.`), `TEST_DIR` accepts package patterns (default
@@ -127,7 +127,7 @@ tests. The Caddy journeys also have their own shorter child-process deadlines.
 If CI times out, inspect the captured test events and active test duration to
 distinguish an exhausted package budget from a stuck individual journey.
 Keep the job budget larger than the package budget so setup, builds and report
-upload can finish; the current workflow allows 60 minutes around the 45-minute
+upload can finish; the current workflow allows 75 minutes around the 60-minute
 Go package limit.
 
 Reports land in `.coverage`. `make qtest` defaults to the root package (`.`) with

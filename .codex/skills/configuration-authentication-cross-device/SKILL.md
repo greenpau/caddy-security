@@ -144,6 +144,11 @@ cross-device action outside ordinary provider-link visibility conditions.
   embedded UI with private fixture trust, QR/copy, explicit approval, navigation,
   cancellation, native aborts without static helpers, and the two-account
   stale-form regression. Keep TLS/Origin enforcement intact.
+  Dispose completed scenario contexts before opening the next devices; assert
+  their contexts and targets are gone. The stale-form scenario retains two
+  isolated requesters and two approver tabs sharing one fresh context.
+  `TestBrowserContextCleanup` checks awaited disposal, partial failure cleanup
+  and ownership of contexts still requiring cleanup.
 - `TestCaddyCrossDeviceExpirationE2E` waits for the real five-minute deadline,
   checks source quota despite untrusted forwarded addresses and verifies expiry
   releases capacity. It deliberately adds five minutes to the full Go suite.

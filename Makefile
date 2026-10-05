@@ -15,14 +15,15 @@ PYTHON ?= python3
 TEST ?= .
 TEST_DIR ?= ./...
 # Go applies this limit to the whole package, including its serial Caddy E2E journeys.
-TEST_TIMEOUT ?= 45m
+# Cross-device expiration alone waits five minutes; each journey keeps its own deadline.
+TEST_TIMEOUT ?= 60m
 # Bound compilers, tests, and their browser/CLI children together.
 TEST_PACKAGE_PARALLELISM ?= 1
 TEST_PARALLELISM ?= 2
 TEST_GOMAXPROCS ?= 2
 TEST_GO_MEMORY_MB ?= 512
 # Leave room around the package timeout for compilation and reports.
-TEST_WALL_TIMEOUT ?= 3300
+TEST_WALL_TIMEOUT ?= 4200
 TEST_MAX_PROCESSES ?= 128
 TEST_ARTIFACT_MB ?= 256
 QUICK_TEST_DIR ?= .

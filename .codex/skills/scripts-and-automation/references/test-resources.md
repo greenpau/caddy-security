@@ -13,10 +13,10 @@ VS Code or other unrelated applications.
 | `TEST_GOMAXPROCS` | `2` | Go execution threads per process |
 | `TEST_GO_MEMORY_MB` | `512` | Go's soft memory target per process, in MiB |
 | `TEST_MEMORY_MB` | smaller of `3072` and three-eighths of physical RAM | Aggregate sampled test process memory, in MiB |
-| `TEST_WALL_TIMEOUT` | `3300` | Entire workflow duration in seconds, including build/report phases |
+| `TEST_WALL_TIMEOUT` | `4200` | Entire workflow duration in seconds, including build/report phases |
 | `TEST_MAX_PROCESSES` | `128` | Observed processes in the owned tree |
 | `TEST_ARTIFACT_MB` | `256` | Regular files directly inside the selected output directory, in MiB |
-| `TEST_TIMEOUT` | `45m` | Existing Go timeout per package |
+| `TEST_TIMEOUT` | `60m` | Existing Go timeout per package |
 
 All numeric guard settings must be positive integers; zero never disables a
 guard. `TEST_MEMORY_MB` may not exceed half of physical RAM. Make arguments
@@ -26,6 +26,14 @@ than relying on unrelated inherited Go environment values. Race detection,
 uncached execution, test selection and tested's authoritative exit status remain
 enabled. On an 8 GiB host the default aggregate budget is 3 GiB, leaving 5 GiB
 outside the test budget. Smaller hosts can legitimately refuse large fixtures.
+
+The full suite runs Caddy journeys sequentially; cross-device expiration alone
+waits five minutes. Keep the 60-minute package budget inside the 70-minute guard
+budget and the 75-minute CI job budget, leaving time for compilation, reports,
+setup, builds and uploads. Individual E2E subprocess deadlines remain shorter.
+For browser scenarios, dispose completed contexts before opening unrelated
+devices; Chrome retains renderer and window processes while contexts stay live.
+Check the resource evidence with the unchanged memory limit after such changes.
 
 Authentication E2E requires a stable wall clock. Host suspension or clock changes
 can expire a login proof, cookie or token while monotonic test/guard durations

@@ -393,7 +393,7 @@ def main():
     memory_mb = positive('TEST_MEMORY_MB', min(3072, max(1, total_mb * 3 // 8)))
     if memory_mb > total_mb // 2:
         raise ValueError('TEST_MEMORY_MB must leave at least half of physical RAM for the system')
-    seconds = positive('TEST_WALL_TIMEOUT', 3300)
+    seconds = positive('TEST_WALL_TIMEOUT', 4200)
     max_processes = positive('TEST_MAX_PROCESSES', 128)
     artifact_mb = positive('TEST_ARTIFACT_MB', 256)
     package_parallelism = positive('TEST_PACKAGE_PARALLELISM', 1)

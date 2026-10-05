@@ -25,6 +25,16 @@ import (
 	"time"
 )
 
+func TestBrowserContextCleanup(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "node", "--test", "testdata/browser/browser_contexts.test.cjs")
+	cmd.WaitDelay = time.Second
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("browser context cleanup regression: %v\n%s", err, output)
+	}
+}
+
 func TestCaddyCrossDeviceBrowserE2E(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
 	defer cancel()
