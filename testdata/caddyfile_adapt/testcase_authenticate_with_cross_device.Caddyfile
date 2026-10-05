@@ -1,0 +1,29 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	security {
+		local identity store employeesdb {
+			realm employees
+			path :memory:
+		}
+		authentication portal myportal {
+			enable identity store employeesdb
+			enable cross-device login
+			cookie prefix LOGIN
+			cookie cross-device session id name __Secure-DEVICE
+		}
+		authentication portal disabled {
+			enable identity store employeesdb
+			disable cross-device login
+		}
+		authentication portal absent {
+			enable identity store employeesdb
+		}
+	}
+}
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

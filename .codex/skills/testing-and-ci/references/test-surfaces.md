@@ -10,6 +10,21 @@ Source and fixture paths below are relative to the repository root.
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
 
+## Cross-device portal login
+
+`TestPortalCrossDevice*`, shared cookie tests and the registered
+`testcase_authenticate_with_cross_device` adapt/resolution fixture cover the
+shared grammar and JSON boundary. `TestCaddyCrossDeviceE2E` covers real TLS,
+mounts, HTTP forms/CSRF, issuance independence, MFA/refresh/OP, replay, revocation,
+reload/restart and rollback. `TestCaddyCrossDeviceProvidersE2E` completes signed
+OAuth and SAML callbacks; `TestCaddyCrossDeviceBrowserE2E` uses private Chrome
+trust and independent contexts for QR/copy, approval, cancellation, navigation,
+native aborts without newer static helpers, and stale two-account forms.
+`TestCaddyCrossDeviceExpirationE2E` adds a deliberate five-minute real deadline
+and source-quota check. These are regular tests, separate from official OP
+conformance. The [cross-device owner](../../configuration-authentication-cross-device/SKILL.md)
+defines acceptance and physical-device/instance-affinity limits.
+
 ## Caddy v2.11.7 compatibility
 
 `TestCaddyfileOAuthApplicationQuotedBraces` and

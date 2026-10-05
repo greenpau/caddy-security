@@ -48,6 +48,7 @@ type localIdentityOptions struct {
 	mount, refreshRealm, oidcRealm string
 	transform, mfa                 bool
 	seed                           func(*testing.T, string)
+	configure                      func(string) string
 }
 
 type localIdentityFixture struct {
@@ -213,6 +214,9 @@ func newLocalIdentityFixture(t *testing.T, options localIdentityOptions, cert, t
   respond unmatched 404
  }
 }`, filepath.Join(dir, "caddy-storage"), logFile, database, excluded, applicationTestSecret, oidcRPCallback, accessKey.signer("access"), refresh, provider, transform, accessKey.verifier("access"), base, options.mount, base, cert, tlsKey, accessLog, options.mount)
+	if options.configure != nil {
+		input = options.configure(input)
+	}
 	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	f := &localIdentityFixture{oidcRPFixture: &oidcRPFixture{client: client, base: base, mount: options.mount, issuer: base + options.mount}, database: database, input: input, secrets: []string{lifecyclePassword, localIdentityBobPassword, authenticationClientTOTPSecret, applicationTestSecret}}

@@ -19,9 +19,11 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	crossdeviceparser "github.com/greenpau/go-authcrunch/pkg/authn/cross_device/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -47,6 +49,7 @@ const (
 //		enable source ip tracking
 //		<enable|disable> admin api
 //		<enable|disable> admin api private key export
+//		<enable|disable> cross-device login
 //		enable identity store <name> [<name>...]
 //		enable identity provider <name> [<name>...]
 //		enable sso provider <name> [<name>...]
@@ -55,6 +58,8 @@ const (
 //
 // Registration is configured with user registration in security and attached to
 // an identity store; there is no enable user registration portal directive.
+// Cross-device login is omitted/disabled by default. Collect its complete
+// statements before shared validation so imports cannot override a prior choice.
 //
 // The optional, single oidc provider block is collected by
 // readCaddyfileOIDCProvider and attached before AddAuthenticationPortal validates
@@ -84,6 +89,7 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 		var adminStatements []string
 		var oidcStatements []string
 		var tokenRefreshStatements []string
+		var crossDeviceStatements []string
 		nesting := d.Nesting()
 		for d.NextBlock(nesting) {
 			k := d.Val()
@@ -127,6 +133,24 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 					return err
 				}
 			case "enable", "disable":
+				if len(v) > 0 && strings.HasPrefix(v[0], "cross-device") {
+					for _, arg := range v {
+						// EncodeArgs can discard empty fields. Reject them before
+						// encoding and leave all grammar to the shared constructor.
+						if strings.TrimSpace(arg) == "" || strings.ContainsAny(arg, "\r\n") {
+							return d.Errf("cross-device login: empty or multiline argument")
+						}
+					}
+					if d.Next() {
+						hasBlock := d.Val() == "{" && !d.Token().Quoted()
+						d.Prev()
+						if hasBlock {
+							return d.Errf("cross-device login directives do not accept blocks")
+						}
+					}
+					crossDeviceStatements = append(crossDeviceStatements, cfgutil.EncodeArgs(append([]string{k}, v...)))
+					continue
+				}
 				if k == "enable" && len(v) > 0 && !strings.HasPrefix(v[0], "admin") {
 					if err := parseCaddyfileAuthPortalMisc(d, p, rootDirective, k, v); err != nil {
 						return err
@@ -151,6 +175,16 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 					return err
 				}
 			default:
+				// A split or malformed continuation must not echo arguments from
+				// a pending feature statement before aggregate validation runs.
+				if crossDeviceStatements != nil {
+					return d.Errf("unsupported authentication portal directive following cross-device login")
+				}
+				// A quoted joined header is not a directive. Keep its error
+				// redacted just like errors from the shared feature parser.
+				if (strings.HasPrefix(k, "enable") || strings.HasPrefix(k, "disable")) && strings.Contains(k, "cross-device") {
+					return d.Errf("invalid cross-device login directive")
+				}
 				return errors.ErrMalformedDirective.WithArgs(rootDirective, v)
 			}
 		}
@@ -200,6 +234,13 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 				app.OIDCProviderDirectives = make(map[string][]string)
 			}
 			app.OIDCProviderDirectives[p.Name] = oidcStatements
+		}
+		if crossDeviceStatements != nil {
+			config, err := crossdeviceparser.NewCrossDeviceLoginConfigFromDirectives(crossDeviceStatements)
+			if err != nil {
+				return d.Errf("portal %q cross-device login: %v", p.Name, err)
+			}
+			p.CrossDeviceLogin = config
 		}
 		if err := app.Config.AddAuthenticationPortal(p); err != nil {
 			return err

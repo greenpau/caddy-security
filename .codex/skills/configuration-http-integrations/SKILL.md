@@ -40,6 +40,13 @@ Read these files when details matter:
 
 ## Caddy Host Defaults
 
+Cross-device login uses the existing portal handler for its entire mount-relative
+`/cross-device` namespace. Preserve the prefix and library `strict-origin`
+Referrer-Policy; no extra handler or CORS layer is needed. Provider realms named
+`cross-device` retain their own namespace. Use
+[configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
+to review transfer paths, HTTPS/Origin boundaries and root/nested mount tests.
+
 The selected Caddy v2.11.7 limits request headers to 16 KiB by default and
 defaults idle request-body reads and response writes to 60 seconds. Review
 large JWT/cookie sets and slow uploads or streams when upgrading. Tune Caddy's

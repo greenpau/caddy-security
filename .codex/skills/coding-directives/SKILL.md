@@ -109,6 +109,10 @@ The [lifecycle contract](references/runtime-lifecycle.md) owns the ordering.
 
 ## Caddyfile Parsers
 
+Use [configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
+to implement or review cross-device directive aggregation, delegated parsing,
+approval boundaries and host/browser acceptance tests.
+
 Follow the existing parser shape:
 
 ```go

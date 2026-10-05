@@ -83,6 +83,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		{name: "GitHub ID and organization transforms", inputFileNamePrefix: "testcase_authenticate_with_github_transforms"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},
 		{name: "match any refresh policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh"},
+		{name: "optional cross-device login and binding cookie", inputFileNamePrefix: "testcase_authenticate_with_cross_device"},
 		{name: "portal token refresh settings, defaults, disabled and deferred", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},
 		{name: "refresh override preserves invalid shared cookie whitespace", inputFileNamePrefix: "testcase_authenticate_with_token_refresh_cookie_whitespace", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': security.authentication.portal \"myportal\" cookies: invalid refresh cookie name at line 1, at Caddyfile:12")},

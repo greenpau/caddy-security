@@ -126,7 +126,8 @@ authorize /api/* with api_policy
   and `plugin_authz.go`.
 - Use [configuration-authentication](../configuration-authentication/SKILL.md)
   to configure authentication portals, parsed by `caddyfile_authn.go` and
-  `caddyfile_authn_*.go`. Its routes own cookies, UI, transforms, and Portal APIs.
+  `caddyfile_authn_*.go`. Its routes own cookies, UI, transforms, cross-device
+  login, and Portal APIs.
 - Use [configuration-authorization](../configuration-authorization/SKILL.md)
   to configure authorization policies, parsed by `caddyfile_authz.go` and
   `caddyfile_authz_*.go`.

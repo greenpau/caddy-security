@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cross-device Portal Login"
+  short_description: "Configure and verify cross-device portal login"
+  default_prompt: "Use $configuration-authentication-cross-device to configure and verify an explicitly approved login through Caddy."

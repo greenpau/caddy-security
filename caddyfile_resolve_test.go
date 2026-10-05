@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "optional cross-device login and binding cookie", inputFileNamePrefix: "testcase_authenticate_with_cross_device"},
 		{name: "direct OAuth settings", inputFileNamePrefix: "testcase_authorize_oauth"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},
 		{name: "match any refresh policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh"},

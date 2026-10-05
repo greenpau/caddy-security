@@ -56,9 +56,12 @@ changing its name does not weaken SAML state or assertion validation.
 The cross-device cookie role is supplied by the v1.3.11 shared parser and uses
 `cookie cross-device session id name <name>`. It participates in prefix,
 uniqueness and runtime resolution just like the other names. Naming this cookie
-does not enable cross-device login. That optional upstream feature is disabled
-by default and has no Caddyfile enable directive yet; its typed JSON field is
-inherited but a complete Caddy login journey remains separate integration work.
+does not enable cross-device login. Use
+[configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
+to enable the optional flow and review its browser-binding lifetime and scope.
+Its Secure/HttpOnly/host-only, mount-scoped, SameSite=None binding uses a
+300-second Max-Age independently of ordinary cookie options. `__Host-` requires
+a root mount; a nested mount fails closed.
 
 
 ## Explicit Names and Precedence

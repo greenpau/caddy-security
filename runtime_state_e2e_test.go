@@ -56,6 +56,7 @@ func TestCaddyRuntimeStateE2E(t *testing.T) {
 	}{
 		{"direct_oauth", testPersistentDirectOAuth},
 		{"portal_refresh_oidc", testPersistentPortal},
+		{"cross_device_pending", testPersistentCrossDevice},
 	} {
 		t.Run(tc.name, func(t *testing.T) { tc.run(t, binary) })
 	}

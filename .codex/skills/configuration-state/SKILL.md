@@ -46,6 +46,11 @@ session DTOs, replay history or locks into Caddy.
 
 ## Lifecycle and operation
 
+Pending cross-device interactions are always volatile. Reload or complete
+stop/start discards them even when completed sessions use persistent state.
+The existing rejection of overlapping persistent reload still applies. See
+[cross-device lifecycle](../configuration-authentication-cross-device/SKILL.md#identity-cancellation-and-lifecycle).
+
 Read [operator guidance](references/operations.md) when enabling persistence,
 planning deployment/recovery, or explaining its guarantees. Persistent runtimes
 are constructed by `App.Start`, not `Provision`, so adaptation and validation

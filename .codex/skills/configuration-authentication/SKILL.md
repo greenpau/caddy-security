@@ -33,6 +33,9 @@ Read these files when details matter:
 
 Use focused repo-local skills for specialized portal sub-blocks:
 
+- Use [configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
+  to enable QR/link login, explicit approval, browser binding, cancellation and
+  volatile request lifecycle through the existing portal route.
 - Use [configuration-oauth-applications](../configuration-oauth-applications/SKILL.md)
   to configure portal `oidc provider` blocks, named client selection, private
   registrations, and dedicated provider signing keys.

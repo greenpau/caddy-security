@@ -168,6 +168,15 @@ registration records alone do not restore sessions or grants.
 
 ## Validation surfaces
 
+Cross-device portal login issues an independent OP browser session for each
+device after explicit approval. It preserves the provider's normal realm,
+capacity and issuance policy; failed completion must suppress credentials and
+release an undelivered refresh family. `TestCaddyCrossDeviceE2E` exercises MFA,
+portal refresh and OP authorization-code exchange together and forces OP
+capacity failure to verify rollback. Pending transfer requests remain volatile
+even when completed OP sessions use persistent state. See
+[cross-device login](../../configuration-authentication-cross-device/SKILL.md).
+
 See the HTTP and RP contract below when changing request routing or protocol
 coverage; parser tests cannot establish those behaviors.
 

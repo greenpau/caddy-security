@@ -33,9 +33,12 @@ factor-policy regressions through real TLS. The shared cookie parser adds
 `cookie cross-device session id name`; initialized cookie snapshots now contain
 that tenth role, including prefixed defaults. Cookie unit/adapt/runtime tests
 cover naming, collisions and token-role isolation. Cross-device login itself is
-disabled by default. Its new typed `cross_device_login` JSON field is inherited
-from AuthCrunch, but Caddy has no enable/disable directive or dedicated login
-journey qualification for it; adding that adapter feature is separate work.
+disabled by default. Caddy now delegates complete `enable cross-device login`
+and `disable cross-device login` statements to the shared parser and preserves
+the typed `cross_device_login` field through JSON reload. Real Caddy TLS and
+Chrome journeys qualify explicit approval, independent credentials, provider
+callbacks, lifecycle and browser cancellation. See
+[cross-device login](../../configuration-authentication-cross-device/SKILL.md).
 The dependency also requires go-crypto v1.5.2 and etree v1.8.1. The Caddy upgrade below is qualified separately; the selected quic-go and
 qpack versions remain unchanged.
 
@@ -72,6 +75,7 @@ the host integration; see [authorization options](../../configuration-authorizat
 
 | Upstream surface | Caddy integration and validation |
 | --- | --- |
+| `PortalConfig.CrossDeviceLogin`, `pkg/authn/cross_device/parser` | Aggregate portal statements preserve token boundaries and reject duplicate/conflicting settings, imports and nested blocks. Unit/adapt/resolution fixtures and `TestCaddyCrossDevice*` exercise real Caddy TLS, QR/copy Chrome flows, MFA/refresh/OP, signed OAuth/SAML, expiry, revocation and restart. The library owns all transfer runtime and embedded assets. |
 | `Config.Logging`, `pkg/logging`, `pkg/logging/parser` | Root `logging` preserves typed rules and delegates parsing/validation. AuthCrunch component filters are instance-owned; built-command tests qualify scope, reload, removal and persistent sessions. Caddy v2.11.7's private authentication logger lacks a supported wrapping hook, so issue #280 remains open. See [configuration-logging](../../configuration-logging/SKILL.md). |
 | `Config.State`, `pkg/state/parser` | Root `state` adapter delegates grammar and preserves library JSON. Persistent runtime construction occurs in Start; Caddy rejects overlapping persistent reload before candidate route startup. `TestCaddyRuntimeStateE2E` qualifies built-command restarts, storage/capacity failures and revocation. See configuration-state. |
 | `PolicyConfig.OAuth`, `pkg/authz/oauth/parser` | Complete `use oauth`/`oauth` statements select portal-free provider login. The new authorization route handler preserves all three outcomes; parser/adapt, response-contract and built-command tests cover the host boundary. |

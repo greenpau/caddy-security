@@ -94,6 +94,17 @@ Do not invent UI directives from authcrunch struct fields unless
 `caddyfile_authn_ui.go` parses them. The Caddyfile parser does not currently
 support a top-level `ui title` or `allow settings for role` subdirective.
 
+## Cross-device Custom Templates
+
+The selected embedded login template shows the cross-device action only when
+the portal enables it. Keep that action outside the ordinary provider-link
+visibility condition: a single local realm can hide ordinary links while still
+offering cross-device login. Preserve the dedicated request/confirmation pages
+and their embedded script instead of copying runtime assets into Caddy. Use
+[configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
+to check explicit approval, matching-code/account display, navigation,
+cancellation and embedded-browser compatibility when customizing those pages.
+
 ## Refresh-Aware Custom Templates
 
 The built-in portal and session templates already load the matching embedded

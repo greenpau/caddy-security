@@ -154,6 +154,16 @@ and cannot disable either bound.
 
 ## Mounts and Cookies
 
+Cross-device approval records refer only to a committed local refresh family.
+AuthCrunch's `tokenrefresh.Manager.ValidateSession` and optional store
+`SessionValidator` check binding, revocation, idle/absolute deadlines and store
+health without rotating credentials or altering replay history. The family ID
+is not authentication evidence, and custom access/provider `sid` claims must
+not become family references. Unsupported stores fail closed. Caddy delegates
+these checks: normal rotation keeps approval valid, while replay, replacement
+and logout (including without an access cookie) invalidate it. See
+[cross-device identity and lifecycle](../../configuration-authentication-cross-device/SKILL.md#identity-cancellation-and-lifecycle).
+
 Mount the portal without stripping its prefix:
 
 ```caddyfile
