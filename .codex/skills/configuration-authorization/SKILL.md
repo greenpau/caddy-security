@@ -18,6 +18,12 @@ Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure JWT
 verification material, token names/lifetimes, generated or secret-backed keys,
 and System API `system` keys for remote Basic or API-key authentication.
 
+Native app `claims_enrichment` bindings load category-specific Caddy factories;
+no production backend or Caddyfile statement is bundled yet. Read the
+[host plugin contract](../coding-directives/references/host-plugins.md) before
+adding a companion or suggesting backend selectors. Lower-level AuthCrunch
+interfaces alone do not establish root injection support.
+
 Read these files when details matter:
 
 - `caddyfile_authz.go` for the policy block.
@@ -96,7 +102,7 @@ the lookup priority. `validate bearer header` enables `Authorization: Bearer
 
 Read [typed custom ACL fields](references/typed-acl-fields.md) for `acl field`
 declarations, literal claim keys, typed JSON, adapter ownership and Caddy TLS
-qualification, including the unconditional default-action fix in v1.3.11.
+qualification, including unconditional default-action behavior.
 
 Prefer concise shortcuts for common role, origin, issuer, method, and path
 matches:
@@ -150,7 +156,7 @@ Explicit actions must start with `allow` or `deny`, and may include `any`,
 `stop`, `log [debug|info|warn|error]`, `counter`, and `tag <value>`. With
 multiple conditions, the default is match-all; add `any` to the action for
 match-any. A matched deny denies immediately. A matched allow grants access only
-if no later matching deny overrides it, unless `stop` is used. Selected v1.3.11
+if no later matching deny overrides it, unless `stop` is used. The selected library
 evaluates `acl default`/`match any` even when normalized user data omits `exp`.
 The typed-field reference owns the default-rule ordering regressions.
 
@@ -203,7 +209,7 @@ Use the same-host portal path such as `/auth` or `/xauth`, or the full URL for
 a split-host or root-mounted dedicated auth host. The HTTP integration route
 above owns mount selection and auth URL alignment.
 
-go-authcrunch v1.3.6 preserves the full application return URL over HTTP/1.1,
+AuthCrunch preserves the full application return URL over HTTP/1.1,
 HTTP/2 and HTTP/3, including authority/port, escaped path and raw query. The
 configured auth URL remains the outer destination, including direct portal
 OAuth callback URLs. Decode `redirect_url` once to inspect the return URL.
@@ -253,7 +259,7 @@ actual source: bearer/named header, Basic/API-key header, query or cookie.
 Unrelated request headers, query arguments and cookies remain. Token sources
 and validation still determine which credential can authorize the request.
 
-The selected go-authcrunch v1.3.6 checks every original, decoded and cleaned
+The selected AuthCrunch checks every original, decoded and cleaned
 path interpretation whenever method/path or token path-claim validation is
 enabled. Every interpretation must satisfy the policy and any required claim;
 this also applies to cached identities. Cleaning must not turn

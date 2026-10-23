@@ -84,6 +84,11 @@ read [Runtime lifecycle](references/runtime-lifecycle.md). It traces Caddy's
 host ordering, the app's disposal contract, identity-file ownership restrictions,
 and the unit/E2E tests that verify those behaviors.
 
+For AuthCrunch backend adapters, read
+[Host plugin contracts](references/host-plugins.md). It defines module naming,
+typed bindings, factory versus backend ownership, and the public root injection
+boundaries. Check those boundaries before exposing a new backend selector.
+
 Register Caddy modules and Caddyfile directives in `init` functions near the
 module implementation. Provide a `CaddyModule` method with the correct public
 Caddy module ID and `New` constructor.
@@ -228,7 +233,7 @@ payloads.
 Diagnostic suppression is governed by [configuration-logging](../configuration-logging/SKILL.md).
 Delegate rule parsing and immutable filters to AuthCrunch. Its root logger
 wrapping does not reach Caddy's private authentication middleware logger, and
-Caddy v2.11.7's custom cores only tee output. Keep that upstream limitation
+the selected Caddy's custom cores only tee output. Keep that upstream limitation
 explicit; never change authentication results to silence a host log.
 
 ## Style

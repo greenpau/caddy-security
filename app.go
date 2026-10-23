@@ -17,7 +17,9 @@ package security
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/caddyserver/caddy/v2"
@@ -81,6 +83,12 @@ type App struct {
 
 	SecretsManagerConfigs []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
 	secretsManagers       []SecretsManager
+
+	// ClaimsEnrichment binds host modules to individual authorization policies.
+	ClaimsEnrichment []*ClaimsEnrichmentBinding `json:"claims_enrichment,omitempty"`
+	claimsEnrichment []preparedClaimsEnrichment
+	pluginContext    context.Context
+	pluginClosers    []io.Closer
 
 	server *authcrunch.Server
 	logger *zap.Logger
@@ -181,6 +189,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := validateOIDCProviderMounts(&config); err != nil {
 		return err
 	}
+	if err := app.prepareClaimsEnrichment(ctx, &config); err != nil {
+		return err
+	}
 	if config.State != nil {
 		// Caddy provisions every candidate before starting any of its apps.
 		// Reject persistent-to-persistent replacement at that boundary, before
@@ -230,7 +241,17 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		)
 		return err
 	}
+	closers, err := app.attachClaimsEnrichment(app.pluginContext, server)
+	if err != nil {
+		// The candidate has never admitted requests. Dispose its consumers before
+		// their injected backends, and release files only after disposal.
+		err = errors.Join(err, server.Close(), closePluginResources(closers))
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return err
+	}
 
+	app.pluginClosers = closers
 	app.server = server
 
 	app.logger.Info(
@@ -280,7 +301,7 @@ func (app *App) Cleanup() error {
 		app.disposing = true
 		app.mu.Unlock()
 		app.requests.Wait()
-		app.cleanupErr = app.server.Close()
+		app.cleanupErr = errors.Join(app.server.Close(), closePluginResources(app.pluginClosers))
 		releaseIdentityFiles(app.identityFiles)
 	})
 	return app.cleanupErr

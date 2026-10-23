@@ -13,11 +13,11 @@ result, including cleanup errors.
 
 ## Host lifecycle traced
 
-This qualification uses the pinned Caddy v2.11.7 and AuthCrunch v1.3.11.
-The relevant Caddy paths are
-[`Context.LoadModuleByID` and context cancellation](https://github.com/caddyserver/caddy/blob/v2.11.7/context.go),
-[`run`, `provisionContext`, `unsyncedDecodeAndRun`, `unsyncedStop`, and `Validate`](https://github.com/caddyserver/caddy/blob/v2.11.7/caddy.go),
-and the [HTTP app's `Stop` and `Cleanup`](https://github.com/caddyserver/caddy/blob/v2.11.7/modules/caddyhttp/app.go).
+Trace the Caddy and AuthCrunch modules selected by `go.mod`, including any
+replacement. In Caddy, inspect `Context.LoadModuleByID` and context cancellation
+in `context.go`; `run`, `provisionContext`, `unsyncedDecodeAndRun`,
+`unsyncedStop`, and `Validate` in `caddy.go`; and the HTTP app's `Stop` and
+`Cleanup` in `modules/caddyhttp/app.go`.
 
 | Event | Caddy behavior | Security behavior |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ exiting. During a reload, returning from HTTP `Stop` or canceling the module
 context does **not** prove that HTTP requests have finished. HTTP grace-period
 expiry is also not proof that a handler has returned.
 
-Caddy v2.11.7 also waits for HTTP servers retired by earlier reloads when the
+The selected Caddy also waits for HTTP servers retired by earlier reloads when the
 process exits. This does not replace security's per-instance admission and
 draining: HTTP shutdown may reach its grace deadline before a handler returns.
 `caddy.Stop` clears the active context before stopping apps, so cleanup must
@@ -103,6 +103,18 @@ usable. Caddy may have started some candidate apps before another app fails;
 its lifecycle does not provide transactional isolation from all possible app
 side effects. Cleanup errors are returned to Caddy for logging; they do not
 roll back a replacement already serving.
+
+Injected backends have separate ownership from the root's built-in components.
+The app attaches them only to a private root and publishes admission after all
+attachments succeed. On failure it closes that root, then acquired backend
+resources in reverse order. On retirement it drains requests, closes the root,
+then closes backend resources before releasing identity-file reservations.
+`Cleanup` retains the joined result for concurrent callers; a backend cleanup
+failure does not skip later resources. Backend diagnostics are redacted.
+See [host plugin contracts](host-plugins.md) for the factory API and category
+boundaries. Caddy module context cancellation must not close an injected backend
+under an admitted request. Persistent validation loads configuration factories
+but defers backend construction to `Start` with the root.
 
 ## Persistent identity files: current reload restriction
 
