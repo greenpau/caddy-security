@@ -7,7 +7,7 @@ description: "Configure and verify optional cross-device portal login, QR activa
 
 ## Configuration and ownership
 
-The selected published go-authcrunch v1.3.11 supplies the parser, runtime and
+The selected published go-authcrunch supplies the parser, runtime and
 embedded UI. Check `go.mod` and the selected module directory when changing this
 integration; a sibling working tree is only a read-only reference. No local
 replacement or copied portal handler, QR generator, store or template is needed.
@@ -124,6 +124,12 @@ separate five-second cancellation deadline; it does not require
 `AbortSignal.any` or `AbortSignal.timeout`. Chrome evidence does not certify
 physical TV/VR hardware. Custom login templates must retain the conditional
 cross-device action outside ordinary provider-link visibility conditions.
+
+The delivered request page separates clipboard feedback (`cross-device-copy-status`)
+from the flow status (`cross-device-status`). Cancellation hides request details
+and controls, announces the terminal state, and offers a fresh request. Browser
+tests must check the clipboard contents and terminal state without expecting
+copy feedback to replace the waiting or cancellation message.
 
 ## Acceptance and validation
 

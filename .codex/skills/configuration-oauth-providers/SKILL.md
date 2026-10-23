@@ -25,8 +25,13 @@ when changing OAuth directives, issuer/audience, keys, or parser validation.
 
 The [qualified operator examples](../configuration/references/operator-examples.md)
 include an actual TLS journey using explicit issuer/access-token audience and
-static Ed25519 keys. Upstream login does not create downstream OP or local
-portal-refresh authority.
+static Ed25519 keys. Upstream login does not create downstream OP authority.
+The shared runtime supports explicitly selected provider snapshot renewal; see the
+[refresh configuration boundary](../configuration-authentication/references/token-refresh.md).
+It also automatically attaches external identities to a private memory store
+unless a concrete local store is selected. See the
+[current integration boundaries](../configuration/references/authcrunch-compatibility.md#current-integration-boundaries)
+before treating shared-parser support as completed host feature qualification.
 
 Use `assets/config/home.Caddyfile` as the nearest repository example for Azure,
 GitHub, and LinkedIn OAuth providers.
@@ -134,10 +139,11 @@ When `scopes` is omitted, authcrunch defaults by driver:
 
 ## GitHub identity claims
 
-With go-authcrunch v1.3.8, authenticated GitHub `/user` IDs also appear as the
+Authenticated GitHub `/user` IDs also appear as the
 lossless string claim `github_id`. Numeric `metadata.id` and login-based
-`sub` remain unchanged. A rename therefore does not change ID matching; missing
-IDs cannot match, and malformed supplied IDs reject login.
+`sub` remain unchanged. A rename therefore does not change ID matching. Missing
+or malformed IDs reject login: the immutable numeric ID is required to identify
+the attached account, even when policy matches organizations rather than IDs.
 
 For organization claims, add `user_org_filters .*` (or narrower login-name
 regexes) inside the GitHub provider. Only returned organizations passing those
@@ -198,7 +204,7 @@ logout url <logout_url>
 ```
 
 These are aliases for one scalar in upstream `pkg/idp/oauth/parser/fields.go`.
-The selected v1.3.4 shared validator in `pkg/idp/config.go` excludes that field,
+The selected shared validator in `pkg/idp/config.go` excludes that field,
 so Caddy adaptation rejects it. Keep both forms documented with that status;
 exclude them from runnable examples until shared validation supports them.
 `enable logout` / `logout enabled` remains a separate supported switch.

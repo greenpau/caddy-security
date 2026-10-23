@@ -161,6 +161,12 @@ P-384, and P-521 curves, mapped to `ES256`, `ES384`, and `ES512`. A private
 key can sign and, unless usage is exactly `sign`, verify through its public
 key. A public key can only verify.
 
+The shared KMS also verifies `PS256` with RSA public keys, requiring SHA-256 and an
+exactly 32-byte PSS salt. Existing portal RSA issuance still uses the RS
+algorithms. The separate reference PS256 signer is not selectable by a portal
+or OP directive; its public integration point is the refresh manager. Keep
+verification support separate from the unimplemented signing adapter.
+
 ```caddyfile
 crypto key auth1 sign-verify from file /etc/caddy/jwt/sign_key.pem
 crypto key auth1 verify from file /etc/caddy/jwt/verify_key.pem

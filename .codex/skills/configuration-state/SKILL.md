@@ -57,7 +57,7 @@ are constructed by `App.Start`, not `Provision`, so adaptation and validation
 do not initialize keys or state files. Route provisioning validates declared
 names; admission stays closed until `NewServer` succeeds.
 
-Caddy v2.11.7 provisions and starts a replacement before retiring the old app.
+Caddy provisions and starts a replacement before retiring the old app.
 There is no atomic drain/construct/rollback facility. A candidate persistent
 app checks Caddy's active app during provisioning and rejects replacement of a
 live persistent runtime before candidate HTTP routes start. This deliberately
@@ -71,13 +71,18 @@ candidate never closes the serving root. Failed construction unwinds its own
 resources. Close neither flushes nor deletes committed data. Preserve handled
 503/protocol failures and never issue fallback credentials or retry rotations.
 
-Policy-only OAuth needs neither a placeholder portal nor a local database.
+Policy-only OAuth needs no placeholder portal. Volatile use needs no declared
+local database, but retaining completed sessions across restart also requires
+the provider to `attach to local identity store NAME` with a file-backed local
+store. Runtime state preserves that store's proof epoch; the provider's implicit
+private-memory attachment loses its identities at restart and cannot validate
+old session evidence.
 The [direct OAuth policy contract](../configuration-authorization/SKILL.md#direct-oauth-without-a-portal)
 owns those settings; mount callback/logout paths through the same policy.
 
 ## Validation
 
-The selected published go-authcrunch v1.3.4 supplies `Config.State` and both
+The selected published go-authcrunch supplies `Config.State` and both
 public parsers; no dependency replacement is needed. Recheck the selected module
 before changing the contract. Library tests alone do not certify this host.
 

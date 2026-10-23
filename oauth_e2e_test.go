@@ -189,9 +189,9 @@ type oauthE2EUpstream struct {
 	keys                                                         []map[string]string
 	callback, discoveredIssuer, tokenIssuer, accessMode, failure string
 	clientID, clientSecret, accessAudience                       string
-	// Optional persistent-state fixtures: large verified identities exercise
+	// Optional persistent-state fixtures: large verified picture claims exercise
 	// the real snapshot bound; holds exercise reload with an admitted callback.
-	identityName                                                      string
+	identityPicture                                                   string
 	exchangeEntered                                                   chan struct{}
 	exchangeRelease                                                   <-chan struct{}
 	codes                                                             map[string]oauthE2ECode
@@ -278,8 +278,8 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		}
 		f.exchanges++
 		id := map[string]any{"iss": f.tokenIssuer, "aud": f.clientID, "sub": record.subject, "email": record.subject + "@example.test", "name": "External User", "nonce": record.nonce, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"authp/user"}}
-		if f.identityName != "" {
-			id["name"] = f.identityName
+		if f.identityPicture != "" {
+			id["picture"] = f.identityPicture
 		}
 		access := map[string]any{"iss": f.tokenIssuer, "aud": f.accessAudience, "azp": f.clientID, "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"resource/editor"}}
 		switch f.failure {
@@ -628,7 +628,7 @@ func TestCaddyOAuthProcess(t *testing.T) {
 		u.clientID += ".apps.googleusercontent.com"
 		// A substituted secret is data, even if it resembles a Caddy placeholder.
 		u.clientSecret = "literal-{env.DO_NOT_EXPAND_OAUTH_SECRET}\u2003"
-		u.tokenIssuer += "\t"
+		u.tokenIssuer += "/Exact/"
 		u.accessAudience += "\u00a0"
 		f := newCaddyOAuthFixture(t, u, "discovery", u.tokenIssuer, u.accessAudience, certFile, keyFile, roots, func(f *caddyOAuthFixture) {
 			f.input = strings.Replace(f.input, "driver generic", "driver google", 1)
@@ -676,7 +676,7 @@ func TestCaddyOAuthProcess(t *testing.T) {
 		u.mu.Unlock()
 		f.login(t, false, false)
 		u.mu.Lock()
-		u.tokenIssuer += "\t"
+		u.tokenIssuer += "/Exact/"
 		u.accessAudience = "resource-api"
 		u.mu.Unlock()
 		f.login(t, true, false)
@@ -685,21 +685,30 @@ func TestCaddyOAuthProcess(t *testing.T) {
 		t.Run(fmt.Sprintf("quoted values U+%04X", []rune(suffix)[0]), func(t *testing.T) {
 			u := newOAuthE2EUpstream(t, cert, "EdDSA")
 			u.clientSecret += suffix
-			u.tokenIssuer += suffix
+			u.tokenIssuer += "/Exact/"
 			u.accessAudience += suffix
 			f := newCaddyOAuthFixture(t, u, "discovery", u.tokenIssuer, u.accessAudience, certFile, keyFile, roots)
 			f.login(t, true, true)
-			// Trimming either claim must fail its own trust check. An invalid
-			// supplemental audience still permits the verified identity to log in.
+			// Changing the issuer path or trimming the audience must fail its own
+			// trust check. An invalid supplemental audience still permits login.
 			u.mu.Lock()
 			u.tokenIssuer = u.server.URL
 			u.mu.Unlock()
 			f.login(t, false, false)
 			u.mu.Lock()
-			u.tokenIssuer += suffix
+			u.tokenIssuer += "/Exact/"
 			u.accessAudience = "resource-api"
 			u.mu.Unlock()
 			f.login(t, true, false)
+		})
+		t.Run(fmt.Sprintf("padded issuer rejected U+%04X", []rune(suffix)[0]), func(t *testing.T) {
+			u := newOAuthE2EUpstream(t, cert, "EdDSA")
+			u.tokenIssuer += suffix
+			f := newCaddyOAuthFixture(t, u, "discovery", u.tokenIssuer, u.accessAudience, certFile, keyFile, roots)
+			// Even a signed issuer matching the exact configured value cannot
+			// identify an attached account when it has surrounding whitespace.
+			// Preserve the configured value; never trim it into a valid identity.
+			f.login(t, false, false)
 		})
 	}
 	for _, alg := range []string{"EdDSA", "Ed25519"} {

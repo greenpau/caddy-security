@@ -173,6 +173,14 @@ Runtime LDAP authentication flow:
 Connections are closed after each operation; identification and password
 verification do not share a long-lived connection.
 
+Verified LDAP subjects also receive an attached local identity,
+using private memory when no explicit attachment is supplied. The native
+password-sandbox flow signs `amr: ["federated", "pwd"]`; the federation marker
+does not prove a separate local password or MFA factor. The LDAPS fallback-role
+E2E verifies this exact signed evidence and protected-resource access. Explicit
+LDAP attachment Caddyfile syntax and the broader connection/administration
+matrix remain separate host work.
+
 This flow means a correct-looking Caddyfile can still fail because the search
 filter is too broad, group membership does not map to any role, LDAPS trust is
 missing, or service bind credentials are wrong.

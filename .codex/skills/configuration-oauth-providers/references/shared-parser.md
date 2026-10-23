@@ -26,7 +26,7 @@ mapping. Shared scalar/list keys also accept separate words, for example
 | Existing Caddy grammar | Shared grammar / handling |
 | --- | --- |
 | `realm`, `driver`, `tenant_id`, `domain_name`, `client_id`, `client_secret`, `server_id`, `base_auth_url`, `metadata_url`, `identity_token_field_name`, `authorization_url`, `token_url`, `region`, `user_pool_id`, `user_info_roles_field_name` | Forward one exact value. |
-| `logout_url <logout_url>` (also `logout url <logout_url>`) | Recognized by `pkg/idp/oauth/parser/fields.go`, but rejected by the OAuth allowlist in `pkg/idp/config.go` in the selected v1.3.4. Forward it unchanged to that validation. Never remove it from Params to make registration succeed. |
+| `logout_url <logout_url>` (also `logout url <logout_url>`) | Recognized by `pkg/idp/oauth/parser/fields.go`, but rejected by the OAuth allowlist in `pkg/idp/config.go` in the selected dependency. Forward it unchanged to that validation. Never remove it from Params to make registration succeed. |
 | `scopes`, `user_group_filters`, `user_org_filters`, `response_type` | Preserve the old append behavior for repeated identical legacy spellings, combining them into one list statement. Mixing a spaced alias with the old spelling fails as a duplicate. |
 | `required_token_fields <fields...>` | Forward one nonempty list. Repetition fails instead of silently replacing the previous list. |
 | `delay_start`, `retry_attempts`, `retry_interval` | Forward one integer. Library validation retains driver/retry defaults and exact integer values. |
@@ -37,6 +37,8 @@ mapping. Shared scalar/list keys also accept separate words, for example
 | `extract <fields...> from userinfo` | `user_info_fields <fields...>`. `all` remains supported. |
 | `icon <label> [class [color [background]]] [text <color> [background]] [priority <number>]` | Translate each positional field into its own `login icon <attribute> <value>` statement, including priority zero. Preserve repeated modifiers for shared duplicate detection; reject missing and surplus arguments. |
 | `jwks key <kid> <public-PEM-path>` | Forward every record. Distinct IDs may repeat; duplicate IDs fail. Quote paths containing spaces. |
+| `attach to local identity store <name>` | Forward the complete clause to the shared attachment parser. Select a concrete local store by name; omission creates provider-private memory. Unknown/wrong-kind targets fail root construction. Dedicated host connection/continuity qualification is a separate milestone. |
+| `login store <name> namespace <namespace>` | The shared parser accepts and preserves the typed reference. Caddy has no backend declaration/injection yet; provisioning fails without the named `ServerOptions.OAuthLoginStores` binding. Do not present this as deployable shared storage. |
 | `oauth identity provider github/google/facebook <client-id> <secret>` | Emit realm, driver, client ID, and secret statements, then use the same shared parser as blocks. |
 | `disabled` | An empty disabled block registers an omission marker without requiring credentials. A populated disabled definition passes shared validation before omission. Extra arguments and repeated markers fail. |
 
@@ -115,6 +117,13 @@ Otherwise the discovered issuer is used. `base_auth_url` does not imply issuer.
 Without either explicit or discovered issuer, the library retains its existing
 optional issuer checking.
 
+External account attachment separately validates the verified issuer and subject
+as exact identity components. Empty values, invalid UTF-8, NUL/CR/LF, surrounding
+whitespace and values exceeding the identity bound reject login, even if a padded
+issuer exactly matches the configured value. Preserve values through adaptation
+and resolution; never trim a rejected identity into an accepted one. Opaque
+credentials and supplemental audiences retain their own exact-value semantics.
+
 The access-token audience applies only to a supplemental JWT access token.
 Identity tokens, including an access token selected as the identity token, use
 the client ID. Without explicit access audience, the existing access-token `azp`
@@ -162,6 +171,8 @@ public keys; it does not need `disable key verification` or TLS bypasses.
   static pin precedence for identity and supplemental tokens, protected resource
   roles, rendered legacy login icons, exact quoted secrets/issuer/audience,
   rejected duplicate icon reconfiguration, and trust changes on reload.
+  Padded issuers are preserved through configuration but rejected at login;
+  positive cases retain case-sensitive issuer paths and trailing slashes.
   A Google journey uses a secret-backed client ID, secret, issuer, and audience;
   rejected runtime secret/snapshot reloads must preserve the active login flow. Negative
   journeys assert exact redirect/forbidden status codes. Missing `kid` preserves

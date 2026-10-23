@@ -108,6 +108,7 @@ func TestCaddyCrossDeviceProvidersProcess(t *testing.T) {
 				location = r.header.Get("Location")
 			}
 			callback := approver.request(t, "GET", location, nil, nil)
+
 			callback.requireStatus(t, 303)
 			if mode == "disabled" {
 				approver.request(t, "GET", f.base+"/protected", nil, nil).requireStatus(t, 200)
@@ -155,9 +156,10 @@ type crossDeviceSAMLSession struct{}
 
 func (crossDeviceSAMLSession) GetSession(_ http.ResponseWriter, _ *http.Request, _ *samllib.IdpAuthnRequest) *samllib.Session {
 	now := time.Now()
-	return &samllib.Session{ID: "cross-device-idp-session", Index: "cross-device-idp-index", CreateTime: now, ExpireTime: now.Add(time.Hour), NameID: "saml-user@example.test", UserName: "saml-user", UserEmail: "saml-user@example.test", UserCommonName: "SAML User", CustomAttributes: []samllib.Attribute{
+	return &samllib.Session{ID: "cross-device-idp-session", Index: "cross-device-idp-index", CreateTime: now, ExpireTime: now.Add(time.Hour), NameID: "saml-user@example.test", NameIDFormat: "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent", UserName: "saml-user", UserEmail: "saml-user@example.test", UserCommonName: "SAML User", CustomAttributes: []samllib.Attribute{
 		{Name: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", Values: []samllib.AttributeValue{{Type: "xs:string", Value: "saml-user@example.test"}}},
 		{Name: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/displayname", Values: []samllib.AttributeValue{{Type: "xs:string", Value: "SAML User"}}},
+		{Name: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name", Values: []samllib.AttributeValue{{Type: "xs:string", Value: "saml-user"}}},
 	}}
 }
 
@@ -261,6 +263,7 @@ func testCaddyCrossDeviceSAML(t *testing.T, cert, key string, roots *x509.CertPo
 		t.Fatal("IdP omitted signed response or browser state")
 	}
 	callback := approver.request(t, "POST", form.action, form.values, http.Header{"Origin": {idpURL}, "Sec-Fetch-Site": {"cross-site"}})
+
 	callback.requireStatus(t, 303)
 	if callback.header.Get("Location") != "/auth/cross-device/confirm" {
 		t.Fatal("signed SAML callback lost the cross-site binding")

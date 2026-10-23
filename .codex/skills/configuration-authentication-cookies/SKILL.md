@@ -53,7 +53,7 @@ host-only scope, path `/`, Secure, HttpOnly, SameSite=None and a 300-second
 lifetime. Its name participates in shared prefix, override and collision checks;
 changing its name does not weaken SAML state or assertion validation.
 
-The cross-device cookie role is supplied by the v1.3.11 shared parser and uses
+The shared parser exposes the cross-device cookie role through
 `cookie cross-device session id name <name>`. It participates in prefix,
 uniqueness and runtime resolution just like the other names. Naming this cookie
 does not enable cross-device login. Use
@@ -102,6 +102,11 @@ names must be valid HTTP cookie names and distinct across all ten roles.
 Names may be explicitly unprefixed. `__Host-` and `__Secure-` remain optional
 compatibility cases; a name alone does not establish the required attributes.
 
+The shared validator reserves the configured SAML cookie name followed by `_`
+for per-login transaction cookies. Other portal roles and upstream identity-token cookie
+names cannot use that prefix. This is shared validation, without a new Caddy
+directive; preserve it when resolving names and qualifying parallel SAML flows.
+
 For enabled [portal token refresh](../configuration-authentication/references/token-refresh.md),
 an explicit `token refresh { cookie name ... }` overrides the shared refresh
 name before shared-parser collision checks and cookie factory construction.
@@ -114,7 +119,7 @@ below only describes retired-cookie cleanup.
 
 ### Reserved-Prefix Compatibility
 
-AuthCrunch v1.3.3 preserves `Secure`, `HttpOnly`, `SameSite`, domain, and path
+Cookie deletion preserves `Secure`, `HttpOnly`, `SameSite`, domain, and path
 on matching deletion cookies, with a past expiry and `Max-Age=0`.
 `__Secure-` names require secure cookies. `__Host-` additionally requires no
 Domain and `Path=/`; a configured access path or domain must respect that scope.

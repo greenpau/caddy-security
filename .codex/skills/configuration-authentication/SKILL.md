@@ -18,7 +18,7 @@ Read these files when details matter:
 
 - `caddyfile_authn.go` for the portal block.
 - `caddyfile_authn_token_refresh.go` and [token refresh](references/token-refresh.md)
-  for readable portal refresh configuration, explicit local realms, transports,
+  for readable portal refresh configuration, explicit eligible realms, transports,
   bounded lifetimes and stores, cookies, placeholders and TLS validation.
 - `caddyfile_authn_crypto.go` for crypto key directives.
 - `caddyfile_authn_misc.go` for `enable`, `validate`, and `trust`.
@@ -152,6 +152,14 @@ need values. Keep `login`/`logout`, `redirect`, and `uri` as separate header
 tokens. Quoted domain/path values remain data even when they contain those
 words; they cannot change which redirect trust list receives the rule.
 
+Login destinations belong to their individual login flows. A rejected, explicitly
+bound destination returns to `<portal-mount>/portal?redirect_url=`. Preserve the
+empty marker: it prevents fallback to another tab's return cookie. Legacy local
+form submissions without a bound destination can still return to
+`<portal-mount>/portal`. `TestCaddyAuthorizationRedirectE2E` checks untrusted-target
+rejection through OAuth transactions and legacy local POST/cookie fallback over
+HTTP/1, HTTP/2, and HTTP/3. The refresh browser E2E checks explicit continuation.
+
 Enable admin/server API endpoints only when they are needed and protected by
 an authenticated admin session:
 
@@ -197,6 +205,6 @@ that rejected reconfiguration leaves the running portal usable.
   mount; a disabled or unknown backend is rejected rather than silently replaced.
 - Trusted redirect rules retain their intended login/logout scope and matcher
   semantics after adaptation and runtime replacement.
-- Refresh/OIDC participation is explicit per local realm. A portal-only syntax
-  fixture does not qualify renewal, provider exchanges, or durable restart;
+- Refresh/OIDC participation follows each feature's explicit realm eligibility.
+  A portal-only syntax fixture does not qualify renewal, provider exchanges, or durable restart;
   those outcomes use the linked feature's Caddy unit and E2E evidence.

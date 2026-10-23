@@ -30,7 +30,7 @@ rules below. Do not promise automatic rollback or uninterrupted availability.
 
 | Resource | Restart behavior |
 | --- | --- |
-| Completed direct OAuth sessions | Original opaque cookies work without another provider exchange; current origin/ACL checks still apply |
+| Completed direct OAuth sessions | With an explicit durable identity attachment, original opaque cookies work without another provider exchange; current identity/origin/ACL checks still apply |
 | Portal browser sessions and generated signing keys | Completed users and generated keys persist; unexpired old JWTs still verify against the same public JWKS |
 | Portal native/browser refresh | Families, deadlines, current credentials and spent-token replay history persist |
 | Downstream OIDC | Browser sessions, consent, codes, access grants and rotating refresh families persist |
@@ -51,10 +51,13 @@ store. Protect Caddy configuration/autosave too: explicit secrets there remain
 secret-bearing configuration.
 
 Local identity stores in a persistent runtime must use file-backed databases;
-`:memory:` cannot preserve the identity proof epoch and fails startup. A direct
-OAuth policy needs no identity database. Adaptation/validation does not open
-runtime storage, so it cannot establish filesystem health or exclusive ownership;
-those checks happen at startup.
+`:memory:` cannot preserve the identity proof epoch and fails startup. For direct
+OAuth restart continuity, declare a file-backed local store and select it in the
+provider with `attach to local identity store NAME`. Root state alone preserves
+the session but cannot restore an implicit provider-private memory identity;
+that old session is denied after restart. Keep both the identity file and runtime
+state, with their matching proof epochs. Adaptation/validation does not open
+runtime storage, so filesystem health and exclusive ownership are startup checks.
 
 A changed normalized security configuration creates a new session epoch,
 including removing and later restoring a component. Unrelated changes or

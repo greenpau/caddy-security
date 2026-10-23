@@ -30,11 +30,12 @@ import (
 // readCaddyfileTokenRefresh collects a single flat portal refresh block. The
 // shared parser owns fields, duplicates, defaults and semantic validation.
 //
-// Syntax (inside an authentication portal; settings occur at most once):
+// Syntax (inside an authentication portal; settings occur once except as noted):
 //
 //	token refresh {
 //	    <enabled|disabled>
 //	    realms <realm> [<realm>...]
+//	    provider revalidation <realm> snapshot
 //	    public origin <canonical-https-origin>
 //	    base path <absolute-mount-path>
 //	    cookie name <name>
@@ -52,10 +53,14 @@ import (
 // nil; disabled opts out. Both preserve ordinary access-only lifetimes. An empty
 // block is invalid. Disabled settings still require valid directive grammar.
 //
-// realms selects realm names from attached local identity stores, not store
-// nicknames. Each must identify exactly one supported store; there is no implicit
-// all-realms selection. Other realms and unsupported login kinds remain
-// access-only. Password/MFA completion supplies the required login evidence.
+// realms selects attached realm names, not backend nicknames. Each must identify
+// exactly one supported source; there is no implicit all-realms selection. Local
+// stores use password/MFA evidence. An OAuth/OIDC realm additionally requires
+// an explicit provider revalidation <realm> snapshot statement (once per realm).
+// Snapshot renewal reuses captured upstream identity and checks current local
+// attachment/policy; it does not observe upstream revocation or renew upstream
+// tokens. Provider identity-token cookies must be disabled. SAML, LDAP and other
+// unsupported sources cannot be selected. Unselected logins remain access-only.
 //
 // public origin pins the actual HTTPS origin, including any nondefault port,
 // without a path. base path pins the unstripped portal mount and refresh-cookie
@@ -111,7 +116,8 @@ import (
 // Durations are integer seconds and counts are integers; omitted/zero numeric
 // settings select library defaults, not unlimited operation. State arguments are
 // enabled/disabled, never true/false/0/1. Every setting occurs at most once,
-// including through imports. For request details and configuration examples, see
+// including through imports, except provider revalidation repeats for distinct
+// realms. For request details and configuration examples, see
 // .codex/skills/configuration-authentication/references/token-refresh.md.
 func readCaddyfileTokenRefresh(d *caddyfile.Dispenser, args []string) ([]string, error) {
 	if len(args) != 1 || args[0] != "refresh" {

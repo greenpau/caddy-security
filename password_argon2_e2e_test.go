@@ -509,7 +509,7 @@ func testPasswordRegistrationImports(t *testing.T, binary, imported, cert, key s
 	for _, candidate := range []string{imported, bcryptFixtureHash, "argon2:malformed", "bcrypt:malformed", " \targon2:malformed\n", " \tbcrypt:malformed\n"} {
 		result := submit(candidate)
 		result.requireStatus(t, 200) // The public HTML form reports validation inline.
-		if !strings.Contains(string(result.body), "the password value is invalid") {
+		if !strings.Contains(string(result.body), "Check your password and try again.") {
 			t.Fatal("registration did not report reserved password rejection")
 		}
 		assertAdminRedacted(t, result.body, append(f.secrets, candidate))

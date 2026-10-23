@@ -189,7 +189,9 @@ func testCaddyLDAPFallback(t *testing.T, cert, key string, roots *x509.CertPool)
 	if !result.Authenticated || verified.Load() == 0 {
 		t.Fatal("LDAP login omitted real credential verification")
 	}
-	claims := challengeClaims(t, f, result.AccessToken, "pwd")
+	// Attached LDAP identities retain federated evidence alongside the password
+	// checkpoint completed by this native login flow.
+	claims := challengeClaims(t, f, result.AccessToken, "federated", "pwd")
 	roles, ok := claims["roles"].([]any)
 	if !ok {
 		t.Fatal("LDAP roles missing")

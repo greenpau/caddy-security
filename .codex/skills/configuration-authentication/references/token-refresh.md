@@ -30,10 +30,21 @@ authentication portal myportal {
 
 This enables portal refresh for the two named realms. `guestsdb` may still
 provide ordinary access-only login. Each selected realm must identify exactly
-one attached local store and no upstream identity provider. Missing, ambiguous,
-unattached, LDAP, OAuth, and SAML realms cannot participate. Never default the
-refresh realm list to all portal backends. API-key and native-client distinctions
-are runtime authentication/transport contracts, not identity-store capabilities.
+one supported attached source. Missing, ambiguous, unattached, LDAP and SAML
+realms cannot participate. Never default the refresh realm list to all portal
+backends. API-key and native-client distinctions are runtime
+authentication/transport contracts, not identity-store capabilities.
+
+The shared parser additionally accepts
+`provider revalidation REALM snapshot`, once per distinct OAuth/OIDC realm also
+listed in `realms`. The provider's identity-token cookie must be disabled.
+Omission does not opt a provider into renewal. Snapshot renewal reuses captured
+upstream identity, rechecks current local attachment and portal policy, and
+does not redeem upstream refresh tokens or observe upstream logout, disablement
+or role changes. Only a fresh upstream login observes those changes; choose a
+bounded absolute lifetime accordingly. Modes `userinfo` and `refresh_token`
+are unsupported. Dedicated Caddy parser/flow/restart qualification remains pending; the
+existing local-refresh evidence does not establish this provider matrix.
 
 `caddyfile_authn_token_refresh.go` forwards encoded body statements to
 `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives` from the
@@ -50,6 +61,7 @@ transport, two eligible local realms, an unselected realm and combined OP use.
 | --- | --- | --- |
 | `enabled` / `disabled` | None; mutually exclusive | Enabled when block exists |
 | `realms` | One or more realm names | Required |
+| `provider revalidation` | One selected OAuth/OIDC realm and `snapshot`; repeat for distinct realms | No provider mode |
 | `public origin` | One canonical HTTPS origin, without path | Required |
 | `base path` | One clean absolute mount; `/` for root | Required |
 | `cookie name` | One complete cookie name | Inherit shared refresh name |
@@ -67,7 +79,8 @@ at 30 days. Access issuance is additionally capped by the actual signing key's
 lifetime. Durations do not accept suffixes such as `5m`.
 
 Keywords occupy separate tokens. No underscore aliases or `true`/`false`/`0`/`1`
-state arguments exist. Each setting occurs once, including through imports;
+state arguments exist. Except for distinct provider revalidation realms, each
+setting occurs once, including through imports;
 repeating even identical values fails. Reject duplicate blocks, extra header
 values, nested blocks, unknown fields, missing/empty arguments and integer
 overflow. Lists belong on one line. A missing block stays nil and access-only;
@@ -247,8 +260,10 @@ follow the state skill's binding and recovery rules.
 A new independent login at capacity returns 503. Exhausting a family's rotation
 limit revokes that family and reclaims capacity. Replaying a spent refresh token
 revokes the whole family. Serialize rotations and do not automatically retry an
-ambiguous refresh response. API-key, Basic, upstream OAuth/OIDC/SAML, and LDAP
-logins remain access-only; native body credentials require explicit opt-in.
+ambiguous refresh response. API-key, Basic, SAML, LDAP and unselected upstream
+OAuth/OIDC logins remain access-only; native body credentials require explicit
+opt-in. Provider snapshot callbacks issue browser cookies, not native body
+refresh credentials.
 
 For browser continuation, Web Locks/storage coordination, SID preconditions,
 GET confirmation and POST logout, use the

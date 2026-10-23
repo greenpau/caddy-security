@@ -218,7 +218,14 @@ func testPersistentDirectOAuth(t *testing.T, binary string) {
 	upstream := newOAuthE2EUpstream(t, pair, "EdDSA")
 	f := newPersistentCaddy(t, binary, cert, key, roots)
 	upstream.callback = f.base + "/_authcrunch/oauth2/direct/authorization-code-callback"
-	security := fmt.Sprintf(`oauth identity provider upstream {
+	// Runtime sessions retain attached identity proof. Keep its local account
+	// and proof epoch durable too; an implicit provider-private store is volatile.
+	identityPath := filepath.Join(f.workspace, "external-users.json")
+	security := fmt.Sprintf(`local identity store external_accounts {
+ realm external_accounts
+ path %q
+}
+oauth identity provider upstream {
  driver generic
  realm upstream
  client_id %s
@@ -226,6 +233,7 @@ func testPersistentDirectOAuth(t *testing.T, binary string) {
  base_auth_url %s
  metadata_url %s/metadata
  scopes openid profile email
+ attach to local identity store external_accounts
 }
 authorization policy direct {
  use oauth identity provider upstream
@@ -241,7 +249,7 @@ authorization policy secondary {
  use oauth identity provider upstream
  oauth base path /secondary/oauth
  allow roles authp/user
-}`, oauthE2EClient, oauthE2ESecret, upstream.server.URL, upstream.server.URL, f.base)
+}`, identityPath, oauthE2EClient, oauthE2ESecret, upstream.server.URL, upstream.server.URL, f.base)
 	input := f.input(security, `route /secondary/* {
  authorize with secondary
  respond "secondary application"
@@ -261,6 +269,9 @@ route {
 	}
 	if _, err := os.Stat(f.directory); !os.IsNotExist(err) {
 		t.Fatal("validation initialized persistent state")
+	}
+	if _, err := os.Stat(identityPath); !os.IsNotExist(err) {
+		t.Fatal("validation initialized attached identity storage")
 	}
 	f.start(t)
 	login := func(client *http.Client) string {
@@ -412,12 +423,13 @@ route {
 	f.write(t, input)
 	f.start(t)
 	persistentRequest(t, client, "GET", f.base+"/private", nil, nil, 302)
-	// Fill the actual 64 MiB snapshot through validated upstream identities.
+	// Fill the actual 64 MiB snapshot through a validated upstream picture claim.
+	// Keep the attached identity's bounded name and subject valid.
 	// No private DTOs, state-file synthesis or lowered library limits are used.
 	client = f.browser(t)
 	persistentRequest(t, client, "GET", login(client), nil, nil, 303)
 	upstream.mu.Lock()
-	upstream.identityName = strings.Repeat("n", 512<<10)
+	upstream.identityPicture = "https://avatar.example.test/" + strings.Repeat("n", 512<<10)
 	upstream.mu.Unlock()
 	refused := false
 	for i := 0; i < 150; i++ {
@@ -445,7 +457,7 @@ route {
 	}
 	persistentRequest(t, client, "GET", f.base+"/private", nil, nil, 200)
 	upstream.mu.Lock()
-	upstream.identityName = ""
+	upstream.identityPicture = ""
 	upstream.callback = f.base + "/secondary/oauth/authorization-code-callback"
 	upstream.mu.Unlock()
 	secondary := f.browser(t)

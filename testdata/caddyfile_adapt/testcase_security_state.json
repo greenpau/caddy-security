@@ -95,11 +95,24 @@
 						"auth_realm_header_name": "X-Auth-Realm"
 					}
 				],
+				"identity_stores": [
+					{
+						"name": "external_accounts",
+						"kind": "local",
+						"params": {
+							"path": "/var/lib/authcrunch/external-users.json",
+							"realm": "external_accounts"
+						}
+					}
+				],
 				"identity_providers": [
 					{
 						"name": "upstream",
 						"kind": "oauth",
 						"params": {
+							"attachment": {
+								"local_identity_store": "external_accounts"
+							},
 							"base_auth_url": "https://identity.example.test",
 							"client_id": "fixture-client",
 							"client_secret": "synthetic-client-secret",

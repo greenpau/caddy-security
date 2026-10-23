@@ -9,7 +9,7 @@ Use for `transform user` or `transform users` inside an authentication portal.
 `caddyfile_authn_transform.go` forwards the complete block to the selected
 module's `pkg/authn/transformer/parser`; provisioning resolves individual
 arguments and compiles the result again. Inspect `go list -m -json github.com/greenpau/go-authcrunch` before relying on sibling source. The
-published v1.3.8 supports the grammar below.
+selected library supports the grammar below.
 
 The surrounding [portal configuration](../configuration-authentication/SKILL.md)
 owns wiring; [static users](../configuration-users/SKILL.md) own stored challenge
@@ -126,8 +126,9 @@ and the [provider claim contract](../configuration-oauth-providers/SKILL.md#gith
 
 `github_id` is a lossless string derived from `/user`'s numeric ID; `metadata.id`
 remains numeric and `sub` remains `github.com/<login>`. Renaming an account leaves
-ID matching stable. An absent ID does not match; a supplied malformed ID rejects
-login. `github_orgs` contains filtered organization logins; existing
+ID matching stable. GitHub login rejects absent or malformed IDs before issuing
+credentials; immutable identity is required even for organization-only rules.
+`github_orgs` contains filtered organization logins; existing
 `github.com/<org>/members` groups remain available. The portal establishes trust
 from the selected backend's driver, not realm names, `origin`, roles or groups.
 Both claims are read-only to transform actions, including nested writes.
@@ -141,9 +142,9 @@ not establish authenticated GitHub identity.
 
 ## Unconditional matching
 
-`match any` applies without requiring token timestamps in selected AuthCrunch
-v1.3.11. It is supported with portal refresh, OIDC and System API keys as well
-as ordinary access-only login. The earlier Caddy compatibility restriction is
+`match any` applies without requiring token timestamps. It is supported with
+portal refresh, OIDC and System API keys as well as ordinary access-only login.
+The earlier Caddy compatibility restriction is
 removed. Use realm matchers when policy should apply only to selected backends;
 do not fabricate `exp` or rewrite matchers to make unconditional rules run.
 

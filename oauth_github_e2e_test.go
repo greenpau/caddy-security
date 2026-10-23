@@ -193,7 +193,9 @@ func TestCaddyGithubTransformsProcess(t *testing.T) {
 		{name: "large integer", id: "9007199254740993", matcher: "match github id exact 9007199254740993", wantID: "9007199254740993", allow: true},
 		{name: "large neighbor", id: "9007199254740992", matcher: "match github id exact 9007199254740993", wantID: "9007199254740992"},
 		{name: "maximum integer", id: "18446744073709551615", matcher: "match github id exact 18446744073709551615", wantID: "18446744073709551615", allow: true},
-		{name: "missing ID cannot use spoofed claim", matcher: "match github id regex .*"},
+		{name: "missing ID cannot use spoofed claim", matcher: "match github id regex .*", reject: true},
+		{name: "organization rule still requires ID", matcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"acme"}]`, reject: true},
+		{name: "organization rule rejects malformed ID", id: `"123"`, matcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"acme"}]`, reject: true},
 		{name: "zero", id: "0", reject: true},
 		{name: "negative", id: "-1", reject: true},
 		{name: "null", id: "null", reject: true},
@@ -204,23 +206,23 @@ func TestCaddyGithubTransformsProcess(t *testing.T) {
 		{name: "ID and org", id: "123", wantID: "123", matcher: "match github id exact 123", additionalMatcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"acme"}]`, wantOrgs: []string{"acme"}, allow: true},
 		{name: "ID and org wrong ID", id: "124", wantID: "124", matcher: "match github id exact 123", additionalMatcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"acme"}]`, wantOrgs: []string{"acme"}},
 		{name: "ID and org wrong org", id: "123", wantID: "123", matcher: "match github id exact 123", additionalMatcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"other"}]`, wantOrgs: []string{"other"}},
-		{name: "organization exact", matcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"other"},{"login":"acme"}]`, wantOrgs: []string{"other", "acme"}, allow: true},
-		{name: "organization regex", matcher: "match github org regex ^acme(-labs)?$", orgFilter: ".*", orgBody: `[{"login":"acme-labs"}]`, wantOrgs: []string{"acme-labs"}, allow: true},
-		{name: "organization miss", matcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"acme-labs"}]`, wantOrgs: []string{"acme-labs"}},
-		{name: "organization regex miss", matcher: "match github org regex ^acme$", orgFilter: ".*", orgBody: `[{"login":"my-acme"}]`, wantOrgs: []string{"my-acme"}},
-		{name: "organization filtered", matcher: "match github org exact acme", orgFilter: "^other$", orgBody: `[{"login":"acme"},{"login":"other"}]`, wantOrgs: []string{"other"}},
-		{name: "organization lookup not enabled", matcher: "match github org regex .*"},
-		{name: "no memberships", matcher: "match github org regex .*", orgFilter: ".*", orgBody: `[]`},
-		{name: "malformed organization login", matcher: "match github org regex .*", orgFilter: ".*", orgBody: `[{"login":123},{"login":null},{"login":""}]`},
-		{name: "organization API denial", matcher: "match github org regex .*", orgFilter: ".*", orgStatus: 403, orgBody: `[{"login":"acme"}]`},
-		{name: "organization malformed JSON", matcher: "match github org regex .*", orgFilter: ".*", orgBody: `{`},
+		{name: "organization exact", id: "123", wantID: "123", matcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"other"},{"login":"acme"}]`, wantOrgs: []string{"other", "acme"}, allow: true},
+		{name: "organization regex", id: "123", wantID: "123", matcher: "match github org regex ^acme(-labs)?$", orgFilter: ".*", orgBody: `[{"login":"acme-labs"}]`, wantOrgs: []string{"acme-labs"}, allow: true},
+		{name: "organization miss", id: "123", wantID: "123", matcher: "match github org exact acme", orgFilter: ".*", orgBody: `[{"login":"acme-labs"}]`, wantOrgs: []string{"acme-labs"}},
+		{name: "organization regex miss", id: "123", wantID: "123", matcher: "match github org regex ^acme$", orgFilter: ".*", orgBody: `[{"login":"my-acme"}]`, wantOrgs: []string{"my-acme"}},
+		{name: "organization filtered", id: "123", wantID: "123", matcher: "match github org exact acme", orgFilter: "^other$", orgBody: `[{"login":"acme"},{"login":"other"}]`, wantOrgs: []string{"other"}},
+		{name: "organization lookup not enabled", id: "123", wantID: "123", matcher: "match github org regex .*"},
+		{name: "no memberships", id: "123", wantID: "123", matcher: "match github org regex .*", orgFilter: ".*", orgBody: `[]`},
+		{name: "malformed organization login", id: "123", wantID: "123", matcher: "match github org regex .*", orgFilter: ".*", orgBody: `[{"login":123},{"login":null},{"login":""}]`},
+		{name: "organization API denial", id: "123", wantID: "123", matcher: "match github org regex .*", orgFilter: ".*", orgStatus: 403, orgBody: `[{"login":"acme"}]`},
+		{name: "organization malformed JSON", id: "123", wantID: "123", matcher: "match github org regex .*", orgFilter: ".*", orgBody: `{`},
 		{name: "other driver organization spoof", driver: "linkedin", realm: "github", matcher: "match github org exact acme", orgFilter: ".*"},
 	}
 
 	cases = append(cases,
-		githubTransformCase{name: "organization case sensitive", matcher: "match github org exact Acme", orgFilter: ".*", orgBody: `[{"login":"acme"}]`, wantOrgs: []string{"acme"}},
-		githubTransformCase{name: "quoted case insensitive regex", matcher: `match github org regex "(?i)^ACME(-labs)?$"`, orgFilter: ".*", orgBody: `[{"login":"acme-labs"}]`, wantOrgs: []string{"acme-labs"}, allow: true},
-		githubTransformCase{name: "regex search semantics", matcher: "match github org regex acme", orgFilter: ".*", orgBody: `[{"login":"my-acme-labs"}]`, wantOrgs: []string{"my-acme-labs"}, allow: true},
+		githubTransformCase{name: "organization case sensitive", id: "123", wantID: "123", matcher: "match github org exact Acme", orgFilter: ".*", orgBody: `[{"login":"acme"}]`, wantOrgs: []string{"acme"}},
+		githubTransformCase{name: "quoted case insensitive regex", id: "123", wantID: "123", matcher: `match github org regex "(?i)^ACME(-labs)?$"`, orgFilter: ".*", orgBody: `[{"login":"acme-labs"}]`, wantOrgs: []string{"acme-labs"}, allow: true},
+		githubTransformCase{name: "regex search semantics", id: "123", wantID: "123", matcher: "match github org regex acme", orgFilter: ".*", orgBody: `[{"login":"my-acme-labs"}]`, wantOrgs: []string{"my-acme-labs"}, allow: true},
 	)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -250,7 +252,9 @@ func TestCaddyGithubTransformsProcess(t *testing.T) {
 				t.Fatal("OAuth exchange and profile fetch were not exercised")
 			}
 			wantOrgCalls := 0
-			if !tc.reject && tc.driver == "github" && tc.orgFilter != "" {
+			// A missing ID reaches attachment validation after profile/org fetches.
+			// A malformed numeric ID is rejected while decoding the profile.
+			if (!tc.reject || tc.id == "") && tc.driver == "github" && tc.orgFilter != "" {
 				wantOrgCalls = 1
 			}
 			if gotOrgs != wantOrgCalls {

@@ -53,6 +53,14 @@ async function evaluate(page, fn, args) {
   return result.result.value;
 }
 async function waitFor(fn) { await waitForRead(fn, { timeout: 25000 }); }
+async function isCancelled(page) {
+  return evaluate(page, () =>
+    document.getElementById('cross-device-title').textContent === 'Sign-in cancelled' &&
+    document.getElementById('cross-device-status').textContent === 'This sign-in request has been cancelled. Start again when you’re ready.' &&
+    document.getElementById('cross-device-details').hidden &&
+    document.getElementById('cross-device-controls').hidden &&
+    !document.getElementById('cross-device-recovery').hidden);
+}
 async function page(contextId) {
   const target = await command("Target.createTarget", { url: "about:blank", browserContextId: contextId });
   const { sessionId } = await command("Target.attachToTarget", { targetId: target.targetId, flatten: true });
@@ -115,10 +123,12 @@ async function navigate(page, path, sessionClient = false) {
     assert.ok(interaction.link.startsWith(origin + '/auth/cross-device/activate?code='));
     assert.equal((await command('Storage.getCookies', { browserContextId: first.browserContextId })).cookies.some(c => c.name === 'AUTHP_ACCESS_TOKEN'), false);
     stage = 'copyable activation link';
+    const waitingStatus = await evaluate(requester, () => document.getElementById('cross-device-status').textContent);
     await command('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin, browserContextId: first.browserContextId });
     await evaluate(requester, () => document.getElementById('cross-device-copy').click());
-    await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-status').textContent.includes('copied')));
+    await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-copy-status').textContent === 'Link copied. Open it on a device you trust.'));
     assert.equal(await evaluate(requester, () => navigator.clipboard.readText()), interaction.link);
+    assert.equal(await evaluate(requester, () => document.getElementById('cross-device-status').textContent), waitingStatus);
     stage = 'activate on isolated second device';
     await navigate(approver, interaction.link.slice(origin.length));
     assert.equal(await evaluate(approver, () => document.getElementById('cross-device-code').textContent), interaction.code);
@@ -156,7 +166,7 @@ async function navigate(page, path, sessionClient = false) {
     await navigate(requester, '/auth/cross-device');
     await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-details')?.hidden === false));
     await evaluate(requester, () => document.getElementById('cross-device-cancel').click());
-    await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-status')?.textContent === 'Sign-in cancelled.'));
+    await waitFor(() => isCancelled(requester));
     assert.equal(await evaluate(requester, () => document.getElementById('cross-device-details').hidden), true);
     stage = 'navigation ends the visible request';
     await navigate(requester, '/auth/cross-device');
@@ -197,10 +207,11 @@ async function navigate(page, path, sessionClient = false) {
     });
     await waitFor(() => evaluate(requester, () => typeof window.finishClipboard === 'function'));
     await evaluate(requester, () => document.getElementById('cross-device-cancel').click());
-    await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-status').textContent === 'Sign-in cancelled.'));
+    await waitFor(() => isCancelled(requester));
     await evaluate(requester, () => window.finishClipboard());
     await new Promise(resolve => setTimeout(resolve, 100));
-    assert.ok(await evaluate(requester, () => document.getElementById('cross-device-details').hidden && document.getElementById('cross-device-status').textContent === 'Sign-in cancelled.'));
+    assert.ok(await isCancelled(requester));
+    assert.equal(await evaluate(requester, () => document.getElementById('cross-device-copy-status').textContent), '');
 
     for (const action of ['cancel', 'navigate']) {
       stage = action + ' aborts an in-flight poll without AbortSignal static helpers';
@@ -212,7 +223,7 @@ async function navigate(page, path, sessionClient = false) {
       stage = action + ' leaves the intercepted request';
       if (action === 'cancel') {
         await evaluate(requester, () => document.getElementById('cross-device-cancel').click());
-        await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-status').textContent === 'Sign-in cancelled.'));
+        await waitFor(() => isCancelled(requester));
       } else {
         await evaluate(requester, () => {
           window.addEventListener('pagehide', () => sessionStorage.setItem('cross-device-aborts', String(window.crossDeviceAborts)), { once: true });

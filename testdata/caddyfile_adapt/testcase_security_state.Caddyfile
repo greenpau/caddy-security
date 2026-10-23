@@ -3,6 +3,10 @@
 		state {
 			directory "/var/lib/authcrunch/private runtime"
 		}
+		local identity store external_accounts {
+			realm external_accounts
+			path /var/lib/authcrunch/external-users.json
+		}
 		oauth identity provider upstream {
 			driver generic
 			realm upstream
@@ -10,6 +14,7 @@
 			client_secret synthetic-client-secret
 			base_auth_url https://identity.example.test
 			metadata_url https://identity.example.test/.well-known/openid-configuration
+			attach to local identity store external_accounts
 		}
 		authorization policy direct {
 			use oauth identity provider upstream

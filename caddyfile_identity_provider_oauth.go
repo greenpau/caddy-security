@@ -65,6 +65,8 @@ import (
 //		login icon <class_name|color|background_color|text|text_color|text_background_color> <value>
 //		login icon priority <integer>
 //		jwks key <kid> <public_PEM_path>
+//		attach to local identity store <store_name>
+//		login store <backend_name> namespace <deployment_namespace>
 //		disabled
 //	}
 //
@@ -102,6 +104,11 @@ import (
 // Statements with runtime references are retained on App and reparsed after
 // replacing their original arguments once. Derived defaults must not rewrite
 // secret lookup keys before provisioning (for example Google's client-ID suffix).
+//
+// Attachment and login-store references delegate through the same parser.
+// Attachment selects a concrete local store by name; omission uses private memory.
+// A login-store reference parses but cannot provision until Caddy supplies the
+// named runtime backend through ServerOptions; the current app supplies none.
 func parseCaddyfileOAuthIdentityProvider(d *caddyfile.Dispenser, app *App, name string, shortcuts []string) error {
 	cfg := app.Config
 	var lines [][]string

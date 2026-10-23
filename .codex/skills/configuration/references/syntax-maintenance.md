@@ -37,10 +37,11 @@ Never run sibling tests, modify its source/Git state, or generate files there.
 Follow the whole path: Caddy tokenization and header/block handling → local
 translation or raw encoding → upstream parser → shared dispatcher → typed
 validation → runtime consumer. A field can be recognized by one layer and
-rejected or deferred by the next. Record the layer and the selected version
-when documenting a restriction. Do not infer grammar from JSON fields alone.
+rejected or deferred by the next. Record the layer and selected version in the
+audit evidence under `tmp/`; keep skill guidance version-neutral. Do not infer
+grammar from JSON fields alone.
 
-Caddy v2.11.7 treats quoted braces as literal tokens. Qualify both sides of that
+Caddy treats quoted braces as literal tokens. Qualify both sides of that
 contract: preserve literal brace arguments and following declarations, while
 requiring unquoted block delimiters and rejecting missing owned closing braces.
 Direct dispenser tests and the public adapter exercise different boundaries;
@@ -102,8 +103,8 @@ change with the selected host parser.
    reference. Apply the [parser documentation guidance](../../coding-directives/SKILL.md#caddyfile-parsers)
    to explain operational meaning, defaults, scope, interactions and reasoning
    beside the grammar; verify those claims against the runtime consumer.
-   Keep recognized-but-restricted forms visible, with the rejecting
-   layer and version. Keep unsupported typed-only fields distinct from usable
+   Keep recognized-but-restricted forms visible, identifying the rejecting
+   layer; retain version details in the audit evidence. Keep unsupported typed-only fields distinct from usable
    Caddy syntax; never filter them away to make validation pass.
 5. Use required `<value>` / `<a|b>`, optional `[value]`, and repetition `...`
    consistently. Multiword argument values need quoting; multiword keywords
@@ -171,8 +172,8 @@ Known fixture outcomes: `testcase_authorize_acl_fields_duplicate`,
 `testcase_security_with_secrets` requires an external module absent from the
 normal test binary; `testcase_authenticate_malformed_replacement` adapts but
 fails runtime resolution. `testcase_authenticate_with_match_any_refresh` and
-`testcase_authenticate_with_match_any_system` adapt and resolve with selected
-v1.3.11; the library now evaluates unconditional rules without timestamps.
+`testcase_authenticate_with_match_any_system` adapt and resolve; the library
+evaluates unconditional rules without timestamps.
 Check test registrations if these outcomes change.
 `testcase_security_oauth_registration_store` needs
 `SECURITY_TEST_REGISTRATION_PATH` set to an isolated private store containing
@@ -189,9 +190,7 @@ restrictions without claiming that parsing tests prove runtime behavior.
 
 ## Known Boundaries
 
-Recheck these against the selected implementation when dependencies change.
-The original inventory used published v1.3.3; changed boundaries are qualified
-against the selected version below. Use the
+Recheck these against the selected implementation when dependencies change. Use the
 [dependency compatibility map](authcrunch-compatibility.md) for changed surfaces
 and their Caddy validation:
 
@@ -214,7 +213,7 @@ and their Caddy validation:
   Bare ordinary `match` retains historical exact spelling in JSON. Static
   local users expose repeated `auth challenges <rule body>`. Both surfaces
   reject unsupported email checkpoints; neither setting enrolls credentials.
-- Selected v1.3.11 supports `match any` transforms with refresh, OIDC and System
+- The selected runtime supports `match any` transforms with refresh, OIDC and System
   API keys: unconditional evaluation no longer requires timestamps. Keep the
   positive policy/claims and unsatisfied-factor regressions in the Caddy suite.
 - `{claims.*}` placeholders survive Caddy resolution only in transform
@@ -228,9 +227,8 @@ and their Caddy validation:
   key, and a supported driver at validation; Caddy requires a location even
   for disabled SSO definitions.
 
-The v1.2.4 → v1.2.5 source comparison leaves delegated Caddyfile grammar,
-authclient, refresh and OIDC implementations unchanged. It changes authorization
-path interpretation and token path wildcard matching. Follow
+Authorization path interpretation and token path wildcard matching are runtime
+contracts independent of delegated Caddyfile grammar. Follow
 [authorization path behavior](../../configuration-authorization/SKILL.md#policy-options)
 and its provider/TLS regressions when upgrading: successful adaptation alone
 cannot establish the stricter request-time authorization contract.

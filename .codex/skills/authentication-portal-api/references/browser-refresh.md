@@ -76,9 +76,11 @@ URL, without rotating or looking up uncertain credentials.
 
 With an eligible refresh cookie and expired access, top-level `/portal` or
 `/login` serves the session continuation page. When no uncertainty exists, it
-looks up the SID, rotates, then returns through `/portal`. Trusted login returns
-use `redirect_url`; untrusted destinations are ignored. `/login?fresh=1` displays
-login instead of returning to continuation. This does not automatically renew
+looks up the SID, rotates, then returns to the flow's trusted `redirect_url`, or
+to `/portal?redirect_url=` when no trusted destination is bound. The explicit empty
+value prevents another tab's return cookie from supplying a destination. Preserve
+it on rendered fresh-login links, including `/login?fresh=1&redirect_url=`.
+`/login?fresh=1` displays login instead of returning to continuation. This does not automatically renew
 arbitrary cross-origin protected applications: those applications must explicitly
 integrate navigation to the portal.
 
@@ -138,18 +140,19 @@ API-key and explicit native-body logins remain separate contracts.
   trust state. Each real-browser scenario also rejects an untrusted certificate
   and a hostname mismatch before completing the positive TLS journey.
 
-Node 24 and Chrome/Chromium are required; missing engines fail rather than skip.
+Node.js with built-in WebSocket and SQLite support and Chrome/Chromium are
+required; missing engines fail rather than skip.
 Set `AUTHCRUNCH_TEST_BROWSER` to a browser executable when autodetection cannot
 find it. The launcher uses a temporary profile under `tmp/`, mock/basic key
-storage and the profile's real custom-certificate database. The Node 24 helper
+storage and the profile's real custom-certificate database. The Node.js helper
 `testdata/browser/token_refresh_browser_trust.cjs` seeds only a fresh profile,
-using Chromium's schema v1 and trusted-certificate metadata, verified against
-[Chromium 153.0.8010.47](https://github.com/chromium/chromium/blob/153.0.8010.47/components/server_certificate_database/server_certificate_database.cc)
-and its [metadata definition](https://github.com/chromium/chromium/blob/153.0.8010.47/components/server_certificate_database/server_certificate_database.proto).
+using Chromium's certificate database schema and trusted-certificate metadata, verified against
+[Chromium certificate database implementation](https://github.com/chromium/chromium/blob/73934a44f61e6b3878d1943064c141a5a820f5f7/components/server_certificate_database/server_certificate_database.cc)
+and its [metadata definition](https://github.com/chromium/chromium/blob/73934a44f61e6b3878d1943064c141a5a820f5f7/components/server_certificate_database/server_certificate_database.proto).
 If a browser changes that format, the positive TLS control must fail; never
 fall back to certificate-error flags or CDP overrides. This helper is independent
 of the opt-in official conformance runner. It does not change machine trust,
-reuse a personal browser profile or disable certificate validation. CI selects Node 24
+reuse a personal browser profile or disable certificate validation. CI selects the supported Node.js runtime
 and checks the runner's Google Chrome before `make ci-check`; the browser test is
 part of the normal Go suite. This is local Chrome integration evidence, not a
 promise about every browser or production proxy.

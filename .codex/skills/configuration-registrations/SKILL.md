@@ -119,6 +119,9 @@ restart discards them; the durable dropbox only contains confirmed entries.
 An expired or lost pending registration must be started again. A supplied
 password must be plaintext: the selected AuthCrunch rejects reserved password-hash import prefixes
 on the public registration path, while trusted static-user imports are separate.
+The HTML form reports invalid input inline with localized messages. Tests should
+check the rendered message and absence of delivery or persisted users, rather
+than expecting the internal validator's error text to appear verbatim.
 
 When multiple registrations target different identity stores or realms, use
 separate dropbox paths. The portal exposes realm-specific registration URLs,

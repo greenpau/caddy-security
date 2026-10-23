@@ -67,7 +67,7 @@ The response must return the issued RelayState and matching request ID to the
 same browser and ACS URL. Expired, missing, replayed or foreign-browser state
 fails; start a new portal login rather than replaying the assertion.
 
-`idp_metadata_location` accepts a filesystem path or HTTP(S) URL. In v1.3.4,
+`idp_metadata_location` accepts a filesystem path or HTTP(S) URL.
 `idp_sign_cert_location` is a local PEM certificate path, read with
 `pkg/util/file.ReadCertFile`; it does not fetch certificate URLs. The separately
 configured certificate pins the signing trust anchor, so metadata cannot add
@@ -110,12 +110,20 @@ saml identity provider directory {
 ```
 
 The assertion must supply attributes whose names end in
-`identity/claims/emailaddress` and `identity/claims/displayname`; these populate
-the required email and name claims. NameID alone, or attributes named only
-`email` and `displayName`, do not satisfy the current consumer. Roles are read
+`identity/claims/emailaddress`, `identity/claims/displayname`, and
+`identity/claims/name`; these populate email, display name, and the nonempty
+`sub` needed by the attached-account login. NameID alone, or attributes named
+only `email` and `displayName`, do not satisfy the consumer. Roles are read
 from attribute names ending in `Attributes/Role`. Inspect
 `pkg/idp/saml/authenticate.go` before assuming another IdP claim name maps to a
 portal claim.
+
+Configure a nonempty, stable NameID; persistent NameID is the recommended IdP
+setting. Transient NameIDs are rejected because they cannot identify the local
+account attached to the verified external login. The issuer, NameID format and
+qualifiers are part of the external identity; display names and email do not
+replace that authority. This does not add an attachment directive to Caddy's
+SAML parser.
 
 ## Review Checklist
 
@@ -140,10 +148,10 @@ Use these references:
 - `go-authcrunch/pkg/idp/saml` for runtime validation and assertion behavior.
 
 `caddyfile_authn_test.go` contains an Azure parser example, but it does not read
-metadata or perform a signed SAML exchange. This checkout has no complete SAML
-login E2E. Before claiming a provider integration works, verify a portal-started
-login through actual Caddy with synthetic signed assertions, the expected
-email/name/roles, and protected-route access. Include missing generic login
+metadata or perform a signed SAML exchange. The signed-SAML journey in
+`TestCaddyCrossDeviceProvidersE2E` uses a synthetic IdP with persistent NameID,
+portal-started login, transfer approval and protected-route access. Broader
+provider qualification must also check expected email/name/roles, missing generic login
 URL, unreadable certificate, wrong signature, wrong ACS, replay and missing or
 foreign browser cookie failures. Upstream SAML tests are implementation
 evidence, not Caddy qualification.

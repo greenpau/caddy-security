@@ -55,10 +55,10 @@ async function page(contextId) {
   await command("Runtime.enable", {}, sessionId);
   return sessionId;
 }
-async function navigate(page, path, sessionClient = false) {
+async function navigate(page, path, sessionClient = false, expectedPath = path) {
   const result = await command("Page.navigate", { url: origin + path }, page);
   if (result.errorText) throw new Error("portal navigation failed");
-  await waitFor(() => evaluate(page, (url) => location.href === url && document.readyState === "complete", origin + path));
+  await waitFor(() => evaluate(page, (url) => location.href === url && document.readyState === "complete", origin + expectedPath));
   if (sessionClient) await waitFor(() => evaluate(page, () => !!window.AuthCrunchSession));
 }
 
@@ -153,13 +153,14 @@ async function coordinatedRefresh(first, second) {
   assert.equal(after.max_active,1,"refresh operations overlapped");
 }
 async function continuation(context) {
+  stage="expired access continuation";
   const first=await page(context), second=await page(context);
   await navigate(first,mount+"/login?fresh=1");
   const session=await login(first);
   // No coordinator is loaded while the real signed access token expires.
   await new Promise(resolve=>setTimeout(resolve,Math.max(0,session.expires*1000-Date.now()+1100)));
   const before=await snapshot(first);
-  await navigate(first,mount+"/portal");
+  await navigate(first,mount+"/portal",true,mount+"/portal?redirect_url=");
   await waitFor(()=>evaluate(first,()=>document.querySelector('script[data-session]')!==null));
   await metadataReady(first,session.sid);
   const after=await snapshot(first);
@@ -180,7 +181,7 @@ async function continuation(context) {
     await new Promise(resolve=>setTimeout(resolve,Math.max(0,session.expires*1000-Date.now()+1100)));
     const target=trusted?origin+mount+"/_test/signed-out":"https://foreign.example/";
     await command("Page.navigate",{url:origin+mount+"/login?redirect_url="+encodeURIComponent(target)},first);
-    const expected=trusted?target:origin+mount+"/portal";
+    const expected=trusted?target:origin+mount+"/portal?redirect_url=";
     await waitFor(()=>evaluate(first,url=>location.href===url && document.readyState==="complete",expected));
     await navigate(first,mount+"/portal",true);
     await assertPrivacy(first,context);
@@ -218,8 +219,8 @@ async function unsupported(context, kind) {
   assert.equal(after.requests,before.requests,"unsupported browser rotated");
   assert.equal(after.lookups,before.lookups,"unsupported browser looked up refresh session");
   assert.equal(await evaluate(tab,()=>document.querySelector('script[data-action]').dataset.action),"continue");
-  await evaluate(tab,()=>document.querySelector('a[href$="/login?fresh=1"]').click());
-  await waitFor(()=>evaluate(tab,url=>location.href===url && document.readyState==="complete",origin+mount+"/login?fresh=1"));
+  await evaluate(tab,()=>document.querySelector('a[href$="/login?fresh=1&redirect_url="]').click());
+  await waitFor(()=>evaluate(tab,url=>location.href===url && document.readyState==="complete",origin+mount+"/login?fresh=1&redirect_url="));
   assert.equal(await evaluate(tab,()=>!!window.AuthCrunchSession),false,"fresh-login fallback looped through renewal");
 }
 async function coordination(context) {

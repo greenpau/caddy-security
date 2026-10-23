@@ -94,7 +94,12 @@ new handler for direct policies and regenerate old adapted route JSON.
 
 Without state, completed sessions and pending exchanges disappear at restart.
 [Persistent runtime state](../../configuration-state/SKILL.md) retains completed
-sessions and revocations across stop/start; pending exchanges still disappear.
+sessions and revocations across stop/start when the provider explicitly attaches
+to a file-backed local identity store. Configure
+`attach to local identity store NAME` inside the OAuth provider and preserve that
+store together with runtime state. The default provider-private memory attachment
+loses identities at restart, so its old session evidence fails validation even
+when the session itself was persisted. Pending exchanges still disappear.
 
 ## LinkedIn and route deployment
 
@@ -138,7 +143,7 @@ in a direct policy.
 
 ## Consumer validation
 
-The selected AuthCrunch v1.3.6 already contains the direct OAuth APIs.
+The selected AuthCrunch supplies the direct OAuth APIs.
 `TestAuthorizationOAuth*` and `TestParseAuthorizationOAuth` cover complete
 statement parsing, token boundaries, runtime secrets, JSON restoration, root
 provider references, and collisions. `testcase_authorize_oauth` is registered

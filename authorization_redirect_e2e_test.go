@@ -374,8 +374,14 @@ func TestCaddyAuthorizationRedirectProcess(t *testing.T) {
 						authURL = f.upstream.callback
 					}
 					final := f.login(t, client, protocol, mode, authURL+"?redirect_url="+url.QueryEscape("https://other.example/private"))
-					if final != f.portal+"/portal" {
-						t.Fatalf("untrusted post-login target not rejected: %q", final)
+					want := f.portal + "/portal"
+					if mode == "oauth" {
+						// OAuth binds the explicitly empty destination. The local
+						// helper above exercises legacy POST/cookie fallback.
+						want += "?redirect_url="
+					}
+					if final != want {
+						t.Fatalf("%s untrusted post-login target = %q, want %q", mode, final, want)
 					}
 				}
 			})

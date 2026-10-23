@@ -308,8 +308,8 @@ func TestCaddyTokenRefreshProcess(t *testing.T) {
 			f.post(t, f.client, "/api/refresh_token", struct{}{}, old, 401)
 			// Rejected runtime candidates must leave the serving portal available.
 			for _, tc := range []struct{ old, next, want string }{
-				{"realms employees contractors", "realms missing", "exactly one store"},
-				{"enable identity stores employeesdb contractorsdb guestsdb", "enable identity store guestsdb", "exactly one store"},
+				{"realms employees contractors", "realms missing", "exactly one renewal source"},
+				{"enable identity stores employeesdb contractorsdb guestsdb", "enable identity store guestsdb", "exactly one renewal source"},
 				{"realm contractors", "realm employees", "same"},
 			} {
 				input := strings.Replace(f.input, tc.old, tc.next, 1)
