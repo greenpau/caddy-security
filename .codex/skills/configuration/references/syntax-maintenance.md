@@ -65,6 +65,7 @@ change with the selected host parser.
 | User transforms | `caddyfile_authn_transform.go` | `pkg/authn/transformer/parser`, `pkg/authchal/parser`, `pkg/acl`, transformer runtime |
 | Portal/policy crypto | `caddyfile_authn_crypto.go`, `caddyfile_authz_crypto.go` | `pkg/kms/crypto_keystore_config.go`, `crypto_key_config.go`, `crypto_key.go` |
 | Policy ACL fields, rules and shortcuts | `caddyfile_authz_acl.go`, `caddyfile_authz_acl_shortcuts.go` | `pkg/acl/parser.NewACLFieldConfigFromDirectives` → one `PolicyConfig.ConfigureAccessListFields` call before rule compilation; `pkg/acl` conditions/actions |
+| Static claims enrichment | `caddyfile_authz_enrichment.go`, `claims_enrichment_static.go` | `pkg/authz/enrichment/parser`, `plugins/claims-enrichment/static/parser`; host checks source, contract, age and requested types |
 | Direct policy OAuth | `caddyfile_authz.go`, `plugin_authorization.go` | `pkg/authz/oauth/parser` → `PolicyConfig.ConfigureOAuth`; route handler preserves authorization, bypass and handled responses |
 | Policy options, bypass, headers, auth proxy | `caddyfile_authz_misc.go`, `caddyfile_authz_bypass.go`, `caddyfile_authz_inject.go` | `pkg/authz`, `pkg/authz/bypass`, `pkg/authz/injector`, `pkg/authproxy` |
 | Local/LDAP stores and static users | `caddyfile_identity_store.go` | `pkg/ids/config.go`, `pkg/ids/local`, `pkg/ids/ldap`, `pkg/authn/icons` |

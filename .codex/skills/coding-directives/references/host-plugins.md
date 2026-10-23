@@ -23,7 +23,7 @@ realm and database path are distinct values; never use a path as implicit identi
 
 | Category | Host module naming | Status |
 | --- | --- | --- |
-| Claims enrichment | `security.claims_enrichment.<driver>` | Loaded through the native app binding below; no production backend is bundled yet |
+| Claims enrichment | `security.claims_enrichment.<driver>` | Native app binding below; bundled `static` adapter also has policy Caddyfile syntax |
 | Secrets | `security.secrets.<driver>` | Existing `SecretsManager` integration; external static/AWS module IDs remain unchanged |
 | External authorization | `security.external_authorization.<driver>` | Naming convention for a future adapter; no host loader yet |
 | Credential authenticators | `security.credential_authenticators.<driver>` | Proposed; bind validated runtime proxy config before root construction |
@@ -61,13 +61,17 @@ Binding validation operates on deep copies. Caddy's `LoadModule` clears the raw
 field it loads, so pass a copied binding to it. Preserve original JSON through
 provisioning and round trips. Decode backend values into public typed structs;
 where arbitrary JSON numbers are permitted, the companion must use
-`json.Decoder.UseNumber`. Raw backend bytes preserve number precision until that
-decoder runs. Do not introduce intermediate `map[string]any` numeric decoding.
+`json.Decoder.UseNumber`. Caddy decodes its configuration tree and inline module
+objects through `map[string]any`, so raw module bytes alone cannot preserve bare JSON numbers.
+The static adapter transports its entire object in a `claims_json` string and
+uses `UseNumber` only after that boundary. Do not insert decoded numeric values
+into the outer Caddy JSON tree.
 
-There is no Caddyfile statement for this list yet. Backend fields and identity
-binding fields currently receive literal native values, without Caddy runtime
-replacement. Add any supported replacement centrally with its feature's parser,
-redaction and resolution tests. Raw module configuration is visible to ordinary
+The bundled static adapter has a
+[policy Caddyfile block](../../configuration-authorization/references/static-claims.md).
+Backend fields and identity binding fields receive literal values without Caddy
+runtime replacement. Add any supported replacement centrally with its feature's
+parser, redaction and resolution tests. Raw module configuration is visible to ordinary
 Caddy configuration introspection; never put runtime credentials/results in it.
 
 ## Factory and resource ownership
@@ -166,7 +170,9 @@ uses a test-only module through actual Caddy TLS routes and reloads: repeated
 authenticated requests, rejected candidates, validation-only cleanup, a blocked
 lookup across replacement, and final stop. It verifies transport trust.
 
-These tests establish the host factory/lifecycle seam. They do not qualify the
-static backend, its ACL semantics, external policy services or SQLite storage.
-Each companion adds its own native/text round trips, Caddyfile fixtures, real
-authentication/authorization E2E, backend failures and resource assertions.
+These tests establish the host factory/lifecycle seam. Static adapter coverage
+lives in `claims_enrichment_static_test.go`, `caddyfile_authz_enrichment_test.go`
+and `claims_enrichment_static_e2e_test.go`, plus adaptation fixtures. Each other
+companion needs its own native/text round trips, real authentication/authorization
+E2E, backend failures and resource assertions; these tests do not qualify
+external policy services or SQLite storage.

@@ -1,6 +1,6 @@
 ---
 name: configuration-authorization
-description: "Configure authorization policies, ACLs, bypasses, identity headers, JWT verification, remote Basic/API-key auth, and direct OAuth without a portal."
+description: "Configure authorization policies, ACLs, static claims enrichment, bypasses, identity headers, JWT verification, remote Basic/API-key auth, and direct OAuth without a portal."
 ---
 
 # Configuration Authorization
@@ -18,11 +18,13 @@ Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure JWT
 verification material, token names/lifetimes, generated or secret-backed keys,
 and System API `system` keys for remote Basic or API-key authentication.
 
-Native app `claims_enrichment` bindings load category-specific Caddy factories;
-no production backend or Caddyfile statement is bundled yet. Read the
+Use the [static claims enrichment reference](references/static-claims.md) for
+`claims enrichment static` blocks, exact JSON values, identity bindings and
+ACL-only decisions. Native app `claims_enrichment` bindings also load companion
+Caddy factories; read the
 [host plugin contract](../coding-directives/references/host-plugins.md) before
-adding a companion or suggesting backend selectors. Lower-level AuthCrunch
-interfaces alone do not establish root injection support.
+adding another backend. Lower-level AuthCrunch interfaces alone do not establish
+root injection support.
 
 Read these files when details matter:
 

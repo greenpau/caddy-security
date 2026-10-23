@@ -40,6 +40,7 @@ const (
 //		acl field <name> { ... }
 //		acl rule { ... }
 //		acl default <allow|deny>
+//		claims enrichment static { ... }
 //		bypass uri <exact|partial|prefix|suffix|regex> <path>
 //		validate bearer header
 //		inject headers with claims
@@ -79,12 +80,22 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		}
 		d.Prev()
 		var fields []*acl.FieldConfig
+		var claimsEnrichment *ClaimsEnrichmentBinding
 		var oauthStatements []string
 		nesting := d.Nesting()
 		for d.NextBlock(nesting) {
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
+			case "claims":
+				if claimsEnrichment != nil {
+					return d.Errf("authorization policy permits one claims enrichment block")
+				}
+				var err error
+				claimsEnrichment, err = parseCaddyfileClaimsEnrichment(d, p.Name)
+				if err != nil {
+					return err
+				}
 			case "}":
 				return d.Errf("authorization policy %q requires an unquoted closing brace", p.Name)
 			case "use", "oauth":
@@ -158,6 +169,9 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		}
 		if err := app.Config.AddAuthorizationPolicy(p); err != nil {
 			return d.WrapErr(err)
+		}
+		if claimsEnrichment != nil {
+			app.ClaimsEnrichment = append(app.ClaimsEnrichment, claimsEnrichment)
 		}
 		// Publish deferred settings only after validation accepts the policy.
 		// A failed ACL must not leave an orphaned entry or prevent a retry.

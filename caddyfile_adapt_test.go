@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "static claims enrichment and exact JSON values", inputFileNamePrefix: "testcase_authorize_static_claims"},
+		{name: "static claims enrichment rejects incompatible attributes", inputFileNamePrefix: "testcase_authorize_static_claims_invalid", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': claims enrichment attribute has invalid type or size, at Caddyfile:14")},
 		{name: "duplicate typed ACL alias is rejected", inputFileNamePrefix: "testcase_authorize_acl_fields_duplicate", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': authorization policy \"custom\": acl field configuration error: duplicate name, at Caddyfile:13")},
 		{name: "typed custom ACL fields and policy isolation", inputFileNamePrefix: "testcase_authorize_acl_fields"},
