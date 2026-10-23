@@ -114,6 +114,7 @@ func TestCaddyfileCryptoSettings(t *testing.T) {
 
 func TestCaddyfileCryptoValidationOwnership(t *testing.T) {
 	key := newJWKSKeyFiles(t, "OKP", "imported")
+	rsaKey := newJWKSKeyFiles(t, "RSA", "rsa")
 	for _, tc := range []struct {
 		name, line string
 		wantErr    bool
@@ -123,6 +124,10 @@ func TestCaddyfileCryptoValidationOwnership(t *testing.T) {
 		{"ES512", "crypto default autogenerate algorithm ES512", false},
 		{"lowercase_label", "crypto default autogenerate algorithm ed25519", true},
 		{"unsupported_generation", "crypto default autogenerate algorithm RS256", true},
+		{"PS256_generation", "crypto default autogenerate algorithm PS256", true},
+		{"RSA_imported", rsaKey.signer("rsa"), false},
+		{"RSA_relabel_PS256", rsaKey.signer("rsa") + " algorithm PS256", true},
+		{"RSA_public_verify", rsaKey.verifier("rsa"), false},
 		{"imported", key.signer("signing"), false},
 		{"imported_autogeneration_label", "crypto default autogenerate algorithm Ed25519\n" + key.signer("signing"), false},
 		{"imported_relabel", key.signer("signing") + " algorithm Ed25519", true},
@@ -150,6 +155,15 @@ func TestCaddyfileCryptoValidationOwnership(t *testing.T) {
 						if len(signers) != 1 || signers[0].Sign.Token.DefaultMethod != "EdDSA" {
 							t.Fatal("autogeneration settings relabeled an imported Ed25519 signer")
 						}
+					}
+					if tc.name == "RSA_imported" {
+						signers := store.GetSignKeys()
+						if len(signers) != 1 || signers[0].Sign.Token.DefaultMethod != "RS512" {
+							t.Fatal("imported RSA key changed its default signing algorithm")
+						}
+					}
+					if tc.name == "RSA_public_verify" && (len(store.GetSignKeys()) != 0 || len(store.GetVerifyKeys()) != 1) {
+						t.Fatal("public RSA verification key gained signing capability")
 					}
 					if tc.name == "public_sign_verify" || tc.name == "private_verify_only" {
 						if len(store.GetSignKeys()) != 0 || len(store.GetVerifyKeys()) != 1 {

@@ -161,11 +161,22 @@ P-384, and P-521 curves, mapped to `ES256`, `ES384`, and `ES512`. A private
 key can sign and, unless usage is exactly `sign`, verify through its public
 key. A public key can only verify.
 
-The shared KMS also verifies `PS256` with RSA public keys, requiring SHA-256 and an
-exactly 32-byte PSS salt. Existing portal RSA issuance still uses the RS
-algorithms. The separate reference PS256 signer is not selectable by a portal
-or OP directive; its public integration point is the refresh manager. Keep
-verification support separate from the unimplemented signing adapter.
+The shared KMS also verifies `PS256` with 2048–8192-bit RSA public keys, requiring
+SHA-256 and an exactly 32-byte PSS salt. It rejects `PS384`, `PS512`, and other
+salt lengths. RSA verification continues to accept the RS algorithms; loading
+an RSA verifier does not create a PS256-only algorithm policy. Signature
+verification does not establish issuer, audience, or token purpose; consumers
+must enforce those trust boundaries separately.
+
+Existing portal RSA issuance still uses the RS algorithms, with `RS512` as the
+imported-key default and public JWKS advertising that actual signing choice.
+The separate reference PS256 signer is not selectable by a portal or OP
+directive; its public integration point is the standalone refresh manager.
+Neither an autogeneration label nor an imported-key `algorithm PS256` suffix
+enables it. Before adding a selector, recheck the
+[public injection boundary](../coding-directives/references/host-plugins.md#public-injection-audit)
+and require a root attachment API that preserves portal issuance transactions,
+credential withholding on failure, and signing-key discovery.
 
 ```caddyfile
 crypto key auth1 sign-verify from file /etc/caddy/jwt/sign_key.pem
@@ -316,6 +327,14 @@ loading, exact labels, public routing, gatekeeper trust, private export and
 reimport, and live discovery changes. `TestCaddyJWKSPersistenceE2E` in
 `jwks_persistence_e2e_test.go` checks restart, rotation, and retirement in fresh
 OS processes, plus live verifier retirement after cached authorization.
+
+`TestCaddyRSAPSSVerificationE2E` in `rsa_pss_e2e_test.go` sends independently
+minted PS256 tokens through bearer and cookie authorization over trusted TLS.
+It checks strict salt/hash/algorithm handling, wrong keys, tampering, HMAC
+confusion, time/role denial, failed candidate preservation, verifier rollover,
+retirement, and Caddy stop/start. Real password login and public JWKS remain
+RS512 throughout. These checks qualify verification only; they do not establish
+portal PS256 issuance, refresh atomicity with a custom signer, or OP support.
 
 Use these examples for orientation:
 
