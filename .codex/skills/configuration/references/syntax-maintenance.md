@@ -76,6 +76,7 @@ change with the selected host parser.
 | Portal OIDC provider | `caddyfile_authn_oidc.go`, `caddyfile_authn.go`, `oidc_config.go` | `Config.ConfigureOIDCProvider` → `pkg/oidc/parser/provider.go` → `PortalConfig.ConfigureOIDCProvider`; collect all applications first, attach before portal validation, reject overlapping issuer mounts across portals |
 | Upstream SAML | `caddyfile_identity_provider.go` | `pkg/idp/config.go`, `pkg/idp/saml` |
 | SSO apps | `caddyfile_sso_provider.go` | `pkg/sso` |
+| SQLite credential authenticators | `caddyfile_credential_authenticator.go`, `credential_authenticator_sqlite.go` | `plugins/credential-authenticators/sqlite/parser`; root `credential authenticator sqlite <name>` declarations bind existing policy API-key syntax with exact names/realms before root construction |
 | Credentials | `caddyfile_credentials.go` | `pkg/credentials` |
 | Messaging | `caddyfile_messaging.go` | `pkg/messaging/email_provider.go`, `file_provider.go` |
 | User registration | `caddyfile_user_registration.go` | `pkg/registry/local_user_registry.go`, domain rules |

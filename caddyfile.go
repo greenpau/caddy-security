@@ -171,6 +171,10 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 	for _, d := range declarations {
 		tld := d.Val()
 		switch tld {
+		case "credential":
+			if err := parseCaddyfileCredentialAuthenticator(d, app); err != nil {
+				return nil, err
+			}
 		case "credentials":
 			if err := parseCaddyfileCredentials(d, app.Config); err != nil {
 				return nil, err

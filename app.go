@@ -83,6 +83,10 @@ type App struct {
 
 	SecretsManagerConfigs []json.RawMessage `json:"secrets_managers,omitempty" caddy:"namespace=security.secrets inline_key=driver"`
 	secretsManagers       []SecretsManager
+	// CredentialAuthenticatorConfigs declares fresh API-key backends selected by
+	// existing policy auth-proxy name/realm bindings. Handles are app-owned.
+	CredentialAuthenticatorConfigs []json.RawMessage `json:"credential_authenticators,omitempty" caddy:"namespace=security.credential_authenticators inline_key=driver"`
+	credentialAuthenticators       []preparedCredentialAuthenticator
 
 	// ClaimsEnrichment binds host modules to individual authorization policies.
 	ClaimsEnrichment []*ClaimsEnrichmentBinding `json:"claims_enrichment,omitempty"`
@@ -215,6 +219,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareExternalAuthorization(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareCredentialAuthenticators(ctx, &config); err != nil {
+		return err
+	}
 	if config.State != nil {
 		// Caddy provisions every candidate before starting any of its apps.
 		// Reject persistent-to-persistent replacement at that boundary, before
@@ -247,15 +254,23 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		return app.privateConfigError("reserve identity storage", err)
 	}
 	app.identityFiles = files
+	credentialClosers, err := app.attachCredentialAuthenticators(app.pluginContext)
+	if err != nil {
+		closeErr := closePluginResources(credentialClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
 
 	server, err := authcrunch.NewServer(config, app.logger)
 	if err != nil {
+		closeErr := closePluginResources(credentialClosers)
 		releaseIdentityFiles(app.identityFiles)
 		app.identityFiles = nil
 		if config.State != nil {
 			// Do not put constructor details (possibly containing credentials)
 			// into shared Caddy logs or admin API responses.
-			return fmt.Errorf("persistent security runtime could not start; ensure the state directory is private and intact and stop its current owner before starting another instance (overlapping reload is unsupported)")
+			return errors.Join(fmt.Errorf("persistent security runtime could not start; ensure the state directory is private and intact and stop its current owner before starting another instance (overlapping reload is unsupported)"), closeErr)
 		}
 		err = app.privateConfigError("construct runtime", err)
 		app.logger.Error(
@@ -263,9 +278,10 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 			zap.String("app", app.Name),
 			zap.Error(err),
 		)
-		return err
+		return errors.Join(err, closeErr)
 	}
-	closers, err := app.attachClaimsEnrichment(app.pluginContext, server)
+	claimsClosers, err := app.attachClaimsEnrichment(app.pluginContext, server)
+	closers := append(credentialClosers, claimsClosers...)
 	if err == nil {
 		var externalClosers []io.Closer
 		externalClosers, err = app.attachExternalAuthorization(app.pluginContext, server)

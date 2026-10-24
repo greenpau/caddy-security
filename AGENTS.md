@@ -80,6 +80,11 @@ modules register from package `init` hooks.
 - `caddyfile_resolve.go` applies Caddy replacer values and
   `security.secrets.*` plugin lookups to authcrunch configuration during
   provisioning.
+- `caddyfile_credential_authenticator.go` and `credential_authenticator_sqlite.go`
+  declare named API-key backends. `app_credential_authenticators.go` binds them
+  before root construction and shares handles only within one app.
+  `command_api_key.go` owns private offline SQLite key issuance and revocation;
+  the authorization skill owns configuration and required Caddy log redaction.
 - `caddyfile_state.go` adapts the optional root runtime-state block. Persistent
   roots are constructed in `App.Start`; overlapping persistent reload is rejected
   before candidate routes start, and Cleanup drains calls before root disposal.

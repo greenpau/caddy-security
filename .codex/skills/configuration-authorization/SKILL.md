@@ -1,6 +1,6 @@
 ---
 name: configuration-authorization
-description: "Configure authorization policies, ACLs, static claims enrichment, required external decisions, bypasses, identity headers, JWT verification, remote Basic/API-key auth, and direct OAuth without a portal."
+description: "Configure authorization policies, ACLs, static claims enrichment, required external decisions, bypasses, identity headers, JWT verification, remote Basic/API-key auth, SQLite API keys, and direct OAuth without a portal."
 ---
 
 # Configuration Authorization
@@ -285,7 +285,7 @@ These checks leave the request URL unchanged for downstream handlers. Keep
 original target; the library cannot recover a path that earlier middleware
 already discarded. Ordinary role-only policies do not enable path validation.
 
-For API key or basic auth proxying, configure a portal and realm:
+For portal-backed API key or basic auth proxying, configure a portal and realm:
 
 ```caddyfile
 with basic auth portal myportal realm local
@@ -297,6 +297,12 @@ with auth realm header name X-Auth-Realm
 Basic/API-key auth is consulted after normal token sources fail. The request
 realm must match `with auth realm header name`, defaulting to `X-Auth-Realm`;
 failed Basic or API-key auth returns `401`.
+
+For portal-free, immediately revocable API keys, use the bundled
+[SQLite credential authenticator](references/sqlite-api-keys.md). Its named global
+declaration is selected by the existing API-key policy syntax; Basic is unsupported.
+That reference owns private offline issuance and revocation as well as storage,
+realm binding, reload and failure behavior.
 
 Client checks for Basic and API-key auth:
 

@@ -65,6 +65,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		err                 error
 	}{
 		{name: "SQLite secrets manager", inputFileNamePrefix: "testcase_secrets_sqlite"},
+		{name: "SQLite credential authenticator", inputFileNamePrefix: "testcase_credentials_sqlite"},
 		{name: "HTTP JSON external authorization", inputFileNamePrefix: "testcase_authorize_external"},
 		{name: "external authorization rejects repeated attributes", inputFileNamePrefix: "testcase_authorize_external_invalid", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': external authorization attribute is invalid or duplicated, at Caddyfile:13")},

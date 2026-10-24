@@ -1,6 +1,6 @@
 ---
 name: configuration-logging
-description: "Configure AuthCrunch diagnostic skip rules and explain the Caddy middleware logger boundary. Use for component/message filtering; access logs and authorization outcomes are separate concerns."
+description: "Configure AuthCrunch diagnostic skip rules, Caddy credential-header redaction, and logger boundaries. Use for component/message filtering and safe API-key diagnostics; authorization outcomes remain unchanged."
 ---
 
 # Configuration Logging
@@ -8,14 +8,14 @@ description: "Configure AuthCrunch diagnostic skip rules and explain the Caddy m
 ## Supported Scope
 
 The root `security logging` block configures AuthCrunch component diagnostics.
-**Caddy v2.11.7's independent `http.handlers.authentication` logger remains
+**The selected Caddy's independent `http.handlers.authentication` logger remains
 unfiltered. Issue #280 is not fixed by this adapter.** Read the host boundary
 below before recommending the issue's message/error patterns to an operator.
 Current `authorize` Caddyfiles use `http.handlers.authorization`; the legacy
 JSON authentication-provider chain is still supported and emits the host error.
 Do not change that chain's behavior to silence it.
 
-Published AuthCrunch v1.3.4 supplies `Config.Logging`, `pkg/logging`, the shared
+The selected AuthCrunch module supplies `Config.Logging`, `pkg/logging`, the shared
 parser, and root logger wrapping. No local replacement or library release is
 needed for these interfaces. Recheck `go list -m -json` when dependencies change;
 the [dependency workflow](../scripts-and-automation/SKILL.md#local-go-authcrunch-development)
@@ -95,6 +95,23 @@ retain refresh sessions. Existing [runtime restrictions](../coding-directives/re
 still apply: overlapping persistent roots or local identity files are rejected.
 Do not relax those restrictions for logging changes.
 
+## Credential header redaction
+
+Caddy's HTTP server clones the request before authorization for its error and
+access loggers. AuthCrunch's `enable strip token` affects downstream handling,
+not that earlier copy. Caddy's default credential redaction covers standard
+Authorization/Cookie headers, not arbitrary API-key headers. Debug HTTP error
+logs and enabled access logs can therefore contain a supplied API key.
+
+Configure Caddy `format filter` encoders to delete
+`request>headers>X-Api-Key` and every configured custom key header, using
+canonical HTTP header spelling, in both global diagnostic and site access logs.
+The [SQLite API-key example](../configuration-authorization/references/sqlite-api-keys.md)
+includes these host filters and is qualified through the production TLS journey.
+This is field redaction; it preserves the HTTP denial and diagnostic entry.
+It does not implement the component-level host message suppression below or
+resolve issue #280. Keep returned errors and authorization behavior unchanged.
+
 ## Missing Caddy Host Extension
 
 Trace the pinned host before attempting integration:
@@ -119,7 +136,7 @@ or error during provisioning. Caddy would retain a clone per provider and use
 it for that provider's actual error call. The authorizer could then supply
 `logging.NewFilter(config.Logging).WrapLogger(base)`. Install it before any
 With/WithLazy fields; retain the base logger and existing Sync owner. This is a
-proposed upstream contract, not an API available in v2.11.7.
+proposed upstream contract, not an API available in the selected Caddy host.
 
 A supported scoped core-wrapper hook is another option, provided it wraps the
 existing core rather than tees beside it and is isolated to the correct

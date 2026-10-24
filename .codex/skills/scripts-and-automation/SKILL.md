@@ -22,6 +22,11 @@ repository builds a Caddy command binary at `bin/authcrunch` from
 `authenticate` and `authorize` integrations, Caddy standard modules, and
 `caddy-trace`.
 
+Use [configuration-authorization](../configuration-authorization/SKILL.md) to issue
+and revoke SQLite API keys with `security api-key issue|revoke`, using private
+JSON input and private key files. Local user-store credential generation remains
+with the local commands below.
+
 Use [configuration-secrets](../configuration-secrets/SKILL.md) to provision
 SQLite secret records with `security secrets put|delete`, choose private JSON
 inputs, and adopt changes through an explicit consumer reload.

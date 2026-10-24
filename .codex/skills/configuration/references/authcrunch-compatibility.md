@@ -62,6 +62,13 @@ candidates, restart and redaction are exercised through the actual Caddy command
 and TLS routes. See [SQLite secrets](../../configuration-secrets/references/sqlite.md).
 This storage concerns credentials, independently of portal session persistence.
 
+The bundled `security.credential_authenticators.sqlite` factory binds an exact
+name/realm to API-key-only policies before root construction. Private offline
+`security api-key issue|revoke` commands provision keys; every protected lookup
+reads current storage and bypasses credential caches. ACLs still decide access.
+The production TLS journey checks revocation, storage failure, reload and restart.
+See [SQLite API keys](../../configuration-authorization/references/sqlite-api-keys.md).
+
 Upstream CI/OpenAPI automation, standalone hosting and CLA changes do not add
 Caddy directives. Preserve Caddy's own tests, workflow and module version.
 

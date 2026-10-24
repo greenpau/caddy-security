@@ -15,17 +15,10 @@
 package security
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"runtime"
 	"time"
-	"unicode/utf8"
 
 	"github.com/greenpau/go-authcrunch/plugins/secrets/sqlite"
 	sqliteparser "github.com/greenpau/go-authcrunch/plugins/secrets/sqlite/parser"
@@ -61,27 +54,9 @@ func addSecuritySecretsCommands(parent *cobra.Command) {
 }
 
 func provisionSQLiteSecrets(ctx context.Context, filename, action string) error {
-	if runtime.GOOS == "windows" {
-		return fmt.Errorf("SQLite secrets require a local POSIX filesystem")
-	}
-	if filename == "" || filepath.Clean(filename) != filename {
-		return fmt.Errorf("a clean private provisioning input path is required")
-	}
-	filename, err := filepath.Abs(filename)
+	data, err := readPrivateProvisioningFile(ctx, filename)
 	if err != nil {
-		return fmt.Errorf("invalid provisioning input path")
-	}
-	if err := checkRegistrationDirectory(ctx, filepath.Dir(filename), true); err != nil {
-		return fmt.Errorf("provisioning input requires a private directory and trusted ancestors")
-	}
-	root, err := os.OpenRoot(filepath.Dir(filename))
-	if err != nil {
-		return fmt.Errorf("cannot open provisioning input directory")
-	}
-	defer root.Close()
-	data, err := (&oauthRegistrationStore{root: root}).read(ctx, filepath.Base(filename))
-	if err != nil {
-		return fmt.Errorf("cannot read private provisioning input")
+		return err
 	}
 	config, values, err := parseSQLiteSecretsInput(data, action)
 	if err != nil {
@@ -116,21 +91,11 @@ func parseSQLiteSecretsInput(data []byte, action string) (*sqlite.Config, map[st
 	invalid := func() (*sqlite.Config, map[string]any, error) {
 		return nil, nil, fmt.Errorf("invalid SQLite secrets provisioning JSON")
 	}
-	if len(data) > 128<<10 || !utf8.Valid(data) || !registrationJSONUnicodeValid(data) || (action != "put" && action != "delete") {
+	if action != "put" && action != "delete" {
 		return invalid()
 	}
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	budget := 4200
-	value, err := decodeSQLiteSecretsJSON(dec, 0, &budget)
+	doc, err := parsePrivateProvisioningJSON(data)
 	if err != nil {
-		return invalid()
-	}
-	if _, err := dec.Token(); err != io.EOF {
-		return invalid()
-	}
-	doc, ok := value.(map[string]any)
-	if !ok {
 		return invalid()
 	}
 	for key := range doc {
@@ -172,63 +137,4 @@ func parseSQLiteSecretsInput(data []byte, action string) (*sqlite.Config, map[st
 		return invalid()
 	}
 	return config, object, nil
-}
-
-func decodeSQLiteSecretsJSON(dec *json.Decoder, depth int, budget *int) (any, error) {
-	*budget--
-	if depth > 18 || *budget < 0 {
-		return nil, sqlite.ErrInvalid
-	}
-	token, err := dec.Token()
-	if err != nil {
-		return nil, sqlite.ErrInvalid
-	}
-	switch t := token.(type) {
-	case json.Delim:
-		switch t {
-		case '{':
-			object := make(map[string]any)
-			for dec.More() {
-				token, err := dec.Token()
-				key, ok := token.(string)
-				if err != nil || !ok {
-					return nil, sqlite.ErrInvalid
-				}
-				if _, exists := object[key]; exists {
-					return nil, sqlite.ErrInvalid
-				}
-				v, err := decodeSQLiteSecretsJSON(dec, depth+1, budget)
-				if err != nil {
-					return nil, err
-				}
-				object[key] = v
-			}
-			if end, err := dec.Token(); err != nil || end != json.Delim('}') {
-				return nil, sqlite.ErrInvalid
-			}
-			return object, nil
-		case '[':
-			array := make([]any, 0)
-			for dec.More() {
-				v, err := decodeSQLiteSecretsJSON(dec, depth+1, budget)
-				if err != nil {
-					return nil, err
-				}
-				array = append(array, v)
-			}
-			if end, err := dec.Token(); err != nil || end != json.Delim(']') {
-				return nil, sqlite.ErrInvalid
-			}
-			return array, nil
-		default:
-			return nil, sqlite.ErrInvalid
-		}
-	case json.Number:
-		if len(t) > 128 {
-			return nil, sqlite.ErrInvalid
-		}
-		return t, nil
-	default:
-		return token, nil
-	}
 }

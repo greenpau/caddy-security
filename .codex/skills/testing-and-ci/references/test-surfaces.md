@@ -25,7 +25,7 @@ and source-quota check. These are regular tests, separate from official OP
 conformance. The [cross-device owner](../../configuration-authentication-cross-device/SKILL.md)
 defines acceptance and physical-device/instance-affinity limits.
 
-## Caddy v2.11.7 compatibility
+## Caddy compatibility
 
 `TestCaddyfileOAuthApplicationQuotedBraces` and
 `TestPortalQuotedBraceArguments` preserve literal opening/closing brace values,
@@ -65,7 +65,7 @@ both after adaptation and after provisioning to establish eight distinct cases.
 It also checks imported declarations, adaptation failure before startup/reload
 (including quoted enclosing policy braces), and source-address
 enforcement when one cached token arrives from different trusted client addresses.
-Keep its default-rule ordering regression visible: selected v1.3.11 evaluates
+Keep its default-rule ordering regression visible: the selected library evaluates
 unconditional rules over normalized users without `exp`, so a default deny
 overrides a compact non-stopping allow. See
 [typed ACL fields](../../configuration-authorization/references/typed-acl-fields.md)
@@ -74,7 +74,7 @@ for both ordering assertions and malformed-claim denial.
 ## Conditional authentication coverage
 
 `TestPortalTransformSharedParser`, `TestPortalTransformRejects`, the transform
-runtime tests, and local-store parser tests cover v1.3.3 grammar and rejection
+runtime tests, and local-store parser tests cover the selected grammar and rejection
 boundaries. The `testcase_authenticate_with_challenges` pair exercises adapted
 JSON and runtime resolution, including mixed environment/claim templates.
 `TestCaddyAuthenticationChallengesE2E` runs isolated actual Caddy TLS journeys
@@ -82,7 +82,7 @@ for HTML/JSON and native conditional login, signed WebAuthn, AMR claims and
 resource authorization, portal refresh/OIDC, Basic/API-key rejection, policy failure,
 static-user creation/replacement/omission and profile rule mutations.
 `TestPortalTransformMatchAnyIdentityContext` checks unconditional matching
-without timestamps in the selected v1.3.11 library. Its resolution fixtures and
+without timestamps in the selected library. Its resolution fixtures and
 TLS E2E qualify Caddy refresh/OIDC/System API usage. Quoted and runtime-resolved
 native JSON matchers exercise the same policy and claims. System API E2E also
 checks encrypted assertions and rejection of unsatisfied factor policy. Its LDAPS
@@ -270,7 +270,7 @@ integrated change.
 logs and qualifies diagnostic rules through real TLS login, legacy/current
 authorization, counted protected handlers, replacements/removal, independent
 processes and persistent-session restarts. It explicitly proves that the private
-Caddy authentication middleware logger remains unfiltered in v2.11.7; a passing
+Caddy authentication middleware logger remains unfiltered in the selected Caddy middleware; a passing
 suite is not an issue #280 host-suppression fix. See
 [logging validation](../../configuration-logging/SKILL.md#validation) for focused
 unit/adaptation coverage and the upstream acceptance criteria.
@@ -321,7 +321,7 @@ the real Make cleanup recipe in a disposable repository. Never delete
 historical official evidence as a unit-test
 side effect. `make oidc-conformance-cleanup` is an explicit artifact-deletion
 target; it preserves tools, the suite and caches for the next opt-in run.
-The default `TestCaddyOIDCRelyingPartyE2E` also covers v1.2.6 claims, ACR,
+The default `TestCaddyOIDCRelyingPartyE2E` also covers claims, ACR,
 registered RS256 Request Objects and OIDC refresh rotation/replay through real
 Caddy TLS. Its discovery expectations track the selected dependency's capability surface;
 these local tests do not launch the official suite.
@@ -385,7 +385,7 @@ lost committed responses and prevention of replay across commands,
 when changing the standalone CLI or the authclient dependency; see the
 [command validation map](../../scripts-and-automation/references/caddy-authenticator.md#validation).
 
-`TestAuthzPathDelegation` and `TestCaddyAuthorizationPathE2E` cover the v1.2.5
+`TestAuthzPathDelegation` and `TestCaddyAuthorizationPathE2E` cover the
 authorization path contract through the provider and real Caddy TLS. Run them
 when changing gatekeeper delegation, bypasses, path claims or the selected
 dependency. They check decoded/cleaned paths before and after identity caching,
@@ -510,3 +510,17 @@ See the [direct OAuth acceptance surface](../../configuration-authorization/refe
 for parser fixtures, admission/draining units and protocol scope. Separate
 built commands are outside parent instrumentation. Existing portal, Basic,
 API-key and remote-authenticator regressions remain in the normal full suite.
+
+## SQLite credential authentication
+
+`TestCaddySQLiteCredentialsE2E` builds the real production command without CGO,
+issues keys through private CLI files and sends trusted TLS requests through two
+policies sharing one backend. It checks default/custom headers, stripping, ACL
+denial, wrong realms, malformed/Basic credentials, immediate revocation of a
+previously used key, unsafe storage, rejected candidates, reload and restart.
+It checks logs, admin configuration and autosaved configuration for credential
+markers. It does not claim killed-process shutdown coverage; ownership/drain and
+partial-construction cleanup are checked by `TestAppCredential*` and existing
+app lifecycle E2E. `TestSQLiteCredential*` and `TestSecurityAPIKey*` cover parsing,
+consumer behavior and private offline provisioning. Preserve secrets command
+regressions when changing the shared private-file and JSON input helpers.

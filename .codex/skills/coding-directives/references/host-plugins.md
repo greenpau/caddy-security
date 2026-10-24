@@ -3,6 +3,7 @@
 Read this when adding a backend adapter, native configuration, policy binding,
 or runtime resource ownership. `app_plugins.go` owns the claims enrichment
 boundary and `app_external_authorization.go` owns external authorization;
+`app_credential_authenticators.go` owns fresh API-key bindings;
 `app.go` owns construction and retirement of the single AuthCrunch root.
 HTTP integrations borrow that root. Do not replace root
 assembly with a second host implementation of portals, gatekeepers or persistence.
@@ -27,7 +28,7 @@ realm and database path are distinct values; never use a path as implicit identi
 | Claims enrichment | `security.claims_enrichment.<driver>` | Native app binding below; bundled `static` adapter also has policy Caddyfile syntax |
 | Secrets | `security.secrets.<driver>` | Existing `SecretsManager` integration; external static/AWS module IDs remain unchanged |
 | External authorization | `security.external_authorization.<driver>` | Native app binding and bundled `httpjson` adapter with policy Caddyfile syntax |
-| Credential authenticators | `security.credential_authenticators.<driver>` | Proposed; bind validated runtime proxy config before root construction |
+| Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled `sqlite` factory with global Caddyfile syntax; bind validated runtime proxy config before root construction |
 | Identity stores/providers | `security.identity_stores.<driver>`, `security.identity_providers.<driver>` | Proposed; root injection unavailable |
 | Messaging | `security.messaging.<driver>` | Proposed; runtime injection is possible but no host adapter/worker exists |
 | Registration workflows | `security.registration_workflows.<driver>` | Proposed; identity-store/root composition gap |
@@ -89,9 +90,10 @@ preserve ordinary behavior. The
 [external authorization reference](../../configuration-authorization/references/external-authorization.md)
 owns text/native fields, TLS and decision behavior.
 
-Claims backends are constructed before external backends. If a later factory
+Credential backends are constructed before the root, followed by claims and
+external backends after root construction. If a later factory
 or attachment fails, close the root, then all acquired backends in reverse
-order across both categories. The HTTP JSON wrapper implements `io.Closer`
+order across all three categories. The HTTP JSON wrapper implements `io.Closer`
 around the library's errorless Close and owns its injected TLS transport.
 
 Claims companions implement `ClaimsEnrichmentBackendModule` alongside `caddy.Module`.
@@ -119,8 +121,9 @@ unwind everything before returning nil. Non-closable backends own no resources
 that need disposal. Construction errors and Close errors must not leak supplied
 values through logs; the host reports binding/resource positions instead.
 
-The app constructs its root first, obtains each named gatekeeper, creates the
-backend and `enrichment.Enricher`, and calls `SetClaimsEnricher`. Only after every
+For claims enrichment, the app constructs its root, obtains each named
+gatekeeper, creates the backend and `enrichment.Enricher`, and calls
+`SetClaimsEnricher`. Only after every
 attachment succeeds does it publish the server for request admission. Failure
 closes the private root before all acquired backends, in reverse order, without
 touching the active configuration. A later Caddy provisioning/validation/start
@@ -169,8 +172,13 @@ with root-owned portal names and existing bindings, and check all proxies before
 publication. Runtime bindings disappear on JSON serialization: restore them on
 each new graph after decoding. The backend remains caller-owned on constructor
 failure and root Close. Add regression coverage for this ordering; do not assume
-reparsing raw declarations preserves an injected handle. No Caddy adapter for
-this path is implemented yet.
+reparsing raw declarations preserves an injected handle. The bundled SQLite
+adapter uses `CredentialAuthenticatorBackendModule`: `CredentialIdentity` supplies
+the exact name/realm and `NewCredentialAuthenticator` transfers a distinct
+context-aware, fresh, closable backend. The host verifies runtime identity and
+freshness, and shares that handle only across matching policies in the same app.
+The [SQLite API-key contract](../../configuration-authorization/references/sqlite-api-keys.md)
+owns declarations, private issuance/revocation and operator recovery.
 
 Do not remove auth-proxy declarations during construction and patch them afterward,
 create placeholder portals, or replace root-owned authenticators. For identity
@@ -200,4 +208,7 @@ companion needs its own native/text round trips, real authentication/authorizati
 E2E, backend failures and resource assertions. `app_external_authorization_test.go`
 checks the external binding and mixed-category cleanup; the HTTP JSON adapter's
 unit and TLS E2E tests qualify its service transport and protected requests.
-These tests do not qualify SQLite storage.
+SQLite credential coverage lives in `credential_authenticator_sqlite_test.go`,
+`app_credential_authenticators_test.go`, `command_api_key_test.go` and
+`credential_authenticator_sqlite_e2e_test.go`; its production TLS journey also
+checks CLI revocation, storage failure, reload and restart.
