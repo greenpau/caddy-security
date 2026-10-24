@@ -54,6 +54,7 @@ type caddyTokenRefreshFixture struct {
 	client             *http.Client
 	keys               []map[string]string
 	inspectResponse    func(*testing.T, int, []byte, []*http.Cookie)
+	contracts          *openAPIContracts
 }
 
 // Every runtime field comes from the Caddyfile parser, including root mounts and
@@ -170,7 +171,11 @@ func (f *caddyTokenRefreshFixture) post(t *testing.T, client *http.Client, path 
 		f.inspectResponse(t, resp.StatusCode, raw, resp.Cookies())
 	}
 	if resp.StatusCode != status {
-		t.Fatalf("POST %s: %d, want %d: %.300s", path, resp.StatusCode, status, raw)
+		t.Fatalf("POST %s: %d, want %d", path, resp.StatusCode, status)
+	}
+	if f.contracts != nil && status == http.StatusOK && (path == "/login" || path == "/api/refresh_token") {
+		f.contracts.AssertRequest(t, "POST", path, req.Header, encoded)
+		f.contracts.AssertResponse(t, "POST", path, resp.StatusCode, resp.Header, raw)
 	}
 	var result apiauth.AuthResponse
 	if status != 404 {
@@ -242,6 +247,7 @@ func TestCaddyTokenRefreshProcess(t *testing.T) {
 	t.Setenv("TOKEN_REFRESH_E2E_SHARED", "INHERITED_REFRESH")
 	t.Setenv("TOKEN_REFRESH_E2E_OVERRIDE", "CUSTOM_REFRESH")
 	required := "realms employees contractors\npublic origin PUBLIC_ORIGIN\nbase path BASE_PATH\naccess lifetime 45\nidle timeout 90\nabsolute timeout 240\n"
+	contracts := newOpenAPIContracts(t)
 	for _, tc := range []struct {
 		name, mount, cookies, extra, refreshName, accessName string
 		signer, lifetime                                     int
@@ -253,6 +259,9 @@ func TestCaddyTokenRefreshProcess(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newCaddyTokenRefreshFixture(t, tc.mount, tokenRefreshTestBlock(required+tc.extra), tc.cookies, tc.signer, cert, key, roots)
+			if tc.name == "root inherited prefix" {
+				f.contracts = contracts
+			}
 			for _, realm := range []string{"employees", "contractors"} {
 				t.Run(realm, func(t *testing.T) {
 					browser := f.browser(t)
@@ -432,6 +441,7 @@ func TestCaddyTokenRefreshProcess(t *testing.T) {
 		t.Setenv("TOKEN_REFRESH_E2E_BODY", "enabled")
 		t.Setenv("TOKEN_REFRESH_E2E_LIMIT", "1")
 		f := newCaddyTokenRefreshFixture(t, "/auth", tokenRefreshTestBlock(required+"body transport {env.TOKEN_REFRESH_E2E_BODY}\nmax sessions {env.TOKEN_REFRESH_E2E_LIMIT}\nmax rotations 1\ncookie name NATIVE_REFRESH"), "cookie prefix PORTAL", 120, cert, key, roots)
+		f.contracts = contracts
 		f.post(t, f.client, "/login", apiauth.AuthRequest{Username: "alice", Realm: "guests", RefreshTransport: "body"}, nil, 400)
 		login, cookies := f.login(t, f.client, "employees", "body", 200)
 		if login.RefreshToken == "" || login.RefreshTokenName != "NATIVE_REFRESH" || len(cookies) != 0 {

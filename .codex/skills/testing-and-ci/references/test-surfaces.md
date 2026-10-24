@@ -10,6 +10,18 @@ Source and fixture paths below are relative to the repository root.
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
 
+## Portal OpenAPI contracts
+
+`openapi_contract_test.go` consumes the selected AuthCrunch module's authored
+YAML through a test-only local loader. Its units reject unsafe references,
+undocumented responses and invalid payloads, preserving exact JSON numbers and
+credential-safe diagnostics. `TestCaddyOpenAPIContractE2E` checks a bounded real
+Caddy TLS matrix at root and nested mounts: negotiation, beacon/claims, metadata,
+profile authority, JWKS and route isolation. Existing login and refresh journeys
+retain their independent transport, credential and lifecycle assertions when
+adding schema checks. See [contract ownership and wire formats](../../authentication-portal-api/references/openapi-contracts.md).
+This is consumer qualification, not exhaustive API or official OP conformance.
+
 ## Cross-device portal login
 
 `TestPortalCrossDevice*`, shared cookie tests and the registered

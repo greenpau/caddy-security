@@ -261,6 +261,7 @@ type authenticationClientWire struct {
 	requests   int
 	responses  []apiauth.AuthResponse
 	payloads   []map[string]json.RawMessage
+	contracts  *openAPIContracts
 }
 
 func (tr *authenticationClientWire) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -274,6 +275,9 @@ func (tr *authenticationClientWire) RoundTrip(r *http.Request) (*http.Response, 
 	}
 	r.Body.Close()
 	r.Body = io.NopCloser(bytes.NewReader(data))
+	if tr.contracts != nil {
+		tr.contracts.AssertRequest(tr.t, r.Method, "/login", r.Header, data)
+	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return nil, err
@@ -315,6 +319,9 @@ func (tr *authenticationClientWire) RoundTrip(r *http.Request) (*http.Response, 
 		return nil, err
 	}
 	response.Body = io.NopCloser(bytes.NewReader(data))
+	if tr.contracts != nil {
+		tr.contracts.AssertResponse(tr.t, r.Method, "/login", response.StatusCode, response.Header, data)
+	}
 	var result apiauth.AuthResponse
 	if err := json.Unmarshal(data, &result); err != nil {
 		tr.t.Error("login response was not JSON")

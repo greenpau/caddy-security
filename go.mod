@@ -14,6 +14,7 @@ require (
 	github.com/greenpau/go-authcrunch v1.4.0
 	github.com/greenpau/versioned v1.0.36
 	github.com/quic-go/quic-go v0.63.0
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/tidwall/gjson v1.18.0

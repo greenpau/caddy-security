@@ -26,7 +26,10 @@ The documented endpoints include:
 - `POST /api/server/info`: local identity database path, modification time,
   and password/user policy details for a realm.
 
-Admin API requests require an active authorized session with an admin role.
+Admin API requests require a valid portal-admitted access token with an admin
+role; stored profile-session evidence is not required. The metadata success
+body contains JSON bytes served as `text/plain`, with a UTC RFC3339 timestamp.
+Its version/build fields identify the linked identity library, not Caddy.
 When debugging, check both the Caddyfile directive and the authenticated user's
 roles before suspecting handler bugs.
 

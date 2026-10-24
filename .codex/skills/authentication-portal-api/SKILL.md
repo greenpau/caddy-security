@@ -21,6 +21,8 @@ For conditional login selection, authoritative AMR and profile policy preview/
 replacement, read [authentication flows](references/authentication-flows.md).
 For password/MFA mutations and refresh/OIDC invalidation, read
 [local identity compatibility](../configuration-identity-stores/references/local-identity.md).
+For authored schemas, mounted endpoint contracts and wire-format exceptions,
+read [OpenAPI contracts](references/openapi-contracts.md).
 
 For the standalone `caddy-authenticator` CLI, profile configuration, terminal
 input and private storage, use the
@@ -47,15 +49,17 @@ describe the separate upstream work instead of editing or testing that checkout.
 
 ## JSON Requests
 
-Portal endpoints return JSON when the request includes either:
+Portal JSON dispatch accepts the exact header value or query signal below:
 
 ```text
 Accept: application/json
 format=json
 ```
 
-Without one of those signals, many endpoints follow browser-oriented behavior
-such as rendering HTML or redirecting.
+Accept lists, quality parameters and `application/json; charset=utf-8` do not
+select this JSON dispatch. Without a recognized signal, many endpoints render
+HTML or redirect. Dedicated API, provider and discovery routes keep their own
+dispatch rules; do not normalize upstream negotiation in the Caddy handler.
 
 Assume endpoint paths are relative to the portal base path. If the portal is
 served at `/auth`, then `/login` means `/auth/login`, `/whoami` means
@@ -133,9 +137,11 @@ refresh. API-key and other unsupported login kinds remain access-only.
 
 ## Status And Identity Endpoints
 
-Use `/beacon` for a light authentication probe. A valid token returns `200 OK`
-with a plain `OK` body; an invalid or expired token returns an access-denied
-JSON response when JSON was requested.
+Use `/beacon` for a light authentication probe with JSON negotiation. A valid
+portal-admitted token returns status 200 and the two raw bytes `OK`, despite
+`Content-Type: application/json`; do not JSON-decode success. Missing or invalid
+credentials return a JSON error with status 401. Without JSON negotiation the
+route returns an HTML 404. Responses use `Cache-Control: no-store`.
 
 Use `/whoami` for the current user claims. Useful query parameters include:
 
@@ -143,6 +149,11 @@ Use `/whoami` for the current user claims. Useful query parameters include:
 - `format=json`: force JSON when no JSON `Accept` header is present.
 - `id_token=true`: include the upstream identity provider ID token when an
   OAuth provider was configured with `enable id token cookie`.
+
+JSON time claims are Unix seconds; `expires_in` is a remaining duration in
+seconds. HTML identity views can format times for display. Do not copy those
+display strings into JSON clients. The distinct `probe=login` browser check also
+requires a stored portal session; a valid token alone does not establish it.
 
 Send access tokens using the portal-supported Authorization header or cookies
 that match the portal's token validator configuration. If custom access-token
@@ -191,8 +202,9 @@ removed keys automatically.
 
 ## Admin Server API
 
-Admin endpoints require the configured admin API and an authorized portal
-session. Private signing-key export is independently disabled by default and
+Admin endpoints require the configured admin API and a valid portal-admitted
+access token with an admin role. They do not require the stored profile session.
+Private signing-key export is independently disabled by default and
 requires both flags plus administrator authorization. Public JWKS is separate
 and needs neither flag. Read [admin/server API contracts](references/admin-api.md)
 for endpoint shapes, exact status/method behavior, key formats, and Caddy tests.
