@@ -8,6 +8,7 @@ boundary and `app_external_authorization.go` owns external authorization;
 `app_identity_providers.go` owns external login-provider bindings;
 `app_messaging.go` owns notification backends and their delivery workers;
 `app_registration_workflows.go` owns enrollment bindings and dependency ordering;
+`app_refresh_stores.go` owns immutable managed refresh factories;
 `app.go` owns construction and retirement of the single AuthCrunch root.
 HTTP integrations borrow that root. Do not replace root
 assembly with a second host implementation of portals, gatekeepers or persistence.
@@ -38,13 +39,11 @@ realm and database path are distinct values; never use a path as implicit identi
 | Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
 | Registration workflows | `security.registration_workflows.<driver>` | Native/global declarations and bundled SQLite enrollment; exact borrowed dependencies and explicit portal registry selection |
 | Access signing | `security.access_signers.<driver>` | Immutable factory and borrowed root/portal signer; bundled `rsapss` |
-| Refresh storage | `security.refresh_stores.<driver>` | Proposed; standalone engine APIs do not select portal storage |
+| Refresh storage | `security.refresh_stores.<driver>` | Native/global named declarations and bundled SQLite; immutable factories and borrowed generation views consumed by selected persistent portals |
 | OAuth login storage | `security.oauth_login_stores.<driver>` | Native/global named declarations and bundled SQLite storage; immutable factories supply exact borrowed runtime handles through root options |
 
-The refresh-storage namespace remains a design convention, not a registered
-module or accepted Caddyfile syntax. Add its loader only with a supported
-consumer and its acceptance tests. Do not add a universal map-based plugin executor or a second
-process-global runtime registry.
+The categories retain their typed public consumers. Do not add a universal
+map-based plugin executor or a second process-global runtime registry.
 
 ## Native claims enrichment binding
 
@@ -96,8 +95,9 @@ preserve ordinary behavior. The
 [external authorization reference](../../configuration-authorization/references/external-authorization.md)
 owns text/native fields, TLS and decision behavior.
 
-Credential, identity, messaging and registration backends are constructed before
-the root, followed by claims and external backends after root construction. A
+Credential, identity, messaging, registration, signing and selected-storage
+backends are constructed before the root, followed by claims and external
+backends after root construction. A
 registration workflow borrows its selected account and notification handles.
 If a later factory
 or attachment fails, close the root, then all acquired backends in reverse
@@ -181,6 +181,54 @@ through drain. No raw database open is needed for these checks. External path
 replacement after admission remains outside the guarantee.
 See [shared login storage](../../configuration-oauth-providers/references/shared-login-storage.md).
 
+## Managed refresh factories
+
+`RefreshStoreBackendModule.PrepareRefreshStore` returns an immutable
+`RefreshStoreFactory`; copied `ExternalStoreConfig` metadata comes from
+`RefreshStoreConfig`, and `NewRefreshStore` returns the exact public
+`tokenrefresh.ManagedStore`. The bundled SQLite factory delegates pure parsing
+and normalization, including equivalent timeout spelling, without opening the
+database. Runtime module fields are never reread at deferred Start. Reject
+invalid native selector bytes before JSON copying and raw module bytes before
+module decoding; retain original declarations for round trips.
+
+Derive root descriptors from prepared modules, never accept caller-supplied
+native root descriptors as substitutes for module preparation. Validate selected
+names and equal session/rotation limits before acquisition. Selected portals
+require enabled refresh and root state. An unused declaration is still prepared
+and constructed, so its storage belongs in preflight too. Empty selection keeps
+the existing owned memory store; an invalid selected backend must never trigger
+that fallback.
+
+The host collects an optional closer before inspecting a factory's error or
+runtime metadata. Metadata/cleanup boundary failures are sanitized and narrowly
+contained, including typed nils. The root then checks copied metadata and bounded
+read-only readiness without a probe write. It activates an immutable namespace
+and generation only after the complete normalized configuration and actual
+loaded public trust enter durable epoch admission. Selected portals remain
+pending until their single manager is ready. Root and portals borrow both the
+backend and activated views, never close them, and never snapshot selected
+families through the legacy memory-store persistence path.
+
+Each backend operation must verify the view's generation in its transaction
+before inspecting replay state, removing expired records or mutating families.
+SQLite IDs, spent digests and capacity are file-wide. All users of the same file
+must agree on both limits; namespace retirement reclaims only that namespace.
+Startup across multiple stores is not a cross-database transaction: a completed
+retirement remains committed if a later store fails. Discard the unpublished
+root, close app-owned handles after root disposal, and recover through fresh
+construction without restoring retired authority.
+
+Storage admission inventories every actual portal/policy KMS file read, including
+ordinary consumers without strict profiles. A candidate that removes refresh
+storage can still read the active app's database as a key; compare both retained
+physical graphs before any reader opens it. Keep opening paths for deferred
+rechecks, include sidecars and physical aliases, and never open/close a raw
+SQLite file to inspect it while another handle serves requests. Custom backends
+remain responsible for truthful metadata and undeclared storage separation.
+See [named refresh storage](../../configuration-authentication/references/refresh-storage.md)
+for grammar, migration, limits and operator recovery.
+
 ## Public injection audit
 
 Recheck these boundaries against the selected module before each adapter change.
@@ -198,12 +246,11 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Ticket identity providers | Derive `Config.ExternalIdentityProviders` and supply `ServerOptions.IdentityProviders`. Root checks exact configured metadata and borrows the same dynamic instance, including its attachment interface; it never reconfigures or closes caller-owned providers |
 | Registration workflows | Derive `Config.ExternalUserRegistries` before validation and supply `ServerOptions.UserRegistries` at construction. Root validates exact metadata/readiness and attaches only selected names; providers remain caller-owned. SQLite factories receive the already-open selected account/outbox handles |
 | PS256 access signing | Derive `Config.ExternalAccessSigners` and supply `ServerOptions.AccessSigners`; `PortalConfig.AccessSigner` selects one borrowed handle with a matching strict profile. App factories freeze normalized configuration; root validates metadata and public-key equality before publication. OP ID signing is separate |
-| Refresh storage | `token_refresh.NewManager` accepts a store, but the portal constructs a private concrete `MemoryStore`; `PortalParameters` and `ServerOptions` have no refresh-store injection. Root state attaches snapshots to that memory store, independently of the SQLite plugin |
+| Refresh storage | Derive `Config.ExternalRefreshStores` and supply `ServerOptions.RefreshStores`; selected portals receive prepared `PortalParameters.RefreshStore` bindings. Root state activates immutable generation views after complete configuration admission. Omission preserves the owned memory store; selected stores/views stay caller-owned |
 
-The [refresh storage boundary](../../configuration-authentication/references/token-refresh.md#storage-backend-boundary)
-owns the missing portal integration and its acceptance requirements. Do not
-register a host selector solely because the standalone engine accepts a backend;
-the actual portal must consume it before any login or refresh request is served.
+The [refresh storage contract](../../configuration-authentication/references/refresh-storage.md)
+owns the selected portal integration and its acceptance requirements. A
+standalone engine interface alone does not establish another host consumer.
 
 For API-key adapters, parse/validate the complete policy first, keep its raw
 declarations intact, then bind into the resulting runtime proxy config before
@@ -229,8 +276,9 @@ binding behavior. Keep unavailable backend selectors out of operator examples.
 
 SQLite references require distinct private local POSIX database files and a
 pure-Go production build. They do not imply network-filesystem support, encrypted
-storage, schema migration or multi-host availability. Keep trusted issuance,
-enrollment and delivery-worker controls in their own adapters.
+storage or multi-host availability. Schema migration is backend-specific; the
+refresh backend validates and migrates only its recognized older layout. Keep
+trusted issuance, enrollment and delivery-worker controls in their own adapters.
 
 ## Validation surfaces
 

@@ -168,15 +168,18 @@ cookie skill for the exact argument-preservation checks and reload regressions.
 
 Token refresh blocks with runtime references are preserved in
 `App.PortalTokenRefreshDirectives` (`portal_token_refresh_directives`). Resolve
-each argument once and attach the shared parser's `*authn.TokenRefreshConfig`
+each value once, keeping keywords literal, and attach the shared parser's `*authn.TokenRefreshConfig`
 before portal validation; do not also supply typed `refresh_tokens` for that
 portal. Defer that portal's complete cookie statements too, including literal
 ones, until the enabled refresh override is known: collision checks must use
-the effective names. Literal refresh blocks need no snapshot. Native JSON origin, base path, cookie
+the effective names. Literal refresh blocks need no snapshot. Native JSON store, origin, base path, cookie
 name, individual realm values, and each `provider_revalidation[].realm` and
 `provider_revalidation[].mode` support replacement. Resolve each string once
 before shared validation; unsupported modes and duplicate resolved selections
-fail. Disabled settings retain the shared validator's opt-out semantics. See
+fail. A nonempty store reference resolving to empty fails before memory defaults
+can apply; malformed native selector bytes fail before JSON copying. A nonempty
+store requires enabled refresh; other disabled settings retain the shared
+validator's opt-out semantics. Named backend module fields stay literal. See
 [token refresh placeholders](../configuration-authentication/references/token-refresh.md#placeholders-and-json)
 for numeric/state values, duplicate checks, and JSON restoration coverage.
 

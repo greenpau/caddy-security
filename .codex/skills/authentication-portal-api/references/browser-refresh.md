@@ -50,6 +50,14 @@ violations use 403, disabled/wrong refresh endpoints use 404, wrong methods use
 it is not a library refresh response. Do not rewrite failures into success or
 introduce replay grace.
 
+A selected SQLite backend uses the same response contract. An attempted commit
+may fail ambiguously after the exchange has begun; the server returns 503 without
+staged credential cookies or downstream OP authority. Successful commit followed
+by response loss is also ambiguous. Clients cannot distinguish safe rollback
+from commitment merely by response status, so no retry or session lookup may
+clear that uncertainty. Root/backend recovery and client recovery are separate:
+reopening storage does not make the old browser marker safe to discard.
+
 ## Browser Coordinator and Continuation
 
 Serve the embedded `<mount>/assets/js/refresh.js` from the same library version
@@ -64,6 +72,9 @@ contains only SID/expiry metadata and pending/blocked markers. Tokens stay in
 HttpOnly cookies, never localStorage or URLs. Persist pending state before
 sending a rotation. Loss of a response can follow a committed exchange and
 updated cookies; never retry that exchange or use session lookup to recover it.
+A non-success response, including 503, stores a blocked marker. Network failure
+retains pending state. Both prevent another rotation from that family across
+reloads/tabs; neither should be cleared merely because the backend reopened.
 
 HTML `data-session` and `data-expires` values are hints. Bootstrap confirms the
 current signed access cookie with `/whoami?probe=true` under the shared lock.
@@ -133,6 +144,14 @@ API-key and explicit native-body logins remain separate contracts.
   committed response. It wraps the real authenticator; it does not inject
   authentication evidence, issue tokens or implement refresh behavior. No such
   module is registered in the production binary.
+- `TestCaddySQLiteRefreshUncertaintyE2E` adds the selected SQLite backend's real
+  attempted-COMMIT failure. Its browser driver receives an actual 503, retains
+  blocked metadata across both tabs and backend reopen, and performs natural
+  fresh form login before rotating a new SID. It differs from the existing
+  lost-response case, which retains pending state after a committed exchange.
+  Neither path retries the uncertain old family. The fixture leaves spare
+  capacity because a failed COMMIT may have retained that family; it does not
+  infer revocation from uncertainty.
 - `TestCaddyRefreshBrowserStartup` verifies delayed/partial CDP readiness, early
   process exits, missing executables, deadline cleanup and process reaping.
 - `TestCaddyRefreshBrowserTrust` checks that trust preparation rejects malformed

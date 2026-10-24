@@ -126,6 +126,32 @@ boundaries. Caddy module context cancellation must not close an injected backend
 under an admitted request. Persistent validation loads configuration factories
 but defers backend construction to `Start` with the root.
 
+## Selected refresh storage
+
+Named refresh storage requires root state. Provisioning retains private resolved
+consumer copies, immutable factories and scalar descriptors; it does not open
+runtime refresh databases. Deferred Start repeats storage/key-reader preflight,
+constructs app-owned backends and passes exact handles to the root. The root
+performs read-only readiness checks before generation activation, then activates
+after all portal/policy normalization and loaded trust enter the persistent
+configuration epoch. Until activation completes, selected portals reject HTTP,
+direct credential and OP admission; no memory manager is substituted.
+
+A successful activation returns a borrowed immutable view. Root/portal Close
+does not close the view/backend or copy its families into a memory snapshot.
+App Cleanup drains requests, joins workers, closes the root, then closes every
+acquired optional backend closer once in reverse acquisition order. A partial
+constructor result transfers cleanup responsibility even with an error; later
+cleanup failures must not skip the remaining resources.
+
+Startup is not atomic across root records and multiple backend databases.
+An earlier activation may have durably retired a generation when a later store
+prevents publication. Cleanup cannot undo that retirement or restore prior
+credentials. Reconstruct after correcting the cause; do not retry activation on
+the failed portal, fall back to memory or claim that a failed cold start preserved
+all previously stored authority. The persistent reload prohibition remains in
+force. See [named refresh storage](../../configuration-authentication/references/refresh-storage.md).
+
 ## Persistent identity files: current reload restriction
 
 **Live replacement using the same local identity file or registration dropbox is rejected.** The old
@@ -134,6 +160,16 @@ file. This includes validation-only candidates in the same process. Use a
 single named identity store across portals; multiple stores pointing at the
 same file in one runtime are also rejected. Registration dropboxes use the same
 snapshot database and receive the same protection.
+
+Known SQLite storage also must be isolated from every actual portal/policy KMS
+reader, including raw/native ordinary key configs without strict profiles.
+Inventory only metadata, retain the original opening paths and reparse dynamic
+KMS environment/directory sources before deferred construction. Compare candidate
+and active graphs in both directions: removing a candidate's refresh declaration
+does not permit its key reader to open the active app's database. A raw file
+open/close can release process-wide SQLite locks; namespace checks must precede
+such key reads. Physical aliases and database sidecars participate, while
+undeclared custom-plugin storage remains its owner's responsibility.
 
 Documents SQLite storage has a separate namespace safeguard. Before live
 construction, the app compares enabled Documents databases and their sidecars
@@ -203,8 +239,11 @@ Client registrations and signing-key files remain persisted independently of
 runtime disposal. Supply the existing registration credentials and key paths to
 the next configuration; do not regenerate them on every load. The config copy
 preserves those values. Access JWTs can remain valid when verification keys and
-policy remain compatible. Without `Config.State`, OIDC sessions, grants and portal refresh state are
-volatile. With it, completed authority and generated keys survive a stop/start;
+policy remain compatible. Without `Config.State`, OIDC sessions, grants and
+ordinary portal refresh state are volatile, and named refresh selection is
+invalid. With it, completed authority and generated keys survive a stop/start;
+selected refresh families stay in their own database, bound to the root's durable
+namespace and configuration generation;
 root snapshots do not preserve pending requests. An explicitly selected SQLite
 OAuth login store independently preserves upstream pending-login evidence until
 its own expiry. Closing a client does not purge a peer's pending work. This does
@@ -255,6 +294,13 @@ Run the focused suite with:
 ```sh
 go test -mod=readonly -race -count=1 -timeout=3m -run 'TestApp|TestCaddyLifecycleE2E' .
 ```
+
+`TestAppRefreshStore*` qualifies immutable factories, runtime metadata, partial
+acquisition, deferred construction, root rejection and request drain with a real
+SQLite wrapper. `TestRefreshStoreStorage*` includes raw/native ordinary key
+readers after candidate removal, both graph directions and physical-path changes.
+Actual Caddy process/browser/client qualification is mapped in
+[managed refresh tests](../../testing-and-ci/references/test-surfaces.md#selected-refresh-storage).
 
 Selected access signers follow the same app-owned factory and borrowed-root
 lifetime. Key-read/storage alias inventory must be refreshed before deferred

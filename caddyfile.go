@@ -46,6 +46,7 @@ func init() {
 //			oauth registration store { path <absolute-private-directory> }
 //			oauth login store <driver> <name> { ... }
 //			access signer <driver> <name> { ... }
+//			token refresh store <driver> <name> { ... }
 //			secrets <module> <id> { ... }
 //			credentials <name> { ... }
 //			messaging <email|file|sqlite> provider <name> { ... }
@@ -102,6 +103,12 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 				return nil, d.Errf("duplicate security state block")
 			}
 			if err := parseCaddyfileState(d, app.Config); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if d.Val() == "token" {
+			if err := parseCaddyfileRefreshStore(d, app); err != nil {
 				return nil, err
 			}
 			continue

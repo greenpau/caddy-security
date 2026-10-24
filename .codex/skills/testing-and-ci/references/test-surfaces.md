@@ -46,6 +46,65 @@ at the same path/key ID, rejected startup, restoration, and complete feature
 omission/reintroduction. Stateless tokens may be accepted again if their key is
 explicitly trusted again; retired persisted session authority must not return.
 
+## Selected refresh storage
+
+`TestSQLiteRefreshStore*`, `TestRefreshStoreResolution*`,
+`TestRefreshStoreInputText*`, `TestRefreshStoreDisabledResolution` and registered
+refresh-store adaptation/resolution fixtures qualify pure defaults, complete
+public parser delegation, literal backend fields and exact one-pass native and
+deferred selection. An invalid/empty-after-resolution named target must not
+fall back to memory. `TestAppRefreshStore*` covers copied factories/descriptors,
+metadata agreement, nil/partial handles, sanitized failures, deferred Start,
+real SQLite activation, root rejection and drain-before-close ownership.
+
+`TestRefreshStoreStorage*` checks all known categories, same-file limit agreement,
+physical aliases, sidecars, managed directories and original opening-path
+rechecks. Its ordinary-key transition cases prepare raw/native portal/policy
+consumers with no candidate refresh declaration, then compare against active
+refresh storage in both directions. This guards actual KMS readers, not only
+strict access-profile consumers. Keep public/private key-read and other common
+inventory regression suites alongside the category tests.
+
+`TestCaddySQLiteRefreshE2E` runs `TestCaddySQLiteRefreshProcess` through actual
+Caddy TLS at root and nested mounts. It checks native/browser login and rotation,
+independent PS256/JWKS and protected-resource verification, strict transport and
+SID boundaries, concurrent replay, current/spent logout, capacity-one account
+replacement, rotation/deadline exhaustion, current roles/disable/factor policy,
+and two portals sharing file-wide capacity while retaining portal-bound proof.
+The same-handle concurrent case joins both requests before assertions and checks
+that the losing replay revokes the winning descendant.
+
+`TestCaddySQLiteRefreshPersistenceE2E` builds the real production-module Caddy
+entrypoint with a private fixture CA and restarts OS processes. It checks live,
+spent and revoked authority, capacity-one configuration/key/complete-omission
+generation transitions, and independently loaded policy trust. A fresh process
+and independently verified resource access are required; an in-process pointer
+swap or JWT decoding alone does not establish restart continuity.
+
+`TestCaddySQLiteRefreshUncertaintyE2E` runs its isolated process helper with the
+real SQLite backend and an observed wrapper. A separate SQL read transaction
+forces an actual driver-COMMIT failure after signing; no synthetic store error
+or fabricated HTTP failure replaces it. `token_refresh_sqlite_browser_e2e_test.go`
+and its Node driver use real Chrome, normal cookies and natural form recovery.
+Delivered 503 sets blocked state in both tabs, and neither exchanges the old
+family before or after backend reopen. Fresh login yields a new SID, then normal
+renewal succeeds. The actual native CLI receives a legitimate short access
+lifetime, retains byte-identical private token state plus its uncertainty marker
+after 503, refuses another ordinary refresh locally across reopen, and recovers
+only through explicit forced password login followed by new-family renewal.
+Both paths assert the old digest was exchanged exactly once and scan for staged
+credential disclosure. The uncertainty fixture has spare capacity because a
+failed COMMIT can leave the old family live; it does not claim that uncertainty
+itself retires a family. Capacity reclamation by generation changes is separate.
+
+Existing provider-snapshot, local refresh, OP composition, native-client and
+browser-response-loss suites remain regressions for shared issuance/client paths.
+Upstream managed-view/migration tests cover exact legacy schema and payload
+compatibility, old-reader denial, namespace retirement, readiness and transaction
+classification. They supplement actual Caddy evidence; neither parser tests nor
+library results establish host acceptance or distributed availability. Run the
+named suites and inspect selected test events before reporting qualification.
+
 ## Portal OpenAPI contracts
 
 `openapi_contract_test.go` consumes the selected AuthCrunch module's authored

@@ -23,15 +23,18 @@ import (
 )
 
 type identityProviderStorageFile struct {
-	path        string
-	openingPath string
-	keyRead     bool
-	oauth       bool
-	capacity    int
-	ticket      bool
-	sqlite      bool
-	documents   bool
-	binding     documentsStorageBinding
+	path         string
+	openingPath  string
+	keyRead      bool
+	refresh      bool
+	maxSessions  int
+	maxRotations int
+	oauth        bool
+	capacity     int
+	ticket       bool
+	sqlite       bool
+	documents    bool
+	binding      documentsStorageBinding
 }
 
 // validateIdentityProviderFiles checks known storage namespaces before live
@@ -47,6 +50,12 @@ func (app *App) validateIdentityProviderFiles(config *authcrunch.Config) error {
 // in a later candidate must also protect the currently serving storage graph.
 func (app *App) configuredStorageFiles(config *authcrunch.Config) []identityProviderStorageFile {
 	var files []identityProviderStorageFile
+	for _, binding := range app.refreshStores {
+		if factory, ok := binding.factory.(*sqliteRefreshStoreFactory); ok && factory != nil {
+			config := factory.sqliteConfig()
+			files = append(files, identityProviderStorageFile{path: config.Path, sqlite: true, refresh: true, maxSessions: config.MaxSessions, maxRotations: config.MaxRotations})
+		}
+	}
 	for _, binding := range app.oauthLoginStores {
 		if factory, ok := binding.factory.(*sqliteOAuthLoginStoreFactory); ok && factory != nil {
 			config := factory.sqliteConfig()

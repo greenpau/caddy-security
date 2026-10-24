@@ -116,6 +116,11 @@ type App struct {
 	AccessSignerConfigs []json.RawMessage `json:"access_signers,omitempty" caddy:"namespace=security.access_signers inline_key=driver"`
 	accessSigners       []preparedAccessSigner
 
+	// RefreshStoreConfigs declares app-owned durable refresh stores. The root
+	// borrows their handles and activates immutable views after state admission.
+	RefreshStoreConfigs []json.RawMessage `json:"refresh_stores,omitempty" caddy:"namespace=security.refresh_stores inline_key=driver"`
+	refreshStores       []preparedRefreshStore
+
 	// MessagingProviderConfigs declares caller-owned notification backends.
 	MessagingProviderConfigs []json.RawMessage `json:"messaging_providers,omitempty" caddy:"namespace=security.messaging inline_key=driver"`
 	messagingProviders       []preparedMessagingProvider
@@ -176,6 +181,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	// JSON copying repairs invalid UTF-8. Reject malformed trust/selection text
 	// before that repair could turn it into another valid named binding.
 	if err := validateAccessTokenInputText(app.Config); err != nil {
+		return err
+	}
+	if err := validateRefreshStoreInputText(app.Config); err != nil {
 		return err
 	}
 	// Validation, runtime replacement, and NewServer all mutate configuration.
@@ -257,6 +265,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareAccessSigners(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareRefreshStores(ctx, &config); err != nil {
+		return err
+	}
 	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
 		return err
 	}
@@ -290,7 +301,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	if err := app.prepareStorageInventory(&config); err != nil {
-		return err
+		return app.privateConfigError("prepare storage inventory", err)
 	}
 	if config.State != nil {
 		// Caddy provisions every candidate before starting any of its apps.
@@ -389,6 +400,14 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
+	refreshStores, refreshStoreClosers, err := app.attachRefreshStores(app.pluginContext)
+	backendClosers = append(backendClosers, refreshStoreClosers...)
+	if err != nil {
+		closeErr := closePluginResources(backendClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
 	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{
 		IdentityStores:                   identityStores,
 		IdentityProviders:                identityProviders,
@@ -396,6 +415,7 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		UserRegistries:                   registries,
 		OAuthLoginStores:                 oauthLoginStores,
 		AccessSigners:                    accessSigners,
+		RefreshStores:                    refreshStores,
 	})
 	if err != nil {
 		closeErr := closePluginResources(backendClosers)

@@ -62,6 +62,7 @@ transport, two eligible local realms, an unselected realm and combined OP use.
 | Setting | Arguments | Enabled default |
 | --- | --- | --- |
 | `enabled` / `disabled` | None; mutually exclusive | Enabled when block exists |
+| `store` | One named refresh backend; requires enabled refresh and root state | Owned memory store |
 | `realms` | One or more realm names | Required |
 | `provider revalidation` | One selected OAuth/OIDC realm and `snapshot`; repeat for distinct realms | No provider mode |
 | `public origin` | One canonical HTTPS origin, without path | Required |
@@ -88,7 +89,8 @@ values, nested blocks, unknown fields, missing/empty arguments and integer
 overflow. Lists belong on one line. A missing block stays nil and access-only;
 an empty block is invalid. A standalone `disabled` opts out, with no required
 origin, mount or realms; its explicit settings still require valid grammar.
-There are no distributed-store directives.
+An explicit `store` with disabled refresh is invalid. The SQLite selector is
+local storage, not a distributed or HA deployment setting.
 
 ## Provider Snapshot Renewal
 
@@ -185,8 +187,11 @@ for request details.
 
 ## Session and Rotation Limits
 
-`max sessions` counts live refresh families in one portal's refresh store,
-shared across its selected realms and both transports. A family is one login
+`max sessions` counts live refresh families across selected realms and both
+transports. Omitted storage uses one portal's owned memory store. A selected
+SQLite backend applies its limits across the whole file, including other
+portals and namespaces; every selecting portal must use the backend's exact
+`max sessions` and `max rotations` values. A family is one login
 session and all credentials produced by rotating it. Multiple independent
 logins by the same user can consume multiple slots; tabs sharing one family do
 not consume extra slots merely by opening. This is neither a per-user quota nor
@@ -197,8 +202,9 @@ live family. Expired families are reclaimed opportunistically during admission;
 revocation removes a family and its credential history. A fresh browser login that
 presents an existing family with the same portal/origin/mount/transport binding
 can replace it atomically, including at capacity. Failed admission preserves
-existing live families. Separate portal runtimes have separate limits. Without
-the root `state` block, runtime replacement or restart discards their stores and
+existing live families. Omitted storage gives separate portal runtimes separate
+limits. Without the root `state` block, runtime replacement or restart discards
+those memory stores and
 requires login again. With persistence enabled, completed families and their
 deadlines survive a complete stop/start with the same storage and configuration;
 overlapping persistent reload is rejected. See [runtime ownership](#runtime-ownership).
@@ -214,7 +220,7 @@ older credential revokes its current descendant. Removing that history while
 leaving the family alive would lose replay detection. Together the two limits
 bound retained credential hashes to `max sessions * (max rotations + 1)`, plus
 session metadata. This is an entry-count bound, not an exact byte budget; raising
-both limits raises potential memory use. Zero restores the documented defaults
+both limits raises potential storage use. Zero restores the documented defaults
 and cannot disable either bound.
 
 ## Mounts and Cookies
@@ -275,8 +281,8 @@ Caddy's `{$ENV}` substitution runs during adaptation. Bodies containing runtime
 `{env.*}` or `secrets:<manager>:<key>` values are preserved, keyed by portal name,
 in `App.PortalTokenRefreshDirectives` / `portal_token_refresh_directives`.
 Keep the complete app snapshot when saving adapted JSON. Provisioning resolves
-each argument once and then calls the shared parser before portal validation.
-Numeric and state placeholders are supported. A replacement remains one argument;
+each value once and then calls the shared parser before portal validation.
+Keep directive keywords literal; numeric and state values are supported. A replacement remains one argument;
 it cannot inject a realm list or another setting. Empty replacements fail.
 Deferred semantic/duplicate-setting errors are rejected during provisioning.
 When refresh is deferred, retain the complete cookie snapshot too, even without
@@ -284,11 +290,14 @@ cookie placeholders. Resolve refresh before parsing that snapshot so collisions
 are checked against the effective cookie names, independent of directive order.
 
 Literal blocks adapt directly to `config.authentication_portals[].refresh_tokens`.
-Native JSON retains that typed form; origin, base path, cookie name and individual
+Native JSON retains that typed form; `store`, origin, base path, cookie name and individual
 realm strings and each `provider_revalidation` entry's `realm` and `mode` support
 runtime replacement. When enabled, the resolved mode must still be exactly
 `snapshot`; realm collisions after resolution fail validation. Disabled native
-settings retain ignored semantics; deferred statements still require valid grammar. JSON booleans/numbers retain their
+settings retain ignored semantics except that a nonempty store selection requires
+enabled refresh. A nonempty selector resolving to empty fails; it cannot opt into
+memory implicitly. Backend module fields remain literal. Deferred statements
+still require valid grammar. JSON booleans/numbers retain their
 types: the readable state grammar is specific to the Caddyfile block.
 A portal cannot supply both a typed refresh config and deferred refresh body.
 Unknown/duplicate snapshot targets, malformed statements and null/empty bodies
@@ -297,10 +306,12 @@ or expand substituted values twice.
 
 ## Runtime Ownership
 
-AuthCrunch owns the bounded session/rotation store, credential hashing,
+AuthCrunch owns the bounded session/rotation engine, credential hashing,
 local password/MFA evidence, signing, fresh identity checks, replay revocation,
 and cookie responses. Caddy configures the portal and owns admission/draining
-around the shared AuthCrunch runtime.
+around the shared AuthCrunch runtime. For selected backends, Caddy owns the
+opened handle; the root borrows it and activates immutable generation views.
+Cleanup drains requests, closes the root, then closes each acquired backend.
 
 Without a root `state` block, refresh state is volatile and does not survive
 runtime replacement or restart. Use
@@ -326,40 +337,28 @@ GET confirmation and POST logout, use the
 
 ## Storage Backend Boundary
 
-Portal refresh has no configurable storage backend selector. The portal creates
-a concrete `tokenrefresh.MemoryStore` and its own manager; neither
-`authn.PortalParameters` nor root `ServerOptions` accepts a refresh store.
-`TokenRefreshConfig` and the `token refresh` parser likewise expose no database
-path or driver. The root's OAuth login-store injection serves pending upstream
-login transactions, not portal refresh families.
+Use `store NAME` to select a declared `security.refresh_stores` module. The
+bundled `token refresh store sqlite NAME` declaration delegates its complete
+body to the public SQLite parser. The root accepts copied descriptors and
+borrowed managed stores; each selected portal receives one immutable view only
+after persistent configuration state establishes its namespace and generation.
+There is no second Caddy refresh manager or duplicate issuance implementation.
 
-AuthCrunch's `plugins/session-and-refresh-storage/sqlite` supplies a separate
-`Store`, `ReplacementStore` and `SessionValidator` for direct composition through
-`tokenrefresh.NewManager`. Its public parser configures that library, not this
-portal. Importing it, supplying its JSON fields, or configuring the root `state`
-block does not select SQLite. Existing root persistence attaches snapshot records
-to the portal's owned memory store; it is a different implementation with the
-documented exclusive stop/start boundary.
-
-A host adapter needs a public, pre-publication root/portal injection path first,
-including disabled/unknown binding rejection, caller ownership, failed-candidate
-cleanup and explicit interaction with root persistence. It must preserve the
-portal's identity transaction, current policy checks, staged signing and
-publish-after-commit behavior. Do not fork the portal issuer, replace private
-fields, or expose a selector that cannot reach the real portal runtime.
-
-Once that boundary exists, acceptance requires actual Caddy TLS login, refresh
-and protected requests using the selected store, concurrent rotation and durable
-replay across processes/restarts, wrong-binding isolation, identity/MFA changes,
-replacement at capacity, cancellation/lock contention, real failed commits,
-unavailable storage and reload/cleanup. Uncertain commit must withhold every
-staged credential and require fresh authentication without retrying the exchange.
-Retain identity epochs and signing keys across restart; a refresh database alone
-does not provide them, persist OIDC/OAuth sessions, or establish portal HA.
-Library consumer tests and the existing snapshot-persistence E2E do not qualify
-this unavailable host adapter.
+Omission retains the existing owned memory store and optional root snapshot
+persistence. Named SQLite storage requires root persistence for identity/key
+continuity and exclusive ownership, while its families and replay history stay
+in the dedicated database. OAuth pending-login storage remains independent.
+Read [named refresh storage](refresh-storage.md) for declaration syntax, limits,
+physical file isolation, migration, ownership and uncertain-commit recovery.
 
 ## Validation
+
+- `caddyfile_refresh_store_test.go`, `refresh_store_sqlite_test.go`,
+  `app_refresh_stores_test.go`, `app_refresh_store_lifecycle_test.go` and
+  `app_refresh_store_storage_test.go`: delegated backend/selector grammar,
+  one-pass native/deferred resolution, immutable factories, partial cleanup,
+  persistent startup, drain ordering and physical namespace admission.
+  `testcase_refresh_store.*` registers adaptation and resolution expectations.
 
 - `caddyfile_authn_token_refresh_test.go`: all fields, defaults/disabled behavior,
   malformed grammar, duplicate/import boundaries, environment and secret

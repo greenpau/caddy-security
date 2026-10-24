@@ -1,0 +1,47 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	security {
+		state {
+			directory /var/lib/authcrunch/runtime
+		}
+		local identity store employeesdb {
+			realm employees
+			path /var/lib/authcrunch/users.json
+		}
+		authentication portal myportal {
+			enable identity store employeesdb
+			token refresh {
+				store sessions
+				realms employees
+				public origin https://auth.example.test
+				base path /auth
+				max sessions 2
+				max rotations 3
+			}
+		}
+		authentication portal deferred {
+			enable identity store employeesdb
+			token refresh {
+				store {env.REFRESH_STORE_NAME}
+				realms employees
+				public origin https://auth.example.test
+				base path /deferred
+				max sessions {env.REFRESH_STORE_SESSIONS}
+				max rotations {env.REFRESH_STORE_ROTATIONS}
+			}
+		}
+		token refresh store sqlite sessions {
+			path /var/lib/authcrunch/refresh.db
+			max sessions 2
+			max rotations 3
+			timeout 1000ms
+		}
+	}
+}
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

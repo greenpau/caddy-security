@@ -134,6 +134,18 @@ rotations and avoid automatic retries when delivery is ambiguous. Invalid/revoke
 credentials return 401, origin/transport violations 403, admission exhaustion
 503. A family's rotation-limit exhaustion revokes it and reclaims capacity.
 
+Selecting [managed refresh storage](../configuration-authentication/references/refresh-storage.md)
+changes durability and limits, not the wire transport or proof requirements.
+Refresh API failures from unavailable storage or commit uncertainty return 503.
+Issuance that reports an uncertain commit also returns 503 and withholds staged
+access, refresh and downstream OP credentials. A failed response does not establish
+that the credential remained unused; even explicit 503 must not trigger automatic
+retry, session lookup recovery or silent fallback to fresh credentials. The
+browser coordinator blocks the affected family until confirmed fresh login;
+persistent native consumers must retain uncertainty across process restarts and
+require an explicit recovery action. A 401 denial is a different status, but also does not
+authorize retry of the same failed rotation.
+
 With a refresh cookie, GET `<base>/logout` displays confirmation; the session API
 POST completes revocation and cookie deletion, including an associated OP
 session. Portal refresh grants are unrelated to OIDC refresh or upstream provider

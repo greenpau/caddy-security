@@ -34,6 +34,7 @@ import (
 //
 //	token refresh {
 //	    <enabled|disabled>
+//	    store <named-refresh-store>
 //	    realms <realm> [<realm>...]
 //	    provider revalidation <realm> snapshot
 //	    public origin <canonical-https-origin>
@@ -102,9 +103,18 @@ import (
 // logins by the same user can occupy several slots. An additional independent
 // login at capacity returns 503 without evicting an existing live family.
 // Expired/revoked families release capacity; a fresh browser login can atomically
-// replace a presented family with the same binding. This is a memory bound, not a
-// rate limit. The portal owns a separate in-memory store that is lost on runtime
-// replacement or restart; this block cannot configure a distributed store.
+// replace a presented family with the same binding. This is a storage bound, not
+// a rate limit. Without store selection the portal owns separate memory storage;
+// configured root persistence retains its established snapshot behavior.
+//
+// store selects a named app-owned backend and requires enabled refresh plus
+// persistent root state. For SQLite, max sessions and max rotations must equal
+// the declared backend limits and apply across the entire file, including other
+// portals and namespaces. Root epochs activate immutable namespace generations;
+// replacement can retire that namespace's families and spent hashes atomically.
+// The SQLite database remains separate from root snapshots. A named local store
+// does not provide distributed or HA deployment support. Omit store to retain
+// the legacy memory implementation; an invalid selection never falls back.
 //
 // max rotations caps successful rotations per family (default 1024); initial
 // issuance does not count. The next attempt beyond the limit revokes the family,

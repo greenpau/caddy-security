@@ -1,0 +1,9 @@
+{
+	security {
+		token refresh store sqlite sessions {
+			path /var/lib/authcrunch/refresh.db
+			max sessions 2
+			max sessions 3
+		}
+	}
+}

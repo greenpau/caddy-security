@@ -32,15 +32,18 @@ rules below. Do not promise automatic rollback or uninterrupted availability.
 | --- | --- |
 | Completed direct OAuth sessions | With an explicit durable identity attachment, original opaque cookies work without another provider exchange; current identity/origin/ACL checks still apply |
 | Portal browser sessions and generated signing keys | Completed users and generated keys persist; unexpired old JWTs still verify against the same public JWKS |
-| Portal native/browser refresh | Families, deadlines, current credentials and spent-token replay history persist; provider families additionally require durable local attachment |
+| Portal native/browser refresh | Omitted backend selection persists the owned memory store through root snapshots; selected SQLite retains families, deadlines and spent history in its own database with root namespace/generation binding. Provider families additionally require durable local attachment |
 | Downstream OIDC | Browser sessions, consent, codes, access grants and rotating refresh families persist |
 | Revocation/logout | Successful revocations and replay-triggered descendant denial survive restart |
 | Local account security | Current account/credential versions still gate refresh, profile and OIDC; identity-file-only rollback invalidates old proof |
 
-Restart does not extend expiration. Pending OAuth callbacks, unfinished login,
-MFA/enrollment and interactive consent transactions must start again. Upstream
-provider discovery and JWKS verification still run normally; provider tokens
-are not retained for upstream renewal. Stateless JWTs keep their existing
+Restart does not extend expiration. Root state does not preserve unfinished
+login, MFA/enrollment or interactive consent transactions. Upstream OAuth
+callbacks also need a new attempt unless their separate selected
+[pending-login store](../../configuration-oauth-providers/references/shared-login-storage.md)
+preserves the transaction within its own expiry. Provider discovery and JWKS
+verification still run normally; provider tokens are not retained for upstream
+renewal. Stateless JWTs keep their existing
 expiration/revocation semantics; persistent sessions do not make all signed
 tokens immediately revocable.
 
@@ -64,11 +67,36 @@ runtime storage, so filesystem health and exclusive ownership are startup checks
 
 A changed normalized security configuration creates a new session epoch,
 including removing and later restoring a component. Unrelated changes or
-reordering may conservatively require login. Storage path and diagnostic
-logging are excluded from the binding. Generated keys persist independently;
-explicit key-configuration changes still apply. A directory only observes
+reordering may conservatively require login. The root-state directory itself and
+diagnostic logging are excluded from the binding; selected backend configuration
+and actual loaded public trust participate. Generated keys persist independently;
+explicit key-configuration or material trust changes still apply. A directory only observes
 configurations opened against it: temporarily omitting state or switching to
 another directory does not revoke authority in the dormant directory.
+
+## Named refresh database
+
+Retain the [selected refresh database](../../configuration-authentication/references/refresh-storage.md)
+alongside the root directory and identity/signing inputs. Its session/rotation
+limits apply to the whole file across portals and namespaces; every declaration
+and selected portal must use equal limits. Do not put the file inside a managed
+state or OAuth-registration directory. Do not reuse its base/sidecar namespace
+as a key, account, messaging, pending-login or other backend file.
+
+The root namespace remains stable through compatible restarts. A changed complete
+configuration generation transactionally retires that namespace's families and
+spent history, releasing their capacity without modifying other namespaces.
+Every immutable view rejects retired authority before mutation. Earlier committed
+activation/migration is not undone if another database later fails startup; there
+is no cross-database atomic startup or automatic rollback.
+
+Losing/replacing the root directory is not repaired by retaining only the SQLite
+file. Old namespaces may still occupy file-wide capacity, but new root state
+does not adopt their credentials. Retain evidence and restore a complete matching
+backup or plan fresh installation/revocation deliberately. Do not delete rows,
+reuse namespace identifiers or raise capacity to conceal an unexplained failure.
+Standalone legacy empty-scope records remain separate after supported migration;
+named portal activation does not import them.
 
 ## Failures and recovery
 
@@ -90,6 +118,15 @@ is not a final flush. Abrupt process death is covered, though an interrupted
 commit can retire the affected component's ambiguous snapshot and require new
 login. A lost response after successful rotation remains ambiguous to a client;
 strict replay rules still apply.
+
+Selected SQLite distinguishes cancellation before an attempted commit from a
+failed attempted commit. The latter quarantines that handle and reports commit
+uncertainty; a successful commit followed by cancellation or a late expiry check
+can also be uncertain without poisoning unrelated families. HTTP failure must
+withhold staged access/refresh/downstream credentials. A client cannot infer
+rollback from 503, and must not replay the same exchange automatically. Restore
+backend availability and use fresh authentication. Stateless access JWTs retain
+their independent expiry/verification behavior.
 
 Back up the entire directory together with configuration, identity databases,
 registrations and explicit keys while Caddy is stopped/drained. Preserve the

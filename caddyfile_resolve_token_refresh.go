@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
@@ -25,6 +27,21 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"go.uber.org/zap"
 )
+
+// validateRefreshStoreInputText rejects malformed native selector bytes before
+// the app's initial JSON snapshot could repair them. This performs no defaults,
+// replacement, semantic validation or I/O.
+func validateRefreshStoreInputText(config *authcrunch.Config) error {
+	if config == nil {
+		return fmt.Errorf("refresh storage configuration is unavailable")
+	}
+	for _, portal := range config.AuthenticationPortals {
+		if portal != nil && portal.RefreshTokens != nil && !utf8.ValidString(portal.RefreshTokens.Store) {
+			return fmt.Errorf("refresh storage selection text is invalid")
+		}
+	}
+	return nil
+}
 
 // resolvePortalTokenRefresh resolves each value once, before portal validation.
 // A deferred Caddyfile body and native JSON config are mutually exclusive.
@@ -50,16 +67,39 @@ func resolvePortalTokenRefresh(ctx context.Context, repl *caddy.Replacer, manage
 			// particular, a replacement cannot inject another setting or realm.
 			resolved := make([]string, 0, len(body))
 			for i, statement := range body {
-				if strings.ContainsAny(statement, "\r\n") {
+				if !utf8.ValidString(statement) || strings.ContainsAny(statement, "\r\n") {
 					return fmt.Errorf("portal %q: invalid token refresh statement %d", portal.Name, i)
 				}
 				args, err := cfgutil.DecodeArgs(statement)
 				if err != nil || len(args) == 0 {
 					return fmt.Errorf("portal %q: invalid token refresh statement %d", portal.Name, i)
 				}
-				args, err = substituteStrings(ctx, repl, managers, "PortalTokenRefreshDirectives", args, log)
-				if err != nil {
-					return err
+				// Resolve value positions only. The shared parser owns the
+				// complete grammar; store and realms have one-word keywords.
+				offset := len(args)
+				if len(args) == 1 {
+					// The enabled/disabled statement may itself be deferred.
+					// Preserve its existing single-token replacement contract.
+					offset = 0
+				}
+				switch args[0] {
+				case "realms", "store":
+					offset = 1
+				case "public", "base", "cookie", "access", "idle", "absolute", "body", "max", "provider":
+					if len(args) >= 2 {
+						offset = 2
+					}
+				}
+				for index := offset; index < len(args); index++ {
+					original := args[index]
+					value, err := substituteString(ctx, repl, managers, "PortalTokenRefreshDirectives", original, log)
+					if err != nil {
+						return err
+					}
+					if args[0] == "store" && original != "" && value == "" {
+						return fmt.Errorf("portal %q refresh storage replacement is invalid", portal.Name)
+					}
+					args[index] = value
 				}
 				if err := validateOAuthDirectiveTokens(args); err != nil {
 					return fmt.Errorf("portal %q: invalid token refresh argument", portal.Name)
@@ -75,6 +115,12 @@ func resolvePortalTokenRefresh(ctx context.Context, repl *caddy.Replacer, manage
 		if cfg == nil {
 			continue
 		}
+		originalStore := cfg.Store
+		resolvedStore, err := substituteString(ctx, repl, managers, "RefreshTokens.Store", originalStore, log)
+		if err != nil || originalStore != "" && resolvedStore == "" || !utf8.ValidString(resolvedStore) || strings.TrimSpace(resolvedStore) != resolvedStore || strings.ContainsFunc(resolvedStore, unicode.IsControl) {
+			return fmt.Errorf("portal %q refresh storage replacement is invalid", portal.Name)
+		}
+		cfg.Store = resolvedStore
 		for field, value := range map[string]*string{"PublicOrigin": &cfg.PublicOrigin, "BasePath": &cfg.BasePath, "CookieName": &cfg.CookieName} {
 			resolved, err := substituteString(ctx, repl, managers, "RefreshTokens."+field, *value, log)
 			if err != nil {
@@ -83,7 +129,6 @@ func resolvePortalTokenRefresh(ctx context.Context, repl *caddy.Replacer, manage
 			*value = resolved
 		}
 		realms := cfg.Realms
-		var err error
 		if realms != nil {
 			realms, err = substituteStrings(ctx, repl, managers, "RefreshTokens.Realms", realms, log)
 		}

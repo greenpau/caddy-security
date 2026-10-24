@@ -140,6 +140,9 @@ func validateDocumentsStorageInventory(inventory appStorageInventory) error {
 	if err := validateAccessKeyStorageInventory(inventory); err != nil {
 		return err
 	}
+	if err := validateRefreshStoreStorageInventory(inventory); err != nil {
+		return err
+	}
 	if err := validateOAuthLoginStoreStorageInventory(inventory); err != nil {
 		return err
 	}
@@ -155,6 +158,9 @@ func validateDocumentsStorageInventory(inventory appStorageInventory) error {
 
 func validateDocumentsStorageTransition(candidate, active appStorageInventory) error {
 	if err := validateAccessKeyStorageTransition(candidate, active); err != nil {
+		return err
+	}
+	if err := validateRefreshStoreStorageTransition(candidate, active); err != nil {
 		return err
 	}
 	if err := validateOAuthLoginStoreStorageTransition(candidate, active); err != nil {

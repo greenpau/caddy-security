@@ -133,8 +133,8 @@ func TestAccessKeyStorageInventorySources(t *testing.T) {
 		t.Fatal("unused declared signer was omitted from preflight")
 	}
 	config := &authcrunch.Config{AuthenticationPortals: []*authn.PortalConfig{{RawCryptoKeyStoreConfig: []string{accessKeyStorageLine("directory", filepath.Join(dir, "absent"))}}}}
-	if files, err := app.configuredAccessKeyFiles(config); err != nil || len(files) != 1 {
-		t.Fatal("legacy-only key loading changed")
+	if _, err := app.configuredAccessKeyFiles(config); err == nil || strings.Contains(err.Error(), dir) {
+		t.Fatal("ordinary key directory failure escaped metadata preflight or exposed its path")
 	}
 }
 

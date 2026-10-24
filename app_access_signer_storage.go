@@ -25,8 +25,9 @@ import (
 
 // configuredAccessKeyFiles reads metadata only. Opening and then closing even a
 // rejected PEM can release process-wide SQLite locks if it aliases a database.
-// Inspect every actual KMS read in a selected consumer, including unrelated
-// explicit verifier/system keys, because construction loads those entries too.
+// Inspect every actual portal/policy KMS read, including ordinary consumers.
+// A candidate without a refresh store can still overlap a serving refresh DB.
+// Retain these reads in the active inventory through request drain as well.
 func (app *App) configuredAccessKeyFiles(config *authcrunch.Config) ([]identityProviderStorageFile, error) {
 	var files []identityProviderStorageFile
 	addFile := func(path string) {
@@ -44,6 +45,11 @@ func (app *App) configuredAccessKeyFiles(config *authcrunch.Config) ([]identityP
 			if err != nil {
 				return fmt.Errorf("access key configuration is unavailable")
 			}
+		}
+		// KMS generates default keys when no explicit key statements exist;
+		// defaults alone do not describe a file read.
+		if len(keyStore.RawKeyConfigs) == 0 {
+			return nil
 		}
 		keys, err := kms.ParseCryptoKeyConfigs(keyStore.RawKeyConfigs)
 		if err != nil {
@@ -95,14 +101,14 @@ func (app *App) configuredAccessKeyFiles(config *authcrunch.Config) ([]identityP
 	}
 	if config != nil {
 		for _, portal := range config.AuthenticationPortals {
-			if portal != nil && (portal.AccessSigner != "" || portal.AccessTokenProfile != nil || portal.CryptoKeyStoreConfig != nil && portal.CryptoKeyStoreConfig.AccessTokenProfile != nil) {
+			if portal != nil {
 				if err := addKeys(portal.CryptoKeyStoreConfig, portal.RawCryptoKeyStoreConfig); err != nil {
 					return nil, err
 				}
 			}
 		}
 		for _, policy := range config.AuthorizationPolicies {
-			if policy != nil && (policy.AccessTokenProfile != nil || policy.CryptoKeyStoreConfig != nil && policy.CryptoKeyStoreConfig.AccessTokenProfile != nil) {
+			if policy != nil {
 				if err := addKeys(policy.CryptoKeyStoreConfig, policy.RawCryptoKeyStoreConfig); err != nil {
 					return nil, err
 				}

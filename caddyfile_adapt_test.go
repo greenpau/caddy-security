@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "named SQLite refresh store and deferred portal selection", inputFileNamePrefix: "testcase_refresh_store"},
+		{name: "SQLite refresh store rejects duplicate limits", inputFileNamePrefix: "testcase_refresh_store_duplicate", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid SQLite refresh storage configuration, at Caddyfile:7")},
 		{name: "named access signer and literal or deferred strict token profiles", inputFileNamePrefix: "testcase_access_signer"},
 		{name: "access signer rejects repeated backend lifetime", inputFileNamePrefix: "testcase_access_signer_duplicate", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid RSA-PSS access signer configuration, at Caddyfile:10")},

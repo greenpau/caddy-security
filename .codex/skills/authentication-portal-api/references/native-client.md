@@ -161,6 +161,26 @@ An interrupted response may follow a committed rotation. Never retry the spent
 credential automatically or add replay grace. Obtain a new family through an
 explicit fresh login, or explicitly revoke the old family. Merely retaining a
 refresh token in `Credentials` does not enable automatic renewal.
+The same rule applies to explicit storage-unavailable or commit-uncertain 503
+responses from selected SQLite storage. Protocol status alone cannot prove that
+replaying the credential is safe. Preserve a durable uncertainty marker before
+the request when implementing a persistent renewal consumer.
+
+The standalone `caddy-authenticator` command already owns this policy separately
+from authclient: it retains its old token file and `refresh.pending` after a
+failed response, refuses another automatic refresh, and removes the marker only
+after saving fresh/rotated credentials or explicitly clearing local state. It
+does not silently authenticate again after refresh failure. An explicit
+`login --force` performs fresh authentication; merely reopening server storage
+must not erase the command's marker. See the
+[command recovery contract](../../scripts-and-automation/references/caddy-authenticator.md#ownership).
+
+`TestCaddySQLiteRefreshUncertaintyE2E` exercises that command against real
+Caddy TLS and an actual SQLite driver-COMMIT failure. It checks the delivered
+503, unchanged private token file, durable marker, no second old-family exchange
+before/after backend reopen, explicit forced login and successful new-family
+rotation. This is distinct from a dropped HTTP response and does not imply that
+the failed commit revoked the old family.
 
 ## Caddy Validation
 

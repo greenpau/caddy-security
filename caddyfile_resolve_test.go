@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "named refresh storage native and deferred values", inputFileNamePrefix: "testcase_refresh_store"},
 		{name: "strict access token profile native and deferred values", inputFileNamePrefix: "testcase_access_signer"},
 		{name: "explicit OAuth SAML and LDAP attachment name resolution", inputFileNamePrefix: "testcase_identity_attachments"},
 		{name: "optional cross-device login and binding cookie", inputFileNamePrefix: "testcase_authenticate_with_cross_device"},

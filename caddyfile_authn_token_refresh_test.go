@@ -132,7 +132,7 @@ func TestPortalTokenRefreshRejects(t *testing.T) {
 		"token refresh {\nrealms }\n",
 	}
 	for _, line := range []string{
-		"mystery value", "enabled true", "disabled false", "enabled\ndisabled", "base_path /auth", "max_sessions 1", "store distributed",
+		"mystery value", "enabled true", "disabled false", "enabled\ndisabled", "base_path /auth", "max_sessions 1", "store one two",
 		"body transport true", "body transport false", "body transport 0", "body transport 1", "body transport on",
 		"access lifetime 1m", "max sessions 999999999999999999999999", "max rotations -1", "idle timeout -1",
 		"realms", `realms ""`, `cookie name ""`, `cookie name " "`, "cookie name", "cookie name one two", `"body transport" enabled`,

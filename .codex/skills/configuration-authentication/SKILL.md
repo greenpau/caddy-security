@@ -20,6 +20,8 @@ Read these files when details matter:
 - `caddyfile_authn_token_refresh.go` and [token refresh](references/token-refresh.md)
   for readable portal refresh configuration, explicit eligible realms, transports,
   bounded lifetimes and stores, cookies, placeholders and TLS validation.
+  Read [named refresh storage](references/refresh-storage.md) for explicit SQLite
+  selection, private file ownership, root-state generations and commit recovery.
 - `caddyfile_authn_documents.go` and [Documents configuration](references/documents.md)
   for flat API directives, explicit local realms, private storage, quotas,
   runtime values and permanent origin/mount bindings.

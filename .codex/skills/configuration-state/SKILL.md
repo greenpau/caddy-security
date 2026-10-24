@@ -80,11 +80,36 @@ old session evidence.
 The [direct OAuth policy contract](../configuration-authorization/SKILL.md#direct-oauth-without-a-portal)
 owns those settings; mount callback/logout paths through the same policy.
 
+## Named refresh storage
+
+A portal selecting [named refresh storage](../configuration-authentication/references/refresh-storage.md)
+must enable this root state block. The SQLite database supplies transactional
+families and spent history; root state supplies the stable namespace, changing
+configuration generation and other completed session/identity authority. Retain
+both through a complete stop/start. Selecting SQLite alone does not retain
+implicit provider-memory identities or downstream OP grants.
+
+Provisioning freezes declarations and checks known storage/key-reader namespaces;
+Start repeats those metadata checks before opening runtime handles. The root
+activates selected views only after complete configuration normalization and
+loaded trust admission. Same-generation restart preserves deadlines and replay
+history; changed generations retire that namespace across its portals and reclaim
+capacity. Complete feature removal/reintroduction also changes the durable epoch.
+A failed later activation cannot roll back an earlier database retirement: cold
+startup is not a transaction across all files. Failed candidates publish no root,
+close their app-owned handles after root disposal and require corrected fresh
+construction. Root/portals never close borrowed views or snapshot their families.
+
+Keep database files outside managed state/client-registration directories and
+separate from key readers and other backend files, including aliases/sidecars.
+Candidate removal does not discard the active graph's ownership until drain.
+See [operations](references/operations.md#named-refresh-database) for loss,
+uncertainty and backup boundaries.
+
 ## Validation
 
-The selected published go-authcrunch supplies `Config.State` and both
-public parsers; no dependency replacement is needed. Recheck the selected module
-before changing the contract. Library tests alone do not certify this host.
+Check the selected module's public state and managed refresh APIs before
+changing this contract. Library tests alone do not certify this host.
 
 - `caddyfile_state_test.go`, `caddyfile_authz_oauth_test.go` and the
   `testcase_security_state` adaptation fixture cover grammar, exact paths,
@@ -107,6 +132,14 @@ before changing the contract. Library tests alone do not certify this host.
   failed persistence activation retaining the volatile deployment's routes and
   sessions remain separate phases. The snapshot-capacity fixture writes tens
   of MiB.
+
+Selected refresh acceptance adds `TestCaddySQLiteRefreshPersistenceE2E` for real
+process continuity, replay/logout, capacity-one generation retirement, loaded
+trust and complete omission/reintroduction. `TestCaddySQLiteRefreshUncertaintyE2E`
+checks real attempted-COMMIT failure and browser/native recovery after reopen;
+local/root readiness and request-drain units remain separate. Use the
+[managed refresh test map](../testing-and-ci/references/test-surfaces.md#selected-refresh-storage)
+for exact fixture scope and limits.
 
 When changing the state parser or runtime implementation, run focused
 unit/adaptation tests and
