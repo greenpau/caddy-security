@@ -155,7 +155,12 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Ticket identity providers | `PortalParameters.IdentityProviders` and optional HTTP-login interface support direct composition; root provider dispatch has no injected-provider option |
 | Registration workflows | `Portal.AddUserRegistry` is public, but the SQLite workflow also requires its injected SQLite identity store; root dispatch constructs local registries and cannot assemble that dependency graph |
 | PS256 signing | `token_refresh.NewManager` accepts a signer; root portal/OP signing does not expose that selection |
-| Refresh storage | The same standalone manager accepts a store; it does not select portal/OP persistence or provide complete distributed session state |
+| Refresh storage | `token_refresh.NewManager` accepts a store, but the portal constructs a private concrete `MemoryStore`; `PortalParameters` and `ServerOptions` have no refresh-store injection. Root state attaches snapshots to that memory store, independently of the SQLite plugin |
+
+The [refresh storage boundary](../../configuration-authentication/references/token-refresh.md#storage-backend-boundary)
+owns the missing portal integration and its acceptance requirements. Do not
+register a host selector solely because the standalone engine accepts a backend;
+the actual portal must consume it before any login or refresh request is served.
 
 For API-key adapters, parse/validate the complete policy first, keep its raw
 declarations intact, then bind into the resulting runtime proxy config before

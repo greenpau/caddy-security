@@ -65,8 +65,7 @@ Selection rules:
   Replace `misc` or `chore` with a more specific indicator when possible, or
   `ops`/`various` when it is truly general maintenance.
 - Use colon form for new dependency bumps, such as
-  `ops: go-authcrunch to v1.1.40`, even though older history has subjects
-  like `upgrade to github.com/greenpau/go-authcrunch v1.1.39`.
+  `ops: update go-authcrunch dependency`.
 
 Use one of these product-surface indicators:
 
@@ -140,6 +139,12 @@ The following rules apply to the body of a commit message:
 - If no smoke test was run, `Tests` MUST say `not run` and include the
   reason.
 - `More info` MUST summarize the implementation details or notable decisions.
+- Do not reference `tmp/` directories or their contents anywhere in the commit
+  message, including `Tests`, `More info`, links, commands, and absolute paths.
+  Those local artifacts are not durable repository references. Summarize actual
+  validation and relevant decisions in the message itself; use tracked source,
+  tests, skills or stable public links when a reference is useful. Omit local
+  output-path arguments from command summaries without claiming a different run.
 
 The `Links` section must contain a list of valid links or references, e.g.:
 
@@ -185,7 +190,10 @@ For every request to create or generate a commit message, write it below
 message file. A review-only request does not create a file unless asked.
 
 Commit message files in `tmp/commits` are working artifacts and should not be
-committed unless explicitly requested.
+committed unless explicitly requested. This output location and the
+`git commit -F` command shown to the user are separate from the message contents;
+neither belongs inside the generated message. Local evidence links may be given
+in the user-facing response outside the commit message.
 
 ## Acceptance criteria
 
@@ -193,5 +201,7 @@ committed unless explicitly requested.
   no final period. The required body sections appear in order and obey line limits.
 - Tests names actual commands or manual checks performed and reports omitted
   smoke tests with their reason. A proposed test is never described as passing.
+- Review the complete message for temporary-directory references, including
+  absolute paths and links; no `tmp/` reference appears in its contents.
 - A message request produces the timestamped file under `tmp/commits` and its
   `git commit -F` command; a review-only request does not create or commit files.

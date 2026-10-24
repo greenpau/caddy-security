@@ -9,6 +9,7 @@
 - [Mounts and cookies](#mounts-and-cookies)
 - [Placeholders and JSON](#placeholders-and-json)
 - [Runtime ownership](#runtime-ownership)
+- [Storage backend boundary](#storage-backend-boundary)
 - [Validation](#validation)
 
 ## Configuration
@@ -268,6 +269,41 @@ refresh credentials.
 For browser continuation, Web Locks/storage coordination, SID preconditions,
 GET confirmation and POST logout, use the
 [browser HTTP/UI contract](../../authentication-portal-api/references/browser-refresh.md).
+
+## Storage Backend Boundary
+
+Portal refresh has no configurable storage backend selector. The portal creates
+a concrete `tokenrefresh.MemoryStore` and its own manager; neither
+`authn.PortalParameters` nor root `ServerOptions` accepts a refresh store.
+`TokenRefreshConfig` and the `token refresh` parser likewise expose no database
+path or driver. The root's OAuth login-store injection serves pending upstream
+login transactions, not portal refresh families.
+
+AuthCrunch's `plugins/session-and-refresh-storage/sqlite` supplies a separate
+`Store`, `ReplacementStore` and `SessionValidator` for direct composition through
+`tokenrefresh.NewManager`. Its public parser configures that library, not this
+portal. Importing it, supplying its JSON fields, or configuring the root `state`
+block does not select SQLite. Existing root persistence attaches snapshot records
+to the portal's owned memory store; it is a different implementation with the
+documented exclusive stop/start boundary.
+
+A host adapter needs a public, pre-publication root/portal injection path first,
+including disabled/unknown binding rejection, caller ownership, failed-candidate
+cleanup and explicit interaction with root persistence. It must preserve the
+portal's identity transaction, current policy checks, staged signing and
+publish-after-commit behavior. Do not fork the portal issuer, replace private
+fields, or expose a selector that cannot reach the real portal runtime.
+
+Once that boundary exists, acceptance requires actual Caddy TLS login, refresh
+and protected requests using the selected store, concurrent rotation and durable
+replay across processes/restarts, wrong-binding isolation, identity/MFA changes,
+replacement at capacity, cancellation/lock contention, real failed commits,
+unavailable storage and reload/cleanup. Uncertain commit must withhold every
+staged credential and require fresh authentication without retrying the exchange.
+Retain identity epochs and signing keys across restart; a refresh database alone
+does not provide them, persist OIDC/OAuth sessions, or establish portal HA.
+Library consumer tests and the existing snapshot-persistence E2E do not qualify
+this unavailable host adapter.
 
 ## Validation
 
