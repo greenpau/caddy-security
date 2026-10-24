@@ -110,7 +110,10 @@ attachments succeed. On failure it closes that root, then acquired backend
 resources in reverse order. On retirement it drains requests, cancels and joins
 host messaging workers, closes the root,
 then closes backend resources before releasing identity-file reservations.
-Enrollment workflows close before their borrowed queues and account stores.
+External identity providers remain the exact caller-owned instances through
+root and portal assembly; attachment setup must not rebind them. They close after
+root disposal and request drain. Enrollment workflows close before their borrowed
+queues and account stores.
 Their derived normalized descriptors participate in root persistence binding;
 pending/account durability remains independent of session persistence.
 `Cleanup` retains the joined result for concurrent callers; a backend cleanup

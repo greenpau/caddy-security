@@ -53,7 +53,7 @@ syntax catalogues with these placeholders are not runnable examples.
 ## Workflow
 
 1. Identify the requested auth flow: local login, LDAP, OAuth/OIDC, SAML, API
-   keys, basic auth, registration, SSO app, or policy-only authorization.
+   keys, trusted tickets, basic auth, registration, SSO app, or policy-only authorization.
 2. Follow only the matching Domain Map routes before drafting the Caddyfile.
    HTTP handler placement includes the HTTP integration route; external SAML
    login follows the SAML provider route, separately from portal SSO apps.
@@ -143,6 +143,9 @@ authorize /api/* with api_policy
   `caddyfile_identity_backend.go` and their typed parsers.
 - Use [configuration-messaging](../configuration-messaging/SKILL.md) to
   configure email/file transports and SQLite outboxes with owned delivery workers.
+- Use [configuration-ticket-providers](../configuration-ticket-providers/SKILL.md)
+  to configure trusted application tickets, their independent browser cookie,
+  private SQLite storage and issuer integration.
 - Use [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md)
   to configure external OAuth/OIDC identity providers, parsed by
   `caddyfile_identity.go`, `caddyfile_identity_provider.go`, and

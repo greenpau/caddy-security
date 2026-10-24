@@ -5,6 +5,7 @@ or runtime resource ownership. `app_plugins.go` owns the claims enrichment
 boundary and `app_external_authorization.go` owns external authorization;
 `app_credential_authenticators.go` owns fresh API-key bindings;
 `app_identity_stores.go` owns named identity-store bindings;
+`app_identity_providers.go` owns external login-provider bindings;
 `app_messaging.go` owns notification backends and their delivery workers;
 `app_registration_workflows.go` owns enrollment bindings and dependency ordering;
 `app.go` owns construction and retirement of the single AuthCrunch root.
@@ -33,7 +34,7 @@ realm and database path are distinct values; never use a path as implicit identi
 | External authorization | `security.external_authorization.<driver>` | Native app binding and bundled `httpjson` adapter with policy Caddyfile syntax |
 | Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled `sqlite` factory with global Caddyfile syntax; bind validated runtime proxy config before root construction |
 | Identity stores | `security.identity_stores.<driver>` | Native/global declarations and bundled SQLite factory; derived descriptors and runtime handles enter ordinary root assembly |
-| Identity providers | `security.identity_providers.<driver>` | Proposed; root injection unavailable |
+| Identity providers | `security.identity_providers.<driver>` | Native/global declarations and bundled SQLite tickets; normalized descriptors and exact caller-owned providers enter ordinary root assembly |
 | Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
 | Registration workflows | `security.registration_workflows.<driver>` | Native/global declarations and bundled SQLite enrollment; exact borrowed dependencies and explicit portal registry selection |
 | Signing/refresh storage | `security.cryptographic_signing.<driver>`, `security.session_and_refresh_storage.<driver>` | Proposed; standalone engine APIs do not select portal backends |
@@ -161,7 +162,7 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; supply named runtime bindings on each construction, close only after consumers drain; the current app does not supply these bindings |
 | API-key authenticators | Validate `PolicyConfig`, then call its `AuthProxyConfig.AddAuthenticator` before `NewServer` on that same private graph. The root retains these runtime bindings and checks `HasAuthProxies`. Waiting to call `Gatekeeper.AddAuthenticators` after root construction fails for an injected-only realm |
 | Identity stores | Derive `Config.ExternalIdentityStores` through `ids.NewExternalIdentityStoreConfig` before validation and supply `ServerOptions.IdentityStores` before root construction. Exact names/kinds/realms, configured handles and persistence digests are validated; injected handles remain caller-owned. See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md) |
-| Ticket identity providers | `PortalParameters.IdentityProviders` and optional HTTP-login interface support direct composition; root provider dispatch has no injected-provider option |
+| Ticket identity providers | Derive `Config.ExternalIdentityProviders` and supply `ServerOptions.IdentityProviders`. Root checks exact configured metadata and borrows the same dynamic instance, including its attachment interface; it never reconfigures or closes caller-owned providers |
 | Registration workflows | Derive `Config.ExternalUserRegistries` before validation and supply `ServerOptions.UserRegistries` at construction. Root validates exact metadata/readiness and attaches only selected names; providers remain caller-owned. SQLite factories receive the already-open selected account/outbox handles |
 | PS256 signing | `token_refresh.NewManager` accepts a signer; root portal/OP signing does not expose that selection |
 | Refresh storage | `token_refresh.NewManager` accepts a store, but the portal constructs a private concrete `MemoryStore`; `PortalParameters` and `ServerOptions` have no refresh-store injection. Root state attaches snapshots to that memory store, independently of the SQLite plugin |
@@ -243,3 +244,29 @@ account/pending/outbox files before acquisition without reserving them as exclus
 local-file stores. The root never activates, rebinds or closes an injected registry.
 See [SQLite enrollment](../../configuration-registrations/references/sqlite-workflows.md)
 for explicit selection, policy, deployed origin/mount responsibility and recovery.
+
+## External identity-provider ownership
+
+`IdentityProviderBackendModule` derives a normalized descriptor and returns a
+fresh configured `idp.IdentityProvider`. Keep original module JSON unchanged,
+reject native root descriptors, and restore runtime maps on each construction.
+The root checks exact map keys and name/kind/driver/realm metadata before resource
+acquisition. A borrowed attachment consumer must return a nonnil attachment;
+an explicitly named store must already be bound. Unnamed lazy memory attachments
+are not initialized by this check. Preserve dynamic optional interfaces,
+especially HTTP login and identity attachment; a wrapper that loses the provider's attachment cannot
+validate its proof through a newly created fallback.
+
+The root finishes owned attachment setup once, then tells portals that assembly
+is complete. Already-ready borrowed providers retain their caller wiring and
+private state. Standalone portal callers retain the default attachment setup
+unless they explicitly declare it complete. The host never duplicates the root
+or configures a second identity attachment for a ticket backend.
+
+Read-only host checks compare ticket database and sidecar paths with known
+bundled backend and local/dropbox files before live factories run. SQLite secret
+snapshots were already read and closed during configuration resolution. Compatible
+ticket handles may share one canonical file, without exclusive local-snapshot
+reservations; different hardlink names and cross-category aliases are rejected.
+See [ticket configuration](../../configuration-ticket-providers/SKILL.md) for
+trusted issuance, private identity lifetime, browser cookies and recovery.

@@ -93,6 +93,10 @@ type App struct {
 	IdentityStoreConfigs []json.RawMessage `json:"identity_stores,omitempty" caddy:"namespace=security.identity_stores inline_key=driver"`
 	identityStores       []preparedIdentityStore
 
+	// IdentityProviderConfigs declares caller-owned external login providers.
+	IdentityProviderConfigs []json.RawMessage `json:"identity_providers,omitempty" caddy:"namespace=security.identity_providers inline_key=driver"`
+	identityProviders       []preparedIdentityProvider
+
 	// MessagingProviderConfigs declares caller-owned notification backends.
 	MessagingProviderConfigs []json.RawMessage `json:"messaging_providers,omitempty" caddy:"namespace=security.messaging inline_key=driver"`
 	messagingProviders       []preparedMessagingProvider
@@ -216,6 +220,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareIdentityStores(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareIdentityProviders(ctx, &config); err != nil {
+		return err
+	}
 	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
 		return err
 	}
@@ -269,6 +276,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 // constructServer runs with app.mu held, before publishing admission.
 func (app *App) constructServer(config *authcrunch.Config) error {
+	if err := app.validateIdentityProviderFiles(config); err != nil {
+		return err
+	}
 	if err := app.validateRegistrationWorkflowFiles(); err != nil {
 		return err
 	}
@@ -296,6 +306,14 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
+	identityProviders, providerClosers, err := app.attachIdentityProviders(app.pluginContext)
+	backendClosers = append(backendClosers, providerClosers...)
+	if err != nil {
+		closeErr := closePluginResources(backendClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
 	messagingClosers, workers, err := app.attachMessagingProviders(app.pluginContext, config)
 	backendClosers = append(backendClosers, messagingClosers...)
 	if err != nil {
@@ -312,7 +330,7 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
-	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores, UserRegistries: registries})
+	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores, IdentityProviders: identityProviders, UserRegistries: registries})
 	if err != nil {
 		closeErr := closePluginResources(backendClosers)
 		releaseIdentityFiles(app.identityFiles)

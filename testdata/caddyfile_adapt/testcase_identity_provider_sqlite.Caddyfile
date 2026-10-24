@@ -1,0 +1,23 @@
+{
+	security {
+		identity provider sqlite application {
+			realm application
+			path "/private tickets/tickets.db"
+			public_origin https://auth.example.test
+			issuer_url https://issuer.example.test/login
+			base_path /auth
+			cookie_name APP_TICKET_BINDING
+			timeout 1000ms
+		}
+		authentication portal myportal {
+			enable identity provider application
+			crypto key sign-verify synthetic-identity-signing-secret
+		}
+	}
+}
+
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

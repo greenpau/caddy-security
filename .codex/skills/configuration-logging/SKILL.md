@@ -1,6 +1,6 @@
 ---
 name: configuration-logging
-description: "Configure AuthCrunch diagnostic skip rules, Caddy credential-header redaction, and logger boundaries. Use for component/message filtering and safe API-key diagnostics; authorization outcomes remain unchanged."
+description: "Configure AuthCrunch diagnostic skip rules, Caddy credential redaction, and logger boundaries. Use for component/message filtering and safe credential diagnostics; authorization outcomes remain unchanged."
 ---
 
 # Configuration Logging
@@ -111,6 +111,18 @@ includes these host filters and is qualified through the production TLS journey.
 This is field redaction; it preserves the HTTP denial and diagnostic entry.
 It does not implement the component-level host message suppression below or
 resolve issue #280. Keep returned errors and authorization behavior unchanged.
+
+## Credential-bearing request and response URLs
+
+Trusted ticket login carries opaque request identifiers and tickets in query
+parameters. Caddy's earlier request clone also retains that URI. Delete
+`request>uri` and `resp_headers>Location` with filter encoders in both global
+diagnostic and site access logs, as shown in [ticket configuration](../configuration-ticket-providers/SKILL.md).
+Caddy records the issuer redirect in response headers even when request URI is
+deleted. These filters preserve status and denial entries. An issuer or proxy
+needs equivalent protection, including credential-bearing Location headers. Handler query stripping
+or AuthCrunch component skip rules do not provide this field redaction. Qualify
+malformed URI parsing before substituting a narrower query-only filter.
 
 ## Missing Caddy Host Extension
 

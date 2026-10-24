@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ticket Identity Providers"
+  short_description: "Configure trusted single-use ticket login"
+  default_prompt: "Use $configuration-ticket-providers to configure trusted ticket login through Caddy."

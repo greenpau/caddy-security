@@ -95,6 +95,9 @@ modules register from package `init` hooks.
 - `caddyfile_state.go` adapts the optional root runtime-state block. Persistent
   roots are constructed in `App.Start`; overlapping persistent reload is rejected
   before candidate routes start, and Cleanup drains calls before root disposal.
+- `app_identity_providers.go` binds caller-owned login providers to the root;
+  the bundled SQLite ticket provider retains trusted application issuance and
+  its independent browser-binding cookie.
 - `app_registration_workflows.go` binds caller-owned enrollment workflows after
   account stores and notification queues; SQLite signup requires explicit portal
   selection and confirms directly into its account store.

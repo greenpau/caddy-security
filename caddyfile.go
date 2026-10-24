@@ -49,6 +49,7 @@ func init() {
 //			messaging <email|file|sqlite> provider <name> { ... }
 //			<local|ldap> identity store <name> { ... }
 //			identity store <driver> <name> { ... }
+//			identity provider <driver> <name> { ... }
 //			<oauth|saml> identity provider <name> { ... }
 //			oauth application <nickname> { ... }
 //			sso provider <name> { ... }

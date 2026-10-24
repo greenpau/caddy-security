@@ -55,6 +55,8 @@ Use focused repo-local skills for specialized portal sub-blocks:
   challenge selection, additive legacy requirements, claim replacements, and
   transform UI links. Persisted local-user challenge rules belong to
   [configuration-users](../configuration-users/SKILL.md).
+- Use [configuration-ticket-providers](../configuration-ticket-providers/SKILL.md)
+  to enable trusted application ticket login and its browser-binding provider.
 - Use [configuration-saml-providers](../configuration-saml-providers/SKILL.md)
   to configure `saml identity provider <name>` login providers enabled by the portal.
 - Use [authentication-portal-api](../authentication-portal-api/SKILL.md) to build

@@ -284,6 +284,14 @@ which can be shared by portals. A portal prefix never rewrites it. Configure
 that provider explicitly when changing its ID-token cookie name; the portal's
 identity-cookie role is not an override of the shared provider.
 
+Ticket provider browser-binding cookies also belong to their configured provider,
+independently of portal prefixes. Their exact callback path, Secure/HttpOnly,
+host-only and SameSite=Lax scope cannot be overridden by ordinary portal cookie
+attributes. Portal construction and response handling reject collisions with
+portal roles and configured upstream identity cookies. See
+[ticket provider configuration](../configuration-ticket-providers/SKILL.md) for
+custom names, matching deletion and the callback's reserved-prefix restrictions.
+
 ## Validation
 
 - `caddyfile_authn_cookie_test.go`: grammar, legacy translation, all nine prefix

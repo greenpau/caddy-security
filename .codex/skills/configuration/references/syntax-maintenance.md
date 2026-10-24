@@ -70,6 +70,7 @@ change with the selected host parser.
 | Direct policy OAuth | `caddyfile_authz.go`, `plugin_authorization.go` | `pkg/authz/oauth/parser` → `PolicyConfig.ConfigureOAuth`; route handler preserves authorization, bypass and handled responses |
 | Policy options, bypass, headers, auth proxy | `caddyfile_authz_misc.go`, `caddyfile_authz_bypass.go`, `caddyfile_authz_inject.go` | `pkg/authz`, `pkg/authz/bypass`, `pkg/authz/injector`, `pkg/authproxy` |
 | SQLite password identities | `caddyfile_identity_backend.go`, `identity_store_sqlite.go` | `plugins/identity-stores/sqlite/parser`; `identity store sqlite <name>` selects literal typed config and named portal injection |
+| SQLite ticket providers | `caddyfile_identity_backend.go`, `identity_provider_sqlite.go` | `plugins/identity-providers/sqlite/parser`; `identity provider sqlite <name>` binds literal configuration through root provider injection |
 | Local/LDAP stores and static users | `caddyfile_identity_store.go` | `pkg/ids/config.go`, `pkg/ids/local`, `pkg/ids/ldap`, `pkg/authn/icons` |
 | Upstream OAuth | `caddyfile_identity_provider_oauth.go` | `pkg/idp/parser/oauth.go` → `pkg/idp/oauth/parser` → shared `pkg/idp/config.go`; runtime `pkg/idp/oauth` |
 | Named OAuth applications | `caddyfile_oauth_application.go`, collected first in `caddyfile.go` | `pkg/oidc/parser/application.go`, `client.go` → `Config.AddOAuthApplication`; explicit or stored credentials, repeatable single-value `redirect_uri`, no generation during adaptation |

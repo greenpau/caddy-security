@@ -19,21 +19,31 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 )
 
-// parseCaddyfileIdentityBackend dispatches host-owned identity-store modules.
+// parseCaddyfileIdentityBackend dispatches host-owned identity modules.
 //
 //	identity store <driver> <name> { ... }
+//	identity provider <driver> <name> { ... }
 //
-// The registered security.identity_stores.<driver> owns the complete block.
-// Built-in local/LDAP declarations retain their existing grammar.
+// Modules under security.identity_stores or security.identity_providers own the
+// complete block. Built-in local/LDAP/OAuth/SAML retain their existing grammar.
 func parseCaddyfileIdentityBackend(d *caddyfile.Dispenser, app *App) error {
 	args := d.RemainingArgs()
-	if len(args) != 3 || args[0] != "store" {
+	if len(args) != 3 || (args[0] != "store" && args[0] != "provider") {
 		return d.ArgErr()
 	}
-	module, err := caddyfile.UnmarshalModule(d, "security.identity_stores."+args[1])
+	namespace := "security.identity_stores."
+	if args[0] == "provider" {
+		namespace = "security.identity_providers."
+	}
+	module, err := caddyfile.UnmarshalModule(d, namespace+args[1])
 	if err != nil {
 		return err
 	}
-	app.IdentityStoreConfigs = append(app.IdentityStoreConfigs, caddyconfig.JSONModuleObject(module, "driver", args[1], nil))
+	raw := caddyconfig.JSONModuleObject(module, "driver", args[1], nil)
+	if args[0] == "provider" {
+		app.IdentityProviderConfigs = append(app.IdentityProviderConfigs, raw)
+	} else {
+		app.IdentityStoreConfigs = append(app.IdentityStoreConfigs, raw)
+	}
 	return nil
 }
