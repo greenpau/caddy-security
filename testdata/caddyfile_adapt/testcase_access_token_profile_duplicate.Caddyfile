@@ -1,0 +1,14 @@
+{
+	security {
+		authentication portal portal {
+			access signer primary
+			access token profile {
+				issuer https://auth.example.test/auth
+				audience service-a
+				key ids current
+				max lifetime 900
+				max lifetime 600
+			}
+		}
+	}
+}

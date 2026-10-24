@@ -56,9 +56,11 @@ non-transient NameID; GitHub requires its immutable numeric ID. Existing access
 JWTs retain their bounded expiry, and old external refresh evidence may require
 a fresh login. Preserve the library's new routes and complete request URL.
 
-The reference PS256 signer and SQLite refresh store plug into the public refresh
-manager; they cannot replace concrete portal/OP backends through the released
-root API. SQLite password identities use derived `ExternalIdentityStores`
+Named PS256 access signers bind through root descriptors and borrowed runtime
+maps, with explicit portal/policy trust profiles. See
+[selected access signing](../../configuration-crypto/references/access-signing.md).
+The SQLite refresh store still has only the public standalone manager binding;
+its portal storage adapter remains separate work. SQLite password identities use derived `ExternalIdentityStores`
 descriptors and the typed `ServerOptions.IdentityStores` runtime map. The host
 constructs them before the root, owns cleanup and preserves backend epochs.
 See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md)
@@ -85,8 +87,8 @@ See [SQLite API keys](../../configuration-authorization/references/sqlite-api-ke
 Upstream CI/OpenAPI automation, standalone hosting and CLA changes do not add
 Caddy directives. Preserve Caddy's own tests, workflow and module version.
 
-RSA public keys verify strict PS256 signatures; portal signing remains on its
-existing algorithms. Cookie validation additionally reserves
+RSA public keys retain legacy PS256 verification; explicit access profiles add
+purpose, issuer, audience and temporal enforcement. Cookie validation reserves
 `<configured SAML cookie name>_` for per-transaction cookies. These inherited
 validation changes have no new host directive; keep the crypto and cookie
 owners' qualification boundaries explicit.

@@ -37,12 +37,13 @@ realm and database path are distinct values; never use a path as implicit identi
 | Identity providers | `security.identity_providers.<driver>` | Native/global declarations and bundled SQLite tickets; normalized descriptors and exact caller-owned providers enter ordinary root assembly |
 | Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
 | Registration workflows | `security.registration_workflows.<driver>` | Native/global declarations and bundled SQLite enrollment; exact borrowed dependencies and explicit portal registry selection |
-| Signing/refresh storage | `security.cryptographic_signing.<driver>`, `security.session_and_refresh_storage.<driver>` | Proposed; standalone engine APIs do not select portal backends |
+| Access signing | `security.access_signers.<driver>` | Immutable factory and borrowed root/portal signer; bundled `rsapss` |
+| Refresh storage | `security.refresh_stores.<driver>` | Proposed; standalone engine APIs do not select portal storage |
 | OAuth login storage | `security.oauth_login_stores.<driver>` | Native/global named declarations and bundled SQLite storage; immutable factories supply exact borrowed runtime handles through root options |
 
-The signing/refresh namespaces remain design conventions, not registered modules
-or accepted Caddyfile syntax. Add loaders only with a supported consumer and its
-acceptance tests. Do not add a universal map-based plugin executor or a second
+The refresh-storage namespace remains a design convention, not a registered
+module or accepted Caddyfile syntax. Add its loader only with a supported
+consumer and its acceptance tests. Do not add a universal map-based plugin executor or a second
 process-global runtime registry.
 
 ## Native claims enrichment binding
@@ -196,7 +197,7 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Identity stores | Derive `Config.ExternalIdentityStores` through `ids.NewExternalIdentityStoreConfig` before validation and supply `ServerOptions.IdentityStores` before root construction. Exact names/kinds/realms, configured handles and persistence digests are validated; injected handles remain caller-owned. See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md) |
 | Ticket identity providers | Derive `Config.ExternalIdentityProviders` and supply `ServerOptions.IdentityProviders`. Root checks exact configured metadata and borrows the same dynamic instance, including its attachment interface; it never reconfigures or closes caller-owned providers |
 | Registration workflows | Derive `Config.ExternalUserRegistries` before validation and supply `ServerOptions.UserRegistries` at construction. Root validates exact metadata/readiness and attaches only selected names; providers remain caller-owned. SQLite factories receive the already-open selected account/outbox handles |
-| PS256 signing | `token_refresh.NewManager` accepts a signer; root portal/OP signing does not expose that selection |
+| PS256 access signing | Derive `Config.ExternalAccessSigners` and supply `ServerOptions.AccessSigners`; `PortalConfig.AccessSigner` selects one borrowed handle with a matching strict profile. App factories freeze normalized configuration; root validates metadata and public-key equality before publication. OP ID signing is separate |
 | Refresh storage | `token_refresh.NewManager` accepts a store, but the portal constructs a private concrete `MemoryStore`; `PortalParameters` and `ServerOptions` have no refresh-store injection. Root state attaches snapshots to that memory store, independently of the SQLite plugin |
 
 The [refresh storage boundary](../../configuration-authentication/references/token-refresh.md#storage-backend-boundary)
@@ -276,6 +277,28 @@ account/pending/outbox files before acquisition without reserving them as exclus
 local-file stores. The root never activates, rebinds or closes an injected registry.
 See [SQLite enrollment](../../configuration-registrations/references/sqlite-workflows.md)
 for explicit selection, policy, deployed origin/mount responsibility and recovery.
+
+## Access-signer ownership
+
+`AccessSignerBackendModule.PrepareAccessSigner` freezes normalized configuration
+without reading key material. Its `AccessSignerFactory` returns a detached core
+descriptor and constructs a fresh app-owned runtime on each call. Keep module
+validation and cleanup independent of those handles. Collect an optional closer
+before inspecting a constructor error, and close all acquired handles in reverse
+order after root disposal or construction failure. Core validates declaration
+metadata, captures immutable public-key evidence, and borrows the exact signer.
+Contain only metadata/preparation/accessor and cleanup panics; never recover
+around signing or root construction.
+
+The bundled RSA-PSS factory's private-key path and every explicit selected
+portal/policy KMS key read enter the common storage inventory before any backend
+opens. Check physical paths, existing-file identities and SQLite sidecars, then
+recollect environment/directory-derived key reads during deferred startup before
+opening the candidate. Preserve each active runtime's original opening and
+physical paths. This preflight checks aliases; it does not make arbitrary
+filesystem or environment mutations safe during construction. See
+[access signing](../../configuration-crypto/references/access-signing.md) for the
+consumer, verification and rotation contracts.
 
 ## External identity-provider ownership
 

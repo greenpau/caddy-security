@@ -135,9 +135,10 @@ authorize /api/* with api_policy
   to configure authorization policies, parsed by `caddyfile_authz.go` and
   `caddyfile_authz_*.go`.
 - Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure
-  crypto directives and token or System API keys, parsed by
-  `caddyfile_authn_crypto.go` and `caddyfile_authz_crypto.go`, implemented by
-  `go-authcrunch/pkg/kms`, and resolved by `caddyfile_resolve.go`.
+  crypto directives, named access signers, strict access-token profiles, and
+  token or System API keys. Parsers include `caddyfile_authn_crypto.go`,
+  `caddyfile_authz_crypto.go`, `caddyfile_access_signer.go`, and
+  `caddyfile_access_token_profile.go`; AuthCrunch owns cryptographic validation.
 - Use [configuration-credentials](../configuration-credentials/SKILL.md) to
   configure reusable generic credentials, parsed by `caddyfile_credentials.go`.
 - Use [configuration-identity-stores](../configuration-identity-stores/SKILL.md)

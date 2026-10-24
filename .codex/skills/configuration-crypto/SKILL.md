@@ -1,14 +1,14 @@
 ---
 name: configuration-crypto
-description: "Configure portal/policy JWT keys, token names and lifetimes, key loading and generation, public-key discovery, and System API encryption keys. Use for signing/verification compatibility and rotation."
+description: "Configure portal/policy JWT keys, named access signers, strict access-token profiles, token names and lifetimes, discovery, rotation, and System API encryption keys."
 ---
 
 # Configuration Crypto
 
 ## Purpose
 
-Use this skill for `crypto` directives inside
-`authentication portal <name>` and `authorization policy <name>` blocks.
+Use this skill for global `access signer` declarations, portal signer selection,
+portal/policy `access token profile` blocks, and their existing `crypto` directives.
 Surrounding declarations belong to
 [configuration-authentication](../configuration-authentication/SKILL.md) and
 [configuration-authorization](../configuration-authorization/SKILL.md).
@@ -54,7 +54,7 @@ does not share session state or authorize concurrent owners.
 
 ## Common Pairing
 
-For a portal that issues JWTs and a policy that verifies them, configure the
+For ordinary KMS issuance and a policy that verifies its JWTs, configure the
 portal with sign-capable material and the policy with matching verify-capable
 material:
 
@@ -78,8 +78,9 @@ material:
 
 Use `sign-verify` on the portal for HMAC/shared secrets or private keys. Use
 `verify` on the policy when only verification is needed. Do not configure a
-portal with only `verify` unless it never issues tokens; portal provisioning can
-succeed, but login token signing will fail later.
+portal with only `verify` unless it never issues tokens or explicitly selects
+an external access signer with its matching profile; ordinary KMS login token
+signing otherwise fails later.
 
 ## Supported Forms
 
@@ -125,9 +126,10 @@ key is unambiguous.
 ## Defaults
 
 The default key ID is `0`. A non-default key ID is injected into JWT headers
-when that key signs a token. Token verification currently tries configured
+when that key signs a token. Ordinary token verification tries configured
 verify-capable keys; it does not select a verification key solely from the JWT
-`kid` header.
+`kid` header. A strict access-token profile instead selects the exact trusted
+key ID and enforces the complete profile.
 
 The default token name is `access_token`. The default lifetime is `900`
 seconds. `crypto default token lifetime <SECONDS>` applies to explicit keys
@@ -168,15 +170,14 @@ an RSA verifier does not create a PS256-only algorithm policy. Signature
 verification does not establish issuer, audience, or token purpose; consumers
 must enforce those trust boundaries separately.
 
-Existing portal RSA issuance still uses the RS algorithms, with `RS512` as the
-imported-key default and public JWKS advertising that actual signing choice.
-The separate reference PS256 signer is not selectable by a portal or OP
-directive; its public integration point is the standalone refresh manager.
-Neither an autogeneration label nor an imported-key `algorithm PS256` suffix
-enables it. Before adding a selector, recheck the
-[public injection boundary](../coding-directives/references/host-plugins.md#public-injection-audit)
-and require a root attachment API that preserves portal issuance transactions,
-credential withholding on failure, and signing-key discovery.
+Ordinary portal RSA issuance uses the RS algorithms, with `RS512` as the
+imported-key default and public JWKS advertising that signing choice. Explicit
+`access signer` selection enables PS256 portal access issuance with a matching
+strict `access token profile`; independent policies may select the profile alone.
+Read [selected access signing](references/access-signing.md) for declarations,
+resolution, approved claims, key isolation, delivery, rotation and persistence.
+Autogeneration labels and imported-key `algorithm PS256` suffixes do not select
+this backend. OP ID signing retains its separate configuration.
 
 ```caddyfile
 crypto key auth1 sign-verify from file /etc/caddy/jwt/sign_key.pem
@@ -335,6 +336,8 @@ confusion, time/role denial, failed candidate preservation, verifier rollover,
 retirement, and Caddy stop/start. Real password login and public JWKS remain
 RS512 throughout. These checks qualify verification only; they do not establish
 portal PS256 issuance, refresh atomicity with a custom signer, or OP support.
+The dedicated `access_signer_*_test.go` suites qualify selected signing, strict
+consumers and persistence; see [their contract](references/access-signing.md).
 
 Use these examples for orientation:
 

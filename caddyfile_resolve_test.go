@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "strict access token profile native and deferred values", inputFileNamePrefix: "testcase_access_signer"},
 		{name: "explicit OAuth SAML and LDAP attachment name resolution", inputFileNamePrefix: "testcase_identity_attachments"},
 		{name: "optional cross-device login and binding cookie", inputFileNamePrefix: "testcase_authenticate_with_cross_device"},
 		{name: "direct OAuth settings", inputFileNamePrefix: "testcase_authorize_oauth"},
@@ -222,7 +223,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, document.Apps.Security.OAuthAuthorizationDirectives, document.Apps.Security.PortalDocumentsDirectives, logger)
+			err = resolveRuntimeAppConfigWithAccessTokens(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, document.Apps.Security.OAuthAuthorizationDirectives, document.Apps.Security.PortalDocumentsDirectives, document.Apps.Security.PortalAccessTokenProfileDirectives, document.Apps.Security.PolicyAccessTokenProfileDirectives, logger)
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)

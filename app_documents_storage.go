@@ -38,6 +38,11 @@ type appStorageInventory struct {
 
 func (app *App) prepareStorageInventory(config *authcrunch.Config) error {
 	inventory := appStorageInventory{files: app.configuredStorageFiles(config)}
+	keyFiles, err := app.configuredAccessKeyFiles(config)
+	if err != nil {
+		return err
+	}
+	inventory.files = append(inventory.files, keyFiles...)
 	if config != nil {
 		for _, portal := range config.AuthenticationPortals {
 			if portal == nil || portal.API == nil || !portal.API.DocumentsEnabled {
@@ -91,6 +96,15 @@ func (app *App) validateStorageInventory(config *authcrunch.Config) error {
 	// Re-resolve immutable opening paths, never the exported module fields.
 	// The published inventory retains the physical ownership graph until drain.
 	inventory := refreshStorageInventory(*app.storageInventory)
+	// KMS environment sources and directory entries are read at construction.
+	// Inventory their actual opening values again before the first key reader.
+	keyFiles, err := app.configuredAccessKeyFiles(config)
+	if err != nil {
+		return err
+	}
+	inventory.files = slices.DeleteFunc(inventory.files, func(file identityProviderStorageFile) bool { return file.keyRead })
+	inventory.files = append(inventory.files, keyFiles...)
+	inventory = refreshStorageInventory(inventory)
 	if err := app.validateDocumentsStorage(inventory); err != nil {
 		return err
 	}
@@ -123,6 +137,9 @@ func (app *App) validateDocumentsStorage(inventory appStorageInventory) error {
 }
 
 func validateDocumentsStorageInventory(inventory appStorageInventory) error {
+	if err := validateAccessKeyStorageInventory(inventory); err != nil {
+		return err
+	}
 	if err := validateOAuthLoginStoreStorageInventory(inventory); err != nil {
 		return err
 	}
@@ -137,6 +154,9 @@ func validateDocumentsStorageInventory(inventory appStorageInventory) error {
 }
 
 func validateDocumentsStorageTransition(candidate, active appStorageInventory) error {
+	if err := validateAccessKeyStorageTransition(candidate, active); err != nil {
+		return err
+	}
 	if err := validateOAuthLoginStoreStorageTransition(candidate, active); err != nil {
 		return err
 	}

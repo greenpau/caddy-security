@@ -256,6 +256,16 @@ Run the focused suite with:
 go test -mod=readonly -race -count=1 -timeout=3m -run 'TestApp|TestCaddyLifecycleE2E' .
 ```
 
+Selected access signers follow the same app-owned factory and borrowed-root
+lifetime. Key-read/storage alias inventory must be refreshed before deferred
+construction; root persistence uses the actual loaded public trust, including
+policy-only profiles. Runtime metadata, signing results and current/public-key
+matching are validated before consumers publish access tokens. The
+[host plugin contract](host-plugins.md#access-signer-ownership) owns acquisition
+and cleanup details; the
+[access-signing tests](../../testing-and-ci/references/test-surfaces.md#selected-access-signing)
+own process-level trust changes.
+
 The library references for ownership are `server.go`,
 `server_lifecycle_test.go`, `server_lifecycle_e2e_test.go`,
 `pkg/idp/oauth/shutdown_test.go`, and the coding skill's

@@ -76,6 +76,11 @@ type App struct {
 	// runtime references, independently of the other portal API settings.
 	PortalDocumentsDirectives map[string][]string `json:"portal_documents_directives,omitempty"`
 
+	// Access-token profiles retain complete deferred bodies separately for
+	// portals and policies, which may have the same name.
+	PortalAccessTokenProfileDirectives map[string][]string `json:"portal_access_token_profile_directives,omitempty"`
+	PolicyAccessTokenProfileDirectives map[string][]string `json:"policy_access_token_profile_directives,omitempty"`
+
 	// OAuthProviderDirectives retains complete, validated provider statements
 	// with runtime references, keyed by provider name. Reparse after replacement
 	// so driver defaults never become part of an unresolved secret lookup.
@@ -105,6 +110,11 @@ type App struct {
 	// Prepared factories are immutable; the root only borrows returned clients.
 	OAuthLoginStoreConfigs []json.RawMessage `json:"oauth_login_stores,omitempty" caddy:"namespace=security.oauth_login_stores inline_key=driver"`
 	oauthLoginStores       []preparedOAuthLoginStore
+
+	// AccessSignerConfigs declares app-owned access signers. The root borrows
+	// their immutable runtimes; private keys stay outside its exportable KMS.
+	AccessSignerConfigs []json.RawMessage `json:"access_signers,omitempty" caddy:"namespace=security.access_signers inline_key=driver"`
+	accessSigners       []preparedAccessSigner
 
 	// MessagingProviderConfigs declares caller-owned notification backends.
 	MessagingProviderConfigs []json.RawMessage `json:"messaging_providers,omitempty" caddy:"namespace=security.messaging inline_key=driver"`
@@ -162,6 +172,11 @@ func (app *App) Provision(ctx caddy.Context) error {
 	app.provisioned = true
 	if app.Config == nil {
 		return fmt.Errorf("security app config is nil")
+	}
+	// JSON copying repairs invalid UTF-8. Reject malformed trust/selection text
+	// before that repair could turn it into another valid named binding.
+	if err := validateAccessTokenInputText(app.Config); err != nil {
+		return err
 	}
 	// Validation, runtime replacement, and NewServer all mutate configuration.
 	// Keep the declarative input separate, including nested maps and slices.
@@ -222,7 +237,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.OAuthAuthorizationDirectives, app.PortalDocumentsDirectives, app.logger); err != nil {
+	if err := resolveRuntimeAppConfigWithAccessTokens(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.OAuthAuthorizationDirectives, app.PortalDocumentsDirectives, app.PortalAccessTokenProfileDirectives, app.PolicyAccessTokenProfileDirectives, app.logger); err != nil {
 		return app.privateConfigError("resolve runtime configuration", err)
 	}
 	// Apply resolved snapshots last so substituted paths are not expanded twice.
@@ -237,6 +252,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	if err := app.prepareOAuthLoginStores(ctx, &config); err != nil {
+		return err
+	}
+	if err := app.prepareAccessSigners(ctx, &config); err != nil {
 		return err
 	}
 	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
@@ -363,12 +381,21 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
+	accessSigners, accessSignerClosers, err := app.attachAccessSigners(app.pluginContext)
+	backendClosers = append(backendClosers, accessSignerClosers...)
+	if err != nil {
+		closeErr := closePluginResources(backendClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
 	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{
 		IdentityStores:                   identityStores,
 		IdentityProviders:                identityProviders,
 		IdentityProviderAttachmentStores: app.identityProviderAttachmentStores(),
 		UserRegistries:                   registries,
 		OAuthLoginStores:                 oauthLoginStores,
+		AccessSigners:                    accessSigners,
 	})
 	if err != nil {
 		closeErr := closePluginResources(backendClosers)

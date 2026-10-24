@@ -183,15 +183,22 @@ no body. No enable directive, session, admin API, or private-export setting is
 required. Requests with invalid credentials, JSON headers, or `format=json`
 still reach discovery before authentication and content negotiation.
 
-The first eligible non-system signer determines availability: an asymmetric
+For ordinary KMS issuance, the first eligible non-system signer determines availability: an asymmetric
 signer enables discovery, while HMAC first returns 404 even when asymmetric
-signers follow. Verification-only keys never enable discovery. When available,
+signers follow. Ordinary verification-only keys never enable discovery. When available,
 the endpoint publishes RSA, EC, and Ed25519 signing public keys in signing
 order, excluding HMAC, verification-only, and System API keys. Success is an
 object with a `keys` array, including for one key, using
 `application/jwk-set+json`. All methods use `Cache-Control: no-store` and
 `nosniff`, without cookies or login redirects. Unsupported methods return 405
 with `Allow: GET, HEAD`.
+
+An explicitly selected PS256 access signer instead publishes its current public
+key plus the configured profile's retained verification keys, sorted by key ID.
+Each advertises PS256 and contains public RSA material only. The shared HTTP and
+mount rules remain the same. See
+[selected access signing](../configuration-crypto/references/access-signing.md)
+for profile trust, rotation and private-key export isolation.
 
 Ed25519 keys use `kty: OKP`, `crv: Ed25519`, and a 32-byte unpadded base64url
 `x`; no private `d` or EC `y` appears. Match the exact `alg` and `kid` to the
@@ -212,7 +219,7 @@ to keep it ahead of a protected catch-all. This endpoint is distinct from
 public keys from discovery to verify real login tokens independently, and
 checks gatekeeper rejection of wrong keys and tampered tokens. Its first request
 is HEAD, and negative-route checks inspect both headers and bodies.
-`TestCaddyJWKSPersistenceE2E` checks persisted rollover across fresh processes:
+`TestCaddyJWKSPersistenceE2E` checks ordinary KMS rollover across fresh processes:
 retained verification keys continue accepting old tokens
 without publishing them; removing those keys on reload rejects cached old
 tokens. Discovery publishes current signing configuration and does not retain

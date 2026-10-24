@@ -21,6 +21,31 @@ proxy origin remain separate deployment responsibilities.
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
 
+## Selected access signing
+
+`TestRSAPSSAccessSigner*`, `TestAppAccessSigner*`, `TestAccessTokenProfile*`,
+`TestAccessTokenInputText*` and registered signer/profile fixtures cover immutable
+factories, partial ownership, exact native/deferred replacement, UTF-8 admission,
+shared grammar and redacted binding failures. `TestAccessKeyStorage*` covers
+private/public key-read aliases with bundled SQLite files and sidecars, including
+active physical ownership and changes between provisioning and startup.
+
+`TestCaddyAccessSignerE2E` exercises actual Caddy TLS login and protected routes:
+ordinary Basic login, local form/native MFA, API-key and direct portal credential
+methods, connected OAuth, a fixture-only legacy provider's cross-device branch,
+and local/provider refresh. It independently verifies PS256 against public JWKS,
+checks current and retained keys, malformed JOSE/claims and wrong-purpose tokens,
+warm-cache expiry, staged signer failures, policy audience decisions, cookie
+lifetimes and independent OP/System API authority. The legacy fixture delegates a
+real OAuth exchange but intentionally does not expose the optional attachment
+interface; it qualifies that protocol branch, not the bundled provider UI.
+
+`TestCaddyAccessSignerPersistenceE2E` uses fresh command processes to test selected
+portal and policy-only trust, equivalent PEM encoding, replacement key material
+at the same path/key ID, rejected startup, restoration, and complete feature
+omission/reintroduction. Stateless tokens may be accepted again if their key is
+explicitly trusted again; retired persisted session authority must not return.
+
 ## Portal OpenAPI contracts
 
 `openapi_contract_test.go` consumes the selected AuthCrunch module's authored

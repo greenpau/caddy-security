@@ -1,0 +1,250 @@
+{
+  "authentication_portals": [
+    {
+      "access_signer": "primary",
+      "access_token_profile": {
+        "issuer": "https://auth.example.test/auth",
+        "audience": "service-a",
+        "key_ids": [
+          "current",
+          "retiring"
+        ],
+        "max_lifetime_seconds": 900
+      },
+      "name": "literal",
+      "ui": {},
+      "cookie_config": {
+        "session_id_cookie_name": "AUTHP_SESSION_ID",
+        "referer_cookie_name": "AUTHP_REDIRECT_URL",
+        "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+        "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+        "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+        "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+        "oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+        "oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+        "saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+        "cross_device_session_id_cookie_name": "AUTHP_CROSS_DEVICE_SESSION_ID",
+        "cookie_name_prefix": "AUTHP"
+      },
+      "identity_stores": [
+        "localdb"
+      ],
+      "token_validator_options": {},
+      "raw_crypto_key_store_config": [
+        "crypto key current verify from file /private/access-current-public.pem",
+        "crypto key retiring verify from file /private/access-retiring-public.pem"
+      ],
+      "crypto_key_store_config": {
+        "access_token_profile": {
+          "issuer": "https://auth.example.test/auth",
+          "audience": "service-a",
+          "key_ids": [
+            "current",
+            "retiring"
+          ],
+          "max_lifetime_seconds": 900
+        },
+        "raw_key_configs": [
+          "crypto key current verify from file /private/access-current-public.pem",
+          "crypto key retiring verify from file /private/access-retiring-public.pem"
+        ],
+        "auto_generate_tag": "default",
+        "auto_generate_algo": "ES512"
+      },
+      "token_grantor_options": {},
+      "portal_admin_roles": {
+        "authp/admin": true
+      },
+      "portal_user_roles": {
+        "authp/user": true
+      },
+      "portal_guest_roles": {
+        "authp/guest": true
+      },
+      "api": {
+        "profile_enabled": true
+      }
+    },
+    {
+      "access_signer": "primary",
+      "name": "deferred",
+      "ui": {},
+      "cookie_config": {
+        "session_id_cookie_name": "AUTHP_SESSION_ID",
+        "referer_cookie_name": "AUTHP_REDIRECT_URL",
+        "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+        "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+        "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+        "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+        "oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+        "oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+        "saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+        "cross_device_session_id_cookie_name": "AUTHP_CROSS_DEVICE_SESSION_ID",
+        "cookie_name_prefix": "AUTHP"
+      },
+      "identity_stores": [
+        "localdb"
+      ],
+      "token_validator_options": {},
+      "raw_crypto_key_store_config": [
+        "crypto key current verify from file /private/access-current-public.pem",
+        "crypto key retiring verify from file /private/access-retiring-public.pem"
+      ],
+      "crypto_key_store_config": {
+        "raw_key_configs": [
+          "crypto key current verify from file /private/access-current-public.pem",
+          "crypto key retiring verify from file /private/access-retiring-public.pem"
+        ],
+        "auto_generate_tag": "default",
+        "auto_generate_algo": "ES512",
+        "access_token_profile": {
+          "issuer": "https://auth.example.test/auth",
+          "audience": "service-a",
+          "key_ids": [
+            "current",
+            "retiring"
+          ],
+          "max_lifetime_seconds": 900
+        }
+      },
+      "token_grantor_options": {},
+      "portal_admin_roles": {
+        "authp/admin": true
+      },
+      "portal_user_roles": {
+        "authp/user": true
+      },
+      "portal_guest_roles": {
+        "authp/guest": true
+      },
+      "api": {
+        "profile_enabled": true
+      },
+      "access_token_profile": {
+        "issuer": "https://auth.example.test/auth",
+        "audience": "service-a",
+        "key_ids": [
+          "current",
+          "retiring"
+        ],
+        "max_lifetime_seconds": 900
+      }
+    }
+  ],
+  "authorization_policies": [
+    {
+      "access_token_profile": {
+        "issuer": "https://auth.example.test/auth",
+        "audience": "service-a",
+        "key_ids": [
+          "current",
+          "retiring"
+        ],
+        "max_lifetime_seconds": 900
+      },
+      "name": "literal",
+      "auth_url_path": "/auth",
+      "auth_redirect_query_param": "redirect_url",
+      "auth_redirect_status_code": 302,
+      "access_list_rules": [
+        {
+          "conditions": [
+            "match roles authp/user"
+          ],
+          "action": "allow log debug"
+        }
+      ],
+      "raw_crypto_key_store_config": [
+        "crypto key current verify from file /private/access-current-public.pem",
+        "crypto key retiring verify from file /private/access-retiring-public.pem"
+      ],
+      "crypto_key_store_config": {
+        "access_token_profile": {
+          "issuer": "https://auth.example.test/auth",
+          "audience": "service-a",
+          "key_ids": [
+            "current",
+            "retiring"
+          ],
+          "max_lifetime_seconds": 900
+        },
+        "raw_key_configs": [
+          "crypto key current verify from file /private/access-current-public.pem",
+          "crypto key retiring verify from file /private/access-retiring-public.pem"
+        ],
+        "auto_generate_tag": "default",
+        "auto_generate_algo": "ES512"
+      },
+      "api_key_header_name": "X-Api-Key",
+      "auth_realm_header_name": "X-Auth-Realm",
+      "access_token_cookie_names": [
+        "AUTHP_ACCESS_TOKEN",
+        "access_token",
+        "jwt_access_token"
+      ],
+      "session_id_cookie_name": "AUTHP_SESSION_ID"
+    },
+    {
+      "name": "deferred",
+      "auth_url_path": "/auth",
+      "auth_redirect_query_param": "redirect_url",
+      "auth_redirect_status_code": 302,
+      "access_list_rules": [
+        {
+          "conditions": [
+            "match roles authp/user"
+          ],
+          "action": "allow log debug"
+        }
+      ],
+      "raw_crypto_key_store_config": [
+        "crypto key current verify from file /private/access-current-public.pem",
+        "crypto key retiring verify from file /private/access-retiring-public.pem"
+      ],
+      "crypto_key_store_config": {
+        "raw_key_configs": [
+          "crypto key current verify from file /private/access-current-public.pem",
+          "crypto key retiring verify from file /private/access-retiring-public.pem"
+        ],
+        "auto_generate_tag": "default",
+        "auto_generate_algo": "ES512",
+        "access_token_profile": {
+          "issuer": "https://auth.example.test/auth",
+          "audience": "service-a",
+          "key_ids": [
+            "current",
+            "retiring"
+          ],
+          "max_lifetime_seconds": 900
+        }
+      },
+      "api_key_header_name": "X-Api-Key",
+      "auth_realm_header_name": "X-Auth-Realm",
+      "access_token_profile": {
+        "issuer": "https://auth.example.test/auth",
+        "audience": "service-a",
+        "key_ids": [
+          "current",
+          "retiring"
+        ],
+        "max_lifetime_seconds": 900
+      },
+      "access_token_cookie_names": [
+        "AUTHP_ACCESS_TOKEN",
+        "access_token",
+        "jwt_access_token"
+      ],
+      "session_id_cookie_name": "AUTHP_SESSION_ID"
+    }
+  ],
+  "identity_stores": [
+    {
+      "name": "localdb",
+      "kind": "local",
+      "params": {
+        "path": ":memory:",
+        "realm": "local"
+      }
+    }
+  ]
+}

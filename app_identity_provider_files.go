@@ -25,6 +25,7 @@ import (
 type identityProviderStorageFile struct {
 	path        string
 	openingPath string
+	keyRead     bool
 	oauth       bool
 	capacity    int
 	ticket      bool

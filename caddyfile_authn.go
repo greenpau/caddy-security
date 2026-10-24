@@ -39,6 +39,8 @@ const (
 //
 //	authentication portal <name> {
 //		crypto key sign-verify <shared_secret>
+//		access signer <name>
+//		access token profile { ... }
 //		oidc provider { ... }
 //		token refresh { ... }
 //		ui { ... }
@@ -93,6 +95,8 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 		var adminStatements []string
 		var oidcStatements []string
 		var tokenRefreshStatements []string
+		var accessProfileStatements []string
+		var accessSignerSeen bool
 		var crossDeviceStatements []string
 		var documentsStatements []string
 		nesting := d.Nesting()
@@ -109,6 +113,26 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 			v := d.RemainingArgs()
 			rootDirective = mkcp(authnPrefix, args[0], k)
 			switch k {
+			case "access":
+				if len(v) > 0 && v[0] == "signer" {
+					if accessSignerSeen {
+						return d.Errf("access signer is already configured")
+					}
+					selection, err := readCaddyfileAccessSignerSelection(d, v)
+					if err != nil {
+						return err
+					}
+					p.AccessSigner, accessSignerSeen = selection, true
+					continue
+				}
+				if accessProfileStatements != nil {
+					return d.Errf("access token profile is already configured")
+				}
+				statements, err := readCaddyfileAccessTokenProfile(d, v)
+				if err != nil {
+					return err
+				}
+				accessProfileStatements = statements
 			case "token":
 				if tokenRefreshStatements != nil {
 					return d.Errf("token refresh is already configured for portal %q", p.Name)
@@ -271,7 +295,33 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 			}
 			p.CrossDeviceLogin = config
 		}
-		if err := app.Config.AddAuthenticationPortal(p); err != nil {
+		deferredProfile := accessProfileStatements != nil && cookieDirectivesNeedResolution(accessProfileStatements)
+		if deferredProfile {
+			if _, exists := app.PortalAccessTokenProfileDirectives[p.Name]; exists {
+				return d.Errf("duplicate access token profile portal")
+			}
+		} else if accessProfileStatements != nil {
+			profile, err := parseAccessTokenProfile(accessProfileStatements)
+			if err != nil {
+				return d.Errf("invalid access token profile configuration")
+			}
+			p.AccessTokenProfile = profile
+		}
+		if deferredProfile {
+			// Core validation never accepts unresolved profile values. Validate
+			// other settings on a temporary consumer, then retain the actual
+			// selector and complete body for strict resolved validation.
+			validation := *p
+			validation.AccessSigner, validation.AccessTokenProfile = "", nil
+			if err := app.Config.AddAuthenticationPortal(&validation); err != nil {
+				return err
+			}
+			validation.AccessSigner = p.AccessSigner
+			if app.PortalAccessTokenProfileDirectives == nil {
+				app.PortalAccessTokenProfileDirectives = make(map[string][]string)
+			}
+			app.PortalAccessTokenProfileDirectives[p.Name] = accessProfileStatements
+		} else if err := app.Config.AddAuthenticationPortal(p); err != nil {
 			return err
 		}
 	default:

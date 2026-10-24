@@ -64,6 +64,11 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "named access signer and literal or deferred strict token profiles", inputFileNamePrefix: "testcase_access_signer"},
+		{name: "access signer rejects repeated backend lifetime", inputFileNamePrefix: "testcase_access_signer_duplicate", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid RSA-PSS access signer configuration, at Caddyfile:10")},
+		{name: "access token profile rejects repeated lifetime", inputFileNamePrefix: "testcase_access_token_profile_duplicate", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid access token profile configuration, at Caddyfile:12")},
 		{name: "explicit root nested and neutral-lookalike portal mounts", inputFileNamePrefix: "testcase_authenticate_explicit_mounts"},
 		{name: "explicit mount rejects reserved nested prefix", inputFileNamePrefix: "testcase_authenticate_reserved_mount", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'authenticate': invalid portal mount: portal mount uses a reserved endpoint prefix, at Caddyfile:2")},

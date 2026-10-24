@@ -34,6 +34,7 @@ const (
 //
 //	authorization policy <name> {
 //		crypto key verify <shared_secret>
+//		access token profile { ... }
 //		set auth url <url>
 //		allow roles <role> [<role>...]
 //		deny <field> <value> [<value>...]
@@ -84,11 +85,21 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		var claimsEnrichment *ClaimsEnrichmentBinding
 		var externalAuthorization *ExternalAuthorizationBinding
 		var oauthStatements []string
+		var accessProfileStatements []string
 		nesting := d.Nesting()
 		for d.NextBlock(nesting) {
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
+			case "access":
+				if accessProfileStatements != nil {
+					return d.Errf("access token profile is already configured")
+				}
+				statements, err := readCaddyfileAccessTokenProfile(d, d.RemainingArgs())
+				if err != nil {
+					return err
+				}
+				accessProfileStatements = statements
 			case "external":
 				if externalAuthorization != nil {
 					return d.Errf("authorization policy permits one external authorization block")
@@ -164,6 +175,18 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		if err := p.ConfigureAccessListFields(fields); err != nil {
 			return d.Errf("authorization policy %q: %v", p.Name, err)
 		}
+		deferredProfile := accessProfileStatements != nil && cookieDirectivesNeedResolution(accessProfileStatements)
+		if deferredProfile {
+			if _, exists := app.PolicyAccessTokenProfileDirectives[p.Name]; exists {
+				return d.Errf("duplicate access token profile policy")
+			}
+		} else if accessProfileStatements != nil {
+			profile, err := parseAccessTokenProfile(accessProfileStatements)
+			if err != nil {
+				return d.Errf("invalid access token profile configuration")
+			}
+			p.AccessTokenProfile = profile
+		}
 		deferredOAuth := cookieDirectivesNeedResolution(oauthStatements)
 		if deferredOAuth {
 			if _, exists := app.OAuthAuthorizationDirectives[p.Name]; exists {
@@ -180,6 +203,12 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		}
 		if err := app.Config.AddAuthorizationPolicy(p); err != nil {
 			return d.WrapErr(err)
+		}
+		if deferredProfile {
+			if app.PolicyAccessTokenProfileDirectives == nil {
+				app.PolicyAccessTokenProfileDirectives = make(map[string][]string)
+			}
+			app.PolicyAccessTokenProfileDirectives[p.Name] = accessProfileStatements
 		}
 		if claimsEnrichment != nil {
 			app.ClaimsEnrichment = append(app.ClaimsEnrichment, claimsEnrichment)

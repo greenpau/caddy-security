@@ -295,10 +295,19 @@ func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 // resolveRuntimeAppConfig also consumes deferred Caddy feature statements.
 // JSON-only AuthCrunch configurations retain typed replacement.
 func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives, tokenRefreshDirectives, oauthAuthorizationDirectives, documentsDirectives map[string][]string, log *zap.Logger) error {
+	return resolveRuntimeAppConfigWithAccessTokens(ctx, repl, secretManagers, config, oauthDirectives, tokenRefreshDirectives, oauthAuthorizationDirectives, documentsDirectives, nil, nil, log)
+}
+
+// resolveRuntimeAppConfigWithAccessTokens adds complete profile snapshots while
+// retaining the existing typed/native resolver entrypoints.
+func resolveRuntimeAppConfigWithAccessTokens(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives, tokenRefreshDirectives, oauthAuthorizationDirectives, documentsDirectives, portalProfiles, policyProfiles map[string][]string, log *zap.Logger) error {
 	if config == nil {
 		return fmt.Errorf("security app config is nil")
 	}
 	if err := validateConfigObjects(config); err != nil {
+		return err
+	}
+	if err := resolveAccessTokens(ctx, repl, secretManagers, config, portalProfiles, policyProfiles); err != nil {
 		return err
 	}
 	if err := resolveOAuthAuthorization(ctx, repl, secretManagers, config, oauthAuthorizationDirectives, log); err != nil {

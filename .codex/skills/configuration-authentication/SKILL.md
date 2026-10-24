@@ -47,7 +47,8 @@ Use focused repo-local skills for specialized portal sub-blocks:
   portals; attaching a store for portal login does not enable its realm for OIDC.
 - Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure
   portal `crypto` defaults, JWT signing keys, auto-generated keys, token names
-  and lifetimes, secret-backed key material, and System API `system` keys.
+  and lifetimes, secret-backed key material, System API `system` keys, and
+  explicitly selected `access signer` and `access token profile` settings.
 - Use [configuration-authentication-cookies](../configuration-authentication-cookies/SKILL.md)
   to configure `cookie` directives and token-cookie naming.
 - Use [configuration-authentication-ui](../configuration-authentication-ui/SKILL.md)

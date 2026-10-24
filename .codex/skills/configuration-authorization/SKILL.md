@@ -16,7 +16,8 @@ applications, and check directive ordering.
 
 Use [configuration-crypto](../configuration-crypto/SKILL.md) to configure JWT
 verification material, token names/lifetimes, generated or secret-backed keys,
-and System API `system` keys for remote Basic or API-key authentication.
+System API `system` keys for remote Basic or API-key authentication, and strict
+`access token profile` verification.
 
 Use the [static claims enrichment reference](references/static-claims.md) for
 `claims enrichment static` blocks, exact JSON values, identity bindings and
@@ -79,12 +80,14 @@ directive arguments.
 
 ## Runtime Defaults
 
-A JWT-mode authorization policy must have a name and at least one ACL rule. When no
+A JWT-mode authorization policy must have a name and at least one ACL rule.
+For ordinary policies without an access-token profile, when no
 `crypto key ...` entries are present, go-authcrunch auto-generates an ES512
 `sign-verify` key with token name `access_token` and lifetime `900`; for real
 portal-issued tokens, configure compatible verification material explicitly.
 When explicit key entries are present, at least one key must be `verify` or
-`sign-verify`.
+`sign-verify`. A strict access-token profile requires explicit trusted RSA
+verification keys and never falls back to these ordinary defaults.
 
 These defaults apply to JWT policies; direct OAuth policies have their own
 configuration and reject JWT crypto settings. Defaults applied by

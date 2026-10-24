@@ -136,6 +136,19 @@ Resolve these app config areas:
   default access-cookie list before construction, preventing implicit
   cross-portal discovery. Never add those JWT defaults to direct OAuth policies.
 
+Selected access signing resolves a portal's `access_signer` once. Native portal
+and policy `access_token_profile` issuer, audience and individual key IDs also
+resolve once before shared validation. Runtime-backed Caddyfile profile blocks
+are retained as complete token collections in
+`portal_access_token_profile_directives` or
+`policy_access_token_profile_directives`; typed and deferred profiles for the
+same consumer are mutually exclusive. Reparse one resolved snapshot through the
+shared profile parser, preserving exact argument bytes. Reject invalid UTF-8 in
+native consumer fields before the app JSON copy can repair it. The named signer
+module's backend fields remain literal apart from Caddy lexical environment
+expansion. See [access signing](../configuration-crypto/references/access-signing.md)
+for grammar and binding requirements.
+
 Cookie Caddyfile statements containing runtime placeholders are held separately
 in `App.PortalCookieDirectives` (`portal_cookie_directives` in Caddy JSON), keyed
 by portal name. After `ResolveRuntimeAppConfig`, app provisioning resolves
