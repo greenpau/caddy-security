@@ -1,59 +1,109 @@
 # Portal mount selection and reserved paths
 
-Read this reference when choosing same-host/custom/root mounts, diagnosing
+Read this reference when choosing a same-host, custom or root mount, diagnosing
 upstream path collisions, or mounting a portal beside protected services.
 
-## Portal Path Selection
+## Declare the mount
 
-For a portal with `oidc provider`, the issuer's path is also the HTTP mount.
-Route its exact path and descendants through `authenticate`, before a protected
-catch-all, using the same segment-boundary pattern above. For example, an issuer
-`https://login.example.com/tenant/auth` requires `/tenant/auth` and
-`/tenant/auth/*`; a dedicated root issuer uses a root `authenticate` route.
-Use `route` or a non-stripping `handle`, never `handle_path`, `uri strip_prefix`,
-or a generic path handler that removes the issuer mount.
+Use an explicit mount in new configurations:
 
-Discovery at `<mount>/.well-known/openid-configuration` and all `<mount>/oidc/*`
-endpoints, including `/oidc/continue` for login/consent, belong to the portal.
-Do not add gatekeeper bypass rules or manually dispatch an OP adapter. AuthCrunch
-handles OP requests before its ordinary access-token gates and HTML negotiation.
-`<mount>/.well-known/jwks.json` publishes portal access-token keys;
-`<mount>/oidc/jwks` publishes separate OP ID-token keys. See the
-[OIDC protocol contract](../../configuration-oauth-applications/references/oidc-provider.md#http-mount-and-protocol-contract)
-for capabilities, native callbacks, and TLS relying-party tests.
+```caddyfile
+@portal path /company/auth /company/auth/*
+route @portal {
+	authenticate with myportal at /company/auth
+}
+```
 
-The selected go-authcrunch pin supplies its own themed OIDC page headers;
-preserve them through Caddy. For older v1.2.6 browser consent, use the explicit
-[consent response policy](../../configuration-oauth-applications/references/oidc-provider.md#consent-response-policy-for-v126).
-It uses Caddy's deferred response-header matcher before `authenticate`; it does
-not rewrite incoming Origin or weaken the provider's CSRF checks.
+The native handler equivalent is:
 
-The authorization policy's `set auth url` must align with the path where the
-authentication portal is actually served:
+```json
+{
+  "handler": "authenticator",
+  "route_matcher": "*",
+  "portal_name": "myportal",
+  "base_path": "/company/auth"
+}
+```
 
-- Same host: use the portal route path, such as `/auth` for an exact `/auth` plus `/auth/*` matcher.
-- Same host with path conflict: use `/xauth` for an exact `/xauth` plus `/xauth/*` matcher.
-- Dedicated auth host at root: use the full root URL, such as
-  `https://auth.example.com/`.
+`at <mount>` occurs once, at the end of `authenticate` arguments. The directive
+accepts no block. Use `/` for root or a canonical absolute nested path without a
+trailing slash. The field is literal: no runtime placeholders, secrets, wildcard
+matching, URL escapes, query or fragment. Whitespace, control characters,
+backslashes, repeated separators and dot segments are rejected, not normalized.
+The declared path must be ASCII, require no URL escaping and contain no semicolon:
+browser cookies use that same mount as their Path, while cookie serialization
+strips non-ASCII bytes or treats a semicolon as an attribute delimiter. Rejecting those mounts
+prevents silently changing the browser-proof scope. Reserved words are checked
+in every segment as described below. These restrictions concern mount
+declarations; realms and resource data retain their own validation.
 
-Do not leave `set auth url` at the `/auth` default when the portal is mounted
-at `/xauth`, `/`, or a different host. For split-host deployments, prefer the
-full portal URL over a relative path.
+Omitting `at`, or omitting/nulling native `base_path`, retains legacy mount
+inference. An explicitly empty value fails validation. Existing compatibility
+fixtures intentionally retain omission; they do not qualify an explicit mount.
 
-Use `/auth` as the default portal route path in new examples:
+Caddy's matcher still selects the handler. An explicit mount does not create
+routes, inspect surrounding route trees or prove that a proxy forwards all
+intended requests. For a nested declaration, requests must use the exact mount
+or a descendant beginning with `<mount>/`; neighboring prefixes, outside paths,
+case aliases and encoded aliases of the mount receive 404 with `no-store` before
+portal handling. Root owns the entire path space and has no outside-prefix case.
+Feature-owned escaping within child data remains subject to that feature's
+validation; the declaration does not globally forbid all encoded child values.
+
+Use `route` or a non-stripping `handle`. An explicit handler rejects changes to
+the request's path or encoded path made earlier in the Caddy chain, so
+`handle_path`, `uri strip_prefix` and path rewrites cannot remove the mount.
+Query-only changes are allowed. Preserve the body, cookies, Origin, Fetch
+Metadata and trusted-proxy interpretation through delegation.
+
+## Feature agreement
+
+The app compares an explicit handler mount with the resolved configuration of
+that portal. Enabled token refresh, the portal OP issuer path, selected bundled
+SQLite ticket providers and selected enabled SQLite registration workflows must
+hold the same mount. An issuer with no path means `/`. Disabled features and
+unused backend declarations do not constrain another portal. Cookie prefix/path
+requirements also apply; for example, a `__Host-` sandbox cookie requires a root
+mount. These checks use private configuration snapshots and do not open a backend
+just to compare paths. The snapshot applies the enabled refresh-cookie name
+override before cookie defaults and collision validation, matching portal runtime
+precedence without mutating the declared configuration.
+
+A portal without a feature that pins its mount may be attached at multiple
+neutral paths; the request keeps its own declared mount without mutating the
+shared portal. Third-party backends retain responsibility for restrictions the
+host cannot inspect. Mount agreement does not establish an external origin or
+replace each feature's origin, callback and TLS validation.
+
+For `oidc provider`, route the issuer path and its descendants through the same
+explicit handler. Discovery at `<mount>/.well-known/openid-configuration` and all
+`<mount>/oidc/*` endpoints, including login/consent continuation, belong to the
+portal. Do not manually dispatch an OP adapter or add gatekeeper bypass rules.
+AuthCrunch handles OP requests before ordinary access-token gates and HTML
+negotiation, after checking the explicit mount boundary.
+
+`<mount>/.well-known/jwks.json` publishes access-token public keys;
+`<mount>/oidc/jwks` publishes separate OP ID-token keys. Explicit mode admits only
+the exact signing-JWKS path, so `/company/auth/other/.well-known/jwks.json` cannot
+publish that keyset by suffix. Preserve the portal's themed OP response headers.
+See the [OIDC protocol contract](../../configuration-oauth-applications/references/oidc-provider.md#http-mount-and-protocol-contract)
+for protocol capabilities, callbacks and TLS relying-party acceptance.
+
+## Portal path selection
+
+Use `/auth` by default and align the authorization policy's `set auth url` with
+the actual mount:
 
 ```caddyfile
 @portal path /auth /auth/*
 route @portal {
-	authenticate with myportal
+	authenticate with myportal at /auth
 }
 ```
 
-Use a different portal path, commonly `/xauth`, when the protected upstream
-application already owns `/auth` for its own login, callbacks, API endpoints,
-or framework routes. In that case, do not shadow the upstream's `/auth` path
-with caddy-security's portal route; mount the portal elsewhere and point the
-authorization policy's `set auth url` to that path:
+If the protected upstream already owns `/auth`, leave that route available to it
+and choose a neutral mount such as `/xauth`. The following fragments assume
+`app_portal` and its signing key are declared in the global `security` block:
 
 ```caddyfile
 {
@@ -69,9 +119,8 @@ authorization policy's `set auth url` to that path:
 app.example.com {
 	@portal path /xauth /xauth/*
 	route @portal {
-		authenticate with app_portal
+		authenticate with app_portal at /xauth
 	}
-
 	route {
 		authorize with app_policy
 		reverse_proxy 127.0.0.1:8080
@@ -79,103 +128,67 @@ app.example.com {
 }
 ```
 
-Use `/` when a dedicated auth host serves only the authentication portal for a
-parent domain. For example, if `auth.myfiosgateway.com` exists only to serve
-the portal for the `myfiosgateway.com` domain and has no upstream app or static
-content of its own, mounting the portal at root keeps the login URL short and
-avoids reserving an unnecessary path prefix:
+Use `/` on a dedicated auth host that serves only the portal:
 
 ```caddyfile
-{
-	security {
-		authorization policy app_policy {
-			crypto key verify {env.JWT_SHARED_KEY}
-			set auth url https://auth.myfiosgateway.com/
-			allow roles authp/user
-		}
-	}
-}
-
-auth.myfiosgateway.com {
+auth.example.com {
 	route {
-		authenticate with domain_portal
-	}
-}
-
-app.myfiosgateway.com {
-	route {
-		authorize with app_policy
-		reverse_proxy 127.0.0.1:8080
+		authenticate with domain_portal at /
 	}
 }
 ```
 
-Do not mount the portal at `/` on a host that also needs to serve an upstream
-application or other site content; use `/auth` or `/xauth` in that case.
+The protected host's policy then uses `set auth url https://auth.example.com/`.
+Do not leave it at `/auth` when the mount or host changes. A redirect does not
+transfer a host-only access cookie to another host; use the
+[cookie configuration owner](../../configuration-authentication-cookies/SKILL.md)
+for shared-domain scope, token discovery and signing/verification coordination.
+Refresh and OP cookies retain their narrower host and issuer restrictions.
 
-## Avoid Portal-Owned Prefixes
+Avoid a root portal when the same host must serve upstream application routes
+or unrelated content. A complete runnable example with explicit `/auth` and
+`/xauth` mounts is [assets/config/Caddyfile](../../../../assets/config/Caddyfile).
 
-Do not use a portal-owned endpoint family as the public mount prefix for
-`authenticate`. These names are valid internal endpoints below the chosen base
-path, such as `/auth/login`, but they SHOULD NOT be the base path itself:
+## Avoid portal-owned prefixes
 
-- `/api`, including `/api/refresh_token`, `/api/profile`, and admin API
-  endpoints.
-- `/qrcode`.
-- `/assets` and `/favicon`.
-- `/profile`.
-- `/portal`.
-- `/recover` and `/forgot`.
-- `/register`.
-- `/whoami`.
-- `/apps`, especially `/apps/sso` and `/apps/mobile-access`.
-- `/oauth2` and `/saml`.
-- `/basic` and `/basic/login`.
-- `/barcode`, especially `/barcode/mfa`.
-- `/sandbox`.
-- `/login` and `/logout`.
-- `/beacon` for JSON/API-style requests.
+The shared mount validator checks each segment case-sensitively:
 
-go-authcrunch dispatches several portal requests with substring or suffix
-checks before falling back to generic base-path inference. A mount such as
-`/api`, `/profile`, `/portal`, or `/login` can therefore make ordinary portal
-login, callback, static asset, refresh-token, or JSON requests hit the wrong
-internal handler.
+| Reservation | Names |
+| --- | --- |
+| Segment starts with | `profile`, `portal`, `recover`, `forgot`, `register`, `whoami`, `logout`, `favicon`, `beacon`, `login` |
+| Complete segment | `connected-accounts`, `.well-known`, `api`, `apps`, `assets`, `barcode`, `basic`, `cross-device`, `oauth2`, `oidc`, `provider`, `qrcode`, `saml`, `sandbox` |
 
-Prefer `/auth` for ordinary same-host portals, `/xauth` when `/auth` collides
-with the protected upstream, or `/` only on a dedicated auth-only host. If an
-upstream application owns one of the reserved names, leave that upstream path
-alone and mount the portal at `/xauth` or a dedicated auth host.
+Thus `/company/login-team` and `/company/api/auth` are rejected. Neutral
+lookalikes such as `/team-login`, `/saml-service`, `/cross-device-team`, `/auth`
+and `/xauth` remain valid, as do uppercase variants such as `/LOGIN`. Do not
+assume that changing the spelling of a reserved name is desirable deployment
+design; choose a path whose meaning is clear to operators.
 
-Avoid:
+These reservations apply to the declared mount, not to route data below it.
+`/auth/login` is an intended login endpoint, and an OAuth realm named `login`
+remains data within the provider's namespace. Arbitrary child paths still follow
+the selected library's endpoint dispatch; an explicit mount does not turn every
+legacy substring-based handler into a complete first-segment router.
 
-```caddyfile
-route /api* {
-	authenticate with app_portal
-}
+Legacy omission cannot reject a reserved deployed mount before requests arrive.
+Move the mount, policy auth URL and any pinned feature paths together rather
+than relying on inferred routing to disambiguate a collision.
 
-route /profile* {
-	authenticate with app_portal
-}
-```
+## Validation
 
-Prefer:
+`plugin_authn_mount_test.go` covers parser arity, literal syntax and native
+presence/validation. `testcase_authenticate_explicit_mounts` and
+`testcase_authenticate_reserved_mount` are registered adaptation fixtures.
+`TestPortalMountResolvedSnapshot`, `TestPortalMountFeatureBindings` and
+`TestPortalMountBundledProviderBindings` exercise resolved feature agreement,
+disabled/unused selections, private snapshots and persistent candidates.
+`TestCaddyPortalMountE2E` uses actual Caddy TLS to qualify root/nested login and
+resource access, mounted assets and exact
+discovery, containment despite a broad matcher, path-rewrite rejection and
+preservation of the serving app after a rejected candidate.
 
-```caddyfile
-{
-	security {
-		authorization policy app_policy {
-			crypto key verify {env.JWT_SHARED_KEY}
-			set auth url /xauth
-			allow roles authp/user
-		}
-	}
-}
-
-app.example.com {
-	@portal path /xauth /xauth/*
-	route @portal {
-		authenticate with app_portal
-	}
-}
-```
+Refresh API routing acceptance includes GET `/api/logout`, `/api/refresh_token`
+and `/api/refresh_session` with HTML Accept: each must return JSON 405 with
+`Allow: POST`, no redirect and no credential mutation, before and after login.
+Existing refresh and OP journeys remain required for their protocol behavior;
+adaptation alone establishes neither request ownership nor session safety.

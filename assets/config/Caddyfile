@@ -85,16 +85,18 @@
 		respond * "1.0.0" 200
 	}
 
-	route /auth* {
-		authenticate * with myportal
+	@portal path /auth /auth/*
+	route @portal {
+		authenticate with myportal at /auth
 	}
 
 	route /favicon.ico {
 		respond "not found" 404
 	}
 
-	route /xauth* {
-		authenticate * with myportal
+	@alternate_portal path /xauth /xauth/*
+	route @alternate_portal {
+		authenticate with myportal at /xauth
 	}
 
 	route /app* {

@@ -4,6 +4,17 @@ Read the sections matching the behavior being changed. These are existing test
 surfaces and their limits; names alone do not establish coverage for a new change.
 Source and fixture paths below are relative to the repository root.
 
+`plugin_authn_mount_test.go` and the explicit/reserved mount adaptation fixtures
+cover Caddyfile and native JSON declarations, canonical shape and reserved route
+segments. `app_portal_mounts_test.go` covers resolved immutable feature constraints
+before immediate or deferred root construction, including selected bundled
+providers and cookie scope without opening storage. `TestCaddyPortalMountE2E`
+exercises actual TLS routes at root, nested and permitted lookalike mounts:
+login, assets, exact discovery, method ownership, outside/encoded boundaries,
+path-rewrite rejection, legacy omission, failed reload continuity and cold
+persistent rejection before state or listeners. Route ordering and external
+proxy origin remain separate deployment responsibilities.
+
 ## Contents
 
 - Conditional authentication coverage

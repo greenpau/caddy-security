@@ -120,6 +120,8 @@ type App struct {
 	// Persistent runtimes are constructed only by Start. Caddy also calls
 	// Provision during validation, which must not initialize durable state.
 	runtimeConfig *authcrunch.Config
+	// Immutable resolved constraints exist for both immediate and deferred roots.
+	portalMounts map[string]portalMountBinding
 
 	mu            sync.Mutex
 	provisioned   bool
@@ -241,6 +243,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 	// Check issuer isolation on the completed config, before construction.
 	if err := validateOIDCProviderMounts(&config); err != nil {
+		return err
+	}
+	if err := app.preparePortalMounts(&config); err != nil {
 		return err
 	}
 	if err := app.prepareClaimsEnrichment(ctx, &config); err != nil {

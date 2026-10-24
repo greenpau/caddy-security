@@ -25,6 +25,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/greenpau/caddy-security/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
@@ -39,8 +40,11 @@ func init() {
 type AuthnMiddleware struct {
 	RouteMatcher string `json:"route_matcher,omitempty" xml:"route_matcher,omitempty" yaml:"route_matcher,omitempty"`
 	PortalName   string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
-	portal       *authn.Portal
-	app          *App
+	// BasePath declares a literal portal mount. Omission retains legacy inference;
+	// a present value must be canonical, including an explicit slash for root.
+	BasePath *string `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
+	portal   *authn.Portal
+	app      *App
 }
 
 // CaddyModule returns the Caddy module information.
@@ -53,6 +57,9 @@ func (AuthnMiddleware) CaddyModule() caddy.ModuleInfo {
 
 // Provision provisions Authenticator.
 func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
+	if err := m.validateMount(); err != nil {
+		return err
+	}
 	appModule, err := ctx.App("security")
 	if err != nil {
 		return err
@@ -72,6 +79,11 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 	} else {
 		return fmt.Errorf("authenticator config is malformed: %v", err)
 	}
+	if m.BasePath != nil {
+		if err := app.validatePortalMount(m.PortalName, *m.BasePath); err != nil {
+			return err
+		}
+	}
 
 	portal, err := app.getPortal(m.PortalName)
 	if err != nil {
@@ -86,6 +98,15 @@ func (m *AuthnMiddleware) Provision(ctx caddy.Context) error {
 // UnmarshalCaddyfile unmarshals a caddyfile.
 func (m *AuthnMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	args := d.RemainingArgs()
+	m.BasePath = nil
+	if len(args) >= 2 && args[len(args)-2] == "at" {
+		basePath := args[len(args)-1]
+		m.BasePath = &basePath
+		if err := m.validateMount(); err != nil {
+			return d.Err(err.Error())
+		}
+		args = args[:len(args)-2]
+	}
 	switch len(args) {
 	case 3:
 		m.RouteMatcher = "*"
@@ -102,6 +123,25 @@ func (m *AuthnMiddleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	default:
 		return d.Errf("malformed directive: %s", strings.Join(args, " "))
 	}
+	if d.Next() {
+		if d.ValRaw() == "{" {
+			return d.Err("authenticate does not accept blocks")
+		}
+		return d.Err("authenticate does not accept additional lines")
+	}
+	return nil
+}
+
+func (m *AuthnMiddleware) validateMount() error {
+	if m.BasePath == nil {
+		return nil
+	}
+	if err := portalpath.Validate(*m.BasePath); err != nil {
+		return fmt.Errorf("invalid portal mount: %w", err)
+	}
+	if m.app != nil {
+		return m.app.validatePortalMount(m.PortalName, *m.BasePath)
+	}
 	return nil
 }
 
@@ -112,6 +152,9 @@ func (m *AuthnMiddleware) Validate() error {
 	}
 	if m.PortalName == "" {
 		return fmt.Errorf("empty portal name")
+	}
+	if err := m.validateMount(); err != nil {
+		return err
 	}
 	if m.portal == nil && m.app == nil {
 		return fmt.Errorf("portal is nil")
@@ -138,6 +181,17 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		}
 	}
 
+	if m.BasePath != nil {
+		// Caddy retains the wire path independently of prior rewrite handlers.
+		// An explicit portal mount requires the original path, including escaping;
+		// query-only rewrites do not change this boundary.
+		if original, ok := r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request); ok && original.URL != nil &&
+			(original.URL.Path != r.URL.Path || original.URL.RawPath != r.URL.RawPath) {
+			w.Header().Set("Cache-Control", "no-store")
+			http.NotFound(w, r)
+			return nil
+		}
+	}
 	normalizeSecurityMetadata(r)
 	rr := requests.NewRequest()
 	rr.ID = util.GetRequestID(r)
@@ -148,6 +202,9 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	// rewrite, retry or broaden CORS for these requests in Caddy middleware.
 	// JSON/native login uses this same dispatch: never synthesize Cookie, Origin
 	// or Fetch Metadata headers, or turn its credentials into OIDC login evidence.
+	if m.BasePath != nil {
+		return portal.ServeHTTPAt(r.Context(), w, r, rr, *m.BasePath)
+	}
 	return portal.ServeHTTP(r.Context(), w, r, rr)
 }
 
@@ -155,10 +212,12 @@ func (m *AuthnMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 //
 // Syntax:
 //
-//	authenticate [<matcher>] with <portal>
+//	authenticate [<matcher>] with <portal> [at <base-path>]
 //
 // The portal is defined in security. This directive takes arguments only;
-// configure its internals in the corresponding security block.
+// configure its internals in the corresponding security block. An explicit mount
+// is literal and canonical (/ for root), must agree with enabled mounted features,
+// and requires the complete original request path. Omission keeps legacy inference.
 func parseAuthnCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	m := &AuthnMiddleware{}
 	if err := m.UnmarshalCaddyfile(h.Dispenser); err != nil {

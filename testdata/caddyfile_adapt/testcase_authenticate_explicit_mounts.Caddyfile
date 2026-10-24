@@ -1,0 +1,9 @@
+:8443 {
+	@nested path /company/auth /company/auth/*
+	@lookalike path /cross-device-team /cross-device-team/*
+	route {
+		authenticate @nested with nested_portal at /company/auth
+		authenticate @lookalike with neutral_portal at /cross-device-team
+		authenticate with root_portal at /
+	}
+}

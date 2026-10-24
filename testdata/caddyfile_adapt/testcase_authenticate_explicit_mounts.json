@@ -1,0 +1,70 @@
+{
+	"apps": {
+		"http": {
+			"servers": {
+				"srv0": {
+					"listen": [
+						":8443"
+					],
+					"routes": [
+						{
+							"handle": [
+								{
+									"handler": "subroute",
+									"routes": [
+										{
+											"handle": [
+												{
+													"base_path": "/company/auth",
+													"handler": "authenticator",
+													"portal_name": "nested_portal",
+													"route_matcher": "*"
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/company/auth",
+														"/company/auth/*"
+													]
+												}
+											]
+										},
+										{
+											"handle": [
+												{
+													"base_path": "/cross-device-team",
+													"handler": "authenticator",
+													"portal_name": "neutral_portal",
+													"route_matcher": "*"
+												}
+											],
+											"match": [
+												{
+													"path": [
+														"/cross-device-team",
+														"/cross-device-team/*"
+													]
+												}
+											]
+										},
+										{
+											"handle": [
+												{
+													"base_path": "/",
+													"handler": "authenticator",
+													"portal_name": "root_portal",
+													"route_matcher": "*"
+												}
+											]
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+}

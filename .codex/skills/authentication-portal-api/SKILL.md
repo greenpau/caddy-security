@@ -184,9 +184,12 @@ signed JWT. Generated keys can advertise `EdDSA` or `Ed25519`; imported keys
 default to `EdDSA`. Default key ID `0` is omitted in both JWT and JWK. See
 [crypto settings](../configuration-crypto/SKILL.md) for key sources and labels.
 
-The embedding Caddy routes define the mount boundary. Use the complete path
-beneath that mount; trailing slashes, filename suffixes, and query-only matches
-are not discovery. See [public JWKS routing](../configuration-http-integrations/SKILL.md#public-jwks-routing)
+An explicit `authenticate with <portal> at <mount>` declaration enforces the
+literal mount boundary before discovery, including under a broad Caddy matcher.
+Discovery then requires the exact mounted `/.well-known/jwks.json` path in both
+decoded and escaped form. Omitted mounts retain legacy inference and suffix
+routing; qualify that mode separately. Trailing slashes, filename suffixes and
+query-only matches are not discovery. See [public JWKS routing](../configuration-http-integrations/SKILL.md#public-jwks-routing)
 to keep it ahead of a protected catch-all. This endpoint is distinct from
 `/oidc/jwks` and the OP's dedicated RS256 ID-token signing keys.
 

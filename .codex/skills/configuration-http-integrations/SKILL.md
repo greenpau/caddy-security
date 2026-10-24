@@ -8,7 +8,7 @@ description: "Mount authenticate and authorize handlers, separate portal and pro
 ## Purpose
 
 Use this skill to wire caddy-security's route-level HTTP integrations:
-`authenticate [<matcher>] with <portal>` and
+`authenticate [<matcher>] with <portal> [at <mount>]` and
 `authorize [<matcher>] with <policy>`.
 
 The `security` app defines authentication portals and authorization policies;
@@ -23,7 +23,7 @@ as `myportal` or `local_portal` for portals and `app_policy` or `local_policy`
 for policies. Policy names are not required to end in `_policy`, but the suffix
 makes `authorize with <policy>` intent clear.
 
-Use `authentication portal myportal` with `authenticate with myportal`, or choose
+Use `authentication portal myportal` with `authenticate with myportal at /auth`, or choose
 a descriptive portal name. Avoid `authentication portal portal` in examples,
 fixtures, and tests; the repeated word obscures the declaration's name.
 
@@ -34,6 +34,7 @@ Read these files when details matter:
 - `assets/config/Caddyfile`, `assets/config/home.Caddyfile`, and
   `assets/config/multiportal.Caddyfile` for current route shapes.
 - `testdata/caddyfile_adapt/testcase_authenticate_ok.Caddyfile`,
+  `testdata/caddyfile_adapt/testcase_authenticate_explicit_mounts.Caddyfile`,
   `testdata/caddyfile_adapt/testcase_authorize_ok.Caddyfile`, and
   `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`
   for focused adapt fixtures.
@@ -47,7 +48,7 @@ Referrer-Policy; no extra handler or CORS layer is needed. Provider realms named
 [configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
 to review transfer paths, HTTPS/Origin boundaries and root/nested mount tests.
 
-The selected Caddy v2.11.7 limits request headers to 16 KiB by default and
+The selected Caddy host limits request headers to 16 KiB by default and
 defaults idle request-body reads and response writes to 60 seconds. Review
 large JWT/cookie sets and slow uploads or streams when upgrading. Tune Caddy's
 global `servers` options (`max_header_size`, `timeouts read_body_idle` and
@@ -66,9 +67,8 @@ The legacy Caddy authentication chain buffers individual provider responses
 when several providers are configured. Only the successful provider's response
 headers are retained; a failed provider must not contaminate another provider's
 success. Current `authorize` routes use `AuthorizationHandler` directly and
-preserve handled gatekeeper responses. See the published
-[v2.11.6 changes](https://github.com/caddyserver/caddy/releases/tag/v2.11.6) and
-[v2.11.7 fixes](https://github.com/caddyserver/caddy/releases/tag/v2.11.7).
+preserve handled gatekeeper responses. Check the selected Caddy
+`modules/caddyhttp/caddyauth/caddyauth.go` when reviewing this boundary.
 
 ## Route Roles
 
@@ -87,7 +87,7 @@ Keep portal and protected-resource routes separate:
 example.com {
 	@portal path /auth /auth/*
 	route @portal {
-		authenticate with myportal
+		authenticate with myportal at /auth
 	}
 
 	route /app* {
@@ -104,7 +104,7 @@ route so the portal is not itself protected by `authorize`:
 https://localhost:8443 {
 	@portal path /auth /auth/*
 	route @portal {
-		authenticate with local_portal
+		authenticate with local_portal at /auth
 	}
 
 	route {
@@ -157,7 +157,7 @@ example.com {
 	@portal path /auth /auth/*
 	route {
 		route @portal {
-			authenticate with myportal
+			authenticate with myportal at /auth
 		}
 		route {
 			authorize with app_policy
@@ -170,7 +170,12 @@ example.com {
 This routes `/auth/.well-known/jwks.json` publicly while `/authentication/`
 stays under the policy. A `/tenant/auth` mount uses `/tenant/auth` and
 `/tenant/auth/*` in the matcher. A dedicated root portal exposes
-`/.well-known/jwks.json` with the existing root `authenticate` route.
+`/.well-known/jwks.json` with `authenticate with myportal at /`.
+
+An explicit mount admits only its exact signing-key discovery path. Nested
+suffix impostors such as `/auth/other/.well-known/jwks.json` do not publish
+the keyset. Omitted mounts retain legacy dispatch and are not evidence of this
+explicit boundary.
 
 Do not put `authorize` before `authenticate` on the portal route or add a
 generic suffix-based bypass to the gatekeeper. Caddy owns mount selection;
@@ -192,7 +197,7 @@ authentication-chain behavior and should be regenerated for direct OAuth.
 
 Keep POST `<mount>/api/refresh_token`, `/api/refresh_session`, and `/api/logout`
 on the complete, unstripped portal route before any protected catch-all.
-`Portal.ServeHTTP` authenticates these operations using their own credentials,
+The portal authenticates these operations using their own credentials,
 so expired access can renew or log out; other APIs stay protected. Forward the
 refresh/session headers, Origin/Fetch Metadata, cookies and body unchanged.
 Do not add retries, CORS allowances or gatekeeper suffix bypasses.
@@ -214,9 +219,21 @@ client and explicit native refresh/logout contract are documented separately in
 ## Portal Path Selection
 
 Default to exact `/auth` plus `/auth/*`, and point the policy's auth URL at that
-mount. If the upstream owns `/auth`, choose another namespace; a dedicated auth
-host can mount at `/`. Read [portal mount patterns](references/portal-mounts.md)
-for routing fragments, required declarations, path preservation, and split-host alignment.
+mount. Declare it with `authenticate with myportal at /auth`. Native handler
+JSON uses `"base_path": "/auth"`. The mount is a literal canonical absolute
+ASCII path requiring no URL escaping: use `/` for root, and omit the trailing
+slash for a nested mount.
+Semicolons are rejected because the path also scopes browser cookies.
+Placeholders and secret lookups are not supported in this field.
+
+Omitting `at`, or omitting/nulling native `base_path`, preserves legacy path
+inference. An explicit empty value is invalid. Caddy matchers still select the
+handler; the declaration adds validation and an independent request boundary.
+It neither creates a matcher nor inspects the enclosing route tree.
+
+If the upstream owns `/auth`, choose another namespace; a dedicated auth host
+can mount at `/`. Read [portal mount patterns](references/portal-mounts.md) for
+feature agreement, reserved names, path preservation and split-host alignment.
 
 ## Avoid Portal-Owned Prefixes
 
@@ -232,7 +249,7 @@ Prefer route blocks for clarity:
 ```caddyfile
 @portal path /auth /auth/*
 route @portal {
-	authenticate with myportal
+	authenticate with myportal at /auth
 }
 
 route /api/* {
@@ -246,7 +263,7 @@ smaller:
 
 ```caddyfile
 @portal path /auth /auth/*
-authenticate @portal with myportal
+authenticate @portal with myportal at /auth
 authorize /api/* with api_policy
 ```
 
@@ -254,7 +271,8 @@ The portal or policy name must match a configured object in the `security` app.
 Keep subconfiguration inside `authentication portal <name>` and
 `authorization policy <name>` blocks. Do not put policy internals, such as
 `with api key auth ...`, under the route-level `authorize` directive; the route
-handler parser reads only the directive arguments.
+handler parser reads only the directive arguments. `authenticate` accepts no
+block; `at <mount>` occurs once at the end of its arguments.
 
 ## Directive Order
 
@@ -285,17 +303,21 @@ current guidance to copy into new Caddyfiles.
 
 ## Validation
 
-When changing Caddyfile examples or fixtures, validate with the narrowest
-adapt-focused test from `testing-and-ci`. For skill-only edits, run the skill
-validator from `skill-creator`.
+When changing mount syntax, use `TestAuthnMountCaddyfile`,
+`TestAuthnMountCaddyfileRejects`, `TestAuthnMountNativeValidation` and
+`TestCaddyfileAdaptAuthenticationToJSON`, followed by the app binding and real
+Caddy mount journeys described in the [mount reference](references/portal-mounts.md#validation).
+Parser success does not prove request containment or feature agreement.
+For skill-only edits, run the skill validator from `skill-creator`.
 
 ## Acceptance criteria
 
 - `/auth` and descendants reach the portal; `/authentic` does not. Protected
   handlers receive no call after denial or a handled OAuth callback.
-- A custom mount preserves the original request path and aligns login, logout,
-  callback, public JWKS, and policy auth URLs. Reserved prefixes are rejected or
-  avoided using the linked contract.
+- An explicit custom mount preserves the original request path and aligns login,
+  logout, callback, public JWKS and policy auth URLs. Reserved prefixes/segments
+  and conflicting selected feature mounts reject the configuration. Legacy
+  omission remains a compatibility mode with runtime inference.
 - A split-host browser login delivers the access cookie to the intended app and
   the policy finds and verifies it. Host-only cookie defaults cannot establish
   that flow. Preserve the narrower refresh/OIDC scopes and test both hosts.

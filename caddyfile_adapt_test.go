@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "explicit root nested and neutral-lookalike portal mounts", inputFileNamePrefix: "testcase_authenticate_explicit_mounts"},
+		{name: "explicit mount rejects reserved nested prefix", inputFileNamePrefix: "testcase_authenticate_reserved_mount", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'authenticate': invalid portal mount: portal mount uses a reserved endpoint prefix, at Caddyfile:2")},
 		{name: "sandbox browser proof namespace rejects access cookie collision", inputFileNamePrefix: "testcase_authenticate_with_sandbox_cookie_collision", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': security.authentication.portal \"myportal\" cookies: invalid cookie configuration, at Caddyfile:6")},
 		{name: "UI language rejects a same-line directive", inputFileNamePrefix: "testcase_authenticate_with_language_invalid", shouldErr: true,

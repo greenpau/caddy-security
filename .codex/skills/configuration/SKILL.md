@@ -19,7 +19,10 @@ reason to edit or run tests in `../go-authcrunch`.
 
 The parser entry point is `caddyfile.go`. Put `security { ... }` inside Caddy's
 outer global options block, `{ ... }`. Route-level HTTP integrations reference
-configured objects with `authenticate with <portal>` and `authorize with <policy>`.
+configured objects with `authenticate with <portal> [at <mount>]` and
+`authorize with <policy>`. An explicit literal mount validates and enforces the
+portal boundary; omission retains legacy path inference. Use the HTTP integration
+skill for mount reservations, feature agreement and route ordering.
 Define the global `security` option once; duplicate blocks fail instead of
 silently replacing the previous app. Collect declarations inside that one block.
 
@@ -94,7 +97,7 @@ syntax catalogues with these placeholders are not runnable examples.
 example.com {
 	@portal path /auth /auth/*
 	route @portal {
-		authenticate with myportal
+		authenticate with myportal at /auth
 	}
 
 	route /app* {
@@ -108,7 +111,7 @@ Use the optional matcher forms only when needed:
 
 ```caddyfile
 @portal path /auth /auth/*
-authenticate @portal with myportal
+authenticate @portal with myportal at /auth
 authorize /api/* with api_policy
 ```
 

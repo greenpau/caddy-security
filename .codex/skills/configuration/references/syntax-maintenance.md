@@ -56,7 +56,7 @@ change with the selected host parser.
 | Global `security` and child headers | `caddyfile.go`, `caddyfile_identity.go`, `caddyfile_user.go` | `Config.Add*` methods and `Config.Validate` |
 | Root diagnostic `logging` | `caddyfile_logging.go` | `pkg/logging/parser` → `Config.Logging`; `NewServer` filters components, not Caddy's separate authentication logger |
 | Root runtime `state` | `caddyfile_state.go`, `caddyfile_resolve.go` | `pkg/state/parser` → `Config.State`; initialization belongs to `NewServer` in `App.Start` |
-| HTTP `authenticate` / `authorize` | `plugin_authn.go`, `plugin_authz.go` | Caddy route matching; provisioned portal/policy |
+| HTTP `authenticate` / `authorize` | `plugin_authn.go`, `app_portal_mounts.go`, `plugin_authz.go` | Caddy route matching; optional literal `at <mount>` uses `pkg/portalpath.Validate` and `Portal.ServeHTTPAt`; omitted mounts retain inference |
 | Portal body and backend enablement | `caddyfile_authn.go`, `caddyfile_authn_misc.go` | `pkg/authn/config.go`, redirect validation, backend attachment |
 | Portal cookies | `caddyfile_authn_cookie.go` | `pkg/authn/cookie/parser`, `PortalConfig.ConfigureCookies` |
 | Portal token refresh | `caddyfile_authn_token_refresh.go`, `caddyfile_resolve_token_refresh.go` | `pkg/authn/token_refresh/parser` → `authn.TokenRefreshConfig`; attach before validation, then library cookie factory and local-realm checks |
