@@ -1,0 +1,16 @@
+{
+	security {
+		authorization policy app_policy {
+			allow roles viewer
+			external authorization httpjson {
+				endpoint https://policy.example.test/decide
+				policy reports
+				version revision-1
+				issuer https://login.example.test/auth/login
+				realm local
+				attribute roles
+				attribute roles
+			}
+		}
+	}
+}

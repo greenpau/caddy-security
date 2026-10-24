@@ -64,6 +64,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "HTTP JSON external authorization", inputFileNamePrefix: "testcase_authorize_external"},
+		{name: "external authorization rejects repeated attributes", inputFileNamePrefix: "testcase_authorize_external_invalid", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': external authorization attribute is invalid or duplicated, at Caddyfile:13")},
 		{name: "static claims enrichment and exact JSON values", inputFileNamePrefix: "testcase_authorize_static_claims"},
 		{name: "static claims enrichment rejects incompatible attributes", inputFileNamePrefix: "testcase_authorize_static_claims_invalid", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': claims enrichment attribute has invalid type or size, at Caddyfile:14")},

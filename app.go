@@ -87,8 +87,11 @@ type App struct {
 	// ClaimsEnrichment binds host modules to individual authorization policies.
 	ClaimsEnrichment []*ClaimsEnrichmentBinding `json:"claims_enrichment,omitempty"`
 	claimsEnrichment []preparedClaimsEnrichment
-	pluginContext    context.Context
-	pluginClosers    []io.Closer
+	// ExternalAuthorization adds a required decision after each policy's local checks.
+	ExternalAuthorization []*ExternalAuthorizationBinding `json:"external_authorization,omitempty"`
+	externalAuthorization []preparedExternalAuthorization
+	pluginContext         context.Context
+	pluginClosers         []io.Closer
 
 	server *authcrunch.Server
 	logger *zap.Logger
@@ -192,6 +195,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareClaimsEnrichment(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareExternalAuthorization(ctx, &config); err != nil {
+		return err
+	}
 	if config.State != nil {
 		// Caddy provisions every candidate before starting any of its apps.
 		// Reject persistent-to-persistent replacement at that boundary, before
@@ -242,6 +248,11 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		return err
 	}
 	closers, err := app.attachClaimsEnrichment(app.pluginContext, server)
+	if err == nil {
+		var externalClosers []io.Closer
+		externalClosers, err = app.attachExternalAuthorization(app.pluginContext, server)
+		closers = append(closers, externalClosers...)
+	}
 	if err != nil {
 		// The candidate has never admitted requests. Dispose its consumers before
 		// their injected backends, and release files only after disposal.

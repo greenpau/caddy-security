@@ -1,9 +1,10 @@
 # Host plugin contracts
 
 Read this when adding a backend adapter, native configuration, policy binding,
-or runtime resource ownership. `app_plugins.go` owns the current claims
-enrichment extension boundary; `app.go` owns construction and retirement of the
-single AuthCrunch root. HTTP integrations borrow that root. Do not replace root
+or runtime resource ownership. `app_plugins.go` owns the claims enrichment
+boundary and `app_external_authorization.go` owns external authorization;
+`app.go` owns construction and retirement of the single AuthCrunch root.
+HTTP integrations borrow that root. Do not replace root
 assembly with a second host implementation of portals, gatekeepers or persistence.
 
 ## Source authority and naming
@@ -25,7 +26,7 @@ realm and database path are distinct values; never use a path as implicit identi
 | --- | --- | --- |
 | Claims enrichment | `security.claims_enrichment.<driver>` | Native app binding below; bundled `static` adapter also has policy Caddyfile syntax |
 | Secrets | `security.secrets.<driver>` | Existing `SecretsManager` integration; external static/AWS module IDs remain unchanged |
-| External authorization | `security.external_authorization.<driver>` | Naming convention for a future adapter; no host loader yet |
+| External authorization | `security.external_authorization.<driver>` | Native app binding and bundled `httpjson` adapter with policy Caddyfile syntax |
 | Credential authenticators | `security.credential_authenticators.<driver>` | Proposed; bind validated runtime proxy config before root construction |
 | Identity stores/providers | `security.identity_stores.<driver>`, `security.identity_providers.<driver>` | Proposed; root injection unavailable |
 | Messaging | `security.messaging.<driver>` | Proposed; runtime injection is possible but no host adapter/worker exists |
@@ -76,7 +77,24 @@ Caddy configuration introspection; never put runtime credentials/results in it.
 
 ## Factory and resource ownership
 
-Companions implement `ClaimsEnrichmentBackendModule` alongside `caddy.Module`.
+External authorization follows the same ownership rules through
+`App.ExternalAuthorization`, JSON `external_authorization`, and
+`ExternalAuthorizationBackendModule.NewExternalAuthorizationBackend(context.Context,
+external.Config)`. Each binding selects an existing local `policy`, typed
+external `config`, and raw `backend` module. The remote `config.policy` is a
+different name. The app clones attribute selections and module bytes, validates
+unique policy references, and attaches `external.New` through
+`Gatekeeper.SetExternalAuthorizer` before root publication. Omitted bindings
+preserve ordinary behavior. The
+[external authorization reference](../../configuration-authorization/references/external-authorization.md)
+owns text/native fields, TLS and decision behavior.
+
+Claims backends are constructed before external backends. If a later factory
+or attachment fails, close the root, then all acquired backends in reverse
+order across both categories. The HTTP JSON wrapper implements `io.Closer`
+around the library's errorless Close and owns its injected TLS transport.
+
+Claims companions implement `ClaimsEnrichmentBackendModule` alongside `caddy.Module`.
 `NewClaimsEnrichmentBackend(context.Context, enrichment.Config)` returns an
 `enrichment.Backend` and error. Return an actual nil interface on nil results;
 typed nils violate the module contract. Include compile-time interface guards.
@@ -128,7 +146,7 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Category | Public consumer and host consequence |
 | --- | --- |
 | Claims enrichment | `Server.GetGatekeeperByName` → `Gatekeeper.SetClaimsEnricher`; supported before publication through this host boundary |
-| External authorization | `Gatekeeper.SetExternalAuthorizer`; supports attachment to a private constructed root; companion/configuration still required |
+| External authorization | `Gatekeeper.SetExternalAuthorizer`; attached to the private root through the host binding and bundled HTTP JSON factory |
 | Secrets | Host `SecretsManager` resolves values before root construction; separate adapter must preserve exact types and redact `GetConfig` metadata |
 | Messaging | `messaging.Config.AddProvider` preserves runtime injections through validation, excludes them from JSON, and is consumed by registry `SetMessaging`; bind after config restoration and before validation/construction; host still needs a bounded delivery worker |
 | OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; supply named runtime bindings on each construction, close only after consumers drain; current app uses `NewServer` without these bindings |
@@ -174,5 +192,7 @@ These tests establish the host factory/lifecycle seam. Static adapter coverage
 lives in `claims_enrichment_static_test.go`, `caddyfile_authz_enrichment_test.go`
 and `claims_enrichment_static_e2e_test.go`, plus adaptation fixtures. Each other
 companion needs its own native/text round trips, real authentication/authorization
-E2E, backend failures and resource assertions; these tests do not qualify
-external policy services or SQLite storage.
+E2E, backend failures and resource assertions. `app_external_authorization_test.go`
+checks the external binding and mixed-category cleanup; the HTTP JSON adapter's
+unit and TLS E2E tests qualify its service transport and protected requests.
+These tests do not qualify SQLite storage.

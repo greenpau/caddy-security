@@ -41,6 +41,7 @@ const (
 //		acl rule { ... }
 //		acl default <allow|deny>
 //		claims enrichment static { ... }
+//		external authorization httpjson { ... }
 //		bypass uri <exact|partial|prefix|suffix|regex> <path>
 //		validate bearer header
 //		inject headers with claims
@@ -81,12 +82,22 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		d.Prev()
 		var fields []*acl.FieldConfig
 		var claimsEnrichment *ClaimsEnrichmentBinding
+		var externalAuthorization *ExternalAuthorizationBinding
 		var oauthStatements []string
 		nesting := d.Nesting()
 		for d.NextBlock(nesting) {
 			k := d.Val()
 			rootDirective = mkcp(authzPrefix, args[0], k)
 			switch k {
+			case "external":
+				if externalAuthorization != nil {
+					return d.Errf("authorization policy permits one external authorization block")
+				}
+				var err error
+				externalAuthorization, err = parseCaddyfileExternalAuthorization(d, p.Name)
+				if err != nil {
+					return err
+				}
 			case "claims":
 				if claimsEnrichment != nil {
 					return d.Errf("authorization policy permits one claims enrichment block")
@@ -172,6 +183,9 @@ func parseCaddyfileAuthorization(d *caddyfile.Dispenser, app *App) error {
 		}
 		if claimsEnrichment != nil {
 			app.ClaimsEnrichment = append(app.ClaimsEnrichment, claimsEnrichment)
+		}
+		if externalAuthorization != nil {
+			app.ExternalAuthorization = append(app.ExternalAuthorization, externalAuthorization)
 		}
 		// Publish deferred settings only after validation accepts the policy.
 		// A failed ACL must not leave an orphaned entry or prevent a retry.
