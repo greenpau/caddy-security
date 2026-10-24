@@ -3,8 +3,8 @@
 ## Selected implementation
 
 Read `go.mod` and `go list -m -json github.com/greenpau/go-authcrunch` to
-establish the selected version, module directory, and any replacement. This
-checkout selects its published dependency through `go.mod`; sibling source and
+establish the selected version, module directory, and any replacement. The
+module requirement and any local replacement in `go.mod` select the build; sibling source and
 integrated xcaddy build arguments can select different code and do not establish
 the normal build's behavior. Record that distinction in qualification evidence. A dependency task
 must inspect the Makefile xcaddy argument and CONTRIBUTING examples separately.
@@ -49,9 +49,13 @@ a fresh login. Preserve the library's new routes and complete request URL.
 
 The reference PS256 signer and SQLite refresh store plug into the public refresh
 manager; they cannot replace concrete portal/OP backends through the released
-root API. Other injected identity backends also require a root-assembly review.
-`ServerOptions` currently exposes OAuth login stores only. Do not duplicate the
-root runtime or relax persistent-state ownership to work around missing APIs.
+root API. SQLite password identities use derived `ExternalIdentityStores`
+descriptors and the typed `ServerOptions.IdentityStores` runtime map. The host
+constructs them before the root, owns cleanup and preserves backend epochs.
+See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md)
+for declarations, administration and remaining profile/OP/attachment limits.
+`ServerOptions.OAuthLoginStores` remains a separate pending-login dependency.
+Do not duplicate the root runtime or relax persistent-state ownership.
 SQLite login-transaction storage is a local reference, not multi-host portal HA.
 
 The bundled `security.secrets.sqlite` adapter reads one private record per Caddy

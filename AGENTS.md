@@ -80,6 +80,10 @@ modules register from package `init` hooks.
 - `caddyfile_resolve.go` applies Caddy replacer values and
   `security.secrets.*` plugin lookups to authcrunch configuration during
   provisioning.
+- `app_identity_stores.go` binds host-owned identity stores to the AuthCrunch
+  root. `identity_store_sqlite.go` provides password identities through
+  `security.identity_stores.sqlite`; `command_identity_sqlite.go` supplies
+  private offline account provisioning and mutation commands.
 - `caddyfile_credential_authenticator.go` and `credential_authenticator_sqlite.go`
   declare named API-key backends. `app_credential_authenticators.go` binds them
   before root construction and shares handles only within one app.

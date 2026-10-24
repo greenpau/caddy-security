@@ -1,6 +1,6 @@
 ---
 name: configuration-identity-stores
-description: "Configure local or LDAP identity stores, realms, databases, binds, TLS trust, searches, and group mappings. Delegates static account entries to configuration-users."
+description: "Configure local, LDAP or SQLite password identity stores, trusted SQLite administration, realms, databases, binds, TLS trust and group mappings. Delegates static local entries to configuration-users."
 ---
 
 # Configuration Identity Stores
@@ -17,8 +17,14 @@ For password verification, credential versions, management/profile mutations,
 reload invalidation, and Caddy qualification, read
 [local identity compatibility](references/local-identity.md).
 Check `github.com/greenpau/go-authcrunch/pkg/ids` when changing this skill:
-`ids.Config.Validate` admits only `local` and `ldap` stores and validates the
-authcrunch parameter names produced by the Caddyfile parser.
+`ids.IdentityStoreConfig.Validate` admits only `local` and `ldap` stores and
+validates the authcrunch parameter names produced by the Caddyfile parser.
+
+For SQLite password accounts and trusted offline administration, read
+[SQLite identities](references/sqlite-integration.md). The bundled module uses
+root runtime injection and preserves its own kind, epoch and password-only
+capabilities. The separate SQLite API-key authenticator does not create portal
+password accounts.
 
 ## Local Stores
 

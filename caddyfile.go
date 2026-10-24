@@ -48,6 +48,7 @@ func init() {
 //			credentials <name> { ... }
 //			messaging <email|file> provider <name> { ... }
 //			<local|ldap> identity store <name> { ... }
+//			identity store <driver> <name> { ... }
 //			<oauth|saml> identity provider <name> { ... }
 //			oauth application <nickname> { ... }
 //			sso provider <name> { ... }
@@ -171,6 +172,10 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 	for _, d := range declarations {
 		tld := d.Val()
 		switch tld {
+		case "identity":
+			if err := parseCaddyfileIdentityBackend(d, app); err != nil {
+				return nil, err
+			}
 		case "credential":
 			if err := parseCaddyfileCredentialAuthenticator(d, app); err != nil {
 				return nil, err

@@ -138,8 +138,9 @@ authorize /api/* with api_policy
 - Use [configuration-credentials](../configuration-credentials/SKILL.md) to
   configure reusable generic credentials, parsed by `caddyfile_credentials.go`.
 - Use [configuration-identity-stores](../configuration-identity-stores/SKILL.md)
-  to configure local and LDAP stores, parsed by `caddyfile_identity.go` and
-  `caddyfile_identity_store.go`.
+  to configure local, LDAP and SQLite password stores. Built-ins are parsed by
+  `caddyfile_identity.go` and `caddyfile_identity_store.go`; host modules use
+  `caddyfile_identity_backend.go` and their typed parsers.
 - Use [configuration-messaging](../configuration-messaging/SKILL.md) to
   configure messaging providers, parsed by `caddyfile_messaging.go`.
 - Use [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md)

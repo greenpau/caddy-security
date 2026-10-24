@@ -88,6 +88,11 @@ type App struct {
 	CredentialAuthenticatorConfigs []json.RawMessage `json:"credential_authenticators,omitempty" caddy:"namespace=security.credential_authenticators inline_key=driver"`
 	credentialAuthenticators       []preparedCredentialAuthenticator
 
+	// IdentityStoreConfigs declares host-owned stores injected into the single
+	// AuthCrunch root. Configuration modules never own the returned handles.
+	IdentityStoreConfigs []json.RawMessage `json:"identity_stores,omitempty" caddy:"namespace=security.identity_stores inline_key=driver"`
+	identityStores       []preparedIdentityStore
+
 	// ClaimsEnrichment binds host modules to individual authorization policies.
 	ClaimsEnrichment []*ClaimsEnrichmentBinding `json:"claims_enrichment,omitempty"`
 	claimsEnrichment []preparedClaimsEnrichment
@@ -199,6 +204,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return app.privateConfigError("resolve portal cookies", err)
 	}
 
+	if err := app.prepareIdentityStores(ctx, &config); err != nil {
+		return err
+	}
 	if err := config.Validate(); err != nil {
 		err = app.privateConfigError("validate runtime configuration", err)
 		app.logger.Error(
@@ -262,7 +270,15 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		return errors.Join(err, closeErr)
 	}
 
-	server, err := authcrunch.NewServer(config, app.logger)
+	identityStores, identityClosers, err := app.attachIdentityStores(app.pluginContext)
+	credentialClosers = append(credentialClosers, identityClosers...)
+	if err != nil {
+		closeErr := closePluginResources(credentialClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
+	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores})
 	if err != nil {
 		closeErr := closePluginResources(credentialClosers)
 		releaseIdentityFiles(app.identityFiles)

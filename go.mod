@@ -207,3 +207,5 @@ tool (
 	github.com/greenpau/tested
 	github.com/greenpau/versioned/cmd/versioned
 )
+
+replace github.com/greenpau/go-authcrunch v1.4.0 => ../go-authcrunch

@@ -4,6 +4,7 @@ Read this when adding a backend adapter, native configuration, policy binding,
 or runtime resource ownership. `app_plugins.go` owns the claims enrichment
 boundary and `app_external_authorization.go` owns external authorization;
 `app_credential_authenticators.go` owns fresh API-key bindings;
+`app_identity_stores.go` owns named identity-store bindings;
 `app.go` owns construction and retirement of the single AuthCrunch root.
 HTTP integrations borrow that root. Do not replace root
 assembly with a second host implementation of portals, gatekeepers or persistence.
@@ -29,9 +30,10 @@ realm and database path are distinct values; never use a path as implicit identi
 | Secrets | `security.secrets.<driver>` | Existing `SecretsManager` integration; external static/AWS module IDs remain unchanged |
 | External authorization | `security.external_authorization.<driver>` | Native app binding and bundled `httpjson` adapter with policy Caddyfile syntax |
 | Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled `sqlite` factory with global Caddyfile syntax; bind validated runtime proxy config before root construction |
-| Identity stores/providers | `security.identity_stores.<driver>`, `security.identity_providers.<driver>` | Proposed; root injection unavailable |
+| Identity stores | `security.identity_stores.<driver>` | Native/global declarations and bundled SQLite factory; derived descriptors and runtime handles enter ordinary root assembly |
+| Identity providers | `security.identity_providers.<driver>` | Proposed; root injection unavailable |
 | Messaging | `security.messaging.<driver>` | Proposed; runtime injection is possible but no host adapter/worker exists |
-| Registration workflows | `security.registration_workflows.<driver>` | Proposed; identity-store/root composition gap |
+| Registration workflows | `security.registration_workflows.<driver>` | Proposed; root registry injection unavailable |
 | Signing/refresh storage | `security.cryptographic_signing.<driver>`, `security.session_and_refresh_storage.<driver>` | Proposed; standalone engine APIs do not select portal backends |
 | OAuth login storage | `security.oauth_login_stores.<driver>` | Proposed; public root option exists, host loader does not |
 
@@ -90,10 +92,10 @@ preserve ordinary behavior. The
 [external authorization reference](../../configuration-authorization/references/external-authorization.md)
 owns text/native fields, TLS and decision behavior.
 
-Credential backends are constructed before the root, followed by claims and
+Credential and identity backends are constructed before the root, followed by claims and
 external backends after root construction. If a later factory
 or attachment fails, close the root, then all acquired backends in reverse
-order across all three categories. The HTTP JSON wrapper implements `io.Closer`
+order across all four categories. The HTTP JSON wrapper implements `io.Closer`
 around the library's errorless Close and owns its injected TLS transport.
 
 Claims companions implement `ClaimsEnrichmentBackendModule` alongside `caddy.Module`.
@@ -154,9 +156,9 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Messaging | `messaging.Config.AddProvider` preserves runtime injections through validation, excludes them from JSON, and is consumed by registry `SetMessaging`; bind after config restoration and before validation/construction; host still needs a bounded delivery worker |
 | OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; supply named runtime bindings on each construction, close only after consumers drain; current app uses `NewServer` without these bindings |
 | API-key authenticators | Validate `PolicyConfig`, then call its `AuthProxyConfig.AddAuthenticator` before `NewServer` on that same private graph. The root retains these runtime bindings and checks `HasAuthProxies`. Waiting to call `Gatekeeper.AddAuthenticators` after root construction fails for an injected-only realm |
-| Identity stores | `PortalParameters.IdentityStores` supports direct portal composition; root factories dispatch built-in kinds and expose no injected store option. Do not disguise SQLite as a local snapshot store |
+| Identity stores | Derive `Config.ExternalIdentityStores` through `ids.NewExternalIdentityStoreConfig` before validation and supply `ServerOptions.IdentityStores` before root construction. Exact names/kinds/realms, configured handles and persistence digests are validated; injected handles remain caller-owned. See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md) |
 | Ticket identity providers | `PortalParameters.IdentityProviders` and optional HTTP-login interface support direct composition; root provider dispatch has no injected-provider option |
-| Registration workflows | `Portal.AddUserRegistry` is public, but the SQLite workflow also requires its injected SQLite identity store; root dispatch constructs local registries and cannot assemble that dependency graph |
+| Registration workflows | `Portal.AddUserRegistry` is public and identity-store injection is available, but root registry dispatch remains local-only; a registration adapter still needs a supported root composition contract |
 | PS256 signing | `token_refresh.NewManager` accepts a signer; root portal/OP signing does not expose that selection |
 | Refresh storage | `token_refresh.NewManager` accepts a store, but the portal constructs a private concrete `MemoryStore`; `PortalParameters` and `ServerOptions` have no refresh-store injection. Root state attaches snapshots to that memory store, independently of the SQLite plugin |
 
@@ -181,7 +183,7 @@ The [SQLite API-key contract](../../configuration-authorization/references/sqlit
 owns declarations, private issuance/revocation and operator recovery.
 
 Do not remove auth-proxy declarations during construction and patch them afterward,
-create placeholder portals, or replace root-owned authenticators. For identity
+create placeholder portals, or replace root-owned authenticators. For provider
 and registry gaps, do not reconstruct a parallel root.
 Upstream work must define typed injection, duplicate-name handling, consumer
 validation, caller ownership on constructor failure and disposal, and persistent

@@ -27,6 +27,10 @@ and revoke SQLite API keys with `security api-key issue|revoke`, using private
 JSON input and private key files. Local user-store credential generation remains
 with the local commands below.
 
+Use [configuration-identity-stores](../configuration-identity-stores/SKILL.md) to
+provision and manage SQLite password accounts with trusted offline
+`security identity` commands and private configuration/password input.
+
 Use [configuration-secrets](../configuration-secrets/SKILL.md) to provision
 SQLite secret records with `security secrets put|delete`, choose private JSON
 inputs, and adopt changes through an explicit consumer reload.
