@@ -36,7 +36,8 @@
                         "fs_path": "ui/favicon.png",
                         "content_type": "image/png"
                     }
-                ]
+                ],
+                "language": "French"
             },
             "user_transformer_configs": [
                 {

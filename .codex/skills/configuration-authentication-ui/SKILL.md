@@ -147,7 +147,7 @@ for Web Locks, pending-state recovery, top-level navigation and Caddy TLS tests.
 
 ## Languages
 
-Use `language <id>` inside the `ui` block for portal localization:
+Use one `language <code-or-English-name>` value per line in the `ui` block:
 
 ```caddyfile
 ui {
@@ -155,10 +155,17 @@ ui {
 }
 ```
 
-The supported language set and message keys come from the selected module
-translation data, especially `pkg/translate/data/messages.json`. Check that
-file when validating whether a language or message is available; do not infer
-support from screenshots alone.
+Omission or an exact empty value selects English. Codes and English language
+names are trimmed and case-insensitive at portal construction; adaptation
+preserves the literal value. Repeated declarations on separate lines use the
+last value. Extra arguments are rejected. Unsupported values fail construction;
+there is no request-specific `Accept-Language` negotiation or runtime placeholder
+resolution for this field.
+
+Read [localization](references/localization.md) for the supported languages,
+portal/OP propagation, escaped template and script messages, RTL behavior,
+custom-template limits and Caddy acceptance. Check the selected module's
+`pkg/translate/language.go` and `data/messages.json` when changing that contract.
 
 ## Client Integration Patterns
 

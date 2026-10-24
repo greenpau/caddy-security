@@ -42,6 +42,18 @@ and source-quota check. These are regular tests, separate from official OP
 conformance. The [cross-device owner](../../configuration-authentication-cross-device/SKILL.md)
 defines acceptance and physical-device/instance-affinity limits.
 
+## Portal and OP localization
+
+`TestPortalUILanguage`, `TestPortalUILanguageArity`, the UI adaptation/resolution
+fixture and invalid-arity fixture cover literal language mapping, defaults,
+repetition and rejection. `TestCaddyLocalizationE2E` uses simultaneous English,
+French and Arabic portals to check independent language snapshots and failed
+replacement, then real trusted Chrome for login recovery, RTL phone/desktop
+layout, translated cross-device script messages and native French OP consent.
+The relying party validates denial and redeems/verifies the actual approval code.
+Keep HTTP policy, escaping, Origin, protocol fields and asynchronous cleanup
+assertions intact. See [localization and custom-template limits](../../configuration-authentication-ui/references/localization.md).
+
 ## Caddy compatibility
 
 `TestCaddyfileOAuthApplicationQuotedBraces` and

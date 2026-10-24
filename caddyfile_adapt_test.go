@@ -64,6 +64,8 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "UI language rejects a same-line directive", inputFileNamePrefix: "testcase_authenticate_with_language_invalid", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': security.authentication.portal.ui language subdirective requires exactly one value, at Caddyfile:5")},
 		{name: "SQLite ticket identity provider", inputFileNamePrefix: "testcase_identity_provider_sqlite"},
 		{name: "SQLite registration workflow", inputFileNamePrefix: "testcase_registration_sqlite"},
 		{name: "SQLite messaging provider", inputFileNamePrefix: "testcase_messaging_sqlite"},

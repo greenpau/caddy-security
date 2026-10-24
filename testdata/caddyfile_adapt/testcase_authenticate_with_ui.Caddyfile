@@ -17,6 +17,7 @@
 			enable identity store localdb
 			cookie guess domain
 			ui {
+				language French
 				meta title "{env.APP_COMPANY_NAME} Authentication Portal"
 				meta author {env.APP_COMPANY_NAME}
 				meta description "Authentication Portal for {env.APP_COMPANY_NAME} Users."

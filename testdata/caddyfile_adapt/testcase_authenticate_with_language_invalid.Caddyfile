@@ -1,0 +1,9 @@
+{
+	security {
+		authentication portal localized {
+			ui {
+				language fr theme basic
+			}
+		}
+	}
+}

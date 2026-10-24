@@ -44,11 +44,14 @@ import (
 //	}
 //
 // Quote multiword values. Use image/png or image/jpeg for image media types.
-// basic is the only registered theme in v1.3.3. Embedded pages handle browser
+// basic is the only registered theme. Embedded pages handle browser
 // color preferences without additional Caddy directives. Profile image assets
 // use SVG; custom static PNG assets remain supported.
 // Template names, themes, and languages depend on go-authcrunch/pkg/authn/ui
 // and pkg/translate. custom html header reads its file during adaptation.
+// language requires one argument; repeated lines use the last value. Keep its
+// spelling for runtime validation: omitted/empty defaults to English, and the
+// portal normalizes supported codes/full English names when constructed.
 // There are no logo_url, logo_description, or allow settings directives.
 func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConfig, rootDirective string) error {
 	for nesting := h.Nesting(); h.NextBlock(nesting); {
@@ -69,10 +72,14 @@ func parseCaddyfileAuthPortalUI(h *caddyfile.Dispenser, portal *authn.PortalConf
 			}
 			portal.UI.Theme = h.Val()
 		case "language":
-			if !h.NextArg() {
+			args := h.RemainingArgs()
+			if len(args) == 0 {
 				return h.Errf("%s %s subdirective has no value", rootDirective, subDirective)
 			}
-			portal.UI.Language = h.Val()
+			if len(args) != 1 {
+				return h.Errf("%s %s subdirective requires exactly one value", rootDirective, subDirective)
+			}
+			portal.UI.Language = args[0]
 		case "logo":
 			hargs := h.RemainingArgs()
 			args := strings.Join(hargs, " ")
