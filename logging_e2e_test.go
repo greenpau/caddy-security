@@ -34,7 +34,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 )
 
-// These tests deliberately retain the host error. Caddy v2.11.4's private
+// These tests deliberately retain the host error. The selected Caddy's private
 // authentication logger has no supported wrapping hook, and CoreRaw tees rather
 // than wraps the existing core. Never change the expected host count to zero
 // until an integration at that actual ownership boundary is implemented.

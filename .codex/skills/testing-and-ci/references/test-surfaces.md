@@ -287,6 +287,15 @@ suite is not an issue #280 host-suppression fix. See
 [logging validation](../../configuration-logging/SKILL.md#validation) for focused
 unit/adaptation coverage and the upstream acceptance criteria.
 
+`TestCaddyAuthenticationEventsE2E` checks exact authentication INFO/WARN records
+through Caddy TLS: real JSON/form password, TOTP and WebAuthn signature failures,
+final JSON issuance, canonical realm/portal attribution, source metadata and
+credential redaction. Message/value suppression must leave the HTTP rejection
+unchanged. This complements the broader filter/reload suite without treating
+checkpoint completion as credential delivery. See
+[event diagnostics](../../configuration-logging/SKILL.md#authentication-event-diagnostics)
+for event scope, correlation semantics and earlier rejection paths.
+
 `TestCaddyRuntimeStateE2E` builds a real Caddy executable with production modules
 and an isolated TLS-root fixture. It tests SIGKILL/restart at the same origin,
 direct OAuth without a portal, sessions/JWKS, refresh/OIDC replay, identity

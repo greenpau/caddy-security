@@ -124,6 +124,51 @@ needs equivalent protection, including credential-bearing Location headers. Hand
 or AuthCrunch component skip rules do not provide this field redaction. Qualify
 malformed URI parsing before substituting a narrower query-only filter.
 
+## Authentication event diagnostics
+
+The portal emits the following structured events at INFO/WARN. Caddy delegates
+these calls to AuthCrunch; it does not reconstruct authentication outcomes from
+HTTP status or add a second event stream.
+
+| Event | Level and boundary |
+| --- | --- |
+| `password authentication failed` | WARN after backend password verification fails. Invalid forms and rate limiting can exit earlier. |
+| `totp passcode authentication failed` | WARN after the TOTP backend rejects a passcode. |
+| `u2f authentication failed` | WARN after backend WebAuthn verification fails. Decoder and origin rejection can exit earlier. |
+| `user was successfully authenticated` | INFO after JSON checkpoint login issues its credentials, before writing the final response. |
+
+The three failure events cover JSON and browser checkpoint paths. They include
+canonical `username`, `realm`, `portal_name`, numeric `checkpoint_id`,
+`checkpoint_name`, `checkpoint_type`, `session_id`, `request_id`, `src_ip` and
+`src_conn_ip`. The final JSON event includes the same account/portal attribution
+and correlation fields, plus `authentication_flow=api`; it has no checkpoint or
+source-address requirement. Account attribution comes from the captured
+authenticator, not a submitted email alias or transformed JWT subject.
+
+For connected LDAP accounts, local MFA can run in the attached local account's
+realm. The factor event pairs that local username with its local realm; it does
+not claim that realm is the original federation issuer. `portal_name` identifies
+the configured portal, allowing equal usernames in different realms/portals to
+be distinguished. Request IDs and the portal session cookie are correlation
+inputs, not identity proofs. Jar-free requests can receive a different
+`session_id` on every checkpoint; it is not the sandbox ID or refresh-family ID.
+Caddy's trusted-proxy interpretation owns the source-address fields.
+
+These events are diagnostics, not a complete audit ledger. Browser
+`user passed all authorization checkpoints` precedes final issuance/session
+admission, and the earlier `Successful login` event is not equivalent to the
+final JSON event. API-key exchanges, external-provider callbacks and refresh
+have separate paths. Even final JSON issuance does not establish that a client
+received the response. Check the actual HTTP/credential outcome independently;
+for example, a rejected browser TOTP input can render HTML with status 200.
+
+Existing skip rules match these messages and textual field values. For example,
+`skip exact text "totp passcode authentication failed"` suppresses that complete
+entry while preserving the rejection and other diagnostics. Matching a portal,
+realm or username value is still a value-only rule: the filter has no field-name
+selector and also matches an identical value in another textual field. Keep
+the separate Caddy diagnostic/access-log redaction controls above.
+
 ## Missing Caddy Host Extension
 
 Trace the pinned host before attempting integration:
@@ -182,6 +227,16 @@ host limitation. They do **not** satisfy the issue's host-suppression acceptance
 criteria. Once the host hook exists, require error-text-only suppression of
 missing-token errors while malformed-token errors from the same logger remain,
 and message-only suppression of the middleware message, through this real process.
+
+`TestCaddyAuthenticationEventsE2E` qualifies exact INFO/WARN authentication events
+through verified Caddy TLS with real password, TOTP and WebAuthn backend failures
+in JSON and form flows. It checks canonical account/portal attribution, source
+addresses, incomplete-versus-final JSON login, unchanged rejection under message
+and field-value suppression, and captured credential redaction in diagnostic and
+access output. A separate DEBUG case checks the same local credential boundary.
+Its WebAuthn inputs reach signature verification; this HTTP test does not claim
+physical-authenticator coverage. `TestAppLoggingInstanceIsolation`
+remains the focused unit coverage for root-filter ownership and immutable rules.
 
 ```sh
 make test TEST='TestParseCaddyfileLogging|TestLogging|TestAppLogging|TestCaddyLoggingE2E|TestCaddyfileAdaptAuthenticationToJSON|TestResolveRuntimeAppConfig' TEST_DIR=. COVERAGE_DIR=.coverage/logging
