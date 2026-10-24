@@ -92,6 +92,25 @@ The next external login resolves to the target UUID and current target policy.
 Existing stateless access tokens retain their ordinary verification/lifetime
 behavior; stored browser/refresh proofs receive their normal current-state checks.
 
+## Administration
+
+Use [local user commands](../../scripts-and-automation/references/local-user-commands.md#commands)
+to inspect or mutate an attached account through the configured portal admin API.
+An automatic record without local email aliases supports an empty email selector;
+an ordinary record or automatic record with a local alias still needs the matching
+email. The server decides from the current record during each operation. Obtain
+the stored username from listing; a provider's display email cannot select it.
+The [HTTP selector contract](../../authentication-portal-api/references/admin-api.md#local-user-selection)
+owns wire types, disabled-account selection and response failures.
+
+Resetting a password does not itself remove the record's automatic flag or add
+an email alias. New provider logins still follow the current local roles and
+required-factor policy. Disable preserves the account/connection for an explicit
+enable; delete removes the account, so a later verified provider login can create
+a new UUID without the old local roles, password or challenge rules. Neither
+operation changes the ordinary lifetime semantics of an already issued stateless
+access JWT. Keep administration distinct from the user-confirmed connection flow.
+
 ## Ownership and changes
 
 Built-in OAuth/SAML/LDAP bindings use the root's configured local instance.
@@ -122,3 +141,7 @@ actual-process identity continuity and in-memory sentinel isolation. Keep the
 existing ticket, provider-refresh, cross-device, local identity and protocol
 negative suites when their shared boundaries change; adaptation alone cannot
 prove those user flows.
+`TestCaddyConnectedAccountsAdministrationE2E` uses the built CLI against actual
+Caddy for empty-email administration, ordinary/aliased selector rejection,
+disabled-account recovery, generated-password policy and fresh-login identity
+checks after mutation or deletion.

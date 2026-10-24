@@ -62,7 +62,7 @@ func addSecurityLocalCommands(parent *cobra.Command) {
 		{info, "user", "info", "Read a user record (may include credential hashes)"},
 		{add, "user", "add", "Create a user and return a generated password"},
 		{update, "user", "update", "Change account status, reset a password, or update roles and challenges"},
-		{del, "user", "delete", "Delete the user matching both username and email"},
+		{del, "user", "delete", "Delete the selected local user"},
 	} {
 		cmd := &cobra.Command{Use: action.name, Short: action.short, Args: securityNoArgs}
 		cmd.Long = action.short + ".\n\nUse --config for client YAML, separate from the server Caddyfile. The config realm identifies the administrator; --realm selects the database to manage. Success prints JSON. User creation and password reset print a new password: protect stdout. Requests are never automatically retried. Use connect to replace expired credentials."
@@ -77,7 +77,12 @@ func addSecurityLocalCommands(parent *cobra.Command) {
 		}
 		if action.name == "user" {
 			flags.String("username", "", "Target username (required)")
-			flags.String("email", "", "Target email address (required)")
+			emailHelp := "Target local email address (required)"
+			if action.operation != "add" {
+				emailHelp = "Target local email address (omit only for automatically provisioned accounts without local email aliases)"
+				cmd.Long += "\n\nUse the stored username from list users. Email may be omitted only for automatically provisioned accounts without local email aliases. Ordinary accounts and accounts with a local email alias require the matching email. The server checks the current account during the operation."
+			}
+			flags.String("email", "", emailHelp)
 		}
 		if action.operation == "add" {
 			flags.String("name", "", "Full display name (required)")
@@ -122,6 +127,11 @@ func securityLocalPayload(cmd *cobra.Command, operation string) (string, []byte,
 			continue
 		}
 		value, _ := flags.GetString(name)
+		// Only the server's current stored record can authorize an empty email
+		// selector. Preserve it on the wire without guessing account kind here.
+		if name == "email" && value == "" && (operation == "info" || operation == "delete" || operation == "update") {
+			continue
+		}
 		if strings.TrimSpace(value) == "" || !utf8.ValidString(value) || strings.ContainsAny(value, "\r\n\x00") {
 			return "", nil, false, fmt.Errorf("a valid --%s is required", name)
 		}

@@ -114,16 +114,33 @@ change from silently retargeting a mutation.
 | `list users` | `--realm`; optional `--format` |
 | `info realm` | `--realm` |
 | `reload` | `--realm` |
-| `info user` | `--realm`, `--username`, `--email` |
+| `info user` | `--realm`, `--username`; conditional `--email` below |
 | `add user` | `--realm`, `--username`, `--email`, `--name`, `--roles` |
-| `delete user` | `--realm`, `--username`, `--email` |
-| `update user` | `--realm`, `--username`, `--email`, exactly one update below |
+| `delete user` | `--realm`, `--username`; conditional `--email` below |
+| `update user` | `--realm`, `--username`, exactly one update below; conditional `--email` |
 
 Update operations are `--enable`, `--disable`, `--reset-password`,
 `--overwrite-roles`, `--add-roles`, and `--overwrite-auth-challenges`.
 List flags accept comma-separated values or repeated flags. Empty lists,
 empty members, conflicting updates, false update switches, positional
 arguments, and irrelevant flags fail before any remote action.
+
+For an existing automatically provisioned account without local email aliases,
+omit `--email` or use `--email=`. Both send the explicit string `"email":""`.
+Use the stored username from `list users`; enabling a disabled account requires
+its exact spelling and the exact stored local email spelling when an alias exists.
+Ordinary accounts and automatic accounts with a local email alias still require
+the matching email; `add user` always requires it. A provider's display email is
+not a local alias. The CLI neither guesses
+record kind from a username nor performs a discovery request before the action.
+The server decides from the current stored record during that operation; an
+earlier list or info response does not authorize a later mutation.
+
+Exactly empty email is the only exception. Whitespace-only values, invalid UTF-8,
+CR/LF and NUL fail before credential-file or network I/O. Other nonempty values
+retain their original bytes; they are not trimmed or repaired. See the
+[admin user selector contract](../../authentication-portal-api/references/admin-api.md#local-user-selection)
+for wire types, failure responses and the server's account-kind boundary.
 
 ```sh
 bin/authcrunch security local add user --config private/client.yaml \
@@ -136,6 +153,13 @@ bin/authcrunch security local update user --config private/client.yaml \
 bin/authcrunch security local update user --config private/client.yaml \
   --realm local --username alice --email alice@example.com \
   --overwrite-auth-challenges "password totp"
+
+# Copy the automatic account's stored username from list users.
+bin/authcrunch security local info user --config private/client.yaml \
+  --realm local --username "$stored_username"
+
+bin/authcrunch security local update user --config private/client.yaml \
+  --realm local --username "$stored_username" --disable
 ```
 
 Each `--overwrite-auth-challenges` item is a complete ordered rule body.
@@ -150,6 +174,15 @@ in JSON; they do not accept a caller-selected password. Protect stdout,
 including automation logs. `info user` can return sensitive credential hashes.
 JSON preserves server fields; table/CSV are available for listings. Prompts go
 to stderr.
+
+While an account is disabled, use listing to inspect its disabled state and
+enable it before requesting detailed info. Enabling an already enabled account
+fails. Password reset alone does not add an email alias or remove an automatic
+account's empty-email eligibility. Deletion is not a permanent provider ban: a
+later verified external login can provision a new account with a new ID. Disable
+or change the relevant identity policy when that is the intended outcome.
+Existing stateless access JWTs retain their ordinary lifetime and authorization
+checks; these commands do not promise universal immediate token revocation.
 
 Requests are not automatically retried and redirects are not followed. HTTP
 errors, malformed responses, HTTP-200 operation failures, and unconfirmed
@@ -222,6 +255,11 @@ password generation never prints the plaintext input.
 - `command_local_test.go` and `command_credentials_test.go`: wire contracts,
   failures, cache isolation, database immutability, bcrypt compatibility,
   secret-safe errors, and actual Caddy command dispatch.
+  `TestSecurityLocalUserSelectors` captures all eight existing-account actions
+  with omitted, explicitly empty and unchanged nonempty email values;
+  `TestSecurityLocalSelectorValidation` checks rejection before credential I/O.
+  `TestSecurityLocalEmptySelectorFailure` retains HTTP-200 failure handling and
+  single-attempt mutation recovery.
 - `command_local_safety_test.go`: unit and Caddy CLI regressions for decoded
   UTF-8, independent TLS verification, configured request/login timeouts, and
   mutation failures after the backend may have committed, including malformed
@@ -237,9 +275,14 @@ password generation never prints the plaintext input.
   admin denial, authentication with generated password hashes and API keys,
   configured administrator MFA, a full three-prompt MFA login (password, method,
   and authenticator code), and cache preservation on failed MFA login.
+- `TestCaddyConnectedAccountsAdministrationE2E`: a built Caddy command administers
+  accounts created by verified provider login through a nested TLS portal. It covers
+  the eight operations, current-record selector rejection, signed identity and
+  role continuity, generated-password checkpoints, and deletion/reprovisioning.
+  Each CLI invocation is a fresh process; this does not claim a server restart.
 - `TestSecurityTerminalE2E`: real Unix terminal input, secret echo suppression,
   Unicode, CRLF and bracketed paste, Ctrl-C/Ctrl-D keystrokes, and terminal
-  restoration after success, SIGINT, SIGTERM, and timeout (Python 3). It also
+  restoration after success, SIGINT, SIGTERM, and timeout (Python). It also
   verifies that malformed encoding cannot produce a hash of an altered password,
   and that interruption at later MFA prompts preserves cached credentials.
 - `TestSecurityTerminalEncoding` and `FuzzSecurityTerminalEncoding`: byte

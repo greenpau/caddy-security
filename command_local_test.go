@@ -138,7 +138,7 @@ func TestSecurityLocalValidation(t *testing.T) {
 		{"update", "user", "--realm", "local", "--username", "alice", "--email", "alice@example.test", "--add-roles", ""},
 		{"update", "user", "--realm", "local", "--username", "alice", "--email", "alice@example.test", "--overwrite-auth-challenges", "password,"},
 		{"add", "user", "--realm", "local", "--username", "alice", "--email", "alice@example.test", "--name", "Alice", "--roles", ""},
-		{"info", "user", "--realm", "local", "--username", "alice"},
+		{"add", "user", "--realm", "local", "--username", "alice", "--name", "Alice", "--roles", "authp/user"},
 		{"reload", "--realm", " "},
 		{"list", "users", "--realm", "local", "--format", registrationTestSecret},
 		{"metadata", "--timeout", "0"},
@@ -159,6 +159,142 @@ func TestSecurityLocalValidation(t *testing.T) {
 	}
 	if _, err := os.Stat(token); !errors.Is(err, os.ErrNotExist) {
 		t.Error("invalid command saved credentials")
+	}
+}
+
+func TestSecurityLocalUserSelectors(t *testing.T) {
+	for _, operation := range []struct {
+		name, command, flags, extra string
+	}{
+		{"info", "info", "", ""},
+		{"delete", "delete", "", ""},
+		{"disable", "update", "--disable", ""},
+		{"enable", "update", "--enable", ""},
+		{"reset_password", "update", "--reset-password", ""},
+		{"overwrite_roles", "update", "--overwrite-roles authp/user,reader", `,"roles":["authp/user","reader"]`},
+		{"add_roles", "update", "--add-roles reader", `,"roles":["reader"]`},
+		{"overwrite_auth_challenges", "update", "--overwrite-auth-challenges password,totp", `,"challenges":["password","totp"]`},
+	} {
+		for _, selector := range []struct {
+			name, email string
+			flags       []string
+		}{
+			{"omitted", "", nil},
+			{"explicit_empty", "", []string{"--email="}},
+			{"nonempty_bytes", " Alice+é@example.test \t", []string{"--email", " Alice+é@example.test \t"}},
+		} {
+			t.Run(operation.name+"/"+selector.name, func(t *testing.T) {
+				var calls atomic.Int32
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					calls.Add(1)
+					if r.Method != http.MethodPost || r.URL.Path != "/nested/auth/api/server/user" || r.Header.Get("Authorization") != "custom_token="+registrationTestSecret || r.Header.Get("Accept") != "application/json" {
+						t.Error("incorrect user-operation request")
+					}
+					body, err := io.ReadAll(r.Body)
+					var got map[string]any
+					if err != nil || json.Unmarshal(body, &got) != nil {
+						t.Error("invalid user-operation payload")
+					}
+					encodedEmail, _ := json.Marshal(selector.email)
+					expected := fmt.Sprintf(`{"realm":"local","operation":%q,"user":{"username":"stored-account","email":%s%s}}`, operation.name, encodedEmail, operation.extra)
+					var want map[string]any
+					if err := json.Unmarshal([]byte(expected), &want); err != nil {
+						t.Error("invalid expected user-operation payload")
+					}
+					if !cmp.Equal(want, got) {
+						t.Error("user selector or operation fields changed")
+					}
+					fmt.Fprint(w, `{"status":"success","username":"stored-account","password":"synthetic-generated-password"}`)
+				}))
+				defer server.Close()
+				config, _ := localCommandConfig(t, server.URL+"/nested/auth", true)
+				args := []string{operation.command, "user", "--config", config, "--realm", "local", "--username", "stored-account"}
+				args = append(args, strings.Fields(operation.flags)...)
+				args = append(args, selector.flags...)
+				output, err := executeLocalCommand(t, args...)
+				if err != nil || !json.Valid(output) || calls.Load() != 1 {
+					t.Fatal("user selector did not produce exactly one successful operation")
+				}
+			})
+		}
+	}
+}
+
+func TestSecurityLocalSelectorValidation(t *testing.T) {
+	// A missing config cannot be read successfully. The precise action error
+	// proves these selectors are rejected before credential-file or HTTP I/O.
+	config := filepath.Join(t.TempDir(), "missing-client.yaml")
+	for _, operation := range []struct {
+		name  string
+		flags []string
+	}{
+		{"info", nil}, {"delete", nil}, {"update", []string{"--disable"}},
+	} {
+		for _, invalid := range []struct{ name, value string }{
+			{"whitespace", " \t\u00a0"}, {"invalid_utf8", "private-\xff"},
+			{"carriage_return", "private\rvalue"}, {"line_feed", "private\nvalue"}, {"nul", "private\x00value"},
+		} {
+			t.Run(operation.name+"/"+invalid.name, func(t *testing.T) {
+				args := []string{operation.name, "user", "--config", config, "--realm", "local", "--username", "stored-account", "--email", invalid.value}
+				args = append(args, operation.flags...)
+				output, err := executeLocalCommand(t, args...)
+				if err == nil || err.Error() != "a valid --email is required" || len(output) != 0 {
+					t.Fatal("invalid email reached credential I/O or disclosed its value")
+				}
+			})
+		}
+	}
+	for _, tc := range []struct {
+		name, want string
+		args       []string
+	}{
+		{"add_missing", "a valid --email is required", []string{"add", "user", "--realm", "local", "--username", "alice", "--name", "Alice", "--roles", "authp/user"}},
+		{"add_empty", "a valid --email is required", []string{"add", "user", "--realm", "local", "--username", "alice", "--email=", "--name", "Alice", "--roles", "authp/user"}},
+		{"missing_username", "a valid --username is required", []string{"info", "user", "--realm", "local"}},
+		{"missing_realm", "a valid --realm is required", []string{"delete", "user", "--username", "stored-account"}},
+		{"missing_update", "select exactly one user update operation", []string{"update", "user", "--realm", "local", "--username", "stored-account"}},
+		{"conflicting_update", "select exactly one user update operation", []string{"update", "user", "--realm", "local", "--username", "stored-account", "--enable", "--disable"}},
+		{"false_update", "user update switches must be true", []string{"update", "user", "--realm", "local", "--username", "stored-account", "--disable=false"}},
+		{"empty_roles", "--add-roles requires at least one value", []string{"update", "user", "--realm", "local", "--username", "stored-account", "--add-roles", ""}},
+		{"empty_challenge", "invalid --overwrite-auth-challenges value", []string{"update", "user", "--realm", "local", "--username", "stored-account", "--overwrite-auth-challenges", "password,"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			output, err := executeLocalCommand(t, append(tc.args, "--config", config)...)
+			if err == nil || err.Error() != tc.want || len(output) != 0 {
+				t.Fatal("invalid action reached credential I/O or changed its validation error")
+			}
+		})
+	}
+}
+
+func TestSecurityLocalEmptySelectorFailure(t *testing.T) {
+	for _, operation := range []string{"info", "delete"} {
+		t.Run(operation, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				var request struct {
+					Operation string
+					User      map[string]any
+				}
+				if r.Method != http.MethodPost || r.URL.Path != "/api/server/user" || json.NewDecoder(r.Body).Decode(&request) != nil || request.Operation != operation {
+					t.Error("unexpected selector failure request")
+				}
+				if email, exists := request.User["email"]; !exists || email != "" {
+					t.Error("empty selector was omitted or changed")
+				}
+				fmt.Fprintf(w, `{"status":"failure","error":%q}`, registrationTestSecret)
+			}))
+			defer server.Close()
+			config, _ := localCommandConfig(t, server.URL, true)
+			output, err := executeLocalCommand(t, operation, "user", "--realm", "local", "--username", "stored-account", "--config", config)
+			if err == nil || calls.Load() != 1 || len(output) != 0 || strings.Contains(err.Error(), registrationTestSecret) {
+				t.Fatal("HTTP200 selector failure was accepted, disclosed or retried")
+			}
+			if operation == "delete" && !strings.Contains(err.Error(), "outcome may be unknown") {
+				t.Error("failed mutation omitted recovery guidance")
+			}
+		})
 	}
 }
 

@@ -239,5 +239,5 @@ for endpoint shapes, exact status/method behavior, key formats, and Caddy tests.
 - `/api/refresh_token` failures: check explicit realm participation, configured
   origin/mount, the required browser header, native opt-in, and replay/capacity
   limits using the transport contract above.
-- Admin endpoint returns unauthorized: verify `enable admin api`, active portal
-  session, and `authp/admin` or equivalent portal admin role.
+- Admin endpoint returns unauthorized: verify `enable admin api`, a valid
+  portal-admitted access token, and `authp/admin` or equivalent portal admin role.

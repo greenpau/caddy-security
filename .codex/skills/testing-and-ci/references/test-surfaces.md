@@ -92,6 +92,20 @@ existing provider-refresh, ticket and protocol regressions for unchanged shared
 paths. See [configuration](../../configuration-identity-stores/references/connected-accounts.md)
 and [browser protocol](../../authentication-portal-api/references/connected-accounts.md).
 
+`TestSecurityLocalUserSelectors` captures all eight existing-account operations
+with omitted, explicitly empty and unchanged nonempty email strings, while
+`TestSecurityLocalSelectorValidation` verifies invalid input before credential
+I/O. `TestSecurityLocalEmptySelectorFailure` checks HTTP-200 failures and a single
+mutation attempt. Keep the existing response, uncertain-mutation, TLS, private
+file and ordinary paired-selector suites; empty email changes no transport rule.
+`TestCaddyConnectedAccountsAdministrationE2E` builds the actual Caddy command and
+runs it against an isolated nested TLS portal. It uses genuine provider-created
+accounts, operator list/info selection, all eight actions, raw HTTP type and
+authority controls, ordinary/aliased rejection, fresh signed role/ID checks and
+the generated-password checkpoint. Each CLI invocation is a separate process;
+the server fixture does not restart. The command binary is not the instrumented
+test-process helper, so do not claim its execution supplies child Go coverage.
+
 ## Cross-device portal login
 
 `TestPortalCrossDevice*`, shared cookie tests and the registered
@@ -491,7 +505,7 @@ selection, private persistence, logging and transport/input failure behavior.
 `TestCaddyAuthenticatorE2E` builds the standalone command and checks password,
 MFA, API keys, native metadata, independent authorization and profile isolation
 through actual Caddy TLS with admin/profile APIs disabled. On Unix it also runs
-the Python 3 PTY broker for pasted setup, hidden input and terminal restoration
+the Python PTY broker for pasted setup, hidden input and terminal restoration
 at password and TOTP prompts. Regressions cover symlink-sensitive CA paths,
 explicit empty home overrides and state preservation when logging rejects an
 operation. Unit tests verify the 45s default and overridden command deadlines;
@@ -595,7 +609,7 @@ Add or update these tests when directive parsing behavior changes:
   Shared OAuth issuer defaults stay unchanged and retain their original suite.
 - `TestAuthnTokenRefreshDelegation` covers strict HTTP dispatch, protected APIs,
   the exact embedded refresh asset and continuation pages. The normal Go suite
-  also runs `TestCaddyTokenRefreshBrowserE2E` with real Chrome/Chromium and Node 24;
+  also runs `TestCaddyTokenRefreshBrowserE2E` with real Chrome/Chromium and Node;
   `TestCaddyRefreshBrowserStartup` covers process readiness/cleanup failures.
   See [browser validation](../../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository)
   for two-tab coordination, committed-response loss and prerequisite overrides.

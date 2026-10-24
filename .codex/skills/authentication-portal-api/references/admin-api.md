@@ -33,6 +33,62 @@ Its version/build fields identify the linked identity library, not Caddy.
 When debugging, check both the Caddyfile directive and the authenticated user's
 roles before suspecting handler bugs.
 
+### Local user selection
+
+`POST <mount>/api/server/user` accepts `realm`, `operation` and a `user` object.
+Existing-account operations are `info`, `delete`, `disable`, `enable`,
+`reset_password`, `overwrite_roles`, `add_roles` and
+`overwrite_auth_challenges`. For example:
+
+```json
+{"realm":"local","operation":"info","user":{"username":"stored-account-name","email":""}}
+```
+
+Empty or omitted email is eligible only for a currently stored, automatically
+provisioned account with no local email aliases in a built-in local store.
+The server checks the record kind and alias list while selecting the account
+inside the read or mutation operation. Username prefixes, provider display
+email and a previous lookup never establish eligibility. Ordinary accounts and
+automatic accounts with a local alias require username and email to identify
+the same account. A password reset alone does not add an alias. Creation
+(`add`) always requires nonempty email; it cannot request automatic provisioning.
+
+Use `POST <mount>/api/server/users` with `{"realm":"local","query":"all"}`
+to obtain the stored username and ID. Listing does not promise the automatic
+record-kind flag. Info for an automatic record includes `externally_provisioned`
+and any `email_addresses`. Disabled accounts remain
+listed but are absent from ordinary active-user selection. `enable` selects a
+disabled record by its exact stored username and, when present, exact stored
+local email spelling; enabling it again is an error. Keep selection and mutation
+together in the server; clients must not preauthorize from a cached list/info
+result or retry a stale write automatically.
+
+Email, when present, must be a string: null, booleans and arrays return 400.
+Empty username, creation without email and an empty selector for a non-local
+backend also return 400. An ordinary/aliased record with an empty email fails
+selection. Info selection failure returns a generic HTTP 500; mutation failures
+can return HTTP 200 with `status:"failure"`. Check the body, not just status.
+Successful info returns the user record; successful mutation confirms
+`status:"success"` and may include operation-specific fields. Creation and reset
+return a generated password; info can expose credential hashes. Preserve
+`Cache-Control: no-store` and keep those bodies out of logs.
+
+The built-in CLI permits the conditional selector and sends one operation,
+with `"email":""` for both omission and `--email=`. It never invents an email,
+changes the wire field to null, infers account kind or performs a prelookup.
+Any sent mutation failure may have an uncertain outcome; inspect current state
+before an explicit retry. File-backed administration retains the server's
+revision-conflict behavior, not a new cross-process retry protocol.
+
+`TestSecurityLocalUserSelectors`, `TestSecurityLocalSelectorValidation` and
+`TestSecurityLocalEmptySelectorFailure` cover the client boundary.
+`TestCaddyConnectedAccountsAdministrationE2E` qualifies the actual built command
+and raw HTTP controls against attached, ordinary and aliased automatic accounts,
+with unchanged-state checks and fresh signed-login evidence. Existing local
+administration tests retain ordinary paired selectors and private response
+handling. See [attached identity policy](../../configuration-identity-stores/references/connected-accounts.md)
+for disable/delete and token-lifetime limits.
+
 ### Private Signing-Key Export
 
 The portal accepts exactly these admin statements, with separate keywords:
