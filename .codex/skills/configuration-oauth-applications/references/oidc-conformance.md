@@ -12,8 +12,8 @@ publish, freeze certification packages, or use the certification mark as part
 of this workflow. The separate library rehearsal is reference evidence only.
 
 Establish the candidate dependency with
-`go list -m -json github.com/greenpau/go-authcrunch` and `go.mod`; the selected
-published module is v1.3.4. The harness rejects local module replacements and
+`go list -m -json github.com/greenpau/go-authcrunch` and `go.mod`. The harness
+requires a published module, rejects local module replacements, and
 records downloaded module checksums and Git origin. Reading a sibling checkout
 alone does not select it for a Caddy build. A dependency change requires new
 candidate evidence; ordinary unit/E2E results and an older official-plan bundle
@@ -21,7 +21,7 @@ do not establish conformance outcomes for the changed candidate.
 
 The current provider supplies themed consent, form-post and browser error pages,
 including same-origin referrer policy and callback-bound form-action. The Caddy
-deployment preserves those headers without importing the older v1.2.6 snippet.
+deployment preserves those headers without importing the legacy consent snippet.
 `consent-policy.json` records policy ownership and links to candidate provenance.
 Preflight validates CSP directives, nonce-limited styles and same-origin assets,
 and still rejects null/cross-origin and forged-CSRF submissions.
@@ -35,10 +35,11 @@ for code binding, a POST client, and the suite's exact alias callback. The
 Foundation requires running each module and retaining warning, skip, review,
 failure and interruption outcomes. Some modules request browser evidence.
 
-The selected unmodified [suite revision](https://gitlab.com/openid/conformance-suite/-/tree/e3b5558d6d5e0c17ab578a47b955fd3b405f902b)
-is `e3b5558d6d5e0c17ab578a47b955fd3b405f902b`, reporting version **5.2.4**.
-This is an immutable commit pin; there is no assumption that `v5.2.4` is a Git
-tag or that it is the latest suite. The selected plan classes in
+The selected unmodified [suite
+revision](https://gitlab.com/openid/conformance-suite/-/tree/e3b5558d6d5e0c17ab578a47b955fd3b405f902b)
+is `e3b5558d6d5e0c17ab578a47b955fd3b405f902b`. This immutable commit pin,
+rather than a displayed version or presumed Git tag, selects the suite; it is
+not a claim that the selected suite is latest. The selected plan classes in
 `src/main/java/net/openid/conformance/openid/` are `OIDCCBasicTestPlan`,
 `OIDCCConfigTestPlan`, and `OIDCCFormPostBasicTestPlan`:
 
@@ -97,21 +98,21 @@ open tmp/oidc-reports/candidate-1/index.html  # macOS; use a browser on other sy
 
 The command prints the absolute HTML report path even when the official runner
 returns nonzero. The result directory must be new and below this checkout's
-`tmp/`, which keeps suite tools and data within the repository's temporary area.
-Symlink escapes and existing destinations are rejected before writing results.
-Never reuse a destination: failed attempts are evidence too.
-Preparation pins Temurin 21.0.12.1+1,
-Maven 3.9.16, MongoDB 7.0.43, and Chrome for Testing/ChromeDriver
-153.0.8010.47 (Chromium revision 1681091), verifies distribution checksums, installs the
-runner's pinned Python dependencies from `assets/scripts/oidc-conformance-requirements.txt`,
+`tmp/`, which keeps suite tools and data within the repository's temporary
+area. Symlink escapes and existing destinations are rejected before writing
+results. Never reuse a destination: failed attempts are evidence too.
+Preparation uses the exact Temurin, Maven, MongoDB and Chrome for
+Testing/ChromeDriver selections in the checked-in preparation and browser-tool
+scripts. It verifies distribution checksums, installs the runner's pinned
+Python dependencies from `assets/scripts/oidc-conformance-requirements.txt`,
 and builds the suite with its Maven package workflow. Suite unit tests and PMD
 are skipped during packaging; protocol validators are unmodified. Sources,
-tools and Maven/pip caches stay under `tmp/oidc-conformance`; per-run temporary
-files and MongoDB data use the chosen result directory under `tmp/`.
-Preparation checks existing tool bytes against their
-verified archives instead of overwriting executables in place.
-Kotlin compilation runs in the Maven process (`-Dkotlin.compiler.daemon=false`)
-using its [documented execution strategy](https://kotlinlang.org/docs/maven-kotlin-compiler.html#choose-execution-strategy).
+tools and Maven/pip caches stay under `tmp/oidc-conformance`; per-run
+temporary files and MongoDB data use the chosen result directory under `tmp/`.
+Preparation checks existing tool bytes against their verified archives instead
+of overwriting executables in place. Kotlin compilation runs in the Maven
+process (`-Dkotlin.compiler.daemon=false`) using its [documented execution
+strategy](https://kotlinlang.org/docs/maven-kotlin-compiler.html#choose-execution-strategy).
 This prevents an idle compiler daemon outliving preparation. Build commands
 also own and stop their process groups.
 
@@ -310,7 +311,7 @@ separate: it provides the local suite operator and development export key;
 it does not authenticate the Caddy user.
 
 The official suite's `AbstractCondition` uses its own permissive outbound HTTP
-client internally. Its pinned `htmlunit3-driver` 4.36.1 also defaults to accepting
+client internally. Its pinned `htmlunit3-driver` also defaults to accepting
 insecure certificates in `HtmlUnitDriverOptions`; `BrowserControl` does not
 override that default. These upstream behaviors are retained without
 modification. The Java truststore alone does not establish that these clients
@@ -446,8 +447,8 @@ HtmlUnit success does not prove that Chrome completes consent. Verify actual
 browser-generated Origin, response Referrer-Policy and callback-bound
 form-action, including cross-origin/forged-CSRF rejection. The selected provider
 owns these headers; the current harness does not import a compatibility snippet.
-For a reported v1.2.6 deployment only, consult the
-[version-scoped consent response policy](oidc-provider.md#consent-response-policy-for-v126).
+For a deployment with the observed legacy consent headers, consult the
+[compatibility response policy](oidc-provider.md#consent-response-policy-for-legacy-deployments).
 Do not accept null Origin, rewrite request headers or weaken consent/CSRF checks.
 
 Use `suite-access.private.jsonl` to confirm the suite's received callback

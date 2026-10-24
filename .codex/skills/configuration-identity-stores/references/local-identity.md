@@ -1,7 +1,7 @@
 # Local Identity Compatibility
 
 This contract is qualified against the go-authcrunch revision selected in
-`go.mod`, currently published v1.3.6.
+`go.mod` and any active replacement.
 Check `go list -m -json github.com/greenpau/go-authcrunch` before attributing
 behavior to a sibling checkout. The upstream `local-password-authentication`
 skill and `pkg/identity/password_verifier.go`, `user.go`, `database.go`,
@@ -12,8 +12,8 @@ references. Keep implementation and tests here; report upstream fixes separately
 
 Keep form and JSON password authentication delegated through the local store's
 `AuthenticateUser` to `identity.Database.AuthenticateUser`. The database builds
-its comparison schedule across enabled accounts and active passwords. In
-v1.3.4 this includes encoded bcrypt costs and Argon2 parameter profiles, including
+its comparison schedule across enabled accounts and active passwords. This
+includes encoded bcrypt costs and Argon2 parameter profiles, including
 mixed algorithms and multiple active hashes. Missing, disabled, and present
 users receive that schedule. A match does not short-circuit it.
 Do not replace this with `User.VerifyPassword` in a Caddy
@@ -39,7 +39,7 @@ bulk-migrates legacy records lacking `credential_version`; missing means zero,
 and successful security mutations persist a later version for the affected user.
 
 Profile password update uses `kind: update_user_password`, `old_password`, and
-`new_password`. In v1.3.4, profile updates accept plaintext only and reject
+`new_password`. Profile updates accept plaintext only and reject
 reserved `bcrypt:` and `argon2:` import prefixes with HTTP 400, including valid
 hashes and imports matching the current password. Rejection preserves password
 records, credential versions and existing renewable sessions. Trusted database
@@ -80,9 +80,9 @@ Do not infer completed MFA from a bearer/API key. The local-identity suite focus
 `TestCaddyAuthenticationChallengesE2E` now qualifies signed WebAuthn assertions
 through Caddy. The public authclient still implements password/TOTP.
 
-**Canonical profile identity:** go-authcrunch revision
-`3e28980b0f5a78463953b674241f154bb77c6679`, included in v1.3.3, fixed backend identity selection when
-transformed claims collide with another account. The default Caddy
+**Canonical profile identity:** backend identity selection must remain bound
+to the authenticated account when transformed claims collide with another
+account. The default Caddy
 [profile regression](../../authentication-portal-api/references/profile-public-keys.md#canonical-profile-identity-regression)
 verifies isolation through actual profile operations. Identity selection remains
 library-owned; Caddy does not rewrite tokens or intercept profile operations.

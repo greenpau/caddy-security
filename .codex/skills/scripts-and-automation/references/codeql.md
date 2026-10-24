@@ -45,7 +45,7 @@ WebSocket messages, credential storage or TLS contexts. New findings need
 separate review.
 
 CQ-003 was remediated by pinning `contributor-assistant/github-action` to
-`a895a435fcce79ecf28fbce61a4ef0f0dabc9853`, verified as the upstream `v2.3.1`
+`a895a435fcce79ecf28fbce61a4ef0f0dabc9853`, verified as an immutable upstream
 commit. `actions/unpinned-tag` has no suppression. Verify an intended release's
 commit in the upstream repository when updating that pin.
 

@@ -76,11 +76,13 @@ separate user instruction.
 
 ## Execution and failure behavior
 
-The job uses Ubuntu 24.04 x86_64, pinned Go 1.26.8, Python 3.12 and headless
-Chrome for Testing. It installs host runtime libraries, while downloaded suite,
-browser, Java, MongoDB, Maven and Python tools/data stay under
-`tmp/oidc-conformance/`. It does not cache run data; only the packaged disposable
-test evidence is uploaded.
+The workflow pins its runner, Go and Python toolchains and uses headless
+Chrome for Testing. Read the checked-in workflow for the exact selections;
+qualify the Go compiler as a supported patched release before building. It
+installs host runtime libraries, while downloaded suite, browser, Java,
+MongoDB, Maven and Python tools/data stay under `tmp/oidc-conformance/`. It
+does not cache run data; only the packaged disposable test evidence is
+uploaded.
 
 ChromeDriver and Chrome receive a separate `TMPDIR` pointing to the checkout's
 `tmp/` root. Chromium creates private unique temporary directories there;
@@ -127,23 +129,24 @@ and upload use `always()` and execute after failures. A forcibly terminated or
 lost runner can prevent final cleanup/upload; no complete evidence claim is
 made for such a run. The action does not automatically retry or overwrite runs.
 
-The upload path is exclusively `tmp/oidc-conformance-ci/artifact/`. Never widen
-it to `tmp/`, `private/` or the suite workspace. The artifact includes only the
-owned run evidence and copied preparation diagnostics, not tool/cache trees.
-Set `include-hidden-files: true` on the pinned upload action to retain hidden
-evidence files and directories. Its default excludes them; see the
-[upload action inputs](https://github.com/actions/upload-artifact/tree/v4.6.2#inputs).
-Copy regular files byte-for-byte. Record symlink paths/targets and special-file
-types in `filesystem-entries.json`, without copying live links, following their
-targets or opening sockets/FIFOs. This keeps the upload action from traversing
-outside the report. The ZIP is for report viewing; it does not preserve executable
-modes or recreate a runnable browser profile.
-Packaging builds `artifact.partial/` outside the upload path and renames it only
-after copying and writing the summary/checksums. A copy failure fails packaging,
-removes partial or stale output, and leaves
-a readable summary plus packaging diagnostics; incomplete evidence is never
-presented as complete. Conformance cleanup removes `tmp/oidc-conformance-ci*` output through
-its existing supplemental-output rule and retains downloaded tools.
+The upload path is exclusively `tmp/oidc-conformance-ci/artifact/`. Never
+widen it to `tmp/`, `private/` or the suite workspace. The artifact includes
+only the owned run evidence and copied preparation diagnostics, not tool/cache
+trees. Set `include-hidden-files: true` on the pinned upload action to retain
+hidden evidence files and directories. Its default excludes them; see the
+[upload action
+inputs](https://github.com/actions/upload-artifact/tree/ea165f8d65b6e75b540449e92b4886f43607fa02#inputs).
+Copy regular files byte-for-byte. Record symlink paths/targets and
+special-file types in `filesystem-entries.json`, without copying live links,
+following their targets or opening sockets/FIFOs. This keeps the upload action
+from traversing outside the report. The ZIP is for report viewing; it does not
+preserve executable modes or recreate a runnable browser profile. Packaging
+builds `artifact.partial/` outside the upload path and renames it only after
+copying and writing the summary/checksums. A copy failure fails packaging,
+removes partial or stale output, and leaves a readable summary plus packaging
+diagnostics; incomplete evidence is never presented as complete. Conformance
+cleanup removes `tmp/oidc-conformance-ci*` output through its existing
+supplemental-output rule and retains downloaded tools.
 
 ## Validation
 

@@ -26,8 +26,8 @@ type before generating release notes or publishing. Test/build actions use
 immutable revisions, checkout does not persist credentials, and
 `contents: write` is confined to the publishing job.
 
-GoReleaser uses the pinned v6.3.0 action with tool version `v2.18.1` and
-`release --clean --timeout 60m`. These are this repository's selected tools. The
+The release workflow pins the GoReleaser action and tool and invokes
+`release --clean --timeout 60m`. Read that workflow for the authoritative pins. The
 configuration declares schema version 2. Keep action and tool upgrades explicit
 and qualify the config against the selected version.
 
@@ -92,9 +92,9 @@ upstream fixture to avoid network-dependent changelog tests.
 
 ## Toolchain and Packaging Checks
 
-Inspect `go.mod` for the module minimum and both workflows for their Go
-selection. Both workflows select Go `1.26.8` with `GOTOOLCHAIN=local`, without
-raising this module's minimum. Record
+Inspect `go.mod` for the module minimum and the checked-in workflows for their
+Go selection and `GOTOOLCHAIN` setting. An explicit compiler pin must select a
+supported patched release; the module minimum does not establish that. Record
 the effective `go version` and inspect packaged executables with `go version -m`;
 the wrapper's Caddy version output is not
 enough to establish its toolchain or embedded dependency versions.

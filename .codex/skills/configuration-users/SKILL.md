@@ -50,14 +50,14 @@ The current Caddyfile parser supports only these subdirectives:
 - `api key <key_id> <bcrypt_value_or_secret_reference>`.
 - `auth challenges <rule body>`; repeat to append ordered rules.
 
-Use `overwrite` when the configured password should replace the existing stored
-password during provisioning. With selected go-authcrunch v1.3.6, passwords may
-be plaintext, `bcrypt:<cost>:<hash>`, or `argon2:<PHC>` imports. The unchanged
-plaintext path creates bcrypt hashes. Static API-key payloads remain bcrypt;
-password-import support does not change their format. Read
-[password imports and generation](references/password-hashing.md) for the exact
-Argon2 format, generation commands, resource limits, trusted-input boundary,
-and Caddy qualification.
+Use `overwrite` when the configured password should replace the existing
+stored password during provisioning. Supported passwords may be plaintext,
+`bcrypt:<cost>:<hash>`, or `argon2:<PHC>` imports. The unchanged plaintext
+path creates bcrypt hashes. Static API-key payloads remain bcrypt;
+password-import support does not change their format. Read [password imports
+and generation](references/password-hashing.md) for the exact Argon2 format,
+generation commands, resource limits, trusted-input boundary, and Caddy
+qualification.
 
 Duplicate password updates can reuse the active hash while still advancing the
 account's credential version. Legacy records without `credential_version`

@@ -96,8 +96,8 @@ do not share this lock. Agents must serialize other expensive work too.
 ## Output and evidence
 
 The guard prints elapsed time, current aggregate memory and process count every
-10 seconds, including during compilation and report generation. Pinned tested
-v1.1.0 also streams test activity and bounded log previews, identifies reporting
+10 seconds, including during compilation and report generation. The pinned
+`tested` tool also streams test activity and bounded log previews, identifies reporting
 stages, and prints a heartbeat during quiet work. Keep its default live output
 enabled; `--quiet` and `--format json` suppress it. Forwarded child output has a
 256 KiB per-second burst limit, with a fresh allowance each second; there is no

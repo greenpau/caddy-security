@@ -26,7 +26,7 @@ Reject unquoted closing braces among header/body arguments too. `RemainingArgs`
 accepts them as values, so a missing `client_id` could otherwise become `}` and
 shift which enclosing block supplies the application's closing brace.
 After collection, also require the enclosing `security` dispenser's nesting
-to return to zero, including for direct dispenser callers. Caddy v2.11.7 treats
+to return to zero, including for direct dispenser callers. Caddy treats
 quoted `"{"` and `"}"` arguments as literal values. Preserve those values and
 following declarations; EOF must still reject an incomplete owned block. Test
 missing security/portal delimiters separately from the host global block.

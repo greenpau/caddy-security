@@ -70,15 +70,16 @@ separate work, and continue any correction that can be completed in this module.
   client ID/secret, scopes, PKCE settings, state/cookie behavior, trusted
   redirects, reverse-proxy headers, and provider-specific constraints.
 - OIDC consent POST `403 invalid_request` in a real browser: compare the
-  consent response's `Referrer-Policy` with the POST's actual `Origin`. In
-  go-authcrunch v1.2.6, `no-referrer` produces `Origin: null`, which its own
-  same-origin check rejects. HtmlUnit/HTTP-client success does not rule this
-  out. Preserve headless Chrome screenshots and network evidence; do not
+  consent response's `Referrer-Policy` with the POST's actual `Origin`. Legacy
+  consent responses using `no-referrer` produce `Origin: null`, which the
+  provider's same-origin check rejects. HtmlUnit/HTTP-client success does not
+  rule this out. Preserve headless Chrome screenshots and network evidence; do not
   rewrite Origin or relax CSRF/origin validation. Apply the explicit Caddy
-  [consent response policy](../configuration-oauth-applications/references/oidc-provider.md#consent-response-policy-for-v126)
-  for this version, then verify both successful consent and rejection of
-  cross-origin/forged-CSRF submissions. The library default needs a separate
-  upstream fix. If the consent Origin is correct but Chrome aborts the callback
+  [consent response policy](../configuration-oauth-applications/references/oidc-provider.md#consent-response-policy-for-legacy-deployments)
+  only after confirming the deployment emits those legacy headers, then verify
+  both successful consent and rejection of cross-origin/forged-CSRF submissions.
+  The current provider owns its corrected response headers. If the consent
+  Origin is correct but Chrome aborts the callback
   with `net::ERR_ABORTED`, inspect `form-action`: its source list must permit the
   registered callback origin as well as self. Keep the exact redirect checks;
   do not replace the source list with a wildcard. See the

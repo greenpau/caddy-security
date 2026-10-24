@@ -57,7 +57,7 @@ come from the library's validated AMR vocabulary (`pwd`, `otp`, `hwk`, `swk`,
 `mfa`, `sms`, `tel`, `email`, `fpt`, `face`, `pin`, `rba`, `sc`, `user`, `wia`).
 
 Check the enclosing portal's closing boundary as well as the provider body.
-Caddy v2.11.7 keeps quoted brace-valued arguments literal. Preserve those
+Caddy keeps quoted brace-valued arguments literal. Preserve those
 values in disabled settings and still reject a missing owned closing brace.
 
 A standalone `disabled` requires no issuer, realms, keys, or applications.
@@ -269,9 +269,9 @@ authentication evidence only from completed password/MFA checkpoints and the
 selected local identity store; Caddy must never call `CompleteLogin` or create
 that evidence itself.
 
-### Consent response policy for v1.2.6
+### Consent response policy for legacy deployments
 
-The selected published dependency, `v1.3.4`, supplies themed
+The selected provider implementation supplies themed
 consent/form-post/error pages and the correct consent headers in the provider.
 Caddy preserves those headers. Both the official harness and normal RP E2E
 now run without the compatibility snippet below. Consent CSP retains default,
@@ -279,9 +279,10 @@ frame and base restrictions, permits same-origin themed assets with a style
 nonce, and binds form-action to self and the validated client's callback origin.
 Form-post script and style nonces must match the actual response page.
 
-The v1.2.6 consent HTML inherits `Referrer-Policy: no-referrer`. Chrome consequently
-sends `Origin: null` on its form POST, and the provider rejects it with 403.
-For this version, import the reusable Caddy snippet
+Some legacy consent HTML inherits `Referrer-Policy: no-referrer`. Chrome
+consequently sends `Origin: null` on its form POST, and the provider rejects
+it with 403. Only after confirming those response headers, import the reusable
+Caddy snippet
 [`assets/config/oidc-consent-headers.Caddyfile`](../../../../assets/config/oidc-consent-headers.Caddyfile)
 before the site declaration, then apply it before `authenticate`:
 
@@ -320,7 +321,8 @@ Discovery, errors, redirects and
 cross-origin form-post responses retain their library headers. Keep Origin and
 CSRF validation intact; do not accept `null`, alter request headers, or skip
 consent. This is an explicit deployment policy, not an automatic change to
-`authenticate` or a library patch. The snippet is retained for v1.2.6 deployments.
+`authenticate` or a library patch. The snippet is retained only for deployments
+with the observed legacy response-header contract.
 
 The selected upstream fix emits the referrer policy and a form-action policy
 covering the validated request's callback directly from the provider. Reassess

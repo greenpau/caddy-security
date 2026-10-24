@@ -116,10 +116,10 @@ for mutation, refresh, stateless access-token and session boundaries.
 
 ## Qualification
 
-Published go-authcrunch v1.3.6 contains feature commit
-`a0928dbd146abfbb744438d4838436d846eea637`, including its public-input guards.
-Check the effective module and `bin/authcrunch security version` for the actual
-build; a sibling `VERSION` file or the presence of Argon2 symbols is insufficient.
+Qualify password imports and their public-input guards against the effective
+go-authcrunch module selected by `go.mod` and any replacement. Check
+`bin/authcrunch security version` for the actual build; a sibling `VERSION`
+file or the presence of Argon2 symbols is insufficient.
 
 The default suite covers:
 

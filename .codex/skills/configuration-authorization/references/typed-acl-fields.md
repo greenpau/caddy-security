@@ -82,8 +82,8 @@ structural syntax before invoking the policy parser, with its own source
 diagnostic. Policy compilation errors also carry a Caddyfile source location;
 the existing rule compiler owns their diagnostic text. Preserve the underlying
 error identity when adding that location with Caddy's error wrapper.
-Check the enclosing policy's opening and closing braces too. Caddy v2.11.7
-treats quoted braces as literal arguments or body tokens, not delimiters. Keep
+Check the enclosing policy's opening and closing braces too. Caddy treats
+quoted braces as literal arguments or body tokens, not delimiters. Keep
 policy-specific source diagnostics for these invalid boundaries, and reject
 incomplete blocks before publishing either the policy or deferred settings.
 
@@ -95,11 +95,11 @@ validated definitions and preserves rules and unrelated settings.
 Publish deferred OAuth statements only after the policy passes validation as
 well: a rejected ACL must not leave an orphaned per-policy entry or prevent retry.
 
-`app_config.go` owns the typed collection null check. Keep the existing app/root
-server and gatekeeper path. Do not add claim projection, token rewriting, new ACL
-constructors or `AllowWithClaims` calls to Caddy request handlers. The released
-v1.3.11 module contains these APIs; inspect the selected module and replacement
-before using a newer sibling contract. Sibling sources remain read-only.
+`app_config.go` owns the typed collection null check. Keep the existing
+app/root server and gatekeeper path. Do not add claim projection, token
+rewriting, new ACL constructors or `AllowWithClaims` calls to Caddy request
+handlers. Inspect the module selected by `go.mod` and any replacement before
+using a sibling contract. Sibling sources remain read-only.
 
 ## Runtime semantics and trust
 
@@ -125,12 +125,12 @@ existing rule order. A later `acl default deny` overrides a non-stopping allow;
 `acl default allow` can grant access when no matching deny applies. Invalid
 referenced custom claim types reject evaluation before any rule can allow.
 
-AuthCrunch v1.3.11 fixes v1.3.10's skipped unconditional rules when normalized
-user data omits `exp`. `TestCaddyAuthorizationFieldsE2E` keeps both ordering
-regressions with independently signed tokens and per-request upstream counts.
-Do not weaken the expected denial, add fictitious timestamps, or rewrite
-shortcut/default actions in Caddy to compensate for library regressions.
-Explicit `allow stop` still preserves the successful decision before later rules.
+Unconditional rules must still run when normalized user data omits `exp`.
+`TestCaddyAuthorizationFieldsE2E` keeps both ordering regressions with
+independently signed tokens and per-request upstream counts. Do not weaken the
+expected denial, add fictitious timestamps, or rewrite shortcut/default
+actions in Caddy to compensate for library regressions. Explicit `allow stop`
+still preserves the successful decision before later rules.
 
 ## Validation surfaces
 
@@ -165,5 +165,5 @@ current trusted client addresses as well as methods/paths. Caddyfile errors and
 native JSON errors reject startup/reload; changed/restored JSON bindings take
 effect in the serving runtime. Imported declarations also authorize real TLS
 requests and reject a token whose only value is under the alias rather than its source.
-Its default-rule ordering assertions qualify the v1.3.11 correction; sibling
+Its default-rule ordering assertions qualify this boundary; sibling
 test success cannot substitute for this Caddy evidence.
