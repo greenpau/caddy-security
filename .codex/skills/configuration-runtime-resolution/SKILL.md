@@ -109,7 +109,11 @@ Resolve these app config areas:
   supported by `substitute`. JSON booleans and floating-point numbers remain
   unchanged; do not assume arbitrary Go scalar or slice types are supported.
   List handling is bounded to the shapes in `substitute`, not an unrestricted
-  recursive JSON walk.
+  recursive JSON walk. SAML/LDAP `attachment.local_identity_store` follows this
+  path after the app JSON clone; preserve the declared reference in the original
+  graph and resolve exactly once. A nonempty reference that becomes empty fails
+  closed. Native omission/empty configuration retains implicit memory. SQLite
+  ticket module fields, including attachment names, remain literal.
 - `sso_providers[]`: replace `entity_id`, `cert_path`, `private_key_path`, and
   each `locations` entry. Do not assume `name` or `driver` is replaced.
 - `authentication_portals[]`: replace raw crypto key-store lines,

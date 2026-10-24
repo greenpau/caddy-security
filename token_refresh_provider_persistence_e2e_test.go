@@ -135,7 +135,7 @@ type persistentProviderFixture struct {
 	secrets  []string
 }
 
-func newPersistentProviderFixture(t *testing.T, binary string, fileAttachment bool) *persistentProviderFixture {
+func newPersistentProviderFixture(t *testing.T, binary string, fileAttachment bool, configure ...func(*persistentProviderFixture)) *persistentProviderFixture {
 	t.Helper()
 	cert, key, roots := cookieTLSCertificate(t)
 	pair, err := tls.LoadX509KeyPair(cert, key)
@@ -213,6 +213,9 @@ route /protected {
 			}
 		}
 	})
+	for _, apply := range configure {
+		apply(f)
+	}
 	f.write(t, f.input)
 	f.start(t)
 	return f

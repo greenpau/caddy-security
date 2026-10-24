@@ -122,8 +122,17 @@ Configure a nonempty, stable NameID; persistent NameID is the recommended IdP
 setting. Transient NameIDs are rejected because they cannot identify the local
 account attached to the verified external login. The issuer, NameID format and
 qualifiers are part of the external identity; display names and email do not
-replace that authority. This does not add an attachment directive to Caddy's
-SAML parser.
+replace that authority.
+
+Optional `attach to local identity store <name>` occurs once in the provider
+block. It selects a configured built-in local store by exact name; omission uses
+provider-private memory. Complete clauses delegate to the public attachment
+parser. Quoted names remain one value; duplicates, nested blocks and `:memory:`
+as a name fail. Environment and secret references resolve once in the app's
+private Params snapshot. A nonempty reference resolving to empty fails rather
+than selecting memory. Native empty attachments retain the implicit default.
+See [attached identities](../configuration-identity-stores/references/connected-accounts.md)
+for target eligibility, account continuity and explicit browser connection.
 
 ## Review Checklist
 
@@ -146,6 +155,12 @@ Use these references:
 
 - `caddyfile_identity_provider.go` for current accepted Caddyfile fields.
 - `go-authcrunch/pkg/idp/saml` for runtime validation and assertion behavior.
+
+`TestIdentityAttachment*` and `testcase_identity_attachments` cover complete
+attachment syntax, native mapping and resolution without reading provider files.
+`TestCaddyConnectedProvidersE2E` exercises signed SAML attachment and stable local
+identity across repeated logins through actual TLS Caddy. Existing signature/ACS/browser-state regressions remain
+required when those protocol boundaries change.
 
 `caddyfile_authn_test.go` contains an Azure parser example, but it does not read
 metadata or perform a signed SAML exchange. The signed-SAML journey in

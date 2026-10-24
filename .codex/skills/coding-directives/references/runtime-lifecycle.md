@@ -111,7 +111,10 @@ resources in reverse order. On retirement it drains requests, cancels and joins
 host messaging workers, closes the root,
 then closes backend resources before releasing identity-file reservations.
 External identity providers remain the exact caller-owned instances through
-root and portal assembly; attachment setup must not rebind them. They close after
+root and portal assembly. Existing caller bindings remain unchanged; bundled
+ticket providers may explicitly request one-time binding of a fresh attachment
+to the root-owned local store before publication. Failed candidates are discarded,
+including when binding completed before a later construction failure. They close after
 root disposal and request drain. Enrollment workflows close before their borrowed
 queues and account stores.
 Their derived normalized descriptors participate in root persistence binding;

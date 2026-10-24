@@ -63,6 +63,35 @@ root replacement, not an OS-process restart or a shipped Documents UI. See the
 [configuration](../../configuration-authentication/references/documents.md) and
 [API](../../authentication-portal-api/references/documents.md) contracts.
 
+## Connected external accounts
+
+`TestIdentityAttachment*`, `TestSQLiteTicketAttachment*`,
+`TestAppIdentityProviderAttachment*` and `testcase_identity_attachments` cover
+complete shared clauses, quoted values, no-I/O target checks, exact one-pass
+resolution, empty-reference rejection, normalized ticket digests and deferred
+root binding. The fixture also adapts an explicitly attached OAuth provider into
+a portal-free direct OAuth policy. Existing implicit attachment fixtures remain.
+Third-party prebound and lazy-memory ownership are qualified separately from the
+bundled module's explicit root binding opt-in.
+
+`TestCaddyConnectedAccountsE2E` exercises actual Caddy TLS at root/nested mounts,
+independent provider identities, exact browser/form authority, fresh intended
+local proof and one-use confirmation. Its Chrome journey checks natural form
+POST Origin and cookie delivery, local password/TOTP, current signed evidence,
+protected access and local-only API/OP rejection after external login.
+`TestCaddyConnectedProvidersE2E` covers signed SAML, verified LDAP/Basic/System
+boundaries and required local factors during external cross-device transfer.
+Its LDAP journey reuses an already accepted Basic credential after authenticated
+local policy changes and disablement, so a cached success cannot conceal an
+authoritative denial. Keep the library's portal Basic/API-key freshness and
+unchanged remote-cache controls alongside this Caddy boundary; bearer-token
+caching is a separate contract.
+`TestCaddyConnectedAccountsPersistenceE2E` uses the real command binary for a
+file-backed ticket attachment and cold `:memory:` collision controls. Preserve
+existing provider-refresh, ticket and protocol regressions for unchanged shared
+paths. See [configuration](../../configuration-identity-stores/references/connected-accounts.md)
+and [browser protocol](../../authentication-portal-api/references/connected-accounts.md).
+
 ## Cross-device portal login
 
 `TestPortalCrossDevice*`, shared cookie tests and the registered

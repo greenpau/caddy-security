@@ -86,9 +86,10 @@ type sqliteTicketFixture struct {
 	mu                  sync.Mutex
 	secrets             []string
 	secretKinds         map[string]string
+	expectedRoles       []string
 }
 
-func newSQLiteTicketFixture(t *testing.T, binary, mount string) *sqliteTicketFixture {
+func newSQLiteTicketFixture(t *testing.T, binary, mount string, configure ...func(*sqliteTicketFixture)) *sqliteTicketFixture {
 	t.Helper()
 	cert, key, roots := cookieTLSCertificate(t, "localhost")
 	pair, err := tls.LoadX509KeyPair(cert, key)
@@ -97,8 +98,9 @@ func newSQLiteTicketFixture(t *testing.T, binary, mount string) *sqliteTicketFix
 	}
 	private := registrationTestDirectory(t)
 	f := &sqliteTicketFixture{persistentCaddy: newPersistentCaddy(t, binary, cert, key, roots), mount: mount, cert: cert,
-		secrets:     []string{sqliteTicketPassword, sqliteTicketSigning},
-		secretKinds: map[string]string{sqliteTicketPassword: "issuer_password", sqliteTicketSigning: "signing_key"}}
+		secrets:       []string{sqliteTicketPassword, sqliteTicketSigning},
+		expectedRoles: []string{"app/issued", "app/verified"},
+		secretKinds:   map[string]string{sqliteTicketPassword: "issuer_password", sqliteTicketSigning: "signing_key"}}
 	f.client.Timeout = 12 * time.Second
 	f.issuer = httptest.NewUnstartedServer(http.HandlerFunc(f.serveIssuer))
 	f.issuer.TLS = &tls.Config{Certificates: []tls.Certificate{pair}, MinVersion: tls.VersionTLS12}
@@ -208,6 +210,9 @@ https://:%s {
  respond unmatched 404
 }`, f.admin, filepath.Join(private, "storage"), f.backendConfig.Path, f.base, f.backendConfig.IssuerURL, mount,
 		sqliteTicketCookie, sqliteTicketSigning, host, sqliteTicketSigning, sqliteTicketAccess, port, cert, key, strings.TrimSuffix(mount, "/"))
+	for _, apply := range configure {
+		apply(f)
+	}
 	f.write(t, f.source)
 	t.Cleanup(func() {
 		f.kill(t)
@@ -628,8 +633,13 @@ func (f *sqliteTicketFixture) verifyToken(t *testing.T, raw string) jwt.MapClaim
 		t.Fatal("ticket asserted unverified local authentication factors")
 	}
 	roles, ok := claims["roles"].([]any)
-	if !ok || len(roles) != 2 || !sqliteTicketHasClaim(roles, "app/issued") || !sqliteTicketHasClaim(roles, "app/verified") {
+	if !ok || len(roles) != len(f.expectedRoles) {
 		t.Fatal("ticket roles bypassed the issuer or current portal transform")
+	}
+	for _, role := range f.expectedRoles {
+		if !sqliteTicketHasClaim(roles, role) {
+			t.Fatal("ticket omitted an expected issuer or portal role")
+		}
 	}
 	iat, err := claims.GetIssuedAt()
 	if err != nil || iat == nil {

@@ -36,6 +36,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/state"
 	tickets "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
@@ -98,6 +99,16 @@ func (m *identityProviderTestModule) NewIdentityProvider(ctx context.Context) (i
 		return nil, err
 	}
 	m.backend = &identityProviderTestBackend{Provider: provider.(*tickets.Provider), probe: m.probe, failure: m.Failure}
+	if m.Failure == "prebound_attachment" {
+		store, err := identity.NewDatabase(":memory:")
+		if err != nil {
+			return m.backend, fmt.Errorf("fixture attachment initialization failed")
+		}
+		if err := attachment.BindStore(m.backend.IdentityAttachment(), store); err != nil {
+			return m.backend, fmt.Errorf("fixture attachment binding failed")
+		}
+		m.backend.callerStore = store
+	}
 	if m.Failure == "construct" {
 		return m.backend, fmt.Errorf("private-sentinel")
 	}
@@ -106,8 +117,9 @@ func (m *identityProviderTestModule) NewIdentityProvider(ctx context.Context) (i
 
 type identityProviderTestBackend struct {
 	*tickets.Provider
-	probe   *claimsTestState
-	failure string
+	probe       *claimsTestState
+	failure     string
+	callerStore *identity.Database
 }
 
 func (b *identityProviderTestBackend) Configure() error {

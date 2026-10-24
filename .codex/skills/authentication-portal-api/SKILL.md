@@ -25,6 +25,8 @@ For authored schemas, mounted endpoint contracts and wire-format exceptions,
 read [OpenAPI contracts](references/openapi-contracts.md).
 For encrypted file operations, current local browser-session authority, sharing
 and client key recovery, read [Documents API](references/documents.md).
+For explicit external-account connection, fresh browser proofs and one-use
+confirmation, read [connected accounts](references/connected-accounts.md).
 
 For the standalone `caddy-authenticator` CLI, profile configuration, terminal
 input and private storage, use the

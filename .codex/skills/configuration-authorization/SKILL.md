@@ -285,6 +285,8 @@ These checks leave the request URL unchanged for downstream handlers. Keep
 original target; the library cannot recover a path that earlier middleware
 already discarded. Ordinary role-only policies do not enable path validation.
 
+## Basic and API-key authentication
+
 For portal-backed API key or basic auth proxying, configure a portal and realm:
 
 ```caddyfile
@@ -297,6 +299,26 @@ with auth realm header name X-Auth-Realm
 Basic/API-key auth is consulted after normal token sources fail. The request
 realm must match `with auth realm header name`, defaulting to `X-Auth-Realm`;
 failed Basic or API-key auth returns `401`.
+
+A named portal in the same security app requires fresh authentication for every
+Basic/API-key request. The gatekeeper bypasses credential-result cache reads and
+writes, repeats backend verification and checks the current local or attached
+account and effective challenge policy before issuing its internal assertion.
+Reusing a previously accepted credential cannot retain old roles, bypass a newly
+required factor or keep a disabled account authorized. Direct credential requests
+cannot complete additional browser checkpoints; unmet requirements fail closed.
+For attached LDAP, the remote password is not proof of a separately required
+local password or MFA factor.
+
+Allow for password/key verification and, for LDAP, directory traffic on each
+request. This applies when these credentials are selected after normal token
+sources; bearer JWT validation, caching and expiry keep their existing behavior.
+An HTTPS remote portal reference uses the remote authenticator, whose credential
+result cache remains enabled. The remote System API checks current policy when
+called, but a cached result at its caller does not make another request. Do not
+promise immediate remote revocation from the same-app behavior. Third-party
+authenticators opt out only through the library's `authproxy.FreshAuthenticator`
+capability; this requires no new Caddyfile setting.
 
 For portal-free, immediately revocable API keys, use the bundled
 [SQLite credential authenticator](references/sqlite-api-keys.md). Its named global
@@ -402,3 +424,8 @@ and proxy trust. See [redirect qualification](../testing-and-ci/references/test-
 - A direct OAuth policy completes its callback through the same handler and
   rejects a replay or incompatible JWT setting. Session restart persistence is
   qualified separately under explicit root state, never inferred from a redirect.
+- Reuse an already successful Basic/API-key credential after an authoritative
+  account, credential, role or challenge-policy mutation. Same-app portal requests
+  must observe the new state without restart or cache expiry. The connected-provider
+  TLS suite covers attached LDAP Basic/System policy changes; retain the library's
+  Basic/API-key freshness and remote-cache regressions when this boundary changes.

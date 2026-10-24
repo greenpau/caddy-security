@@ -69,7 +69,7 @@ login.example.test {
  }
  @portal path /auth /auth/*
  handle @portal {
-  authenticate with myportal
+  authenticate with myportal at /auth
  }
  handle /app* {
   authorize with app-policy
@@ -99,10 +99,20 @@ collide. Unknown selections fail before factories run. A portal with no explicit
 store or provider selection retains the root's default-backend selection rules;
 explicit selection keeps deployment intent clear.
 
-Explicit `attach to local identity store ...` statements are rejected by this
-adapter until their host integration is supplied. Do not silently discard them
-or insert an unrecognized native `attachment` field. The inherited private
-attachment described below still applies when explicit configuration is absent.
+Add `attach to local identity store <name>` once to bind the provider to one
+configured built-in local store. Native JSON uses
+`"attachment": {"local_identity_store": "accounts"}`. The name is literal,
+including in native JSON; it is not a realm or file path. Missing, disabled,
+ambiguous, wrong-kind and SQLite password-store targets fail before ticket
+storage opens. The target name `:memory:` is invalid; a named local store whose
+path is `:memory:` remains available for a nonpersistent root.
+
+Omission, `null` and native `{}` select the same private-memory default and
+normalized descriptor. Explicit targets enter the descriptor and root state
+binding. Attaching does not enable the target as a login realm. Enable it in the
+portal only when users need fresh local login, connection or local challenges.
+Read [attached identities](../configuration-identity-stores/references/connected-accounts.md)
+for account continuity and the browser connection boundary.
 
 ## Browser and identity behavior
 
@@ -128,14 +138,14 @@ local MFA requirement cannot be satisfied by asserted roles. A consumed ticket
 stays spent if later policy or signing fails. The endpoint remains a browser
 redirect protocol; JSON negotiation does not create a native issuance API.
 
-Current AuthCrunch creates a provider-owned private passwordless memory identity
-for the pinned issuer and verified subject. The signed local `id` differs from
+Without an explicit target, AuthCrunch creates a provider-owned private
+passwordless memory identity for the pinned issuer and verified subject. The signed local `id` differs from
 `sub`; email does not select an existing account. Repeated logins through the same
 provider instance share that identity. Replacement/restart creates a new private
 identity even though pending tickets survive. Preserve the exact provider's
 attachment interface through root/portal wiring; a separate fallback store cannot
-validate its proof. Do not advertise durable local account management from this
-private identity. Existing stateless access JWTs keep their normal lifetime. Application roles
+validate its proof. A file-backed explicit target preserves the local UUID and its current account
+policy across restart; private memory does not provide that durability. Existing stateless access JWTs keep their normal lifetime. Application roles
 do not automatically grant portal access. Public asset and favicon requests
 preserve a valid application-only cookie without admitting its user to restricted
 portal assets; invalid tokens still receive deletion.
@@ -167,17 +177,22 @@ issuance, multi-host availability or durable portal sessions.
 
 The app derives descriptors before root validation and opens fresh handles before
 root construction. Runtime bindings are absent from JSON. The root borrows the
-exact instances and never configures, rebinds or closes them. It rejects missing
-attachments and explicitly named stores that are not already bound, without
-initializing lazy memory attachments. Failed candidates
-close acquired resources; retirement drains requests and disposes the root before
+exact instances and never configures or closes them. Only a bundled ticket
+module with a nonempty target opts into `IdentityProviderAttachmentStores`:
+the root captures its fresh unbound attachment, validates the exact enabled
+local declaration before acquisition, then binds the actual root store before
+publication. Other borrowed providers retain caller-prebound or unnamed lazy
+memory behavior; merely implementing the attachment interface does not opt in.
+Failed candidates close acquired resources; retirement drains requests and disposes the root before
 provider closure. Persistent-root construction remains deferred to Start and
 retains its stop/start restriction. Config digests bind runtime state to the
 provider's normalized policy and storage declaration.
 
 Pending requests and issued tickets survive compatible restart. Changing name,
 realm, origin, mount, issuer or cookie binding prevents old state consumption.
-On unavailable storage or uncertain commit, publish no ticket, identity or
+Changing only the attachment target changes the root configuration/session epoch;
+it does not change the ticket protocol binding or revoke a pending request.
+An accepted callback uses the currently selected attachment. On unavailable storage or uncertain commit, publish no ticket, identity or
 credential. Drain and reopen quarantined handles, reconcile the outcome, then
 begin a fresh login. Do not retry blindly or restore consumed cookies as recovery.
 
@@ -194,8 +209,13 @@ skip rules do not provide this redaction or resolve the separate host logger iss
 ## Acceptance
 
 `TestSQLiteTicket*`, `TestAppIdentityProvider*` and `testcase_identity_provider_sqlite`
-cover text/native declarations, defaults, explicit attachment rejection, no-I/O
+cover text/native declarations, implicit and explicit attachments, no-I/O
 validation, exact runtime bindings, storage separation and owned lifecycle.
+`testcase_identity_attachments` adds attached SAML/LDAP/ticket adaptation;
+`TestAppIdentityProviderAttachment*` checks target preflight, deferred snapshots,
+file-backed identity and unchanged third-party ownership. The connected-provider
+and persistence journeys in the [shared reference](../configuration-identity-stores/references/connected-accounts.md)
+qualify the explicit target through actual Caddy.
 `TestCaddySQLiteTicketE2E` must qualify actual TLS Caddy and an authenticated trusted
 issuer, Chrome login, independent JWT verification, binding-cookie scope, malformed
 callbacks, wrong browser/host/credentials, concurrent consumption, replay, restart,

@@ -65,6 +65,7 @@ func TestCaddyRuntimeStateE2E(t *testing.T) {
 
 type persistentCaddy struct {
 	binary, base, admin, directory, config, ca, workspace string
+	workingDirectory                                      string
 	client                                                *http.Client
 	cmd                                                   *exec.Cmd
 	done                                                  chan error
@@ -120,6 +121,7 @@ func (f *persistentCaddy) write(t *testing.T, input string) []byte {
 func (f *persistentCaddy) command(t *testing.T, args ...string) *exec.Cmd {
 	t.Helper()
 	cmd := exec.CommandContext(t.Context(), f.binary, args...)
+	cmd.Dir = f.workingDirectory
 	cmd.Env = append(os.Environ(), "CADDY_SECURITY_TEST_CA="+f.ca, "CADDY_SECURITY_TEST_STATE_DIRECTORY="+f.directory, "XDG_CONFIG_HOME="+f.workspace, "XDG_DATA_HOME="+f.workspace)
 	cmd.WaitDelay = 5 * time.Second
 	return cmd
@@ -384,6 +386,7 @@ route {
 	otherInput := strings.Replace(input, "admin "+f.admin, "admin off", 1)
 	otherInput = strings.ReplaceAll(otherInput, f.base, "https://"+lifecycleAddress(t))
 	f.write(t, otherInput)
+	t.Log("persistent startup rejection phase: competing process")
 	f.failStartup(t)
 	f.write(t, input)
 	// Changing and restoring configuration must not revive an old cookie.
@@ -427,6 +430,8 @@ route {
 	// Fill the actual 64 MiB snapshot through a validated upstream picture claim.
 	// Keep the attached identity's bounded name and subject valid.
 	// No private DTOs, state-file synthesis or lowered library limits are used.
+	t.Log("persistent snapshot capacity phase: fill the actual 64 MiB limit")
+	capacityStarted := time.Now()
 	client = f.browser(t)
 	persistentRequest(t, client, "GET", login(client), nil, nil, 303)
 	upstream.mu.Lock()
@@ -447,6 +452,7 @@ route {
 				}
 			}
 			refused = true
+			t.Logf("persistent snapshot capacity phase: refusal after %d attempts in %s", i+1, time.Since(capacityStarted).Round(time.Millisecond))
 			break
 		}
 		if status != 303 {
@@ -468,6 +474,7 @@ route {
 	persistentRequest(t, secondary, "GET", f.base+"/secondary/private", nil, nil, 200)
 	old = client.Jar.Cookies(u)
 	persistentRequest(t, client, "POST", f.base+"/_authcrunch/oauth2/direct/logout", nil, http.Header{"Origin": {f.base}}, 204)
+	t.Log("persistent snapshot capacity phase: restart and verify durable logout and secondary session")
 	f.restart(t)
 	client.Jar.SetCookies(u, old)
 	persistentRequest(t, client, "GET", f.base+"/private", nil, nil, 302)
@@ -475,13 +482,18 @@ route {
 	// Committed storage damage must fail startup, and releasing the failed
 	// constructor must allow a repaired private fixture to retry immediately.
 	f.kill(t)
-	for _, name := range []string{"master.key", "catalog.state", fmt.Sprintf("%x.state", sha256.Sum256([]byte("oauth-sessions/secondary")))} {
-		path := filepath.Join(f.directory, name)
+	for _, component := range []struct{ label, file string }{
+		{"master key", "master.key"},
+		{"catalog", "catalog.state"},
+		{"secondary policy", fmt.Sprintf("%x.state", sha256.Sum256([]byte("oauth-sessions/secondary")))},
+	} {
+		path := filepath.Join(f.directory, component.file)
 		original, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for _, damage := range []string{"missing", "corrupt"} {
+			t.Logf("persistent startup rejection phase: %s %s", component.label, damage)
 			if damage == "missing" {
 				err = os.Remove(path)
 			} else {
@@ -494,6 +506,7 @@ route {
 			if err = os.WriteFile(path, original, 0600); err != nil {
 				t.Fatal(err)
 			}
+			t.Logf("persistent startup recovery phase: %s repaired after %s", component.label, damage)
 			f.start(t)
 			f.kill(t)
 		}
@@ -501,10 +514,12 @@ route {
 	if err := os.Chmod(f.directory, 0755); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("persistent startup rejection phase: nonprivate directory")
 	f.failStartup(t)
 	if err := os.Chmod(f.directory, 0700); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("persistent startup recovery phase: private directory restored")
 	f.start(t)
 	// An IO failure at logout cannot publish success or keep cached authority.
 	marker := filepath.Join(f.directory, fmt.Sprintf("%x.state.pending", sha256.Sum256([]byte("oauth-sessions/secondary"))))
@@ -550,18 +565,27 @@ route {
 
 func (f *persistentCaddy) failStartup(t *testing.T) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	// Secondary-policy damage is reached after restoring the direct policy's
+	// near-64 MiB snapshot: decrypt, gob decode, then unmarshal every User. Allow
+	// bounded headroom for that work under race instrumentation. Expiry still
+	// fails the assertion; a killed process is never a controlled rejection.
+	const startupRejectionTimeout = 30 * time.Second
+	ctx, cancel := context.WithTimeout(t.Context(), startupRejectionTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, f.binary, "run", "--config", f.config)
+	cmd.Dir = f.workingDirectory
 	cmd.Env = f.command(t).Env
 	cmd.WaitDelay = 5 * time.Second
+	started := time.Now()
 	output, err := cmd.CombinedOutput()
+	elapsed := time.Since(started).Round(time.Millisecond)
 	if err == nil || ctx.Err() != nil || !bytes.Contains(output, []byte("persistent security runtime could not start")) {
-		t.Fatalf("expected controlled startup failure: %v", err)
+		t.Fatalf("expected controlled startup failure after %s (deadline %s, context error %v): %v", elapsed, startupRejectionTimeout, ctx.Err(), err)
 	}
 	if bytes.Contains(output, []byte(oauthE2ESecret)) || bytes.Contains(output, []byte(applicationTestSecret)) {
 		t.Fatal("startup failure exposed credentials")
 	}
+	t.Logf("persistent startup rejected without timeout in %s", elapsed)
 }
 
 func testPersistentPortal(t *testing.T, binary string) {

@@ -38,8 +38,9 @@ type IdentityProviderBackendModule interface {
 }
 
 type preparedIdentityProvider struct {
-	config idp.ExternalIdentityProviderConfig
-	module IdentityProviderBackendModule
+	config          idp.ExternalIdentityProviderConfig
+	module          IdentityProviderBackendModule
+	attachmentStore string
 }
 
 // prepareIdentityProviders derives descriptors on the private root snapshot.
@@ -72,12 +73,55 @@ func (app *App) prepareIdentityProviders(ctx caddy.Context, config *authcrunch.C
 			return fmt.Errorf("identity provider %d requires a valid unique runtime binding", i)
 		}
 		seen[descriptor.Name] = true
+		var attachmentStore string
+		if ticket, ok := module.(*SQLiteTicketIdentityProvider); ok {
+			normalized, err := ticket.config()
+			if err != nil {
+				return fmt.Errorf("identity provider %d attachment configuration is invalid", i)
+			}
+			if normalized.Attachment != nil {
+				attachmentStore = normalized.Attachment.LocalIdentityStore
+				matches := 0
+				invalidKind := false
+				for _, store := range config.IdentityStores {
+					if store != nil && store.Name == attachmentStore {
+						matches++
+						invalidKind = invalidKind || store.Kind != "local"
+					}
+				}
+				for _, store := range config.ExternalIdentityStores {
+					if store != nil && store.Name == attachmentStore {
+						matches++
+						invalidKind = true
+					}
+				}
+				if matches != 1 || invalidKind {
+					return fmt.Errorf("identity provider %d attachment requires one configured local identity store", i)
+				}
+			}
+		}
 		copy := *descriptor
 		config.ExternalIdentityProviders = append(config.ExternalIdentityProviders, &copy)
-		app.identityProviders = append(app.identityProviders, preparedIdentityProvider{config: copy, module: module})
+		app.identityProviders = append(app.identityProviders, preparedIdentityProvider{config: copy, module: module, attachmentStore: attachmentStore})
 	}
 	app.pluginContext = ctx
 	return nil
+}
+
+// Only the bundled ticket declaration opts into root attachment. Third-party
+// providers retain their existing caller-bound or implicit-memory contract.
+func (app *App) identityProviderAttachmentStores() map[string]string {
+	var stores map[string]string
+	for _, provider := range app.identityProviders {
+		if provider.attachmentStore == "" {
+			continue
+		}
+		if stores == nil {
+			stores = make(map[string]string)
+		}
+		stores[provider.config.Name] = provider.attachmentStore
+	}
+	return stores
 }
 
 // attachIdentityProviders transfers all acquired closers to the caller, including

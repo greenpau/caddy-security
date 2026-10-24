@@ -347,7 +347,12 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
-	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores, IdentityProviders: identityProviders, UserRegistries: registries})
+	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{
+		IdentityStores:                   identityStores,
+		IdentityProviders:                identityProviders,
+		IdentityProviderAttachmentStores: app.identityProviderAttachmentStores(),
+		UserRegistries:                   registries,
+	})
 	if err != nil {
 		closeErr := closePluginResources(backendClosers)
 		releaseIdentityFiles(app.identityFiles)

@@ -65,7 +65,7 @@ func TestSQLiteTicketParser(t *testing.T) {
 		"missing_path": strings.Replace(good, "path \"/private tickets/tickets.db\"\n", "", 1), "relative_path": strings.Replace(good, "/private tickets/tickets.db", "tickets.db", 1),
 		"duplicate": strings.Replace(good, "realm application", "realm application\nrealm application", 1), "extra_value": strings.Replace(good, "realm application", "realm application other", 1),
 		"nested": strings.Replace(good, "realm application", "realm application {\nunknown value\n}", 1), "unknown": strings.Replace(good, "realm application", "realm application\napproval required", 1),
-		"attachment":  strings.Replace(good, "realm application", "realm application\nattach to local identity store accounts", 1),
+		"attachment":  strings.Replace(good, "realm application", "realm application\nattach to local identity store :memory:", 1),
 		"origin_http": strings.Replace(good, "https://portal.example.test", "http://portal.example.test", 1), "origin_path": strings.Replace(good, "https://portal.example.test", "https://portal.example.test/auth", 1),
 		"origin_empty_port": strings.Replace(good, "https://portal.example.test", "https://portal.example.test:", 1), "issuer_bad_port": strings.Replace(good, "https://issuer.example.test/login", "https://issuer.example.test:65536/login", 1),
 		"issuer_missing_path": strings.Replace(good, "https://issuer.example.test/login", "https://issuer.example.test", 1), "issuer_query": strings.Replace(good, "https://issuer.example.test/login", "https://issuer.example.test/login?query=value", 1),
@@ -186,7 +186,7 @@ func TestSQLiteTicketNativeConfiguration(t *testing.T) {
 	if !ok || module.Timeout != "1000ms" || module.Path != config.Path || module.CookieName != config.CookieName {
 		t.Fatal("native loading changed literals")
 	}
-	for name, input := range map[string]string{"null": "null", "driver": strings.Replace(string(raw), `"driver":"sqlite"`, `"driver":"unknown"`, 1), "unknown_field": strings.Replace(string(raw), `"driver":`, `"password":"private-sentinel","driver":`, 1), "attachment": strings.Replace(string(raw), `"driver":`, `"attachment":{"local_identity_store":"accounts"},"driver":`, 1), "origin": strings.Replace(string(raw), config.PublicOrigin, "https://portal.example.test:0", 1), "cookie": strings.Replace(string(raw), config.CookieName, "__Host-APP", 1), "missing_issuer": strings.Replace(string(raw), `"issuer_url":"https://issuer.example.test/login",`, "", 1)} {
+	for name, input := range map[string]string{"null": "null", "driver": strings.Replace(string(raw), `"driver":"sqlite"`, `"driver":"unknown"`, 1), "unknown_field": strings.Replace(string(raw), `"driver":`, `"password":"private-sentinel","driver":`, 1), "attachment": strings.Replace(string(raw), `"driver":`, `"attachment":{"local_identity_store":":memory:"},"driver":`, 1), "origin": strings.Replace(string(raw), config.PublicOrigin, "https://portal.example.test:0", 1), "cookie": strings.Replace(string(raw), config.CookieName, "__Host-APP", 1), "missing_issuer": strings.Replace(string(raw), `"issuer_url":"https://issuer.example.test/login",`, "", 1)} {
 		t.Run(name, func(t *testing.T) {
 			if _, _, err := sqliteTicketTestLoad(t, json.RawMessage(input)); err == nil {
 				t.Fatal("invalid native ticket configuration accepted")

@@ -1,0 +1,47 @@
+{
+	security {
+		local identity store accounts {
+			realm local
+			path :memory:
+		}
+		ldap identity store directory {
+			attach to local identity store {env.ATTACHMENT_STORE}
+			realm directory
+			servers {
+				ldaps://directory.example.test
+			}
+			username cn=service,dc=example,dc=test
+			password synthetic-bind-password
+			search_base_dn dc=example,dc=test
+			enable short automatic group mapping
+		}
+		saml identity provider saml {
+			attach to local identity store {env.ATTACHMENT_STORE}
+			realm saml
+			driver generic
+			entity_id urn:caddy:attachment-test
+			idp_login_url https://issuer.example.test/sso
+			idp_sign_cert_location /not-opened/idp.pem
+			acs_url https://portal.example.test/auth/saml/saml
+			acs_url https://other.example.test/auth/saml/saml
+		}
+		oauth identity provider linkedin {
+			realm linkedin
+			driver linkedin
+			client_id {env.LINKEDIN_APP_CLIENT_ID}
+			client_secret {env.LINKEDIN_APP_CLIENT_SECRET}
+			attach to local identity store {env.ATTACHMENT_STORE}
+		}
+		authorization policy linkedin_oauth_policy {
+			use oauth identity provider linkedin
+			allow roles authp/admin authp/user
+		}
+		identity provider sqlite application {
+			realm application
+			path /private/tickets.db
+			public_origin https://portal.example.test
+			issuer_url https://issuer.example.test/login
+			attach to local identity store accounts
+		}
+	}
+}

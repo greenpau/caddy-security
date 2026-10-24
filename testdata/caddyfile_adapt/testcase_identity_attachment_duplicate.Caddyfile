@@ -1,0 +1,8 @@
+{
+	security {
+		saml identity provider saml {
+			attach to local identity store accounts
+			attach to local identity store accounts
+		}
+	}
+}

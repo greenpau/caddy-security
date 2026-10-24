@@ -21,6 +21,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	attachmentparser "github.com/greenpau/go-authcrunch/pkg/identity/attachment/parser"
 )
 
 // parseCaddyfileIdentityProvider dispatches upstream OAuth and SAML providers.
@@ -41,6 +42,7 @@ import (
 //		tenant_id <id>
 //		application_id <id>
 //		application_name <name>
+//		attach to local identity store <name>
 //		icon <text> [<class> [<color> [<background>]]] [text <color> [<background>]] [priority <integer>]
 //		disable tls verification
 //		disabled
@@ -49,12 +51,17 @@ import (
 // Repeat acs_url for multiple callback URLs. Each scalar takes one value.
 // Optional fields depend on the driver. disabled omits registration. TLS
 // verification is enabled by default; disabling it is not required for SAML.
+// Attachment is optional and occurs once: its exact store name selects a
+// root-owned local account store without enabling it as a portal login realm.
+// Omission retains private memory. The shared attachment parser owns validation;
+// the existing Params resolver expands its name only in the private runtime copy.
 func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, app *App, kind, name string, shortcuts []string) error {
 	if kind == "oauth" {
 		return parseCaddyfileOAuthIdentityProvider(d, app, name, shortcuts)
 	}
 	cfg := app.Config
 	var disabled bool
+	var attachmentStatements []string
 
 	m := make(map[string]interface{})
 	if len(shortcuts) > 0 {
@@ -63,6 +70,17 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, app *App, kind, name
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
+		if k == "attach" {
+			if kind != "saml" {
+				return d.Errf("identity attachments require an external provider")
+			}
+			statement, err := readCaddyfileIdentityAttachment(d)
+			if err != nil {
+				return err
+			}
+			attachmentStatements = append(attachmentStatements, statement)
+			continue
+		}
 		args := d.RemainingArgs()
 		rd := mkcp("security."+kind+".identity.provider["+name+"]", k)
 		switch k {
@@ -187,6 +205,13 @@ func parseCaddyfileIdentityProvider(d *caddyfile.Dispenser, app *App, kind, name
 		}
 	}
 
+	if len(attachmentStatements) != 0 {
+		attachment, err := attachmentparser.NewIdentityAttachmentConfigFromDirectives(attachmentStatements)
+		if err != nil {
+			return d.Errf("invalid identity attachment: %v", err)
+		}
+		m["attachment"] = attachment
+	}
 	if disabled {
 		cfg.AddDisabledIdentityProvider(name)
 	} else {

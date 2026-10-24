@@ -252,16 +252,30 @@ fresh configured `idp.IdentityProvider`. Keep original module JSON unchanged,
 reject native root descriptors, and restore runtime maps on each construction.
 The root checks exact map keys and name/kind/driver/realm metadata before resource
 acquisition. A borrowed attachment consumer must return a nonnil attachment;
-an explicitly named store must already be bound. Unnamed lazy memory attachments
-are not initialized by this check. Preserve dynamic optional interfaces,
+by default an explicitly named store must already be caller-bound. Unnamed
+lazy memory attachments are not initialized by this check. Preserve dynamic optional interfaces,
 especially HTTP login and identity attachment; a wrapper that loses the provider's attachment cannot
 validate its proof through a newly created fallback.
+
+The bundled SQLite ticket module alone opts into
+`ServerOptions.IdentityProviderAttachmentStores` when its copied typed attachment
+has a nonempty target. Prepare the exact target name on the immutable app snapshot;
+require one configured built-in local declaration before factories run and pass
+a fresh provider-name → store-name map on construction. The root captures the
+original attachment once under sanitized preflight, requires it to be fresh and
+unbound, then binds its actual root-owned local store after epoch setup. Do not
+reconstruct providers, root stores or attachment objects; do not opt in arbitrary
+third-party consumers based on interface satisfaction. Empty native attachments
+normalize to omission only in detached ticket descriptor/runtime configuration.
 
 The root finishes owned attachment setup once, then tells portals that assembly
 is complete. Already-ready borrowed providers retain their caller wiring and
 private state. Standalone portal callers retain the default attachment setup
 unless they explicitly declare it complete. The host never duplicates the root
-or configures a second identity attachment for a ticket backend.
+or configures a second identity attachment for a ticket backend. A failure after
+explicit binding may leave that borrowed candidate bound to a retired root store:
+discard and close it, then construct a fresh instance. There is no unbind/reuse
+rollback contract. The root still never closes borrowed providers.
 
 Read-only host checks compare ticket database and sidecar paths with known
 bundled backend and local/dropbox files before live factories run. SQLite secret

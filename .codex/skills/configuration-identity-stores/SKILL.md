@@ -123,6 +123,8 @@ Use these Caddyfile-to-authcrunch aliases deliberately:
   `LDAP_USER_SECRET` during provisioning.
 - `search_filter` is a legacy alias for `search_user_filter`; prefer
   `search_user_filter` for clarity when adding new examples.
+- `attach to local identity store <name>` sets `attachment.local_identity_store`
+  (LDAP only).
 - `trusted_authority <path>` appends to authcrunch `trusted_authorities`.
 - `icon` becomes `login_icon`.
 
@@ -184,8 +186,14 @@ using private memory when no explicit attachment is supplied. The native
 password-sandbox flow signs `amr: ["federated", "pwd"]`; the federation marker
 does not prove a separate local password or MFA factor. The LDAPS fallback-role
 E2E verifies this exact signed evidence and protected-resource access. Explicit
-LDAP attachment Caddyfile syntax and the broader connection/administration
-matrix remain separate host work.
+LDAP attachment uses `attach to local identity store <name>` once in the LDAP
+block. The complete clause is validated by the shared attachment parser;
+duplicates, nested blocks and local-store declarations of `attach` fail.
+The exact name may resolve once from an environment or secrets reference in the
+private runtime Params snapshot. A nonempty reference resolving to empty fails;
+native empty attachments retain private memory. Read
+[attached identities and connection](references/connected-accounts.md) for target
+selection, durable UUIDs, local-factor policy and browser-only connection.
 
 This flow means a correct-looking Caddyfile can still fail because the search
 filter is too broad, group membership does not map to any role, LDAPS trust is
@@ -198,6 +206,7 @@ Supported store-level options include:
 - `disabled`
 - `realm`, `path`, `search_base_dn`, `search_group_filter`,
   `search_user_filter`, `search_filter`, `username`, and `password`
+- `attach to local identity store <name>` (LDAP only)
 - `trusted_authority <path>`
 - `attributes { <local_name> <remote_name> }`
 - `servers { <ldap_url> [ignore_cert_errors] [posix_groups] }`
@@ -232,6 +241,11 @@ Use these examples:
 - `caddyfile_identity_test.go`.
 - `caddyfile_identity_store_test.go`.
 - `testdata/caddyfile_adapt/testcase_security_authentication_portal.Caddyfile`.
+
+`TestIdentityAttachment*`, `TestAppIdentityProviderAttachment*` and
+`testcase_identity_attachments` cover parser, target, snapshot and ownership
+boundaries. `TestCaddyConnectedProvidersE2E` covers explicit LDAP attachment,
+current local policy and connected identity through verified LDAPS/Caddy.
 
 The LDAP journey in `ldap_fallback_e2e_test.go`, invoked by
 `TestCaddyAuthenticationChallengesE2E`, checks verified LDAPS, fallback role

@@ -21,23 +21,25 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	tickets "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
 	ticketparser "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite/parser"
 )
 
 // SQLiteTicketIdentityProvider declares browser-bound tickets issued by a trusted
-// application. The app owns each runtime handle, including its implicit private
-// identity attachment; durable pending tickets do not make those identities durable.
+// application. The app owns each runtime handle. Explicit attachments bind to a
+// root-owned local store before publication; omission retains private memory.
 type SQLiteTicketIdentityProvider struct {
-	Name         string `json:"name"`
-	Realm        string `json:"realm"`
-	Path         string `json:"path"`
-	Timeout      string `json:"timeout,omitempty"`
-	PublicOrigin string `json:"public_origin"`
-	BasePath     string `json:"base_path,omitempty"`
-	CookieName   string `json:"cookie_name,omitempty"`
-	IssuerURL    string `json:"issuer_url"`
+	Name         string             `json:"name"`
+	Realm        string             `json:"realm"`
+	Path         string             `json:"path"`
+	Timeout      string             `json:"timeout,omitempty"`
+	PublicOrigin string             `json:"public_origin"`
+	BasePath     string             `json:"base_path,omitempty"`
+	CookieName   string             `json:"cookie_name,omitempty"`
+	IssuerURL    string             `json:"issuer_url"`
+	Attachment   *attachment.Config `json:"attachment,omitempty"`
 }
 
 func init() { caddy.RegisterModule(SQLiteTicketIdentityProvider{}) }
@@ -52,8 +54,17 @@ func (m *SQLiteTicketIdentityProvider) config() (*tickets.Config, error) {
 		return nil, fmt.Errorf("invalid SQLite ticket provider configuration")
 	}
 	cfg := &tickets.Config{Name: m.Name, Realm: m.Realm, Path: m.Path, Timeout: m.Timeout, PublicOrigin: m.PublicOrigin, BasePath: m.BasePath, CookieName: m.CookieName, IssuerURL: m.IssuerURL}
+	if m.Attachment != nil {
+		copy := *m.Attachment
+		cfg.Attachment = &copy
+	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid SQLite ticket provider configuration")
+	}
+	// Empty native attachments and omission both select private memory. Normalize
+	// only the detached runtime config so declarative JSON remains unchanged.
+	if cfg.Attachment != nil && cfg.Attachment.LocalIdentityStore == "" {
+		cfg.Attachment = nil
 	}
 	duration, _ := time.ParseDuration(cfg.Timeout) // Validate checks the duration.
 	cfg.Timeout = duration.String()
@@ -97,6 +108,7 @@ func (m *SQLiteTicketIdentityProvider) NewIdentityProvider(ctx context.Context) 
 //	    base_path <portal-mount>
 //	    cookie_name <binding-cookie-name>
 //	    timeout <duration>
+//	    attach to local identity store <name>
 //	}
 //
 // Required fields are realm, path, public_origin and issuer_url; each takes one
@@ -106,7 +118,9 @@ func (m *SQLiteTicketIdentityProvider) NewIdentityProvider(ctx context.Context) 
 // inherit the portal prefix. Select with enable identity provider <name>.
 // Operators must align origin/mount with actual routes. Only a trusted application
 // authenticating its user may call Issue; this module installs no issuer endpoint.
-// Explicit local attachments are not exposed by this adapter.
+// An optional literal attachment selects exactly one root-owned local store by
+// name, not realm or path. It neither enables that store as a login realm nor
+// grants provider claims local-factor authority. Omission uses private memory.
 func (m *SQLiteTicketIdentityProvider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	if !d.Next() {
 		return d.Errf("expected identity provider name")
@@ -127,11 +141,12 @@ func (m *SQLiteTicketIdentityProvider) UnmarshalCaddyfile(d *caddyfile.Dispenser
 	if err != nil {
 		return d.Errf("invalid SQLite ticket provider configuration")
 	}
-	if cfg.Attachment != nil {
-		return d.Errf("explicit ticket identity attachments are not supported")
-	}
 	duration, _ := time.ParseDuration(cfg.Timeout)
 	*m = SQLiteTicketIdentityProvider{Name: cfg.Name, Realm: cfg.Realm, Path: cfg.Path, Timeout: duration.String(), PublicOrigin: cfg.PublicOrigin, BasePath: cfg.BasePath, CookieName: cfg.CookieName, IssuerURL: cfg.IssuerURL}
+	if cfg.Attachment != nil {
+		copy := *cfg.Attachment
+		m.Attachment = &copy
+	}
 	return nil
 }
 

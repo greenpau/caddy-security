@@ -96,7 +96,7 @@ go test -run TestResolveRuntimeAppConfig ./...
 ```
 
 Use `make test` for the repository report lifecycle. `go.mod` pins
-`github.com/greenpau/tested` v1.1.0, invoked as `go tool tested`; it owns `-json`,
+`github.com/greenpau/tested`, invoked as `go tool tested`; it owns `-json`,
 `-coverprofile`, child-process status, and coherent reports. Do not reintroduce
 `go test | tee`, log-grep success detection, richgo, tparse, or go-test-report.
 
@@ -119,6 +119,18 @@ package limit. Keep live tested output enabled; the guard also prints progress
 every ten seconds.
 `TEST` is a regex (default `.`), `TEST_DIR` accepts package patterns (default
 `./...`), and `TEST_TIMEOUT` overrides the quoted per-package limit.
+
+Make expands dollar signs in command-line variables even inside shell single
+quotes. For example, `TEST='^(TestA|TestB)$|^TestC'` lets Make consume `$|` as an
+automatic variable, changing the selector and potentially omitting tests while
+the process still succeeds. Prefer prefix selectors such as
+`TEST='^TestA|^TestB|^TestC'` when sufficient. If an end anchor is necessary, escape
+its dollar for Make: `TEST='^(TestA|TestB)$$|^TestC'`. Direct `go test -run` uses the
+ordinary single `$`; the extra escape is for Make. Inspect the effective `-run`
+argument in the bundle's `run.json` command and the selected test names in
+`test_output.jsonl` before claiming the intended tests passed. A zero exit status
+or aggregate test count alone does not prove selection.
+
 `MINIMUM_COVERAGE` defaults to 1 percent as a nonzero-profile check, matching
 go-authcrunch; it is not a substantial coverage target.
 
@@ -202,8 +214,8 @@ and reusable workflow calls. Its test job skips `main` push events whose head
 commit message starts with `ops: released v`: the release script atomically
 pushes that commit and its tag, and `release.yml` runs the gate for the tag.
 Ordinary pushes, PRs, manual runs, and release tag validation still run tests.
-It selects Ubuntu 24.04 and Go `1.26.8` with
-`GOTOOLCHAIN=local`, plus Node 24, Python 3 and NSS utilities. It checks the
+It selects the Ubuntu runner, Go and Node versions declared in the workflow,
+with `GOTOOLCHAIN=local`, Python and NSS utilities. It checks the
 runner's Google Chrome installation for browser E2E. It resolves a versioned
 artifact identity, runs `make dep` and `make ci-check`, and checks that
 validation did not modify tracked source or add untracked source files.

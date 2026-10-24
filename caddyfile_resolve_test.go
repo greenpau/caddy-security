@@ -128,6 +128,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "explicit OAuth SAML and LDAP attachment name resolution", inputFileNamePrefix: "testcase_identity_attachments"},
 		{name: "optional cross-device login and binding cookie", inputFileNamePrefix: "testcase_authenticate_with_cross_device"},
 		{name: "direct OAuth settings", inputFileNamePrefix: "testcase_authorize_oauth"},
 		{name: "conditional authentication and LDAP fallback roles", inputFileNamePrefix: "testcase_authenticate_with_challenges"},

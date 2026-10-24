@@ -23,6 +23,7 @@ import (
 	challengeparser "github.com/greenpau/go-authcrunch/pkg/authchal/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	attachmentparser "github.com/greenpau/go-authcrunch/pkg/identity/attachment/parser"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -73,6 +74,7 @@ import (
 //		}
 //		enable <short|full> automatic group mapping
 //		fallback <role|roles> <role> [<role>...]
+//		attach to local identity store <name>
 //	}
 //
 // search_filter aliases search_user_filter. Repeat trusted_authority for multiple
@@ -82,6 +84,11 @@ import (
 //
 // LDAP fallback roles apply when group mapping yields no roles. Repeating the
 // setting replaces the whole list. The local store does not support fallback.
+// LDAP's optional attachment occurs once and selects an exact configured local
+// store name; omission uses private memory. It does not enable that local realm
+// for portal login. Complete clauses use the shared attachment parser, and
+// Params resolution preserves each substituted name as one value. Local stores
+// cannot themselves declare attachments.
 // Local passwords pass through unchanged: plaintext defaults to bcrypt; trusted
 // imports use bcrypt:<cost>:<hash> or argon2:<Argon2id-v19-PHC>. Quote imported
 // values. AuthCrunch validates hashes and owns password replacement semantics.
@@ -94,6 +101,7 @@ import (
 // methods/operators are literal grammar, not runtime placeholders.
 func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config, kind, name string, shortcuts []string) error {
 	var disabled bool
+	var attachmentStatements []string
 	m := make(map[string]interface{})
 
 	if len(shortcuts) > 0 {
@@ -113,6 +121,17 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		k := d.Val()
+		if k == "attach" {
+			if kind != "ldap" {
+				return d.Errf("identity attachments require an LDAP store")
+			}
+			statement, err := readCaddyfileIdentityAttachment(d)
+			if err != nil {
+				return err
+			}
+			attachmentStatements = append(attachmentStatements, statement)
+			continue
+		}
 		args := d.RemainingArgs()
 		rd := mkcp("security.identity.store["+name+"]", k)
 		switch k {
@@ -329,6 +348,13 @@ func parseCaddyfileIdentityStore(d *caddyfile.Dispenser, cfg *authcrunch.Config,
 		m["users"] = userMaps
 	}
 
+	if len(attachmentStatements) != 0 {
+		attachment, err := attachmentparser.NewIdentityAttachmentConfigFromDirectives(attachmentStatements)
+		if err != nil {
+			return d.Errf("invalid identity attachment: %v", err)
+		}
+		m["attachment"] = attachment
+	}
 	if disabled {
 		cfg.AddDisabledIdentityStore(name)
 	} else {

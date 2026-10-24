@@ -377,8 +377,12 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 	}
 
 	for _, cfg := range config.IdentityStores {
+		attachmentName := identityAttachmentName(cfg.Params)
 		if err := substitute(ctx, repl, secretManagers, cfg.Params, "", log); err != nil {
 			return err
+		}
+		if cfg.Kind == "ldap" && attachmentName != "" && identityAttachmentName(cfg.Params) == "" {
+			return fmt.Errorf("identity store attachment resolved to an empty name")
 		}
 		if err := validateIdentityParameters(cfg.Kind, cfg.Params); err != nil {
 			return fmt.Errorf("identity store %q parameters: %w", cfg.Name, err)
@@ -404,6 +408,7 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		}
 	}
 	for _, cfg := range config.IdentityProviders {
+		attachmentName := identityAttachmentName(cfg.Params)
 		if statements, ok := oauthDirectives[cfg.Name]; ok {
 			// Snapshots recompute defaults, not the shared dispatcher's allowlist.
 			// A JSON snapshot must not hide unsupported fields in its target map.
@@ -417,6 +422,9 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 			cfg.Params = resolved.Params
 		} else if err := substitute(ctx, repl, secretManagers, cfg.Params, "", log); err != nil {
 			return err
+		}
+		if cfg.Kind == "saml" && attachmentName != "" && identityAttachmentName(cfg.Params) == "" {
+			return fmt.Errorf("identity provider attachment resolved to an empty name")
 		}
 		if err := validateIdentityParameters(cfg.Kind, cfg.Params); err != nil {
 			return fmt.Errorf("identity provider %q parameters: %w", cfg.Name, err)
