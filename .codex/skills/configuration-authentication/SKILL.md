@@ -1,6 +1,6 @@
 ---
 name: configuration-authentication
-description: "Configure authentication portals, backend selection, redirect trust, refresh, and portal wiring. Delegates cookies, UI, transforms, crypto, and OIDC provider details to focused skills."
+description: "Configure authentication portals, backend selection, redirect trust, refresh, Documents storage, and portal wiring. Delegates cookies, UI, transforms, crypto, and OIDC provider details to focused skills."
 ---
 
 # Configuration Authentication
@@ -20,6 +20,9 @@ Read these files when details matter:
 - `caddyfile_authn_token_refresh.go` and [token refresh](references/token-refresh.md)
   for readable portal refresh configuration, explicit eligible realms, transports,
   bounded lifetimes and stores, cookies, placeholders and TLS validation.
+- `caddyfile_authn_documents.go` and [Documents configuration](references/documents.md)
+  for flat API directives, explicit local realms, private storage, quotas,
+  runtime values and permanent origin/mount bindings.
 - `caddyfile_authn_crypto.go` for crypto key directives.
 - `caddyfile_authn_misc.go` for `enable`, `validate`, and `trust`.
 - `caddyfile_authn_admin_api.go` and selected upstream
@@ -60,8 +63,8 @@ Use focused repo-local skills for specialized portal sub-blocks:
 - Use [configuration-saml-providers](../configuration-saml-providers/SKILL.md)
   to configure `saml identity provider <name>` login providers enabled by the portal.
 - Use [authentication-portal-api](../authentication-portal-api/SKILL.md) to build
-  or troubleshoot JSON login, `/whoami`, `/beacon`, refresh token, and admin/server
-  API interactions.
+  or troubleshoot JSON login, `/whoami`, `/beacon`, refresh token, Documents,
+  and admin/server API interactions.
 
 ## Shape
 

@@ -1,0 +1,51 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		authentication portal literal {
+			enable identity store localdb
+			enable admin api
+			enable documents api
+			documents api database "/private/caddy documents/literal.db"
+			documents api public origin https://localhost:8443
+			documents api base path /tenant/auth
+			documents api realms local
+			documents api max file bytes 32
+			documents api max user bytes 64
+			documents api max total bytes 128
+			documents api max user files 2
+			documents api max total files 3
+			documents api max keys 4
+			documents api max recipients 2
+			documents api upload ttl seconds 60
+		}
+		authentication portal deferred {
+			enable identity store localdb
+			enable documents api
+			documents api database {env.DOCUMENTS_FIXTURE_DATABASE}
+			documents api public origin {env.DOCUMENTS_FIXTURE_ORIGIN}
+			documents api base path {env.DOCUMENTS_FIXTURE_MOUNT}
+			documents api realms {env.DOCUMENTS_FIXTURE_REALM}
+			documents api max file bytes {env.DOCUMENTS_FIXTURE_BYTES}
+		}
+		authentication portal disabled {
+			enable identity store localdb
+			disable documents api
+			documents api database relative-unused
+		}
+		authentication portal storageonly {
+			enable identity store localdb
+			documents api database ignored
+			documents api base path unused
+		}
+	}
+}
+:8443 {
+	@nested path /tenant/auth /tenant/auth/*
+	route {
+		authenticate @nested with literal at /tenant/auth
+		authenticate with deferred at /
+	}
+}

@@ -167,7 +167,7 @@ oauth maximum pending logins PENDING`
 			if mode != "environment" && (app.Config.AuthorizationPolicies[0].OAuth != nil || len(app.OAuthAuthorizationDirectives["direct"]) != 8) {
 				t.Fatal("lost complete deferred body")
 			}
-			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: values}}, app.Config, nil, nil, app.OAuthAuthorizationDirectives, zap.NewNop())
+			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: values}}, app.Config, nil, nil, app.OAuthAuthorizationDirectives, nil, zap.NewNop())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -221,7 +221,7 @@ func TestAuthorizationOAuthRuntimeRejects(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app := directOAuthTestApp(t, directOAuthPolicy("use oauth identity provider upstream\noauth session cookie name secrets:oauth:name"))
 			tc.mutate(app)
-			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": "SESSION"}}}, app.Config, nil, nil, app.OAuthAuthorizationDirectives, zap.NewNop())
+			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": "SESSION"}}}, app.Config, nil, nil, app.OAuthAuthorizationDirectives, nil, zap.NewNop())
 			if err == nil {
 				t.Fatal("invalid snapshot accepted")
 			}
@@ -230,7 +230,7 @@ func TestAuthorizationOAuthRuntimeRejects(t *testing.T) {
 	for i, value := range []string{"", "S\nuse oauth identity provider evil", "S\x00", "S\t", "S\u00a0", "S extra"} {
 		t.Run(fmt.Sprint("value/", i), func(t *testing.T) {
 			app := directOAuthTestApp(t, directOAuthPolicy("use oauth identity provider upstream\noauth session cookie name secrets:oauth:name"))
-			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": value}}}, app.Config, nil, nil, app.OAuthAuthorizationDirectives, zap.NewNop())
+			err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), []SecretsManager{&oauthRuntimeSecrets{Values: map[string]string{"name": value}}}, app.Config, nil, nil, app.OAuthAuthorizationDirectives, nil, zap.NewNop())
 			if err == nil {
 				t.Fatal("invalid replacement normalized or accepted")
 			}

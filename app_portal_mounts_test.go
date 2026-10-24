@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/state"
@@ -305,6 +306,60 @@ func TestPortalMountBundledProviderBindings(t *testing.T) {
 			}
 			if _, err := os.Stat(storage); !os.IsNotExist(err) {
 				t.Fatal("mount snapshot opened storage")
+			}
+		})
+	}
+}
+
+func TestPortalMountDocumentsBindings(t *testing.T) {
+	for _, tc := range []struct {
+		name, base, mount string
+		enabled, storage  bool
+	}{
+		{"default root", "", "/", true, true},
+		{"nested", "/tenant/auth", "/tenant/auth", true, true},
+		{"disabled invalid", "invalid", "/unrelated", false, true},
+		{"omitted", "", "/unrelated", false, false},
+		{"enabled missing", "", "/", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "absent", "documents.db")
+			portal := &authn.PortalConfig{Name: "portal", API: &authn.APIConfig{DocumentsEnabled: tc.enabled}}
+			if tc.storage {
+				portal.Documents = &documents.Config{Database: path, PublicOrigin: "https://portal.example.test", BasePath: tc.base, Realms: []string{"local"}}
+				if tc.enabled {
+					if err := portal.Documents.Validate(); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			app := &App{}
+			err := app.preparePortalMounts(&authcrunch.Config{AuthenticationPortals: []*authn.PortalConfig{portal}})
+			if tc.enabled && !tc.storage {
+				if err == nil {
+					t.Fatal("enabled Documents without storage lost its mount constraint")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := app.validatePortalMount("portal", tc.mount); err != nil {
+				t.Fatal(err)
+			}
+			err = app.validatePortalMount("portal", "/different")
+			if tc.enabled && (err == nil || !strings.Contains(err.Error(), "documents API")) || !tc.enabled && err != nil {
+				t.Fatal("Documents enabled state did not control mount agreement", err)
+			}
+			portal.API.DocumentsEnabled = !tc.enabled
+			if portal.Documents != nil {
+				portal.Documents.BasePath = "/mutated"
+			}
+			if err := app.validatePortalMount("portal", tc.mount); err != nil {
+				t.Fatal("Documents mount snapshot retained a caller alias", err)
+			}
+			if _, err := os.Stat(filepath.Dir(path)); !os.IsNotExist(err) {
+				t.Fatal("Documents mount preparation touched storage")
 			}
 		})
 	}

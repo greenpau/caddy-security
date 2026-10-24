@@ -177,6 +177,21 @@ for boundaries and the unit/TLS E2E coverage. Keep this app-level snapshot when
 copying adapted JSON; `ResolveRuntimeAppConfig` alone accepts an AuthCrunch config
 and does not carry app-level snapshots.
 
+Documents directives with runtime references retain their complete portal
+collection in `App.PortalDocumentsDirectives` (`portal_documents_directives`).
+Resolve each original argument once, reject empty/multiline tokens, and reparse
+through the shared Documents parser before portal validation. Preserve literal
+keywords and quoted value boundaries. Native `documents.database`,
+`public_origin`, `base_path` and individual `realms` resolve once; native numeric
+limits stay typed. Deferred values, including numeric limits, resolve before parsing;
+keep directive keywords literal.
+Reject unknown or ambiguous portal targets, empty snapshots and concurrent
+native Documents configuration. Disabled values still resolve but do not receive
+enabled storage semantics/defaults; deferred numeric syntax remains enforced.
+Neither path may expand a substituted string a second time. See
+[Documents configuration](../configuration-authentication/references/documents.md)
+for storage isolation, API-switch independence and acceptance surfaces.
+
 The route plugins have separate runtime replacement: `authenticate ... with
 {env.PORTAL}` and `authorize ... with {env.POLICY}` resolve their portal or
 gatekeeper names during plugin provisioning, not in `ResolveRuntimeAppConfig`.
@@ -203,8 +218,9 @@ Adapt fixtures may include:
 
 `TestResolveRuntimeAppConfig` lists the fixtures that exercise runtime
 resolution. It extracts `apps.security.config` from `<prefix>.json`, loads `<prefix>.env`,
-runs app-aware resolution (including `apps.security.oauth_provider_directives` and
-`apps.security.portal_token_refresh_directives`)
+runs app-aware resolution (including `apps.security.oauth_provider_directives`,
+`apps.security.portal_token_refresh_directives` and
+`apps.security.portal_documents_directives`)
 followed by any `apps.security.portal_cookie_directives` snapshot, and compares
 the dumped authcrunch config to `<prefix>_resolved.json`.
 

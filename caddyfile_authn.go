@@ -49,6 +49,8 @@ const (
 //		enable source ip tracking
 //		<enable|disable> admin api
 //		<enable|disable> admin api private key export
+//		<enable|disable> documents api
+//		documents api <setting> <value> [<value>...]
 //		<enable|disable> cross-device login
 //		enable identity store <name> [<name>...]
 //		enable identity provider <name> [<name>...]
@@ -92,9 +94,18 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 		var oidcStatements []string
 		var tokenRefreshStatements []string
 		var crossDeviceStatements []string
+		var documentsStatements []string
 		nesting := d.Nesting()
 		for d.NextBlock(nesting) {
 			k := d.Val()
+			if isDocumentsAPIDirective(d) {
+				statement, err := readCaddyfileDocumentsAPI(d)
+				if err != nil {
+					return err
+				}
+				documentsStatements = append(documentsStatements, statement)
+				continue
+			}
 			v := d.RemainingArgs()
 			rootDirective = mkcp(authnPrefix, args[0], k)
 			switch k {
@@ -177,6 +188,9 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 					return err
 				}
 			default:
+				if documentsStatements != nil {
+					return d.Errf("unsupported authentication portal directive following documents API")
+				}
 				// A split or malformed continuation must not echo arguments from
 				// a pending feature statement before aggregate validation runs.
 				if crossDeviceStatements != nil {
@@ -198,6 +212,19 @@ func parseCaddyfileAuthentication(d *caddyfile.Dispenser, app *App) error {
 
 		if err := configurePortalAdminAPI(p, adminStatements); err != nil {
 			return d.Errf("%s.portal %q admin API: %v", authnPrefix, p.Name, err)
+		}
+		if documentsStatements != nil {
+			if cookieDirectivesNeedResolution(documentsStatements) {
+				if app.PortalDocumentsDirectives == nil {
+					app.PortalDocumentsDirectives = make(map[string][]string)
+				}
+				if _, exists := app.PortalDocumentsDirectives[p.Name]; exists {
+					return d.Errf("duplicate documents portal %q", p.Name)
+				}
+				app.PortalDocumentsDirectives[p.Name] = documentsStatements
+			} else if err := configurePortalDocuments(p, documentsStatements); err != nil {
+				return d.Errf("portal %q documents API: %v", p.Name, err)
+			}
 		}
 
 		if tokenRefreshStatements != nil {

@@ -1,0 +1,9 @@
+{
+	security {
+		authentication portal myportal {
+			disable documents api
+			documents api database ignored
+			documents api database another
+		}
+	}
+}

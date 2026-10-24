@@ -37,7 +37,7 @@ methods or user-supplied transform values. Current policy also applies to direct
 Basic/API-key login, portal refresh, OP sessions and OIDC refresh. Backchannel
 policy evaluation uses current request context, including issuer and address.
 A configuration that depends on request context can invalidate an older session.
-Selected AuthCrunch v1.3.11 applies `match any` to untimed identity claims too,
+The selected AuthCrunch applies `match any` to untimed identity claims too,
 including refresh/OIDC and encrypted System API requests. See
 [unconditional matching](../../configuration-authentication-user-transforms/SKILL.md#unconditional-matching).
 

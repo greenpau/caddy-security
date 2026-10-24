@@ -72,6 +72,10 @@ type App struct {
 	// runtime references. Resolve and attach before validating runtime portals.
 	PortalTokenRefreshDirectives map[string][]string `json:"portal_token_refresh_directives,omitempty"`
 
+	// PortalDocumentsDirectives preserves complete Documents statements with
+	// runtime references, independently of the other portal API settings.
+	PortalDocumentsDirectives map[string][]string `json:"portal_documents_directives,omitempty"`
+
 	// OAuthProviderDirectives retains complete, validated provider statements
 	// with runtime references, keyed by provider name. Reparse after replacement
 	// so driver defaults never become part of an unresolved secret lookup.
@@ -122,6 +126,8 @@ type App struct {
 	runtimeConfig *authcrunch.Config
 	// Immutable resolved constraints exist for both immediate and deferred roots.
 	portalMounts map[string]portalMountBinding
+	// Detached storage paths protect candidate and active Documents namespaces.
+	storageInventory *appStorageInventory
 
 	mu            sync.Mutex
 	provisioned   bool
@@ -211,7 +217,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	repl := caddy.NewReplacer()
-	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.OAuthAuthorizationDirectives, app.logger); err != nil {
+	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.OAuthAuthorizationDirectives, app.PortalDocumentsDirectives, app.logger); err != nil {
 		return app.privateConfigError("resolve runtime configuration", err)
 	}
 	// Apply resolved snapshots last so substituted paths are not expanded twice.
@@ -257,6 +263,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareCredentialAuthenticators(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareStorageInventory(&config); err != nil {
+		return err
+	}
 	if config.State != nil {
 		// Caddy provisions every candidate before starting any of its apps.
 		// Reject persistent-to-persistent replacement at that boundary, before
@@ -281,6 +290,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 // constructServer runs with app.mu held, before publishing admission.
 func (app *App) constructServer(config *authcrunch.Config) error {
+	if err := app.validateStorageInventory(config); err != nil {
+		return err
+	}
 	if err := app.validateIdentityProviderFiles(config); err != nil {
 		return err
 	}

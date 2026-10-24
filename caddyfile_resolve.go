@@ -289,12 +289,12 @@ func resolveConfigInstructions(ctx context.Context, repl *caddy.Replacer, secret
 
 // ResolveRuntimeAppConfig uses caddy.Replacer to replace strings in App config.
 func ResolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, log *zap.Logger) error {
-	return resolveRuntimeAppConfig(ctx, repl, secretManagers, config, nil, nil, nil, log)
+	return resolveRuntimeAppConfig(ctx, repl, secretManagers, config, nil, nil, nil, nil, log)
 }
 
-// resolveRuntimeAppConfig also consumes deferred Caddy OAuth and token refresh
-// statements. JSON-only AuthCrunch configurations retain typed replacement.
-func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives, tokenRefreshDirectives, oauthAuthorizationDirectives map[string][]string, log *zap.Logger) error {
+// resolveRuntimeAppConfig also consumes deferred Caddy feature statements.
+// JSON-only AuthCrunch configurations retain typed replacement.
+func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretManagers []SecretsManager, config *authcrunch.Config, oauthDirectives, tokenRefreshDirectives, oauthAuthorizationDirectives, documentsDirectives map[string][]string, log *zap.Logger) error {
 	if config == nil {
 		return fmt.Errorf("security app config is nil")
 	}
@@ -315,6 +315,9 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		}
 	}
 	if err := resolvePortalTokenRefresh(ctx, repl, secretManagers, config, tokenRefreshDirectives, log); err != nil {
+		return err
+	}
+	if err := resolvePortalDocuments(ctx, repl, secretManagers, config, documentsDirectives, log); err != nil {
 		return err
 	}
 	// These Validate methods parse raw instructions. Empty or already-parsed

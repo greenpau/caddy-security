@@ -26,8 +26,9 @@ expiring build artifacts are not durable release identifiers.
 ## Wire-format distinctions
 
 Match operation, status and media type before decoding a payload. Keep the HTTP
-status authoritative: portal errors use a boolean `error` property, while OAuth
-errors use a different envelope. Schema validation complements authentication,
+status authoritative: ordinary portal errors use a boolean `error` property,
+OAuth errors use their protocol envelope, and Documents errors use numeric
+`status` plus `message`. Schema validation complements authentication,
 cache, cookie and ownership assertions; it cannot prove those behaviors alone.
 Claims and profile envelopes allow extensibility, so also check the expected
 identity fields and the concrete profile entry. Validate timestamp semantics
@@ -40,6 +41,7 @@ explicitly; a schema format annotation alone need not enforce them.
 | `GET /whoami`, HTML | Browser identity rendering can use formatted display times. It is a separate representation. |
 | `GET /api/server/metadata`, 200 | JSON-encoded object under `text/plain`, with RFC3339 timestamp and linked identity-library metadata. |
 | Profile API | Requires stored portal-session evidence associated with the exact token; successful access-only JSON login is insufficient. |
+| Documents API | Direct resource objects or `{"success":true}` mutations; separate enablement, current local browser-session evidence and strict operation-specific JSON are required. |
 | Public JWKS | `application/jwk-set+json`, public keys only. HEAD preserves the discovery headers and has no response body. |
 
 For ordinary portal JSON routing, the Accept value must be exactly
@@ -73,3 +75,6 @@ reuse existing client journeys; retain their semantic transport and cookie
 checks. This sampling does not certify every documented API operation or any
 official OIDC conformance plan. Extend the matrix when a changed consumer
 depends on another operation instead of copying the upstream contract suite.
+`TestCaddyDocumentsE2E` separately qualifies the Documents operations with their
+authored schemas and protocol, ownership, storage and browser-crypto assertions;
+see the [Documents contract](documents.md).

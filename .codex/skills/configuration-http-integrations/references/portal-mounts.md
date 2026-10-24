@@ -59,7 +59,7 @@ Metadata and trusted-proxy interpretation through delegation.
 ## Feature agreement
 
 The app compares an explicit handler mount with the resolved configuration of
-that portal. Enabled token refresh, the portal OP issuer path, selected bundled
+that portal. Enabled token refresh and Documents API, the portal OP issuer path, selected bundled
 SQLite ticket providers and selected enabled SQLite registration workflows must
 hold the same mount. An issuer with no path means `/`. Disabled features and
 unused backend declarations do not constrain another portal. Cookie prefix/path
@@ -74,6 +74,13 @@ neutral paths; the request keeps its own declared mount without mutating the
 shared portal. Third-party backends retain responsibility for restrictions the
 host cannot inspect. Mount agreement does not establish an external origin or
 replace each feature's origin, callback and TLS validation.
+
+Documents stores permanently bind their origin and base path. A matching
+explicit handler is required when declaring a mount; a valid but externally
+misrouted origin is still the operator's responsibility. Disabling Documents or
+declaring only storage settings adds no mount constraint. See
+[Documents configuration](../../configuration-authentication/references/documents.md)
+for the separate database namespace and reload restrictions.
 
 For `oidc provider`, route the issuer path and its descendants through the same
 explicit handler. Discovery at `<mount>/.well-known/openid-configuration` and all

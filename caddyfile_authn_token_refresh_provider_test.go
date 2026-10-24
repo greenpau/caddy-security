@@ -125,7 +125,7 @@ func providerRefreshResolutionApp(t *testing.T, native bool, realm, mode string)
 func resolveProviderRefreshTestApp(t *testing.T, app *App, values map[string]string) error {
 	t.Helper()
 	managers := []SecretsManager{&oauthRuntimeSecrets{Values: values}}
-	if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), managers, app.Config, nil, app.PortalTokenRefreshDirectives, nil, zap.NewNop()); err != nil {
+	if err := resolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), managers, app.Config, nil, app.PortalTokenRefreshDirectives, nil, nil, zap.NewNop()); err != nil {
 		return err
 	}
 	return resolvePortalCookieDirectives(t.Context(), caddy.NewReplacer(), managers, app.Config, app.PortalCookieDirectives, zap.NewNop())

@@ -39,7 +39,7 @@ not evidence that password/MFA checkpoints completed for an OIDC browser login.
 | API key with body mode | Any portal | Invalid client configuration; raw login also rejects it |
 
 Cookie mode omits the `refresh_transport` field from every wire request. This
-preserves compatibility with older strict-schema portals, including v1.1.41.
+preserves compatibility with older strict-schema portals.
 Do not send an explicit `cookie` value merely because it is the typed default.
 Refresh-enabled browser completion exposes metadata without bearer credentials;
 the Go client returns the transport error with no credentials and does not retry

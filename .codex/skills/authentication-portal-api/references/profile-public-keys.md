@@ -40,7 +40,7 @@ including key ID, fingerprint, comment, normalized payload, and stored usage.
 Do not turn this compatibility work into an algorithm-policy redesign.
 
 The fixture `testdata/identity/legacy_pgp_public.pem` is copied unchanged from
-go-authcrunch v1.2.5 `testdata/gpg/linux_gpg_pub.pem` (Apache-2.0 repository).
+go-authcrunch's `testdata/gpg/linux_gpg_pub.pem` (Apache-2.0 repository).
 It is historical public test material: DSA key ID `a040830f7fac5991`, fingerprint
 `4cca1eaf950cee4ab83976dca040830f7fac5991`. No private key fixture is committed;
 RSA test keys are generated in private temporary test storage/memory.

@@ -59,6 +59,12 @@ func (app *App) preparePortalMounts(config *authcrunch.Config) error {
 		if refresh := portal.RefreshTokens; refresh != nil && refresh.Enabled {
 			binding.constraints = append(binding.constraints, portalMountConstraint{"token refresh", refresh.BasePath})
 		}
+		if portal.API != nil && portal.API.DocumentsEnabled {
+			if portal.Documents == nil {
+				return fmt.Errorf("portal %q documents mount configuration is invalid", portal.Name)
+			}
+			binding.constraints = append(binding.constraints, portalMountConstraint{"documents API", portal.Documents.BasePath})
+		}
 		if provider := portal.OIDCProvider; provider != nil && provider.Enabled {
 			issuer, err := url.Parse(provider.Issuer)
 			if err != nil {

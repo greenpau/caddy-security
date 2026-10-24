@@ -1,0 +1,8 @@
+{
+	security {
+		authentication portal myportal {
+			enable documents api {
+			}
+		}
+	}
+}

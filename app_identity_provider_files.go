@@ -17,14 +17,17 @@ package security
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/greenpau/go-authcrunch"
 )
 
 type identityProviderStorageFile struct {
-	path   string
-	ticket bool
-	sqlite bool
+	path      string
+	ticket    bool
+	sqlite    bool
+	documents bool
+	binding   documentsStorageBinding
 }
 
 // validateIdentityProviderFiles checks known storage namespaces before live
@@ -32,14 +35,18 @@ type identityProviderStorageFile struct {
 // provisioning snapshots. Custom modules own their storage separation contract.
 // These checks neither open files nor reserve SQLite as a local snapshot owner.
 func (app *App) validateIdentityProviderFiles(config *authcrunch.Config) error {
+	return validateTicketStorageFiles(app.configuredStorageFiles(config))
+}
+
+// configuredStorageFiles copies scalar paths without opening any backend. Keep
+// every bundled category even when no ticket is configured: a Documents portal
+// in a later candidate must also protect the currently serving storage graph.
+func (app *App) configuredStorageFiles(config *authcrunch.Config) []identityProviderStorageFile {
 	var files []identityProviderStorageFile
 	for _, binding := range app.identityProviders {
 		if module, ok := binding.module.(*SQLiteTicketIdentityProvider); ok && module != nil {
 			files = append(files, identityProviderStorageFile{path: module.Path, ticket: true, sqlite: true})
 		}
-	}
-	if len(files) == 0 {
-		return nil
 	}
 	for _, binding := range app.identityStores {
 		if module, ok := binding.module.(*SQLiteIdentityStore); ok && module != nil {
@@ -83,35 +90,23 @@ func (app *App) validateIdentityProviderFiles(config *authcrunch.Config) error {
 			}
 		}
 	}
-	return validateTicketStorageFiles(files)
+	return files
 }
 
 func validateTicketStorageFiles(files []identityProviderStorageFile) error {
+	if !slices.ContainsFunc(files, func(file identityProviderStorageFile) bool { return file.ticket }) {
+		return nil
+	}
 	paths := make([][]string, len(files))
 	for i, file := range files {
-		path := file.path
-		if file.sqlite {
-			// SQLite constructors clean native JSON paths before opening them.
-			// Local snapshot/dropbox stores instead open the original path.
-			path = filepath.Clean(path)
-		}
-		base, err := identityFilePath(path)
+		var err error
+		paths[i], err = storageFileNamespace(file)
 		if err != nil {
-			return fmt.Errorf("ticket identity provider storage path is unavailable")
-		}
-		paths[i] = []string{base}
-		if file.sqlite {
-			for _, suffix := range []string{"-journal", "-wal", "-shm"} {
-				path, err := identityFilePath(base + suffix)
-				if err != nil {
-					return fmt.Errorf("ticket identity provider storage sidecar is unavailable")
-				}
-				paths[i] = append(paths[i], path)
-			}
+			return fmt.Errorf("ticket identity provider storage namespace is unavailable")
 		}
 	}
 	for i, file := range files {
-		for j := 0; j < i; j++ {
+		for j := range i {
 			if !file.ticket && !files[j].ticket {
 				continue
 			}
@@ -130,4 +125,28 @@ func validateTicketStorageFiles(files []identityProviderStorageFile) error {
 		}
 	}
 	return nil
+}
+
+// storageFileNamespace matches constructor path semantics, including SQLite's
+// lexical normalization before opening. Local snapshot stores open raw paths.
+func storageFileNamespace(file identityProviderStorageFile) ([]string, error) {
+	path := file.path
+	if file.sqlite {
+		path = filepath.Clean(path)
+	}
+	base, err := identityFilePath(path)
+	if err != nil {
+		return nil, err
+	}
+	paths := []string{base}
+	if file.sqlite {
+		for _, suffix := range []string{"-journal", "-wal", "-shm"} {
+			sidecar, err := identityFilePath(base + suffix)
+			if err != nil {
+				return nil, err
+			}
+			paths = append(paths, sidecar)
+		}
+	}
+	return paths, nil
 }

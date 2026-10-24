@@ -135,6 +135,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		{name: "match any System API policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_system"},
 		{name: "token refresh snapshots and typed config", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},
 		{name: "provider snapshot realm and mode resolution", inputFileNamePrefix: "testcase_authenticate_with_provider_refresh"},
+		{name: "Documents API typed and complete deferred settings", inputFileNamePrefix: "testcase_authenticate_with_documents"},
 		{name: "named OAuth application credentials remain exact", inputFileNamePrefix: "testcase_security_oauth_applications"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
 		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},
@@ -220,7 +221,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, document.Apps.Security.OAuthAuthorizationDirectives, logger)
+			err = resolveRuntimeAppConfig(context.TODO(), repl, nil, config, document.Apps.Security.OAuthProviderDirectives, document.Apps.Security.PortalTokenRefreshDirectives, document.Apps.Security.OAuthAuthorizationDirectives, document.Apps.Security.PortalDocumentsDirectives, logger)
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)

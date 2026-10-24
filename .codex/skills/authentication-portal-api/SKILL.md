@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-api
-description: "Build or troubleshoot portal JSON/native login clients, refresh, profile and admin APIs, and public JWKS. Use for HTTP contracts; portal Caddyfile wiring belongs to configuration-authentication."
+description: "Build or troubleshoot portal JSON/native login clients, refresh, Documents, profile and admin APIs, and public JWKS. Use for HTTP contracts; portal Caddyfile wiring belongs to configuration-authentication."
 ---
 
 # Authentication Portal API
@@ -23,6 +23,8 @@ For password/MFA mutations and refresh/OIDC invalidation, read
 [local identity compatibility](../configuration-identity-stores/references/local-identity.md).
 For authored schemas, mounted endpoint contracts and wire-format exceptions,
 read [OpenAPI contracts](references/openapi-contracts.md).
+For encrypted file operations, current local browser-session authority, sharing
+and client key recovery, read [Documents API](references/documents.md).
 
 For the standalone `caddy-authenticator` CLI, profile configuration, terminal
 input and private storage, use the

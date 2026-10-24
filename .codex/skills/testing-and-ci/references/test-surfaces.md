@@ -33,6 +33,36 @@ retain their independent transport, credential and lifecycle assertions when
 adding schema checks. See [contract ownership and wire formats](../../authentication-portal-api/references/openapi-contracts.md).
 This is consumer qualification, not exhaustive API or official OP conformance.
 
+## Encrypted Documents
+
+`TestPortalDocuments*` and the Documents adaptation/resolution fixtures cover
+flat shared grammar, quoted/imported values, independent API switches, exact
+native/deferred replacement and redacted failures. `TestAppDocuments*` covers
+private configuration snapshots, enabled/disabled admission, immediate and
+deferred construction, and close/reopen behavior. `TestDocumentsStorage*` and
+`TestPortalMountDocumentsBindings` cover no-ticket namespace checks, sidecars,
+filesystem aliases, managed directories, active/candidate transitions and mount
+agreement without opening storage during those checks.
+
+`TestCaddyDocumentsE2E` uses actual trusted Caddy TLS for root/nested/legacy
+mounts, selected OpenAPI schemas, browser-session authority, native-token denial,
+strict protocol payloads, independent JWT verification and protected-resource
+access. A real HTTP/1 `100 Continue` barrier holds an upload before its body
+arrives while a password reset or same-browser account switch completes; the
+released write must fail without storing a chunk. Recipient reset, quota races,
+actual minimum upload expiry, immutable source bindings, failed reload continuity
+and compatible Documents reuse have separate cases.
+
+The suite's real Chrome client loads the selected AuthCrunch crypto module with
+private TLS trust. Natural form login and browser cookies precede multichunk and
+empty-file encryption, two-user sharing, unauthorized admin denial, tamper checks,
+revocation and fresh-context key recovery after root replacement. Check private
+key/plaintext evidence against wire, logs and database bytes, retain asynchronous
+browser failures, and join browser/request cleanup. This proves an in-process
+root replacement, not an OS-process restart or a shipped Documents UI. See the
+[configuration](../../configuration-authentication/references/documents.md) and
+[API](../../authentication-portal-api/references/documents.md) contracts.
+
 ## Cross-device portal login
 
 `TestPortalCrossDevice*`, shared cookie tests and the registered

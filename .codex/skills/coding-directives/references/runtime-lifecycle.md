@@ -132,6 +132,27 @@ single named identity store across portals; multiple stores pointing at the
 same file in one runtime are also rejected. Registration dropboxes use the same
 snapshot database and receive the same protection.
 
+Documents SQLite storage has a separate namespace safeguard. Before live
+construction, the app compares enabled Documents databases and their sidecars
+against known bundled backend files, local identity files and registration
+dropboxes, and excludes managed state/client-registration directories. This
+check exists without a ticket provider. Every app retains detached resolved
+paths, including an app with no Documents feature, so a later candidate can
+protect the active graph in both directions. During normal serialized Caddy
+replacement, copy the active inventory under its mutex and release the mutex
+before filesystem checks; do not discard ownership merely because drain began.
+
+Only a cross-root reuse of the same canonical Documents file with the same
+protocol, portal, origin and mount binding is permitted. Another portal in one
+candidate, a hardlink alias or a different binding conflicts. This exception
+does not waive local account-file reservations or persistent-root reload
+restrictions. Namespace checks read metadata and repeat before deferred startup;
+they neither reserve SQLite as a snapshot identity file nor replace its runtime
+ownership. External filesystem/path replacement and undeclared custom-plugin
+storage remain outside this check. See
+[Documents storage and replacement](../../configuration-authentication/references/documents.md#storage-and-replacement)
+for operator-facing recovery and earlier provisioning-read boundaries.
+
 The selected AuthCrunch local authenticator loads a private `identity.Database`
 snapshot. Its mutex protects that instance only. The root server offers no
 public facility to inject a coordinated store or reload all snapshots. A mutex

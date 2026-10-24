@@ -59,8 +59,9 @@ change with the selected host parser.
 | HTTP `authenticate` / `authorize` | `plugin_authn.go`, `app_portal_mounts.go`, `plugin_authz.go` | Caddy route matching; optional literal `at <mount>` uses `pkg/portalpath.Validate` and `Portal.ServeHTTPAt`; omitted mounts retain inference |
 | Portal body and backend enablement | `caddyfile_authn.go`, `caddyfile_authn_misc.go` | `pkg/authn/config.go`, redirect validation, backend attachment |
 | Portal cookies | `caddyfile_authn_cookie.go` | `pkg/authn/cookie/parser`, `PortalConfig.ConfigureCookies` |
-| Portal token refresh | `caddyfile_authn_token_refresh.go`, `caddyfile_resolve_token_refresh.go` | `pkg/authn/token_refresh/parser` → `authn.TokenRefreshConfig`; attach before validation, then library cookie factory and local-realm checks |
+| Portal token refresh | `caddyfile_authn_token_refresh.go`, `caddyfile_resolve_token_refresh.go` | `pkg/authn/token_refresh/parser` → `authn.TokenRefreshConfig`; attach before validation, then library cookie factory and selected local/provider-realm checks |
 | Portal admin API and private-key export | `caddyfile_authn_admin_api.go` | `pkg/authn/admin_api/parser`, `PortalConfig.ConfigureAdminAPI` |
+| Portal Documents API | `caddyfile_authn_documents.go`, `caddyfile_resolve_documents.go` | `pkg/authn/documents/parser.NewDocumentsAPIConfigFromDirectives` → `PortalConfig.ConfigureDocumentsAPI`; flat enable/storage/limit statements, deferred values before validation, independent API flags; see [Documents configuration](../../configuration-authentication/references/documents.md) for realm, mount and storage boundaries |
 | Portal UI | `caddyfile_authn_ui.go` | `pkg/authn/ui`, `pkg/translate`, portal asset/template loading |
 | User transforms | `caddyfile_authn_transform.go` | `pkg/authn/transformer/parser`, `pkg/authchal/parser`, `pkg/acl`, transformer runtime |
 | Portal/policy crypto | `caddyfile_authn_crypto.go`, `caddyfile_authz_crypto.go` | `pkg/kms/crypto_keystore_config.go`, `crypto_key_config.go`, `crypto_key.go` |
@@ -163,6 +164,8 @@ Known fixture outcomes: `testcase_authorize_acl_fields_duplicate`,
 `testcase_authenticate_with_argon2_malformed`,
 `testcase_authenticate_malformed`,
 `testcase_authenticate_with_admin_api_malformed`,
+`testcase_authenticate_with_documents_block`,
+`testcase_authenticate_with_documents_duplicate`,
 `testcase_authenticate_with_token_refresh_cookie_whitespace`,
 `testcase_authenticate_with_oauth_icon_malformed`, and
 `testcase_authenticate_with_redirect_trust_malformed`,
@@ -224,8 +227,20 @@ and their Caddy validation:
 - `{claims.*}` placeholders survive Caddy resolution only in transform
   arguments. Resolved transforms are compiled again, including native JSON.
 - Portal `ui logo url` / `logo description` are valid; JSON field spellings
-  `logo_url` / `logo_description` are not UI directives. Registration attaches
-  through the global registry's identity store, not `enable user registration`.
+  `logo_url` / `logo_description` are not UI directives. Portal
+  `enable user registration <name> [<name>...]` selects global registries;
+  external SQLite workflows require this explicit selection and an attached
+  target identity store. Legacy registries retain automatic eligible-store
+  attachment when no selection is present.
+- Documents uses flat portal statements, not a nested `documents api` block.
+  Omitted, disabled and storage-only settings do not enable the API or open its
+  database. Disabled input still obeys directive syntax and duplicate checks;
+  enabled storage additionally validates realms, permanent origin/mount binding
+  and quotas. Runtime-backed collections resolve before shared validation.
+  Parsing success alone does not establish current local browser-session
+  authority, private filesystem readiness or ciphertext ownership; those use
+  the [Documents API contract](../../authentication-portal-api/references/documents.md)
+  and its actual Caddy acceptance.
 - Messaging file providers use `root_dir` and require `sender`. Registration
   `admin email` (alias `admin emails`) takes exactly one address per line;
   repeating it replaces the prior address. SSO apps require `cert`, a private
