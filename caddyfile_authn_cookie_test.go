@@ -213,6 +213,40 @@ break"`, "cookie domain example.com {\n path /app\n}",
 	}
 }
 
+func TestPortalCookieSandboxNamespace(t *testing.T) {
+	for _, tc := range []struct {
+		name, first, second string
+	}{
+		{"access", "cookie sandbox id name FLOW", "cookie access token name FLOW_access"},
+		{"SAML inside sandbox", "cookie sandbox id name FLOW", "cookie saml session id name FLOW_saml"},
+		{"sandbox inside SAML", "cookie saml session id name SAML", "cookie sandbox id name SAML_flow"},
+		{"legacy aliases", "set sandbox_id cookie name FLOW", "set access_token cookie name FLOW_access"},
+		{"prefix-derived sandbox", "cookie prefix LOGIN", "cookie access token name LOGIN_SANDBOX_ID_access"},
+	} {
+		for _, reverse := range []bool{false, true} {
+			order, first, second := "declared", tc.first, tc.second
+			if reverse {
+				order, first, second = "reversed", second, first
+			}
+			t.Run(tc.name+"/"+order, func(t *testing.T) {
+				_, err := parseCookieApp(cookiePortalInput(first + "\n" + second))
+				if err == nil || !strings.Contains(err.Error(), `cookies: invalid cookie configuration`) {
+					t.Fatal("dynamic proof namespace collision did not reach shared cookie validation")
+				}
+			})
+		}
+	}
+	// Reserving FLOW_ must not reject unrelated names that merely contain FLOW.
+	app, err := parseCookieApp(cookiePortalInput("cookie sandbox id name FLOW\ncookie access token name FLOWISH_access\ncookie saml session id name OTHER_FLOW"))
+	if err != nil {
+		t.Fatal("unrelated cookie names were rejected")
+	}
+	config := app.Config.AuthenticationPortals[0].CookieConfig
+	if config.SandboxIDCookieName != "FLOW" || config.AccessTokenCookieName != "FLOWISH_access" || config.SAMLSessionIDCookieName != "OTHER_FLOW" {
+		t.Fatal("valid explicit names changed during adaptation")
+	}
+}
+
 func TestPortalCookieRuntimeDirectives(t *testing.T) {
 	t.Setenv("COOKIE_PREFIX", "portal")
 	t.Setenv("COOKIE_ACCESS", "AUTHP_ACCESS_TOKEN")

@@ -28,6 +28,7 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -163,7 +164,13 @@ func (crossDeviceSAMLSession) GetSession(_ http.ResponseWriter, _ *http.Request,
 	}}
 }
 
-func testCaddyCrossDeviceSAML(t *testing.T, cert, key string, roots *x509.CertPool, pair tls.Certificate) {
+// newCrossDeviceSAMLFixture retains the real signed IdP exchange for focused
+// host journeys; configure may amend Caddy routing and destination trust.
+func newCrossDeviceSAMLFixture(t *testing.T, cert, key string, roots *x509.CertPool, pair tls.Certificate, configure func(string) string, hostname ...string) (*localIdentityFixture, string) {
+	t.Helper()
+	if len(hostname) > 1 || len(hostname) == 1 && hostname[0] != "localhost" {
+		t.Fatal("unsupported fixture IdP hostname")
+	}
 	signingKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
@@ -180,6 +187,13 @@ func testCaddyCrossDeviceSAML(t *testing.T, cert, key string, roots *x509.CertPo
 	sp := &crossDeviceSAMLProvider{}
 	idpServer := httptest.NewUnstartedServer(nil)
 	idpURL := "https://" + idpServer.Listener.Addr().String()
+	if len(hostname) == 1 {
+		_, port, err := net.SplitHostPort(idpServer.Listener.Addr().String())
+		if err != nil {
+			t.Fatal("cannot resolve fixture IdP listener")
+		}
+		idpURL = "https://" + net.JoinHostPort(hostname[0], port)
+	}
 	parseURL := func(value string) url.URL {
 		u, err := url.Parse(value)
 		if err != nil {
@@ -224,9 +238,18 @@ func testCaddyCrossDeviceSAML(t *testing.T, cert, key string, roots *x509.CertPo
 		sp.metadata = serviceProvider.Metadata()
 		provider := fmt.Sprintf("saml identity provider saml_upstream {\nrealm cross-device\ndriver generic\nentity_id urn:caddy:cross-device\nidp_login_url %s/sso\nidp_metadata_location %q\nidp_sign_cert_location %q\nacs_url %s/auth/saml/cross-device\n}\n", idpURL, metadataPath, signingPath, base)
 		input = strings.Replace(input, "security {", "security {\n"+provider, 1)
-		return strings.Replace(input, "enable identity stores localdb excludeddb", "enable identity provider saml_upstream", 1)
+		input = strings.Replace(input, "enable identity stores localdb excludeddb", "enable identity provider saml_upstream", 1)
+		if configure != nil {
+			input = configure(input)
+		}
+		return input
 	}}
 	f := crossDeviceFixture(t, options, "enable cross-device login\ntransform user {\nmatch realm cross-device\naction add role authp/user\n}", cert, key, roots)
+	return f, idpURL
+}
+
+func testCaddyCrossDeviceSAML(t *testing.T, cert, key string, roots *x509.CertPool, pair tls.Certificate) {
+	f, idpURL := newCrossDeviceSAMLFixture(t, cert, key, roots, pair, nil)
 	requester, approver := crossDeviceBrowser(t, f.oidcRPFixture), crossDeviceBrowser(t, f.oidcRPFixture)
 	i := crossDeviceStart(t, requester)
 	crossDeviceBegin(t, approver, i)

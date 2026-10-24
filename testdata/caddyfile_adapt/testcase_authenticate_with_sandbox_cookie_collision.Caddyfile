@@ -1,0 +1,8 @@
+{
+	security {
+		authentication portal myportal {
+			cookie sandbox id name FLOW
+			cookie access token name FLOW_access
+		}
+	}
+}

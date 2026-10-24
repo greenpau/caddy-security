@@ -157,6 +157,17 @@ asserted here. Registration confirmation/approval and live SMTP remain separate.
 
 ## Authorization login redirects
 
+Per-flow destination ownership has three complementary parents:
+`TestCaddyLoginDestinationsE2E` (TLS local/MFA, refresh coexistence, bounds and
+native proof rotation), `TestCaddyLoginDestinationsProvidersE2E` (OAuth, signed
+SAML and cross-device), and `TestCaddyLoginDestinationsBrowserE2E` (trusted Chrome
+root/nested tabs, fresh intent and native cross-site SAML POST). Their subprocess
+coverage is collected normally. See the
+[login destination contract](../../configuration-authentication/references/login-destinations.md)
+for precedence and the difference between independent authentication transactions
+and the browser's shared current identity. Replay checks retain original proofs;
+successful concurrent flows must never depend on restoring cookies.
+
 `TestAuthzRedirectRequestTargets` tests both redirect renderers through the Caddy
 authorization handler, including origin-form, absolute-form and quic-go's
 absolute-URL/origin-target representation. JavaScript runs in Node rather than

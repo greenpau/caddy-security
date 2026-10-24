@@ -102,10 +102,41 @@ names must be valid HTTP cookie names and distinct across all ten roles.
 Names may be explicitly unprefixed. `__Host-` and `__Secure-` remain optional
 compatibility cases; a name alone does not establish the required attributes.
 
-The shared validator reserves the configured SAML cookie name followed by `_`
-for per-login transaction cookies. Other portal roles and upstream identity-token cookie
-names cannot use that prefix. This is shared validation, without a new Caddy
-directive; preserve it when resolving names and qualifying parallel SAML flows.
+The shared validator reserves the configured SAML and sandbox cookie names
+followed by `_` for per-login transaction cookies. Other portal roles, provider
+login cookies and upstream identity-token cookie names cannot use those prefixes;
+the two dynamic prefixes cannot overlap. This is shared validation, without a
+new Caddy directive. Apply it after prefix and refresh-name overrides resolve.
+
+### Independent Browser Login Proofs
+
+Each local or connected-provider browser sandbox issues
+`<configured-sandbox-name>_<sandbox-id>` at the normalized portal mount. It is
+host-only, HttpOnly, SameSite=Lax, expires after 300 seconds and is Secure unless
+the existing insecure mode is enabled. Ordinary cookie lifetime/domain/path
+settings cannot broaden this proof. Root mounts support explicit `__Host-`
+names; nested mounts require a compatible ordinary or `__Secure-` name.
+
+The sandbox URL selects the state; the independently random cookie value proves
+possession. An exact flow-cookie occurrence must be unique, nonempty and valid.
+Malformed, duplicate or wrong exact proofs never fall back to another cookie.
+For compatibility, starts also issue the original base-name cookie, and requests
+without the exact flow cookie can still use that legacy proof. Legacy-only
+clients retain their single-cookie concurrency limitation.
+
+Completion and termination delete only their own flow cookie. Existing shared
+base-cookie cleanup remains; another pending tab survives through its independent
+proof. Redemption is single-use even if later credential delivery fails. Ordinary
+factor failures remain retryable. Logout does not invalidate unfinished sandbox
+state; its five-minute lifetime and process disposal remain the boundary.
+
+Sixteen visible canonical pending proofs cause HTTP 429 before new state or proof
+issuance. This is a sequential browser budget, not a strict concurrency or rate
+limit: simultaneous starts and clients omitting cookies can bypass that count.
+The separate atomic per-portal sandbox cache admits at most 10000 live entries,
+then returns HTTP 503 without evicting live flows. Expired entries can be pruned.
+Native JSON sandboxes share server admission but retain rotating body proofs;
+they do not issue these browser cookies.
 
 For enabled [portal token refresh](../configuration-authentication/references/token-refresh.md),
 an explicit `token refresh { cookie name ... }` overrides the shared refresh

@@ -163,6 +163,9 @@ form submissions without a bound destination can still return to
 `<portal-mount>/portal`. `TestCaddyAuthorizationRedirectE2E` checks untrusted-target
 rejection through OAuth transactions and legacy local POST/cookie fallback over
 HTTP/1, HTTP/2, and HTTP/3. The refresh browser E2E checks explicit continuation.
+Read [login destinations and concurrent tabs](references/login-destinations.md)
+for bound destination precedence, fresh-login intent, browser proof isolation
+and the local/provider/Chrome acceptance surfaces.
 
 Enable admin/server API endpoints only when they are needed and protected by
 an authenticated admin session:
