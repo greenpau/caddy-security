@@ -7,7 +7,7 @@ description: "Configure portal UI templates, static assets, themes, languages, l
 
 ## Published UI contract
 
-The v1.3.3 embedded portal and OIDC pages supply their themed layouts and
+The selected embedded portal and OIDC pages supply their themed layouts and
 browser color preference behavior automatically. `theme basic` remains the
 only registered Caddy theme; do not invent `theme dark` or `theme light`.
 Profile assets include `profile/images/banner.svg`, `favicon.svg` and
@@ -104,6 +104,8 @@ and their embedded script instead of copying runtime assets into Caddy. Use
 [configuration-authentication-cross-device](../configuration-authentication-cross-device/SKILL.md)
 to check explicit approval, matching-code/account display, navigation,
 cancellation and embedded-browser compatibility when customizing those pages.
+Read [cross-device presentation](references/cross-device.md) for template hooks,
+clipboard feedback, keyboard focus, responsive layout and Caddy browser evidence.
 
 ## Refresh-Aware Custom Templates
 

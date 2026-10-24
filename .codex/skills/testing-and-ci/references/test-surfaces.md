@@ -32,6 +32,11 @@ reload/restart and rollback. `TestCaddyCrossDeviceProvidersE2E` completes signed
 OAuth and SAML callbacks; `TestCaddyCrossDeviceBrowserE2E` uses private Chrome
 trust and independent contexts for QR/copy, approval, cancellation, navigation,
 native aborts without newer static helpers, and stale two-account forms.
+It also checks six responsive widths, real keyboard input, Chrome accessibility
+semantics, immediate/delayed clipboard denial, explicit Deny and fresh recovery;
+a smaller nested-mount journey checks asset/link bases. Keep asynchronous script
+errors visible and await context disposal. See
+[presentation evidence and limits](../../configuration-authentication-ui/references/cross-device.md#caddy-acceptance).
 `TestCaddyCrossDeviceExpirationE2E` adds a deliberate five-minute real deadline
 and source-quota check. These are regular tests, separate from official OP
 conformance. The [cross-device owner](../../configuration-authentication-cross-device/SKILL.md)
