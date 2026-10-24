@@ -119,11 +119,13 @@ examples. After defaults and disabled-backend filtering, a portal must have at
 least one identity store or identity provider; SSO providers are additional app
 providers and do not satisfy the login-backend requirement by themselves.
 
-User registration is global authcrunch config. A `user registration <name>`
-block names its target identity store; authcrunch validates that store, marks it
-registration-enabled, and attaches the registry to any portal that has that
-identity store enabled. Do not generate an `enable user registration <name>`
-portal line: the current `enable` parser does not accept it.
+User registration is global configuration. `enable user registration <name>
+[<name>...]` selects named registries whose identity stores must also be enabled
+in this portal. External SQLite workflows require this explicit selection.
+Without a nonempty selection, legacy `user registration <name>` blocks attach
+automatically to eligible stores. Signup visibility belongs to each portal's
+attached registry metadata. See [registration configuration](../configuration-registrations/SKILL.md)
+for the different confirmation and account-activation policies.
 
 ## Common Portal Options
 

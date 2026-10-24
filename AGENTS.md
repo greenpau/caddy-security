@@ -95,6 +95,9 @@ modules register from package `init` hooks.
 - `caddyfile_state.go` adapts the optional root runtime-state block. Persistent
   roots are constructed in `App.Start`; overlapping persistent reload is rejected
   before candidate routes start, and Cleanup drains calls before root disposal.
+- `app_registration_workflows.go` binds caller-owned enrollment workflows after
+  account stores and notification queues; SQLite signup requires explicit portal
+  selection and confirms directly into its account store.
 - `*_test.go` files sit beside the code they exercise. `caddyfile_adapt_test.go`
   is fixture-driven and compares Caddyfile input against expected adapted JSON.
 - `testdata/caddyfile_adapt/` contains `.Caddyfile`, `.json`, optional `.env`,

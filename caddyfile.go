@@ -53,6 +53,7 @@ func init() {
 //			oauth application <nickname> { ... }
 //			sso provider <name> { ... }
 //			user registration <name> { ... }
+//			user registration <driver> <name> { ... }
 //			authentication portal <name> { ... }
 //			authorization policy <name> { ... }
 //		}
@@ -202,7 +203,7 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 				return nil, err
 			}
 		case "user":
-			if err := parseCaddyfileUser(d, app.Config); err != nil {
+			if err := parseCaddyfileUser(d, app); err != nil {
 				return nil, err
 			}
 		case "authentication":

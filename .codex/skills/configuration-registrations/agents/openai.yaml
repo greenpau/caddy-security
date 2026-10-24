@@ -1,4 +1,4 @@
 interface:
   display_name: "Configuration Registrations"
-  short_description: "Configure user registration flows"
-  default_prompt: "Use $configuration-registrations to configure caddy-security user registration flows."
+  short_description: "Configure signup and durable SQLite enrollment"
+  default_prompt: "Use $configuration-registrations to configure legacy signup or SQLite enrollment, portal selection and recovery."

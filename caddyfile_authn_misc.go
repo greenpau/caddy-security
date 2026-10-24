@@ -16,6 +16,8 @@ package security
 
 import (
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
@@ -29,6 +31,7 @@ import (
 //	enable source ip tracking
 //	enable identity <store|provider> <name> [<name>...]
 //	enable sso provider <name> [<name>...]
+//	enable user registration <name> [<name>...]
 //	validate source address
 //	trust <login|logout> redirect uri domain [exact|partial|prefix|suffix|regex] <domain> path [exact|partial|prefix|suffix|regex] <path>
 //
@@ -43,6 +46,24 @@ func parseCaddyfileAuthPortalMisc(h *caddyfile.Dispenser, portal *authn.PortalCo
 		switch {
 		case v == "source ip tracking":
 			portal.TokenGrantorOptions.EnableSourceAddress = true
+		case len(args) >= 2 && args[0] == "user" && args[1] == "registration":
+			if len(args) < 3 {
+				return h.Errf("user registration requires at least one name")
+			}
+			for _, name := range args[2:] {
+				if name == "" || len(name) > 128 || !utf8.ValidString(name) || strings.TrimSpace(name) != name || strings.ContainsFunc(name, unicode.IsControl) {
+					return h.Errf("invalid user registration name")
+				}
+			}
+			if h.Next() {
+				nested := h.Val() == "{" && !h.Token().Quoted()
+				h.Prev()
+				if nested {
+					return h.Errf("user registration selection does not accept a block")
+				}
+			}
+			portal.UserRegistries = append(portal.UserRegistries, args[2:]...)
+			return nil
 		case strings.HasPrefix(v, "identity provider"):
 			if len(args) < 3 {
 				return h.Errf("malformed directive for %s: %s", rootDirective, v)

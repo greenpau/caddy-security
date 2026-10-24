@@ -1,13 +1,19 @@
 ---
 name: configuration-registrations
-description: "Configure local user signup, domain/MX rules, terms, confirmation, dropbox storage, and messaging. Use for registration versus account activation; OAuth client registration is separate."
+description: "Configure legacy signup and SQLite email-confirmed enrollment, portal selection, messaging, storage and recovery. OAuth client registration is separate."
 ---
 
 # Configuration Registrations
 
 ## Purpose
 
-Use this skill to configure `user registration <name>` blocks. Dispatch starts
+Use this skill to configure user signup. Read [SQLite enrollment](references/sqlite-workflows.md)
+for `user registration sqlite <name>`: confirmation creates a login account with
+a fixed policy and requires explicit portal selection. The legacy
+`user registration <name>` flow below writes a separate approval dropbox.
+OAuth client registrations retain their own configuration owner.
+
+Legacy dispatch starts
 in `caddyfile_user.go`; registration instructions are collected by
 `caddyfile_user_registration.go`. The Caddyfile parser injects
 `name <block-name>` and `kind local`, then forwards the block instructions to
@@ -16,9 +22,10 @@ authcrunch for validation.
 Registration flows attach to the target identity store declared by
 `identity store <name> [<realm>]`. During authcrunch validation, portals using
 that identity store get registration enabled for that store and the registry is
-attached at runtime. The current portal parser does not accept
-`enable user registration <name>`; use `enable identity store <name>` on the
-portal instead.
+attached at runtime. Legacy registrations are selected automatically for eligible
+portals unless a nonempty explicit `enable user registration <name> [<name>...]`
+selection is supplied. The portal must also enable each selected registry's
+identity store. SQLite workflows require explicit registration selection.
 
 ## Shape
 
@@ -94,7 +101,7 @@ the opposite of the last configured rule. For a simple allow list, use only
 
 Coordinate the `email provider` value with `configuration-messaging`; despite
 the directive name, authcrunch can notify through a matching email or file
-messaging provider. Coordinate identity store names with
+messaging provider or a bound SQLite outbox. Coordinate identity store names with
 `configuration-identity-stores`.
 
 ## Workflow Notes
@@ -150,11 +157,11 @@ The adaptation/resolution fixture verifies configuration shape and defaults,
 not a registration journey. `TestCaddyPasswordArgon2E2E/public-registration`
 uses the actual executable and a disposable file sender to reject valid, malformed
 and whitespace-padded bcrypt/Argon2 imports without a message or persisted user;
-ordinary plaintext reaches confirmation-message delivery. This does not qualify
-confirmation, approval, transfer or SMTP. The lifecycle tests exercise registry ownership
-and replacement, but this checkout has no complete user-signup E2E. Do not
+ordinary plaintext reaches confirmation-message delivery. `TestCaddySQLiteMessagingE2E`
+also qualifies legacy confirmation, the separate dropbox and administrator
+notification through real TLS Caddy and SMTP, including restart and worker
+cleanup. It deliberately verifies that confirmation alone does not create a login
+account. The lifecycle tests exercise registry ownership and replacement. Do not
 confuse `TestCaddyRegistrationE2E`, which covers persisted OAuth client
-registrations, with user signup. A future user-signup acceptance case should
-reject wrong codes and disallowed domains, confirm one emitted link/passcode,
-verify only the dropbox receives the account, reject replay or lost pending
-state, and observe the administrator notification and separate activation.
+registrations, with user signup. Retain separate acceptance for wrong codes,
+domain policy, replay/lost pending state and the management activation boundary.

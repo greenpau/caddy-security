@@ -16,7 +16,6 @@ package security
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
@@ -29,18 +28,21 @@ const (
 // Syntax:
 //
 //	user registration <name> { ... }
+//	user registration <driver> <name> { ... }
 //
 // Static user accounts belong in local identity store blocks, not here.
-func parseCaddyfileUser(d *caddyfile.Dispenser, cfg *authcrunch.Config) error {
+func parseCaddyfileUser(d *caddyfile.Dispenser, app *App) error {
 	args := d.RemainingArgs()
-	if len(args) < 2 {
+	if len(args) < 2 || len(args) > 3 {
 		return d.ArgErr()
 	}
 	switch {
 	case args[0] == "registration":
-		parseCaddyfileUserRegistration(d, cfg, args[1], "local")
+		if len(args) == 3 {
+			return parseCaddyfileRegistrationWorkflow(d, app, args[1])
+		}
+		return parseCaddyfileUserRegistration(d, app.Config, args[1], "local")
 	default:
 		return errors.ErrMalformedDirective.WithArgs(userPrefix, args)
 	}
-	return nil
 }

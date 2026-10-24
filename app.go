@@ -98,6 +98,10 @@ type App struct {
 	messagingProviders       []preparedMessagingProvider
 	messagingWorkers         []*sqliteMessagingWorker
 
+	// RegistrationWorkflowConfigs declares caller-owned enrollment backends.
+	RegistrationWorkflowConfigs []json.RawMessage `json:"registration_workflows,omitempty" caddy:"namespace=security.registration_workflows inline_key=driver"`
+	registrationWorkflows       []preparedRegistrationWorkflow
+
 	// ClaimsEnrichment binds host modules to individual authorization policies.
 	ClaimsEnrichment []*ClaimsEnrichmentBinding `json:"claims_enrichment,omitempty"`
 	claimsEnrichment []preparedClaimsEnrichment
@@ -212,6 +216,12 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareIdentityStores(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
+		return err
+	}
+	if err := app.prepareRegistrationWorkflows(ctx, &config); err != nil {
+		return err
+	}
 	if err := config.Validate(); err != nil {
 		err = app.privateConfigError("validate runtime configuration", err)
 		app.logger.Error(
@@ -230,9 +240,6 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	if err := app.prepareExternalAuthorization(ctx, &config); err != nil {
-		return err
-	}
-	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
 		return err
 	}
 	if err := app.prepareCredentialAuthenticators(ctx, &config); err != nil {
@@ -262,6 +269,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 // constructServer runs with app.mu held, before publishing admission.
 func (app *App) constructServer(config *authcrunch.Config) error {
+	if err := app.validateRegistrationWorkflowFiles(); err != nil {
+		return err
+	}
 	// Local stores cache independent database snapshots. Until AuthCrunch can
 	// coordinate those snapshots, overlapping owners must fail before NewServer
 	// can initialize or overwrite users in a file used by the live deployment.
@@ -294,7 +304,15 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
-	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores})
+	registries, registrationClosers, err := app.attachRegistrationWorkflows(app.pluginContext, identityStores, config)
+	backendClosers = append(backendClosers, registrationClosers...)
+	if err != nil {
+		closeErr := closePluginResources(backendClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
+	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores, UserRegistries: registries})
 	if err != nil {
 		closeErr := closePluginResources(backendClosers)
 		releaseIdentityFiles(app.identityFiles)

@@ -161,8 +161,8 @@ authorize /api/* with api_policy
   to configure SAML login identity providers, parsed by `caddyfile_identity.go`
   and `caddyfile_identity_provider.go`, implemented by `go-authcrunch/pkg/idp/saml`.
 - Use [configuration-registrations](../configuration-registrations/SKILL.md) to
-  configure user registrations, parsed by `caddyfile_user.go` and
-  `caddyfile_user_registration.go`.
+  configure legacy signup and SQLite enrollment workflows, their explicit portal
+  selection, storage and confirmation recovery.
 - Use [configuration-runtime-resolution](../configuration-runtime-resolution/SKILL.md)
   to configure runtime placeholder and secret resolution, applied by
   `caddyfile_resolve.go`.

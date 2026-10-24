@@ -53,11 +53,13 @@ const (
 //		enable identity store <name> [<name>...]
 //		enable identity provider <name> [<name>...]
 //		enable sso provider <name> [<name>...]
+//		enable user registration <name> [<name>...]
 //		trust <login|logout> redirect uri domain [exact|partial|prefix|suffix|regex] <domain> path [exact|partial|prefix|suffix|regex] <path>
 //	}
 //
-// Registration is configured with user registration in security and attached to
-// an identity store; there is no enable user registration portal directive.
+// Registrations are declared globally and bound to an enabled identity store.
+// External workflows require explicit enable user registration selection;
+// eligible legacy local registrations retain their implicit default selection.
 // Cross-device login is omitted/disabled by default. Collect its complete
 // statements before shared validation so imports cannot override a prior choice.
 //

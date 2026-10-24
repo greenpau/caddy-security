@@ -110,6 +110,9 @@ attachments succeed. On failure it closes that root, then acquired backend
 resources in reverse order. On retirement it drains requests, cancels and joins
 host messaging workers, closes the root,
 then closes backend resources before releasing identity-file reservations.
+Enrollment workflows close before their borrowed queues and account stores.
+Their derived normalized descriptors participate in root persistence binding;
+pending/account durability remains independent of session persistence.
 `Cleanup` retains the joined result for concurrent callers; a backend cleanup
 failure does not skip later resources. Backend diagnostics are redacted.
 See [host plugin contracts](host-plugins.md) for the factory API and category

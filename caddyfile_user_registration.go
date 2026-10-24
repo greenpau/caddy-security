@@ -42,8 +42,9 @@ import (
 //
 // admin emails is an alias for admin email; both take one address.
 // Repeated lines replace the earlier address.
-// Repeat domain rules for multiple patterns. Registration attaches to the named
-// store; it is not enabled with a directive inside an authentication portal.
+// Repeat domain rules for multiple patterns. Legacy registration defaults to
+// portals using its named store; enable user registration can select it explicitly.
+// External workflow blocks are handled by parseCaddyfileRegistrationWorkflow.
 func parseCaddyfileUserRegistration(d *caddyfile.Dispenser, cfg *authcrunch.Config, name, kind string) error {
 	instructions := []string{}
 	instructions = append(instructions, cfgutil.EncodeArgs([]string{"name", name}))

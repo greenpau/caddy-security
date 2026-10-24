@@ -64,6 +64,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		shouldErr           bool
 		err                 error
 	}{
+		{name: "SQLite registration workflow", inputFileNamePrefix: "testcase_registration_sqlite"},
 		{name: "SQLite messaging provider", inputFileNamePrefix: "testcase_messaging_sqlite"},
 		{name: "SQLite identity store", inputFileNamePrefix: "testcase_identity_sqlite"},
 		{name: "SQLite secrets manager", inputFileNamePrefix: "testcase_secrets_sqlite"},

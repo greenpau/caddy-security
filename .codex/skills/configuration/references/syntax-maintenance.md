@@ -80,7 +80,7 @@ change with the selected host parser.
 | SQLite credential authenticators | `caddyfile_credential_authenticator.go`, `credential_authenticator_sqlite.go` | `plugins/credential-authenticators/sqlite/parser`; root `credential authenticator sqlite <name>` declarations bind existing policy API-key syntax with exact names/realms before root construction |
 | Credentials | `caddyfile_credentials.go` | `pkg/credentials` |
 | Messaging | `caddyfile_messaging.go`, `caddyfile_messaging_backend.go`, `messaging_sqlite.go` | `pkg/messaging/email_provider.go`, `file_provider.go`, `plugins/messaging/sqlite/parser` |
-| User registration | `caddyfile_user_registration.go` | `pkg/registry/local_user_registry.go`, domain rules |
+| User registration | `caddyfile_user_registration.go`, `caddyfile_registration_workflow.go`, `registration_workflow_sqlite.go` | `pkg/registry/local_user_registry.go` owns legacy policy; `plugins/registration-workflows/sqlite/parser` owns fixed SQLite enrollment; portal selection maps to `PortalConfig.UserRegistries` |
 | Secrets manager body | `caddyfile_secrets.go`, `secrets_sqlite.go` | Registered `security.secrets.<module>` parser; bundled SQLite delegates to `plugins/secrets/sqlite/parser`, reads one record and closes before consumer construction |
 | Runtime placeholders | `caddyfile_resolve.go`, `app_config.go`, deferred cookie collection | Selected typed validators and raw instruction parsers; see the runtime-resolution skill |
 
