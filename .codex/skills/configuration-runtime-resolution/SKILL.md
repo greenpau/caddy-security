@@ -74,11 +74,17 @@ The unit tests in `app_lifecycle_test.go` and actual Caddy reload tests in
 Guard raw instruction argument counts before calling AuthCrunch's dispatch
 parsers: a one-token `crypto` statement or messaging/registration `kind` statement
 can otherwise panic during provisioning. For crypto, credentials, messaging,
-registration and transform instructions, check resolved tokens before `cfgutil.EncodeArgs`,
-which trims trailing empty tokens. Reject empty arguments and report the
-field/statement index without including secret values.
-Keep command semantics in AuthCrunch. Include literal empty tokens and empty
-environment replacements in unit and Caddy reload rejection tests, verifying
+registration and transform instructions, check resolved tokens before encoding,
+since the shared codec trims trailing empty tokens. Reject empty arguments and
+report the field/statement index without including secret values.
+For general raw instructions, use the lossless encoding fallback when the shared
+codec would trim trailing tabs or Unicode whitespace. Exact credential bytes
+must survive both encoding and AuthCrunch parsing. When managers supply private
+values, app-level resolution, validation and constructor failures report the
+failed phase without wrapping upstream errors that may contain resolved
+instructions. Declarative module JSON retains references; private runtime
+copies hold resolved data. Keep command semantics in AuthCrunch. Include literal
+empty tokens and empty environment replacements in unit and Caddy reload rejection tests, verifying
 that the old deployment still authorizes requests.
 
 Resolve these app config areas:
@@ -215,7 +221,7 @@ Empty replacements must fail before the codec can drop a token and change its
 meaning. Reject CR/LF in raw transform instructions before decoding, since the
 CSV decoder can discard later records. Shared validation also rejects multiline
 resolved transform values. Native JSON transformers receive the same validation.
-Selected AuthCrunch v1.3.11 supports `match any` without timestamps, including
+The selected AuthCrunch supports `match any` without timestamps, including
 refresh/OIDC/System API identity checks and quoted/runtime-resolved encodings.
 Keep shared compilation and single-line validation; see
 [unconditional matching](../configuration-authentication-user-transforms/SKILL.md#unconditional-matching).
@@ -236,7 +242,7 @@ manager module must provide them.
 
 When adding a new placeholder-bearing field, check the authcrunch struct and
 validation path first. Raw encoded directive fields usually need
-`cfgutil.DecodeArgs`, replacement of each argument, `cfgutil.EncodeArgs`, and
+`cfgutil.DecodeArgs`, replacement of each argument, lossless encoding, and
 validation. Typed fields need explicit assignment in `caddyfile_resolve.go`.
 
 `caddyfile_resolve_instructions_test.go` checks encoded credentials, messaging,

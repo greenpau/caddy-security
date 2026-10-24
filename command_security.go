@@ -25,8 +25,8 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "security",
-		Short: "Inspect the security version and manage users, credentials, and provider signing keys",
-		Long:  "Security administration commands. Use version to print the linked go-authcrunch version. Use local to manage local user stores through a portal or generate password hashes and API keys offline. Use oauth to initialize private provisioning storage, create applications, or rotate client secrets. Use oidc to create provider signing keys. Run security <group> --help to explore its commands.",
+		Short: "Inspect the security version and manage users, credentials, secrets, and provider signing keys",
+		Long:  "Security administration commands. Use version to print the linked go-authcrunch version. Use local to manage local user stores through a portal or generate password hashes and API keys offline. Use oauth to initialize private provisioning storage, create applications, or rotate client secrets. Use oidc to create provider signing keys. Use secrets to provision private SQLite secret records. Run security <group> --help to explore its commands.",
 		CobraFunc: func(cmd *cobra.Command) {
 			// Cobra parses flags before running our handlers. Its default errors
 			// include raw values and unknown flag names, which may contain secrets.
@@ -36,6 +36,7 @@ func init() {
 			})
 			addSecurityProvisioningCommands(cmd)
 			addSecurityLocalCommands(cmd)
+			addSecuritySecretsCommands(cmd)
 			cmd.AddCommand(&cobra.Command{
 				Use: "version", Short: "Print the linked go-authcrunch version",
 				Long: "Print the go-authcrunch module version embedded in this binary, including any module replacement. No configuration or running server is required.",

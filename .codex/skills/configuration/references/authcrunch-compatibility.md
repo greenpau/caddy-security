@@ -54,6 +54,14 @@ root API. Other injected identity backends also require a root-assembly review.
 root runtime or relax persistent-state ownership to work around missing APIs.
 SQLite login-transaction storage is a local reference, not multi-host portal HA.
 
+The bundled `security.secrets.sqlite` adapter reads one private record per Caddy
+candidate and closes storage before constructing consumers. Trusted offline
+`security secrets put|delete` commands mutate records; consumer adoption requires
+an explicit successful reload. Exact types, invalid replacement, failed
+candidates, restart and redaction are exercised through the actual Caddy command
+and TLS routes. See [SQLite secrets](../../configuration-secrets/references/sqlite.md).
+This storage concerns credentials, independently of portal session persistence.
+
 Upstream CI/OpenAPI automation, standalone hosting and CLA changes do not add
 Caddy directives. Preserve Caddy's own tests, workflow and module version.
 

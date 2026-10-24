@@ -753,8 +753,10 @@ func TestCaddyLifecycleProcess(t *testing.T) {
 		}
 		bad := lifecycleInstructionsConfig("secrets:lifecycle:missing")
 		data := lifecycleCaddyConfig(t, addr, "missing-secret", "", bad, json.RawMessage(`{"driver":"security_lifecycle"}`))
-		if err := caddy.Load(data, true); err == nil || !strings.Contains(err.Error(), "RawCredentialConfigs[0][2]") {
-			t.Fatalf("missing raw credential secret accepted: %v", err)
+		// App errors with private managers expose only the failed phase: upstream
+		// validators may otherwise echo an entire resolved credential statement.
+		if err := caddy.Load(data, true); err == nil || !strings.Contains(err.Error(), "resolve runtime configuration with private secrets") || strings.Contains(err.Error(), lifecycleInstructionValue) {
+			t.Fatalf("missing raw credential secret did not produce a redacted failure: %v", err)
 		}
 		lifecycleGET(t, client, base+"/protected", "instructions-secret", lifecycleLogin(t, client, base), http.StatusNoContent)
 	})

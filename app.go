@@ -150,7 +150,13 @@ func (app *App) Provision(ctx caddy.Context) error {
 		zap.String("app", app.Name),
 	)
 
-	secretsManagerConfigs, err := ctx.LoadModule(app, "SecretsManagerConfigs")
+	// LoadModule consumes raw JSON. Keep declarative module configuration intact
+	// for introspection and fresh candidates; secret values stay in runtime copies.
+	secretModules := &App{SecretsManagerConfigs: make([]json.RawMessage, len(app.SecretsManagerConfigs))}
+	for i, raw := range app.SecretsManagerConfigs {
+		secretModules.SecretsManagerConfigs[i] = append(json.RawMessage(nil), raw...)
+	}
+	secretsManagerConfigs, err := ctx.LoadModule(secretModules, "SecretsManagerConfigs")
 	if err != nil {
 		app.logger.Error(
 			"app failed loading secrets manager plugins",
@@ -160,26 +166,37 @@ func (app *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 
-	for _, conf := range secretsManagerConfigs.([]any) {
-		secretsManagerPlugin := conf.(SecretsManager)
+	seenSecrets := make(map[string]bool)
+	for i, conf := range secretsManagerConfigs.([]any) {
+		secretsManagerPlugin, ok := conf.(SecretsManager)
+		if !ok {
+			return fmt.Errorf("secrets manager %d has an incompatible module interface", i)
+		}
+		metadata := secretsManagerPlugin.GetConfig(ctx)
+		id, _ := metadata["id"].(string)
+		if id == "" || seenSecrets[id] {
+			return fmt.Errorf("secrets manager %d requires a unique nonempty id", i)
+		}
+		seenSecrets[id] = true
 		app.logger.Info(
 			"loaded secrets manager plugin",
 			zap.String("app_name", app.Name),
-			zap.Any("config", secretsManagerPlugin.GetConfig(ctx)),
+			zap.Any("config", metadata),
 		)
 		app.secretsManagers = append(app.secretsManagers, secretsManagerPlugin)
 	}
 
 	repl := caddy.NewReplacer()
 	if err := resolveRuntimeAppConfig(ctx, repl, app.secretsManagers, &config, app.OAuthProviderDirectives, app.PortalTokenRefreshDirectives, app.OAuthAuthorizationDirectives, app.logger); err != nil {
-		return err
+		return app.privateConfigError("resolve runtime configuration", err)
 	}
 	// Apply resolved snapshots last so substituted paths are not expanded twice.
 	if err := resolvePortalCookieDirectives(ctx, repl, app.secretsManagers, &config, app.PortalCookieDirectives, app.logger); err != nil {
-		return err
+		return app.privateConfigError("resolve portal cookies", err)
 	}
 
 	if err := config.Validate(); err != nil {
+		err = app.privateConfigError("validate runtime configuration", err)
 		app.logger.Error(
 			"app failed validating config",
 			zap.String("app_name", app.Name),
@@ -227,7 +244,7 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 	// can initialize or overwrite users in a file used by the live deployment.
 	files, err := reserveIdentityFiles(config)
 	if err != nil {
-		return err
+		return app.privateConfigError("reserve identity storage", err)
 	}
 	app.identityFiles = files
 
@@ -240,6 +257,7 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 			// into shared Caddy logs or admin API responses.
 			return fmt.Errorf("persistent security runtime could not start; ensure the state directory is private and intact and stop its current owner before starting another instance (overlapping reload is unsupported)")
 		}
+		err = app.privateConfigError("construct runtime", err)
 		app.logger.Error(
 			"failed provisioning app server instance",
 			zap.String("app", app.Name),
@@ -270,6 +288,16 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		zap.String("app", app.Name),
 	)
 	return nil
+}
+
+// AuthCrunch parser/constructor errors can include full resolved instructions.
+// Once managers supply private values, publish only the failed phase, without
+// retaining the underlying error in Caddy logs or admin API error responses.
+func (app *App) privateConfigError(phase string, err error) error {
+	if len(app.secretsManagers) != 0 {
+		return fmt.Errorf("security app could not %s with private secrets", phase)
+	}
+	return err
 }
 
 // Start starts the App.

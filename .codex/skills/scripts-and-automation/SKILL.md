@@ -22,6 +22,10 @@ repository builds a Caddy command binary at `bin/authcrunch` from
 `authenticate` and `authorize` integrations, Caddy standard modules, and
 `caddy-trace`.
 
+Use [configuration-secrets](../configuration-secrets/SKILL.md) to provision
+SQLite secret records with `security secrets put|delete`, choose private JSON
+inputs, and adopt changes through an explicit consumer reload.
+
 For the independently installable `cmd/caddy-authenticator`, use the
 [standalone authenticator reference](references/caddy-authenticator.md). It owns
 profile-based portal login, private credentials/token/log storage, and the
@@ -118,14 +122,14 @@ choose `make test`, `make qtest`, or direct `go test` instead.
 
 Read the module's Go minimum and Caddy dependency from `go.mod`; inspect
 `Makefile` separately for the Caddy version used by `devbuild`. CI explicitly
-selects Go `1.26.8` with `GOTOOLCHAIN=local` and Node 24; Python 3.9+ runs
-automation. The default Go suite requires Chrome/Chromium for Caddy browser
-refresh E2E. Set `AUTHCRUNCH_TEST_BROWSER` when autodetection cannot find the
+selects its Go and Node versions in the build workflow, with `GOTOOLCHAIN=local`;
+Python runs automation. The default Go suite requires Chrome/Chromium for Caddy
+browser refresh E2E. Set `AUTHCRUNCH_TEST_BROWSER` when autodetection cannot find the
 executable. Missing browser/Node prerequisites fail the test; no sibling UI
 build or npm dependency installation is needed. See
 [browser validation](../authentication-portal-api/references/browser-refresh.md#validation-in-this-repository).
 
-`go.mod` and `go.sum` pin `github.com/greenpau/tested` v1.1.0 and the release tool
+`go.mod` and `go.sum` pin `github.com/greenpau/tested` and the release tool
 `github.com/greenpau/versioned/cmd/versioned`; use `go tool tested` and
 `go tool versioned`. `make dep` downloads/verifies module
 dependencies and resolves tested. `make install-test-tools` runs its version
@@ -287,7 +291,7 @@ automation. Do not edit CLA signatures or consent files unless the user asks.
 ## Security Dependency Version
 
 Run `bin/authcrunch security version` to print the go-authcrunch module linked
-into the executable, for example `go-authcrunch v1.2.6`. This uses
+into the executable, for example `go-authcrunch <module-version>`. This uses
 `runtime/debug.ReadBuildInfo` and works without a config, server, credentials,
 Go installation or source checkout. Do not substitute the caddy-security
 `VERSION`, a working-directory go.mod, or the authdb package's version banner.

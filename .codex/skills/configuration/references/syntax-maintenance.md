@@ -79,7 +79,7 @@ change with the selected host parser.
 | Credentials | `caddyfile_credentials.go` | `pkg/credentials` |
 | Messaging | `caddyfile_messaging.go` | `pkg/messaging/email_provider.go`, `file_provider.go` |
 | User registration | `caddyfile_user_registration.go` | `pkg/registry/local_user_registry.go`, domain rules |
-| Secrets manager body | `caddyfile_secrets.go` | Registered external `security.secrets.<module>` parser |
+| Secrets manager body | `caddyfile_secrets.go`, `secrets_sqlite.go` | Registered `security.secrets.<module>` parser; bundled SQLite delegates to `plugins/secrets/sqlite/parser`, reads one record and closes before consumer construction |
 | Runtime placeholders | `caddyfile_resolve.go`, `app_config.go`, deferred cookie collection | Selected typed validators and raw instruction parsers; see the runtime-resolution skill |
 
 ## Inventory and Update

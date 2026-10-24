@@ -280,7 +280,9 @@ func resolveConfigInstructions(ctx context.Context, repl *caddy.Replacer, secret
 				return nil, fmt.Errorf("%s: argument %d must not be empty", path, j)
 			}
 		}
-		entries = append(entries, cfgutil.EncodeArgs(args))
+		// The shared codec trims unquoted record-edge whitespace. Use the
+		// lossless fallback so a secret's trailing tab or Unicode space survives.
+		entries = append(entries, encodeOAuthDirective(args))
 	}
 	return entries, nil
 }

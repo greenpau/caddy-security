@@ -1,6 +1,6 @@
 ---
 name: configuration-secrets
-description: "Configure security.secrets plugins and secret lookup values for users, credentials, and crypto. Use for static/AWS manager wiring and lookup failures; runtime field support belongs to runtime resolution."
+description: "Configure security.secrets plugins and secret lookup values for users, credentials, and crypto. Use for SQLite provisioning, static/AWS wiring, and lookup failures; runtime field support belongs to runtime resolution."
 ---
 
 # Configuration Secrets
@@ -11,8 +11,8 @@ Use this skill to configure `secrets <plugin_name> <secret_id>` blocks and
 secret-backed Caddyfile values. The parser is `caddyfile_secrets.go`; runtime
 replacement is in `caddyfile_resolve.go`.
 
-Secrets managers are external Caddy modules under the `security.secrets`
-namespace. The `security` app loads them through `SecretsManagerConfigs`; each
+Secrets managers are Caddy modules under the `security.secrets` namespace.
+SQLite is bundled; static and AWS managers require external modules. The `security` app loads them through `SecretsManagerConfigs`; each
 module must expose `GetConfig(ctx)["id"]`, `GetSecret(ctx)`, and
 `GetSecretByKey(ctx, key)`.
 
@@ -48,8 +48,16 @@ secrets <secrets_plugin_name> <secret_id> {
 
 The third token is the manager ID, also called the secret ID in plugin logs and
 docs. It must match the middle segment of every lookup:
-`secrets:<secret_id>:<key>`. The inner block is owned by the external secrets
-manager module; do not invent manager-specific fields.
+`secrets:<secret_id>:<key>`. The inner block is owned by the selected secrets manager module; do not invent
+manager-specific fields. Manager IDs must be nonempty and unique across the app.
+
+## SQLite Secrets Manager
+
+Use the [SQLite secrets reference](references/sqlite.md) to configure the bundled
+`security.secrets.sqlite` module, provision records with `security secrets`,
+rotate consumers through explicit reload, and verify failure/restart behavior.
+The module reads one coherent record during provisioning and closes the database
+before consumers start. Backend writes do not change an existing runtime.
 
 ## Static Secrets Manager
 
@@ -217,7 +225,7 @@ interface after Caddy loads the module.
 
 External plugin behavior must be checked against the module included in the
 actual Caddy binary; these plugins are not selected by this repository's
-`go.mod`. In static manager v1.0.1, `{env.*}` expansion happens in
+`go.mod`. In the reviewed static manager, `{env.*}` expansion happens in
 the plugin's Caddyfile unmarshaler, so adapted JSON already contains the value.
 An unresolved placeholder becomes `CADDY_REPLACEMENT_FAILED` there. This differs
 from caddy-security's strict provisioning-time lookup. Do not use successful

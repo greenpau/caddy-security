@@ -91,3 +91,17 @@ func TestResolveRuntimeAppConfigEncodedInstructions(t *testing.T) {
 		t.Fatalf("missing raw credential secret accepted: %v", err)
 	}
 }
+
+func TestResolveRuntimeInstructionWhitespace(t *testing.T) {
+	// Tabs and NBSP at the record edge are not quoted by the ordinary CSV writer.
+	// Verify the actual credential parser, not just an encoding roundtrip.
+	value := "exact-password\t\u00a0"
+	t.Setenv("CADDY_SECURITY_EXACT_INSTRUCTION", value)
+	cfg := lifecycleInstructionsConfig("{env.CADDY_SECURITY_EXACT_INSTRUCTION}")
+	if err := ResolveRuntimeAppConfig(t.Context(), caddy.NewReplacer(), nil, cfg, zap.NewNop()); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Credentials.Generic[0].Password != value {
+		t.Fatal("credential whitespace changed")
+	}
+}
