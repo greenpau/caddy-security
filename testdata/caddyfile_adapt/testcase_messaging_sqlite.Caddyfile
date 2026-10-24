@@ -1,0 +1,18 @@
+{
+	security {
+		messaging email provider smtp-local {
+			address 127.0.0.1:1025
+			protocol smtp
+			passwordless
+			sender auth@example.test
+		}
+		messaging sqlite provider notifications {
+			path "/private mail/outbox.db"
+			timeout 1500ms
+			delivery smtp-local
+		}
+		messaging sqlite provider queue-only {
+			path "/private mail/outbox.db"
+		}
+	}
+}

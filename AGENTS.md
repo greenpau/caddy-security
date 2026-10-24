@@ -77,6 +77,9 @@ modules register from package `init` hooks.
   `caddyfile_authz_*` files parse authorization policy subdirectives such as
   ACLs, shortcuts, bypass rules, crypto, header injection, and miscellaneous
   policy settings. `caddyfile_utils.go` contains small parser helpers.
+- `app_messaging.go` binds caller-owned notification providers.
+  `messaging_sqlite.go` adapts private SQLite outboxes; bounded SMTP delivery
+  workers start with the app and stop after producers drain.
 - `caddyfile_resolve.go` applies Caddy replacer values and
   `security.secrets.*` plugin lookups to authcrunch configuration during
   provisioning.

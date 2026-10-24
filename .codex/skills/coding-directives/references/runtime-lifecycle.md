@@ -8,7 +8,7 @@ The `security` app owns one `authcrunch.Server` per Caddy configuration.
 `authenticate` and `authorize` borrow its portals and gatekeepers. Route modules
 never dispose the server, providers, authenticators, or component caches.
 `App.Cleanup` closes admission, waits for admitted AuthCrunch calls to return,
-then calls `Server.Close` once. Concurrent cleanup callers wait for the same
+then cancels and joins host messaging workers before calling `Server.Close` once. Concurrent cleanup callers wait for the same
 result, including cleanup errors.
 
 ## Host lifecycle traced
@@ -107,7 +107,8 @@ roll back a replacement already serving.
 Injected backends have separate ownership from the root's built-in components.
 The app attaches them only to a private root and publishes admission after all
 attachments succeed. On failure it closes that root, then acquired backend
-resources in reverse order. On retirement it drains requests, closes the root,
+resources in reverse order. On retirement it drains requests, cancels and joins
+host messaging workers, closes the root,
 then closes backend resources before releasing identity-file reservations.
 `Cleanup` retains the joined result for concurrent callers; a backend cleanup
 failure does not skip later resources. Backend diagnostics are redacted.

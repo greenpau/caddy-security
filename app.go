@@ -93,6 +93,11 @@ type App struct {
 	IdentityStoreConfigs []json.RawMessage `json:"identity_stores,omitempty" caddy:"namespace=security.identity_stores inline_key=driver"`
 	identityStores       []preparedIdentityStore
 
+	// MessagingProviderConfigs declares caller-owned notification backends.
+	MessagingProviderConfigs []json.RawMessage `json:"messaging_providers,omitempty" caddy:"namespace=security.messaging inline_key=driver"`
+	messagingProviders       []preparedMessagingProvider
+	messagingWorkers         []*sqliteMessagingWorker
+
 	// ClaimsEnrichment binds host modules to individual authorization policies.
 	ClaimsEnrichment []*ClaimsEnrichmentBinding `json:"claims_enrichment,omitempty"`
 	claimsEnrichment []preparedClaimsEnrichment
@@ -227,6 +232,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareExternalAuthorization(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
+		return err
+	}
 	if err := app.prepareCredentialAuthenticators(ctx, &config); err != nil {
 		return err
 	}
@@ -262,25 +270,33 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		return app.privateConfigError("reserve identity storage", err)
 	}
 	app.identityFiles = files
-	credentialClosers, err := app.attachCredentialAuthenticators(app.pluginContext)
+	backendClosers, err := app.attachCredentialAuthenticators(app.pluginContext)
 	if err != nil {
-		closeErr := closePluginResources(credentialClosers)
+		closeErr := closePluginResources(backendClosers)
 		releaseIdentityFiles(app.identityFiles)
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
 
 	identityStores, identityClosers, err := app.attachIdentityStores(app.pluginContext)
-	credentialClosers = append(credentialClosers, identityClosers...)
+	backendClosers = append(backendClosers, identityClosers...)
 	if err != nil {
-		closeErr := closePluginResources(credentialClosers)
+		closeErr := closePluginResources(backendClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
+	messagingClosers, workers, err := app.attachMessagingProviders(app.pluginContext, config)
+	backendClosers = append(backendClosers, messagingClosers...)
+	if err != nil {
+		closeErr := closePluginResources(backendClosers)
 		releaseIdentityFiles(app.identityFiles)
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
 	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{IdentityStores: identityStores})
 	if err != nil {
-		closeErr := closePluginResources(credentialClosers)
+		closeErr := closePluginResources(backendClosers)
 		releaseIdentityFiles(app.identityFiles)
 		app.identityFiles = nil
 		if config.State != nil {
@@ -297,7 +313,7 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		return errors.Join(err, closeErr)
 	}
 	claimsClosers, err := app.attachClaimsEnrichment(app.pluginContext, server)
-	closers := append(credentialClosers, claimsClosers...)
+	closers := append(backendClosers, claimsClosers...)
 	if err == nil {
 		var externalClosers []io.Closer
 		externalClosers, err = app.attachExternalAuthorization(app.pluginContext, server)
@@ -312,6 +328,7 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		return err
 	}
 
+	app.messagingWorkers = workers
 	app.pluginClosers = closers
 	app.server = server
 
@@ -344,6 +361,9 @@ func (app *App) Start() error {
 			return err
 		}
 	}
+	for _, worker := range app.messagingWorkers {
+		worker.start()
+	}
 	app.logger.Debug(
 		"started app instance",
 		zap.String("app", app.Name),
@@ -372,6 +392,10 @@ func (app *App) Cleanup() error {
 		app.disposing = true
 		app.mu.Unlock()
 		app.requests.Wait()
+		// Producers have returned. Cancel delivery before closing its queue.
+		for _, worker := range app.messagingWorkers {
+			worker.stop()
+		}
 		app.cleanupErr = errors.Join(app.server.Close(), closePluginResources(app.pluginClosers))
 		releaseIdentityFiles(app.identityFiles)
 	})

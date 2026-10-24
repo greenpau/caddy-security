@@ -5,6 +5,7 @@ or runtime resource ownership. `app_plugins.go` owns the claims enrichment
 boundary and `app_external_authorization.go` owns external authorization;
 `app_credential_authenticators.go` owns fresh API-key bindings;
 `app_identity_stores.go` owns named identity-store bindings;
+`app_messaging.go` owns notification backends and their delivery workers;
 `app.go` owns construction and retirement of the single AuthCrunch root.
 HTTP integrations borrow that root. Do not replace root
 assembly with a second host implementation of portals, gatekeepers or persistence.
@@ -32,7 +33,7 @@ realm and database path are distinct values; never use a path as implicit identi
 | Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled `sqlite` factory with global Caddyfile syntax; bind validated runtime proxy config before root construction |
 | Identity stores | `security.identity_stores.<driver>` | Native/global declarations and bundled SQLite factory; derived descriptors and runtime handles enter ordinary root assembly |
 | Identity providers | `security.identity_providers.<driver>` | Proposed; root injection unavailable |
-| Messaging | `security.messaging.<driver>` | Proposed; runtime injection is possible but no host adapter/worker exists |
+| Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
 | Registration workflows | `security.registration_workflows.<driver>` | Proposed; root registry injection unavailable |
 | Signing/refresh storage | `security.cryptographic_signing.<driver>`, `security.session_and_refresh_storage.<driver>` | Proposed; standalone engine APIs do not select portal backends |
 | OAuth login storage | `security.oauth_login_stores.<driver>` | Proposed; public root option exists, host loader does not |
@@ -92,10 +93,10 @@ preserve ordinary behavior. The
 [external authorization reference](../../configuration-authorization/references/external-authorization.md)
 owns text/native fields, TLS and decision behavior.
 
-Credential and identity backends are constructed before the root, followed by claims and
+Credential, identity and messaging backends are constructed before the root, followed by claims and
 external backends after root construction. If a later factory
 or attachment fails, close the root, then all acquired backends in reverse
-order across all four categories. The HTTP JSON wrapper implements `io.Closer`
+order across all categories. The HTTP JSON wrapper implements `io.Closer`
 around the library's errorless Close and owns its injected TLS transport.
 
 Claims companions implement `ClaimsEnrichmentBackendModule` alongside `caddy.Module`.
@@ -136,8 +137,8 @@ For a persistent root, `Provision` prepares factories and validates bindings;
 runtime storage. Backend checks requiring construction happen at `Start` in
 that mode. Preserve the existing rejection of overlapping persistent reloads.
 
-At retirement, the app closes admission, waits for admitted calls, closes the
-root, and then closes backends. Root Close owns built-in components only.
+At retirement, the app closes admission, waits for admitted calls, stops and joins
+delivery workers, closes the root, and then closes backends. Root Close owns built-in components only.
 Module cleanup order and HTTP grace-period expiry do not replace request drain.
 The [runtime lifecycle contract](runtime-lifecycle.md) owns errors, reservations
 and concurrent cleanup. Future category adapters must preserve these invariants
@@ -153,8 +154,8 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Claims enrichment | `Server.GetGatekeeperByName` → `Gatekeeper.SetClaimsEnricher`; supported before publication through this host boundary |
 | External authorization | `Gatekeeper.SetExternalAuthorizer`; attached to the private root through the host binding and bundled HTTP JSON factory |
 | Secrets | Host `SecretsManager` resolves values before root construction; separate adapter must preserve exact types and redact `GetConfig` metadata |
-| Messaging | `messaging.Config.AddProvider` preserves runtime injections through validation, excludes them from JSON, and is consumed by registry `SetMessaging`; bind after config restoration and before validation/construction; host still needs a bounded delivery worker |
-| OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; supply named runtime bindings on each construction, close only after consumers drain; current app uses `NewServer` without these bindings |
+| Messaging | `messaging.Config.AddProvider` preserves runtime injections through validation, excludes them from JSON, and is consumed by registry `SetMessaging`; bind after config restoration and before validation/construction; SQLite delivery uses the app-owned bounded worker |
+| OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; supply named runtime bindings on each construction, close only after consumers drain; the current app does not supply these bindings |
 | API-key authenticators | Validate `PolicyConfig`, then call its `AuthProxyConfig.AddAuthenticator` before `NewServer` on that same private graph. The root retains these runtime bindings and checks `HasAuthProxies`. Waiting to call `Gatekeeper.AddAuthenticators` after root construction fails for an injected-only realm |
 | Identity stores | Derive `Config.ExternalIdentityStores` through `ids.NewExternalIdentityStoreConfig` before validation and supply `ServerOptions.IdentityStores` before root construction. Exact names/kinds/realms, configured handles and persistence digests are validated; injected handles remain caller-owned. See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md) |
 | Ticket identity providers | `PortalParameters.IdentityProviders` and optional HTTP-login interface support direct composition; root provider dispatch has no injected-provider option |
@@ -214,3 +215,15 @@ SQLite credential coverage lives in `credential_authenticator_sqlite_test.go`,
 `app_credential_authenticators_test.go`, `command_api_key_test.go` and
 `credential_authenticator_sqlite_e2e_test.go`; its production TLS journey also
 checks CLI revocation, storage failure, reload and restart.
+
+## Messaging ownership
+
+`MessagingProviderBackendModule` supplies a validated name and a fresh
+`messaging.Provider`. Bind it into the app-private resolved messaging config
+before constructing the root. Runtime handles are excluded from native JSON.
+SQLite delivery is an explicit bundled capability, not an assumed method of
+arbitrary providers. Its queue factory has no module-level Cleanup ownership.
+The app starts workers only at Start, drains producers before cancellation,
+joins every worker, disposes the root, then closes queues in reverse acquisition
+order. See [messaging configuration](../../configuration-messaging/SKILL.md) for
+lease budgets, persistence, transport limits and actual Caddy acceptance tests.

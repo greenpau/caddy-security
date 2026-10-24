@@ -142,7 +142,7 @@ authorize /api/* with api_policy
   `caddyfile_identity.go` and `caddyfile_identity_store.go`; host modules use
   `caddyfile_identity_backend.go` and their typed parsers.
 - Use [configuration-messaging](../configuration-messaging/SKILL.md) to
-  configure messaging providers, parsed by `caddyfile_messaging.go`.
+  configure email/file transports and SQLite outboxes with owned delivery workers.
 - Use [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md)
   to configure external OAuth/OIDC identity providers, parsed by
   `caddyfile_identity.go`, `caddyfile_identity_provider.go`, and

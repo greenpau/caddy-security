@@ -46,7 +46,7 @@ func init() {
 //			oauth registration store { path <absolute-private-directory> }
 //			secrets <module> <id> { ... }
 //			credentials <name> { ... }
-//			messaging <email|file> provider <name> { ... }
+//			messaging <email|file|sqlite> provider <name> { ... }
 //			<local|ldap> identity store <name> { ... }
 //			identity store <driver> <name> { ... }
 //			<oauth|saml> identity provider <name> { ... }
@@ -185,7 +185,16 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 				return nil, err
 			}
 		case "messaging":
-			if err := parseCaddyfileMessaging(d, app.Config); err != nil {
+			if !d.NextArg() {
+				return nil, d.ArgErr()
+			}
+			kind := d.Val()
+			d.Prev()
+			if kind == "email" || kind == "file" {
+				if err := parseCaddyfileMessaging(d, app.Config); err != nil {
+					return nil, err
+				}
+			} else if err := parseCaddyfileMessagingBackend(d, app); err != nil {
 				return nil, err
 			}
 		case "local", "ldap", "oauth", "saml":

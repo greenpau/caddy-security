@@ -1,6 +1,6 @@
 ---
 name: configuration-messaging
-description: "Configure email and file messaging providers, SMTP transport, sender/authentication, templates, and registration delivery wiring. Use to distinguish parsed settings from actual delivery behavior."
+description: "Configure email, file and SQLite messaging providers, bounded delivery workers, SMTP transport, sender credentials and registration notifications."
 ---
 
 # Configuration Messaging
@@ -8,7 +8,8 @@ description: "Configure email and file messaging providers, SMTP transport, send
 ## Purpose
 
 Use this skill to configure `messaging <kind> provider <name>` blocks. The
-parser is `caddyfile_messaging.go`.
+built-in parser is `caddyfile_messaging.go`; companion modules use
+`caddyfile_messaging_backend.go`. The app owns runtime bindings and delivery.
 
 Messaging is most often needed by registration flows, password recovery, MFA
 OTP, or administrative notifications.
@@ -48,7 +49,7 @@ Email providers require:
 Use `passwordless` instead of `credentials <name>` when the SMTP server does
 not require authentication.
 
-In selected go-authcrunch v1.3.4, `smtp` opens a plaintext SMTP connection;
+`smtp` opens a plaintext SMTP connection;
 the sender does not negotiate STARTTLS. `smtps` uses implicit TLS with
 certificate verification. A server requiring STARTTLS is not supported by
 switching `protocol smtp` to port 587. Use an endpoint that supports the chosen
@@ -81,7 +82,7 @@ File providers write `.eml` messages under `root_dir`. Authcrunch requires both
 `root_dir <path>` and `sender <email> [display_name]`. File providers do not use
 `credentials` or `passwordless`.
 
-In v1.3.4, email providers put `bcc <email>...` into a `Bcc` message header but
+Email providers put `bcc <email>...` into a `Bcc` message header but
 do not add those addresses to SMTP `RCPT TO`. Do not rely on it for copy
 delivery or recipient privacy: recipients can see that header. This is an
 upstream sender limitation, not configurable Caddy behavior. File providers
@@ -130,9 +131,10 @@ Default files by validated template ID:
 ## Registration Wiring
 
 Registration flows reference messaging providers by name with the historical
-`email provider <name>` directive. The referenced provider may be either kind;
-authcrunch resolves whether it is an `email` or `file` messaging provider at
-send time.
+`email provider <name>` directive. The referenced provider may be email, file or a bound SQLite outbox.
+AuthCrunch selects it by exact name at send time. An outbox receives no SMTP
+credentials; its independently selected delivery transport receives them only
+when the worker sends.
 
 ```caddyfile
 user registration signup {
@@ -144,17 +146,96 @@ user registration signup {
 The registration block belongs to
 [configuration-registrations](../configuration-registrations/SKILL.md).
 
-## Fixtures
+## SQLite outbox
 
-Use these examples:
+```caddyfile
+{
+ security {
+  messaging email provider smtp-local {
+   address 127.0.0.1:1025
+   protocol smtp
+   passwordless
+   sender auth@example.test
+  }
+  messaging sqlite provider notifications {
+   path /var/lib/caddy-security/mail/outbox.db
+   timeout 1s
+   delivery smtp-local
+  }
+ }
+}
+```
 
-- `caddyfile_messaging_test.go`.
-- `testdata/caddyfile_adapt/testcase_authenticate_with_registration.Caddyfile`.
+The `security.messaging.sqlite` module appears in native JSON under
+`apps.security.messaging_providers`, with `driver`, `name`, `path`, optional
+`timeout` and optional `delivery`. Names must be unique across modules and
+built-ins. The public SQLite parser owns name/path/timeout validation. Fields
+are literal; they do not expand Caddy placeholders or secret lookups. Existing
+email-provider and credential instructions retain runtime resolution.
 
-The parser test checks encoded instructions. Adapt/resolution and lifecycle
-tests verify configuration and replacement, not message delivery. This checkout
-has no complete user-registration SMTP E2E. Acceptance for a sender change
-needs a disposable recipient server that observes the negotiated transport,
-authentication, envelope recipients and rendered confirmation link; a `Bcc`
-header alone is not delivery evidence. File-provider acceptance checks private
-`.eml` output and content, and reports SMTP behavior as untested.
+`path` is an absolute local POSIX database in an existing private 0700 parent;
+its database and sidecars use 0600. Use a separate file from other plugin
+categories. Runtime construction can create the outbox; parsing and module
+validation perform no storage I/O. Storage is pure Go and requires no SQLite
+process or cgo. Bodies, recipients and confirmation codes are plaintext on disk.
+`timeout` defaults to 1s and accepts 1ms through 30s for database operations.
+
+Optional `delivery` selects an existing email provider, whose sender, protocol
+and credentials apply to every message in this queue. It cannot select another
+outbox or a file provider. Missing or ambiguous credentials fail before storage
+opens. Omission queues messages without starting a delivery worker; an external
+consumer must own delivery. Registration references the queue using
+`email provider notifications`.
+
+`Send` success means durable local acceptance. The shared file permits 1000
+outstanding messages across all named queues; full storage rejects admission
+without eviction. Transactions obtain exclusive access before mutation; ordinary
+reader/writer contention waits within the database deadline before admission. Failed or uncertain acceptance must not be blindly retried.
+The app rebuilds private runtime bindings after JSON restoration and never
+serializes handles or delivery credentials into message records.
+
+Workers start only in `App.Start`. Each claim has a one-minute exclusive lease;
+the worker uses its exact persisted expiry, reserves five seconds for
+acknowledgement, and caps an SMTP attempt at fifteen seconds. Claim and
+acknowledgement contexts are bounded to five seconds, subject to any shorter
+queue timeout. Empty or failed attempts poll at one-second intervals. Failed or
+uncertain delivery remains leased until expiry; there is no immediate resend,
+lease renewal or dead-letter queue. A commit error can quarantine its handle;
+drain and reopen the runtime before reconciling uncertain work. The worker does
+not automatically reopen storage or reinterpret an error as non-acceptance.
+Independent workers can share a named queue.
+A crash after SMTP acceptance and before acknowledgement may duplicate delivery;
+applications needing deduplication must provide it downstream.
+
+Cleanup closes request admission and drains producers, then cancels and joins
+workers before closing the root and queues. Cancellation closes the actual SMTP
+socket, including greeting, TLS handshake, DATA and QUIT stalls. A successful
+send still gets a bounded acknowledgement when cleanup starts concurrently.
+Validation-only candidates never send mail. A candidate that reaches Start may
+deliver before an unrelated app fails; Caddy startup has no transaction spanning
+external SMTP side effects. Queued work and outstanding leases survive restart.
+Other restrictions, including local identity/dropbox overlap, still apply.
+
+Registration renders quoted-printable HTML. The worker preserves those bytes and
+the email sender supplies matching MIME headers; it does not double encode or
+reinterpret content. General queue callers must honor that body contract. Logs
+report fixed failure phases without recipients, bodies, codes, credentials,
+leases or raw transport diagnostics. `bcc` retains the built-in sender limitation
+above; queue delivery does not turn a header into an envelope recipient.
+
+## Validation surfaces
+
+`messaging_sqlite_test.go` covers public parsing, native modules, private storage,
+queue isolation, stale leases and durable reopen. `app_messaging_test.go` covers
+binding validation, candidate cleanup and producer drain;
+`app_messaging_worker_test.go` covers budgets, cancellation, failure redaction
+and concurrent workers. `app_messaging_e2e_test.go` exercises actual TLS Caddy
+registration, SMTP envelope/body delivery, queue errors, restart and shutdown.
+Legacy registration confirmation writes a dropbox record; it does not implicitly
+activate a login account. Dedicated registration workflows have their own owner.
+
+Adaptation cases include `testcase_messaging_sqlite` and
+`testcase_authenticate_with_registration` in `testdata/caddyfile_adapt/`.
+File output checks alone do not verify SMTP authentication, TLS or recipients.
+Use a disposable loopback server and synthetic credentials for transport tests;
+inspect `RCPT TO` separately from headers and close all test-owned connections.
