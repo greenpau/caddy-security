@@ -91,6 +91,20 @@ func resolvePortalTokenRefresh(ctx context.Context, repl *caddy.Replacer, manage
 			return err
 		}
 		cfg.Realms = realms
+		for i := range cfg.ProviderRevalidation {
+			provider := &cfg.ProviderRevalidation[i]
+			for _, field := range []struct {
+				name  string
+				value *string
+			}{{"Realm", &provider.Realm}, {"Mode", &provider.Mode}} {
+				path := fmt.Sprintf("RefreshTokens.ProviderRevalidation[%d].%s", i, field.name)
+				resolved, err := substituteString(ctx, repl, managers, path, *field.value, log)
+				if err != nil {
+					return err
+				}
+				*field.value = resolved
+			}
+		}
 		if err := cfg.Validate(); err != nil {
 			return fmt.Errorf("portal %q token refresh: %w", portal.Name, err)
 		}

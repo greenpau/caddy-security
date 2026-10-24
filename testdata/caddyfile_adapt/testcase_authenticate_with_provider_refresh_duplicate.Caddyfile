@@ -1,0 +1,11 @@
+{
+	security {
+		authentication portal myportal {
+			token refresh {
+				disabled
+				provider revalidation upstream snapshot
+				provider revalidation upstream snapshot
+			}
+		}
+	}
+}

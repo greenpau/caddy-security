@@ -1,0 +1,93 @@
+{
+	"apps": {
+		"security": {
+			"config": {
+				"authentication_portals": [
+					{
+						"name": "literal",
+						"ui": {},
+						"cookie_config": {
+							"session_id_cookie_name": "AUTHP_SESSION_ID",
+							"referer_cookie_name": "AUTHP_REDIRECT_URL",
+							"sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+							"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+							"access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+							"refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+							"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+							"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+							"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+							"cross_device_session_id_cookie_name": "AUTHP_CROSS_DEVICE_SESSION_ID",
+							"cookie_name_prefix": "AUTHP"
+						},
+						"identity_stores": ["localdb"],
+						"identity_providers": ["upstream"],
+						"token_validator_options": {},
+						"crypto_key_store_config": {"auto_generate_tag": "default", "auto_generate_algo": "ES512"},
+						"token_grantor_options": {},
+						"portal_admin_roles": {"authp/admin": true},
+						"portal_user_roles": {"authp/user": true},
+						"portal_guest_roles": {"authp/guest": true},
+						"api": {"profile_enabled": true},
+						"refresh_tokens": {
+							"enabled": true,
+							"realms": ["local", "upstream"],
+							"provider_revalidation": [{"realm": "upstream", "mode": "snapshot"}],
+							"public_origin": "https://auth.example.test",
+							"base_path": "/auth",
+							"access_lifetime_seconds": 300,
+							"idle_timeout_seconds": 1800,
+							"absolute_timeout_seconds": 28800,
+							"max_sessions": 10000,
+							"max_rotations": 1024
+						}
+					},
+					{
+						"name": "deferred",
+						"ui": {},
+						"identity_stores": ["localdb"],
+						"identity_providers": ["upstream"],
+						"token_validator_options": {},
+						"crypto_key_store_config": {"auto_generate_tag": "default", "auto_generate_algo": "ES512"},
+						"token_grantor_options": {},
+						"portal_admin_roles": {"authp/admin": true},
+						"portal_user_roles": {"authp/user": true},
+						"portal_guest_roles": {"authp/guest": true},
+						"api": {"profile_enabled": true}
+					}
+				],
+				"identity_stores": [{"name": "localdb", "kind": "local", "params": {"path": ":memory:", "realm": "local"}}],
+				"identity_providers": [
+					{
+						"name": "upstream",
+						"kind": "oauth",
+						"params": {
+							"attachment": {"local_identity_store": "localdb"},
+							"authorization_url": "https://issuer.example.test/authorize",
+							"base_auth_url": "https://issuer.example.test",
+							"client_id": "snapshot-client",
+							"client_secret": "synthetic-snapshot-client-secret",
+							"driver": "generic",
+							"identity_token_field_name": "id_token",
+							"jwks_keys": {"fixture": "testdata/oauth/87329db33bf_pub.pem"},
+							"login_icon": {"background_color": "#324960", "class_name": "lab la-codepen la-2x", "color": "white", "text_color": "#37474f"},
+							"realm": "upstream",
+							"required_token_fields": ["access_token", "id_token"],
+							"response_type": ["code"],
+							"scopes": ["openid", "email", "profile"],
+							"token_url": "https://issuer.example.test/token"
+						}
+					}
+				]
+			},
+			"portal_cookie_directives": {"deferred": ["cookie prefix SNAPSHOT"]},
+			"portal_token_refresh_directives": {
+				"deferred": [
+					"realms local {env.PROVIDER_REFRESH_FIXTURE_REALM}",
+					"provider revalidation {env.PROVIDER_REFRESH_FIXTURE_REALM} {env.PROVIDER_REFRESH_FIXTURE_MODE}",
+					"public origin https://auth.example.test",
+					"base path /company/auth"
+				]
+			}
+		}
+	}
+}

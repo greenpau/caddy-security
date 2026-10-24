@@ -30,6 +30,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -191,7 +192,12 @@ type oauthE2EUpstream struct {
 	clientID, clientSecret, accessAudience                       string
 	// Optional persistent-state fixtures: large verified picture claims exercise
 	// the real snapshot bound; holds exercise reload with an admitted callback.
-	identityPicture                                                   string
+	identityPicture string
+	// Optional provider-renewal controls. The fixture mutex guards all access;
+	// zero values preserve the ordinary OAuth signature/issuer test behavior.
+	fixedSubject, upstreamRefreshToken                                string
+	identityClaims, userInfoClaims                                    map[string]any
+	deactivated                                                       bool
 	exchangeEntered                                                   chan struct{}
 	exchangeRelease                                                   <-chan struct{}
 	codes                                                             map[string]oauthE2ECode
@@ -244,6 +250,9 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		code := fmt.Sprintf("one-use-code-%d", f.authorizations)
 		f.issuedSecrets = append(f.issuedSecrets, code)
 		record := oauthE2ECode{q.Get("state"), q.Get("nonce"), q.Get("code_challenge"), f.callback, fmt.Sprintf("external-user-%d", f.authorizations)}
+		if f.fixedSubject != "" {
+			record.subject = f.fixedSubject
+		}
 		if f.failure == "pkce" {
 			record.challenge = "mismatched-challenge"
 		}
@@ -277,7 +286,12 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 			return
 		}
 		f.exchanges++
+		if f.deactivated {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 		id := map[string]any{"iss": f.tokenIssuer, "aud": f.clientID, "sub": record.subject, "email": record.subject + "@example.test", "name": "External User", "nonce": record.nonce, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"authp/user"}}
+		maps.Copy(id, f.identityClaims)
 		if f.identityPicture != "" {
 			id["picture"] = f.identityPicture
 		}
@@ -340,7 +354,12 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		}
 		f.subjects[signedAccess] = record.subject
 		f.issuedSecrets = append(f.issuedSecrets, signedID, signedAccess)
-		_ = json.NewEncoder(w).Encode(map[string]any{"id_token": signedID, "access_token": signedAccess, "token_type": "Bearer", "expires_in": 3600})
+		response := map[string]any{"id_token": signedID, "access_token": signedAccess, "token_type": "Bearer", "expires_in": 3600}
+		if f.upstreamRefreshToken != "" {
+			response["refresh_token"] = f.upstreamRefreshToken
+			f.issuedSecrets = append(f.issuedSecrets, f.upstreamRefreshToken)
+		}
+		_ = json.NewEncoder(w).Encode(response)
 	case "/userinfo":
 		subject, ok := f.subjects[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")]
 		if !ok {
@@ -349,7 +368,13 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 			return
 		}
 		f.userInfos++
-		_ = json.NewEncoder(w).Encode(map[string]any{"sub": subject, "email": subject + "@example.test", "roles": []string{"userinfo/user"}})
+		if f.deactivated {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		claims := map[string]any{"sub": subject, "email": subject + "@example.test", "roles": []string{"userinfo/user"}}
+		maps.Copy(claims, f.userInfoClaims)
+		_ = json.NewEncoder(w).Encode(claims)
 	default:
 		http.NotFound(w, r)
 	}

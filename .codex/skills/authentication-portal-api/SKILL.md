@@ -97,7 +97,8 @@ portal. Sandbox sessions are temporary and separate from the final JWT session.
 ## Portal Refresh Transports
 
 Use the [token refresh configuration](../configuration-authentication/references/token-refresh.md)
-for explicit participating local realms, origin, mount, cookie naming and limits.
+for explicit participating local/provider realms, origin, mount, cookie naming
+and limits.
 The selected go-authcrunch implements real rotation; `/api/refresh_token`
 is no longer a timestamp probe. No enabled block means access-only behavior and
 404 at the refresh/session API routes.
@@ -134,6 +135,16 @@ POST completes revocation and cookie deletion, including an associated OP
 session. Portal refresh grants are unrelated to OIDC refresh or upstream provider
 refresh. API-key and other unsupported login kinds remain access-only.
 `TestCaddyTokenRefreshE2E` covers these transports through verified Caddy TLS.
+
+Explicitly selected OAuth/OIDC snapshot callbacks also issue cookie-transport
+families. They preserve captured upstream identity while rechecking current local
+attachment and portal policy; they do not contact upstream token/userinfo during
+renewal. The signed local account `id`, upstream subject, and family SID have
+distinct meanings. Local account/security mutations can invalidate the original
+proof, requiring fresh login. Native body opt-in does not change callback
+transport or grant local profile/OP authority. See
+[provider renewal](../configuration-authentication/references/token-refresh.md#provider-snapshot-renewal)
+for selection, credential sanitization and restart requirements.
 
 ## Status And Identity Endpoints
 

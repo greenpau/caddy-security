@@ -1,0 +1,40 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		oauth identity provider upstream {
+			realm upstream
+			driver generic
+			client_id snapshot-client
+			client_secret synthetic-snapshot-client-secret
+			base_auth_url https://issuer.example.test
+			authorization_url https://issuer.example.test/authorize
+			token_url https://issuer.example.test/token
+			jwks key fixture testdata/oauth/87329db33bf_pub.pem
+			attach to local identity store localdb
+		}
+		authentication portal literal {
+			enable identity store localdb
+			enable identity provider upstream
+			token refresh {
+				realms local upstream
+				provider revalidation upstream snapshot
+				public origin https://auth.example.test
+				base path /auth
+			}
+		}
+		authentication portal deferred {
+			enable identity store localdb
+			enable identity provider upstream
+			cookie prefix SNAPSHOT
+			token refresh {
+				realms local {env.PROVIDER_REFRESH_FIXTURE_REALM}
+				provider revalidation {env.PROVIDER_REFRESH_FIXTURE_REALM} {env.PROVIDER_REFRESH_FIXTURE_MODE}
+				public origin https://auth.example.test
+				base path /company/auth
+			}
+		}
+	}
+}

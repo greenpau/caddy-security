@@ -34,9 +34,11 @@ be deployed. SAML/LDAP attachment Caddyfile syntax remains unimplemented. Native
 
 The existing refresh parser recognizes `provider revalidation REALM snapshot`.
 This is explicit captured-identity renewal, with local attachment/policy checks,
-not upstream revocation or token refresh. Dedicated Caddy qualification remains
-pending. Documents has typed upstream configuration but no Caddyfile
-adapter yet. Neither feature should be inferred from a new field alone.
+not upstream revocation or token refresh. Native provider realm/mode fields
+support one-pass runtime resolution. See the
+[provider renewal contract](../../configuration-authentication/references/token-refresh.md#provider-snapshot-renewal)
+for cookie transport, current local proof and durable attachment requirements.
+Documents has typed upstream configuration but no Caddyfile adapter yet.
 
 External authentication attaches an immutable local identity automatically.
 Without explicit attachment it uses provider-private memory with no generated

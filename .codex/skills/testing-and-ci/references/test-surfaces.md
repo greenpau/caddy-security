@@ -523,6 +523,17 @@ Add or update these tests when directive parsing behavior changes:
   caps, native opt-in/off, capacity/replay/rotation limits and rejected mounts.
   Its adaptation/resolution fixture is `testcase_authenticate_with_token_refresh`.
   See [portal refresh](../../configuration-authentication/references/token-refresh.md#validation).
+- `caddyfile_authn_token_refresh_provider_test.go` and
+  `app_token_refresh_provider_test.go` qualify explicit provider selection,
+  native/deferred realm and mode replacement, unchanged declarations, disabled
+  semantics and runtime source eligibility. Registered provider fixtures cover
+  adaptation and resolved JSON. `TestCaddyProviderRefreshE2E` uses real signed
+  OAuth callbacks through Caddy TLS to qualify captured claims, stable local
+  identity and family evidence, current local policy, transport, revocation and
+  deadlines. `TestCaddyRuntimeStateE2E/provider_snapshot` exercises full process
+  restart with explicit durable attachment, persistent replay/logout denial,
+  configuration epoch retirement and the implicit-memory negative control.
+  Shared OAuth issuer defaults stay unchanged and retain their original suite.
 - `TestAuthnTokenRefreshDelegation` covers strict HTTP dispatch, protected APIs,
   the exact embedded refresh asset and continuation pages. The normal Go suite
   also runs `TestCaddyTokenRefreshBrowserE2E` with real Chrome/Chromium and Node 24;

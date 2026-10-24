@@ -3,6 +3,7 @@
 ## Contents
 
 - [Configuration](#configuration)
+- [Provider snapshot renewal](#provider-snapshot-renewal)
 - [Lifetime interaction](#lifetime-interaction)
 - [Body transport](#body-transport)
 - [Session and rotation limits](#session-and-rotation-limits)
@@ -44,8 +45,8 @@ upstream identity, rechecks current local attachment and portal policy, and
 does not redeem upstream refresh tokens or observe upstream logout, disablement
 or role changes. Only a fresh upstream login observes those changes; choose a
 bounded absolute lifetime accordingly. Modes `userinfo` and `refresh_token`
-are unsupported. Dedicated Caddy parser/flow/restart qualification remains pending; the
-existing local-refresh evidence does not establish this provider matrix.
+are unsupported. See [provider snapshot renewal](#provider-snapshot-renewal)
+for identity, transport and restart requirements.
 
 `caddyfile_authn_token_refresh.go` forwards encoded body statements to
 `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives` from the
@@ -88,6 +89,56 @@ overflow. Lists belong on one line. A missing block stays nil and access-only;
 an empty block is invalid. A standalone `disabled` opts out, with no required
 origin, mount or realms; its explicit settings still require valid grammar.
 There are no distributed-store directives.
+
+## Provider Snapshot Renewal
+
+Select the provider realm explicitly in both statements:
+
+```caddyfile
+token refresh {
+    realms corporate
+    provider revalidation corporate snapshot
+    public origin https://auth.example.com
+    base path /auth
+}
+```
+
+The portal must enable exactly one OAuth/OIDC provider with realm `corporate`;
+its identity-token cookie must be disabled. A local store is not a provider,
+and LDAP/SAML cannot use snapshot mode. The callback uses the provider's configured upstream validation before a family
+can be issued; keep nonce, PKCE and signature verification enabled. Snapshot mode
+does not override weakened provider settings. An
+access JWT or provider-supplied session claim cannot establish that evidence.
+
+Renewal preserves the captured upstream subject and claims, original
+`auth_time`, actual login methods and family SID. The signed `id` identifies
+the attached local account, distinct from the provider subject and family SID.
+Provider-supplied authentication methods, timestamps, session identifiers and
+credentials are not local proof. Protocol credentials are removed recursively
+from the bounded snapshot; no upstream refresh credential is retained for reuse.
+
+Current local attachment and portal transforms are checked on every exchange.
+Supported role, disablement, session or required-factor mutations invalidate
+older proof: the old family is denied, and fresh login is required. Fresh login
+uses the current local roles and factor requirements. Upstream AMR alone cannot
+satisfy a local challenge. Renewal can also fail when current request-dependent
+portal policy differs from callback policy. External identity does not become
+local profile or downstream OP authority merely by obtaining refresh cookies.
+
+Provider callbacks issue cookie-transport families. Enabling body transport for
+local native clients does not change external callbacks; copying a refresh
+cookie into a native request fails. Replay, logout, deadlines and fresh-login
+replacement use the same family lifecycle as local refresh. Stateless access
+JWTs retain their own expiration and authorization behavior after family logout.
+
+To retain a provider family across a complete Caddy stop/start, enable root
+[state](../../configuration-state/SKILL.md), select an explicit file-backed local
+attachment with `attach to local identity store NAME`, and preserve that database
+and the same effective security configuration. Root snapshots alone cannot
+restore implicit provider-private memory identities. Accepted configuration
+changes retire prior authority; restoring the earlier configuration does not
+revive families in the same observed state history. Restart renewal makes no
+upstream token/userinfo call; normal startup discovery and JWKS loading remain.
 
 ## Lifetime Interaction
 
@@ -184,16 +235,16 @@ Mount the portal without stripping its prefix:
 auth.example.com {
     @portal path /auth /auth/*
     route @portal {
-        authenticate with myportal
+        authenticate with myportal at /auth
     }
 }
 ```
 
-For root mounting, use `base path /` and serve `authenticate with myportal` at
-the site's root. The configured HTTPS public origin must match the request's
+For root mounting, use `base path /` and serve
+`authenticate with myportal at /` at the site's root. The configured HTTPS public origin must match the request's
 actual origin, including any nondefault port. A mount/origin mismatch fails
 refresh login and requests; Caddy cannot infer an intended public origin from
-an untrusted request. Preserve the original URL through `Portal.ServeHTTP`,
+an untrusted request. Preserve the original URL through the portal handler,
 including refresh endpoints before ordinary access-token gating. Do not use
 `handle_path` to strip the mount or mint authentication evidence in middleware.
 
@@ -234,7 +285,10 @@ are checked against the effective cookie names, independent of directive order.
 
 Literal blocks adapt directly to `config.authentication_portals[].refresh_tokens`.
 Native JSON retains that typed form; origin, base path, cookie name and individual
-realm strings support runtime replacement. JSON booleans/numbers retain their
+realm strings and each `provider_revalidation` entry's `realm` and `mode` support
+runtime replacement. When enabled, the resolved mode must still be exactly
+`snapshot`; realm collisions after resolution fail validation. Disabled native
+settings retain ignored semantics; deferred statements still require valid grammar. JSON booleans/numbers retain their
 types: the readable state grammar is specific to the Caddyfile block.
 A portal cannot supply both a typed refresh config and deferred refresh body.
 Unknown/duplicate snapshot targets, malformed statements and null/empty bodies
@@ -312,6 +366,16 @@ this unavailable host adapter.
   replacements, saved app snapshots and native JSON restoration; cookie overrides
   before collision validation, including reused names, duplicate rejection and
   exact shared-cookie argument preservation through literals and replacements.
+- `caddyfile_authn_token_refresh_provider_test.go` and
+  `app_token_refresh_provider_test.go`: provider selection, native/deferred realm
+  and mode resolution, exact argument preservation, runtime eligibility and
+  immutable immediate/persistent app configuration.
+- `TestCaddyProviderRefreshE2E`: actual OAuth callback and cookie renewal,
+  captured upstream claims without token/userinfo requests, current local proof
+  and request policy, replay, logout, deadlines and transport/authority limits.
+  `TestCaddyRuntimeStateE2E/provider_snapshot` adds durable attachment, replay and
+  logout across fresh processes, changed/restored configuration retirement, and
+  rejection when only an implicit memory identity was available.
 - `testcase_authenticate_with_token_refresh.*`: registered Caddy adaptation and
   runtime-resolution fixtures, including zero defaults and deferred values.
 - `TestCaddyTokenRefreshE2E` in `token_refresh_e2e_test.go`: actual verified Caddy

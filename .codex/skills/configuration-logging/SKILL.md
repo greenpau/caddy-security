@@ -157,8 +157,11 @@ Caddy's trusted-proxy interpretation owns the source-address fields.
 These events are diagnostics, not a complete audit ledger. Browser
 `user passed all authorization checkpoints` precedes final issuance/session
 admission, and the earlier `Successful login` event is not equivalent to the
-final JSON event. API-key exchanges, external-provider callbacks and refresh
-have separate paths. Even final JSON issuance does not establish that a client
+final JSON event. The external-provider `Successful login` event retains only
+`session_id`, `request_id`, `auth_method` and `auth_realm`; it omits arbitrary
+provider payloads, which can contain credentials even within nested userinfo
+claims. Its occurrence means provider acceptance, not completed portal issuance.
+API-key exchanges, external-provider callbacks and refresh have separate paths. Even final JSON issuance does not establish that a client
 received the response. Check the actual HTTP/credential outcome independently;
 for example, a rejected browser TOTP input can render HTML with status 200.
 

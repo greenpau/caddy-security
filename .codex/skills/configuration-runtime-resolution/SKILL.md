@@ -156,7 +156,10 @@ before portal validation; do not also supply typed `refresh_tokens` for that
 portal. Defer that portal's complete cookie statements too, including literal
 ones, until the enabled refresh override is known: collision checks must use
 the effective names. Literal refresh blocks need no snapshot. Native JSON origin, base path, cookie
-name and individual realm values support replacement. See
+name, individual realm values, and each `provider_revalidation[].realm` and
+`provider_revalidation[].mode` support replacement. Resolve each string once
+before shared validation; unsupported modes and duplicate resolved selections
+fail. Disabled settings retain the shared validator's opt-out semantics. See
 [token refresh placeholders](../configuration-authentication/references/token-refresh.md#placeholders-and-json)
 for numeric/state values, duplicate checks, and JSON restoration coverage.
 

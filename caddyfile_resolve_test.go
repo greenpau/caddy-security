@@ -134,6 +134,7 @@ func TestResolveRuntimeAppConfig(t *testing.T) {
 		{name: "match any refresh policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_refresh"},
 		{name: "match any System API policy", inputFileNamePrefix: "testcase_authenticate_with_match_any_system"},
 		{name: "token refresh snapshots and typed config", inputFileNamePrefix: "testcase_authenticate_with_token_refresh"},
+		{name: "provider snapshot realm and mode resolution", inputFileNamePrefix: "testcase_authenticate_with_provider_refresh"},
 		{name: "named OAuth application credentials remain exact", inputFileNamePrefix: "testcase_security_oauth_applications"},
 		{name: "shared upstream OAuth parser and trust", inputFileNamePrefix: "testcase_authenticate_with_oauth_parser"},
 		{name: "quoted OAuth values remain exact", inputFileNamePrefix: "testcase_authenticate_with_oauth_quoted_values"},

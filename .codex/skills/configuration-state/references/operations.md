@@ -32,7 +32,7 @@ rules below. Do not promise automatic rollback or uninterrupted availability.
 | --- | --- |
 | Completed direct OAuth sessions | With an explicit durable identity attachment, original opaque cookies work without another provider exchange; current identity/origin/ACL checks still apply |
 | Portal browser sessions and generated signing keys | Completed users and generated keys persist; unexpired old JWTs still verify against the same public JWKS |
-| Portal native/browser refresh | Families, deadlines, current credentials and spent-token replay history persist |
+| Portal native/browser refresh | Families, deadlines, current credentials and spent-token replay history persist; provider families additionally require durable local attachment |
 | Downstream OIDC | Browser sessions, consent, codes, access grants and rotating refresh families persist |
 | Revocation/logout | Successful revocations and replay-triggered descendant denial survive restart |
 | Local account security | Current account/credential versions still gate refresh, profile and OIDC; identity-file-only rollback invalidates old proof |
@@ -52,10 +52,13 @@ secret-bearing configuration.
 
 Local identity stores in a persistent runtime must use file-backed databases;
 `:memory:` cannot preserve the identity proof epoch and fails startup. For direct
-OAuth restart continuity, declare a file-backed local store and select it in the
+OAuth and portal provider-snapshot restart continuity, declare a file-backed local
+store and select it in the
 provider with `attach to local identity store NAME`. Root state alone preserves
 the session but cannot restore an implicit provider-private memory identity;
-that old session is denied after restart. Keep both the identity file and runtime
+that old session or refresh family is denied after restart. Provider renewal
+reuses the captured sanitized upstream identity without a new token/userinfo
+exchange, while current local proof and policy still gate issuance. Keep both the identity file and runtime
 state, with their matching proof epochs. Adaptation/validation does not open
 runtime storage, so filesystem health and exclusive ownership are startup checks.
 

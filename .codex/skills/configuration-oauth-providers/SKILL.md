@@ -26,8 +26,13 @@ when changing OAuth directives, issuer/audience, keys, or parser validation.
 The [qualified operator examples](../configuration/references/operator-examples.md)
 include an actual TLS journey using explicit issuer/access-token audience and
 static Ed25519 keys. Upstream login does not create downstream OP authority.
-The shared runtime supports explicitly selected provider snapshot renewal; see the
-[refresh configuration boundary](../configuration-authentication/references/token-refresh.md).
+For explicitly selected provider snapshot renewal, see the
+[refresh contract](../configuration-authentication/references/token-refresh.md#provider-snapshot-renewal).
+It reuses captured upstream identity and checks current local attachment/policy;
+it does not query upstream revocation or exchange upstream refresh credentials.
+Durable renewal requires root state and explicit file-backed local attachment.
+Identity-token cookies must be disabled; the callback family uses cookies even
+when native body refresh is enabled for local login.
 It also automatically attaches external identities to a private memory store
 unless a concrete local store is selected. See the
 [current integration boundaries](../configuration/references/authcrunch-compatibility.md#current-integration-boundaries)

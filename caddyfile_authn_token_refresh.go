@@ -65,7 +65,7 @@ import (
 // public origin pins the actual HTTPS origin, including any nondefault port,
 // without a path. base path pins the unstripped portal mount and refresh-cookie
 // path; use / for a root mount. These bindings prevent using a refresh credential
-// at another origin or mount. Caddy passes the original URL to Portal.ServeHTTP.
+// at another origin or mount. Caddy preserves the original URL for the portal.
 // A coexisting OIDC issuer must equal origin plus mount (omit the root slash).
 //
 // cookie name inherits the shared cookie prefix/refresh-token name when omitted.
