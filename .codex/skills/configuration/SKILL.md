@@ -150,10 +150,13 @@ authorize /api/* with api_policy
   to configure trusted application tickets, their independent browser cookie,
   private SQLite storage and issuer integration.
 - Use [configuration-oauth-providers](../configuration-oauth-providers/SKILL.md)
-  to configure external OAuth/OIDC identity providers, parsed by
-  `caddyfile_identity.go`, `caddyfile_identity_provider.go`, and
-  `caddyfile_identity_provider_oauth.go`, delegated to
-  `go-authcrunch/pkg/idp/parser` and `pkg/idp/oauth/parser`.
+  to configure external OAuth/OIDC identity providers and named pending-login
+  storage. Provider syntax uses `caddyfile_identity.go`,
+  `caddyfile_identity_provider.go` and `caddyfile_identity_provider_oauth.go`,
+  delegating to `go-authcrunch/pkg/idp/parser` and `pkg/idp/oauth/parser`.
+  Storage declarations use `caddyfile_oauth_login_store.go` and
+  `oauth_login_store_sqlite.go`, delegating the body to
+  `plugins/oauth-login-storage/sqlite/parser`.
 - Use [configuration-oauth-applications](../configuration-oauth-applications/SKILL.md)
   to register named OAuth clients, configure private registration storage and
   portal `oidc provider` blocks, or provision credentials through the CLI.

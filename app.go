@@ -101,6 +101,11 @@ type App struct {
 	IdentityProviderConfigs []json.RawMessage `json:"identity_providers,omitempty" caddy:"namespace=security.identity_providers inline_key=driver"`
 	identityProviders       []preparedIdentityProvider
 
+	// OAuthLoginStoreConfigs declares app-owned pending OAuth transaction stores.
+	// Prepared factories are immutable; the root only borrows returned clients.
+	OAuthLoginStoreConfigs []json.RawMessage `json:"oauth_login_stores,omitempty" caddy:"namespace=security.oauth_login_stores inline_key=driver"`
+	oauthLoginStores       []preparedOAuthLoginStore
+
 	// MessagingProviderConfigs declares caller-owned notification backends.
 	MessagingProviderConfigs []json.RawMessage `json:"messaging_providers,omitempty" caddy:"namespace=security.messaging inline_key=driver"`
 	messagingProviders       []preparedMessagingProvider
@@ -231,6 +236,9 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err := app.prepareIdentityProviders(ctx, &config); err != nil {
 		return err
 	}
+	if err := app.prepareOAuthLoginStores(ctx, &config); err != nil {
+		return err
+	}
 	if err := app.prepareMessagingProviders(ctx, &config); err != nil {
 		return err
 	}
@@ -347,11 +355,20 @@ func (app *App) constructServer(config *authcrunch.Config) error {
 		app.identityFiles = nil
 		return errors.Join(err, closeErr)
 	}
+	oauthLoginStores, oauthLoginClosers, err := app.attachOAuthLoginStores(app.pluginContext)
+	backendClosers = append(backendClosers, oauthLoginClosers...)
+	if err != nil {
+		closeErr := closePluginResources(backendClosers)
+		releaseIdentityFiles(app.identityFiles)
+		app.identityFiles = nil
+		return errors.Join(err, closeErr)
+	}
 	server, err := authcrunch.NewServerWithOptions(config, app.logger, authcrunch.ServerOptions{
 		IdentityStores:                   identityStores,
 		IdentityProviders:                identityProviders,
 		IdentityProviderAttachmentStores: app.identityProviderAttachmentStores(),
 		UserRegistries:                   registries,
+		OAuthLoginStores:                 oauthLoginStores,
 	})
 	if err != nil {
 		closeErr := closePluginResources(backendClosers)

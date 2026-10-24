@@ -74,6 +74,9 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		{name: "explicit provider attachments and portal-free direct OAuth", inputFileNamePrefix: "testcase_identity_attachments"},
 		{name: "duplicate identity attachment rejected", inputFileNamePrefix: "testcase_identity_attachment_duplicate", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid identity attachment: duplicate identity attachment directive, at Caddyfile:6")},
+		{name: "shared SQLite OAuth login storage and deferred selection", inputFileNamePrefix: "testcase_oauth_login_storage"},
+		{name: "SQLite OAuth login storage rejects duplicate capacity", inputFileNamePrefix: "testcase_oauth_login_storage_duplicate", shouldErr: true,
+			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid SQLite OAuth login storage configuration, at Caddyfile:7")},
 		{name: "SQLite ticket identity provider", inputFileNamePrefix: "testcase_identity_provider_sqlite"},
 		{name: "SQLite registration workflow", inputFileNamePrefix: "testcase_registration_sqlite"},
 		{name: "SQLite messaging provider", inputFileNamePrefix: "testcase_messaging_sqlite"},
@@ -144,7 +147,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 			name:                "malformed OAuth application header redacts credentials",
 			inputFileNamePrefix: "testcase_security_oauth_application_header_malformed",
 			shouldErr:           true,
-			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': expected oauth application, oauth registration store, or oauth identity provider header, at Caddyfile:3"),
+			err:                 fmt.Errorf("parsing caddyfile tokens for 'security': expected oauth application, oauth registration store, oauth login store, or oauth identity provider header, at Caddyfile:3"),
 		},
 		{
 			name:                "empty OAuth application requires explicit credentials",

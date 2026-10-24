@@ -147,6 +147,11 @@ When changing syntax or updating Caddy/go-authcrunch, follow
 to audit Caddyfiles, parser syntax comments, delegated upstream grammar, and
 the corresponding configuration skills together.
 
+[configuration-oauth-providers](.codex/skills/configuration-oauth-providers/SKILL.md)
+also owns named `oauth login store` backends and deployment namespaces for
+shared pending upstream OAuth transactions. Their lifetime is independent of
+completed portal/root-state sessions; the app owns and drains borrowed clients.
+
 The configuration router delegates `oauth application <nickname>`
 registrations, private `oauth registration store` configuration, the
 `security oauth` and `security oidc` CLI commands, and portal `oidc provider` blocks
@@ -162,7 +167,8 @@ stop/start deployment boundary. Direct OAuth without a portal belongs to
 [configuration-logging](.codex/skills/configuration-logging/SKILL.md) owns root
 diagnostic skip rules and issue #280's logger ownership boundary.
 AuthCrunch component filtering does not suppress
-Caddy v2.11.7's independent authentication middleware logger.
+Caddy's independent authentication middleware logger; verify its behavior against
+the dependency selected in `go.mod`.
 
 ## Portal API Integration
 

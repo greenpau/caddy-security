@@ -38,7 +38,7 @@ mapping. Shared scalar/list keys also accept separate words, for example
 | `icon <label> [class [color [background]]] [text <color> [background]] [priority <number>]` | Translate each positional field into its own `login icon <attribute> <value>` statement, including priority zero. Preserve repeated modifiers for shared duplicate detection; reject missing and surplus arguments. |
 | `jwks key <kid> <public-PEM-path>` | Forward every record. Distinct IDs may repeat; duplicate IDs fail. Quote paths containing spaces. |
 | `attach to local identity store <name>` | Forward the complete clause to the shared attachment parser. Select a concrete local store by name; omission creates provider-private memory. Unknown/wrong-kind targets fail root construction. See [attached identities](../../configuration-identity-stores/references/connected-accounts.md) for local-policy, browser connection and restart acceptance. |
-| `login store <name> namespace <namespace>` | The shared parser accepts and preserves the typed reference. Caddy has no backend declaration/injection yet; provisioning fails without the named `ServerOptions.OAuthLoginStores` binding. Do not present this as deployable shared storage. |
+| `login store <name> namespace <namespace>` | Select a declared `oauth login store` by exact name. The provider isolates pending transactions by deployment namespace and its complete normalized configuration. Omission retains private memory; a missing/empty binding fails before backend construction. See [shared login storage](shared-login-storage.md). |
 | `oauth identity provider github/google/facebook <client-id> <secret>` | Emit realm, driver, client ID, and secret statements, then use the same shared parser as blocks. |
 | `disabled` | An empty disabled block registers an omission marker without requiring credentials. A populated disabled definition passes shared validation before omission. Extra arguments and repeated markers fail. |
 
@@ -183,7 +183,7 @@ system-root hook retained for rootcerts (Go issue 67401). Caddy initializes its
 fallback roots before tests, so `SetFallbackRoots` cannot be called a second
 time. The hook is confined to the test child, initialized before any test TLS
 clients, and never changes the OS trust store or skips certificate verification.
-The repository pins Go 1.26; check this hook when upgrading the toolchain.
+Read the selected toolchain from `go.mod`; recheck this hook when upgrading it.
 
 When changing OAuth parser or trust behavior, start with the focused suite:
 

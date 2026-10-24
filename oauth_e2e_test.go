@@ -276,6 +276,7 @@ func (f *oauthE2EUpstream) serve(t *testing.T, w http.ResponseWriter, r *http.Re
 		record, ok := f.codes[r.Form.Get("code")]
 		delete(f.codes, r.Form.Get("code"))
 		verifier := r.Form.Get("code_verifier")
+		f.issuedSecrets = append(f.issuedSecrets, verifier)
 		challenge := sha256.Sum256([]byte(verifier))
 		bound := ok && r.Form.Get("client_id") == f.clientID && r.Form.Get("client_secret") == f.clientSecret && r.Form.Get("redirect_uri") == record.redirect && r.Form.Get("grant_type") == "authorization_code" && r.Form.Get("state") == record.state
 		if !bound || len(verifier) < 43 || base64.RawURLEncoding.EncodeToString(challenge[:]) != record.challenge {

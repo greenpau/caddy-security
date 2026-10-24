@@ -407,7 +407,7 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 			return fmt.Errorf("OAuth directives require exactly one provider named %q", name)
 		}
 	}
-	for _, cfg := range config.IdentityProviders {
+	for providerIndex, cfg := range config.IdentityProviders {
 		attachmentName := identityAttachmentName(cfg.Params)
 		if statements, ok := oauthDirectives[cfg.Name]; ok {
 			// Snapshots recompute defaults, not the shared dispatcher's allowlist.
@@ -428,6 +428,13 @@ func resolveRuntimeAppConfig(ctx context.Context, repl *caddy.Replacer, secretMa
 		}
 		if err := validateIdentityParameters(cfg.Kind, cfg.Params); err != nil {
 			return fmt.Errorf("identity provider %q parameters: %w", cfg.Name, err)
+		}
+		// Validate raw selector strings before JSON-based typed validation can
+		// replace invalid UTF-8 supplied by a secret with replacement runes.
+		if cfg.Kind == "oauth" {
+			if err := validateOAuthLoginStoreParameters(cfg.Params); err != nil {
+				return fmt.Errorf("identity provider %d OAuth login store selection is invalid", providerIndex)
+			}
 		}
 		if err := cfg.Validate(); err != nil {
 			return err

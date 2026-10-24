@@ -28,9 +28,13 @@ The complete-body OAuth parser recognizes
 `attach to local identity store NAME` and
 `login store NAME namespace NAMESPACE`. Explicit attachment resolves a concrete
 local store through the root runtime; an invalid target fails instead of falling
-back to memory. The login-store reference requires injected runtime bindings;
-Caddy calls `NewServer` without those bindings, so a nonempty reference cannot
-be deployed. SAML/LDAP attachment Caddyfile syntax remains unimplemented. Native upstream fields alone do not establish host text syntax.
+back to memory. Named `oauth login store` declarations now supply the selected
+runtime map through `NewServerWithOptions`. SQLite pending transactions can be
+completed by another local Caddy process with identical provider configuration;
+this does not share completed sessions. See
+[shared login storage](../../configuration-oauth-providers/references/shared-login-storage.md).
+OAuth, SAML, LDAP and bundled ticket attachment wiring and current local policy
+are qualified through the [connected-account contract](../../configuration-identity-stores/references/connected-accounts.md).
 
 The existing refresh parser recognizes `provider revalidation REALM snapshot`.
 This is explicit captured-identity renewal, with local attachment/policy checks,
@@ -38,13 +42,16 @@ not upstream revocation or token refresh. Native provider realm/mode fields
 support one-pass runtime resolution. See the
 [provider renewal contract](../../configuration-authentication/references/token-refresh.md#provider-snapshot-renewal)
 for cookie transport, current local proof and durable attachment requirements.
-Documents has typed upstream configuration but no Caddyfile adapter yet.
+The `documents` portal block and independent API switches expose encrypted
+storage through Caddy; see the
+[Documents API contract](../../authentication-portal-api/references/documents.md).
 
 External authentication attaches an immutable local identity automatically.
 Without explicit attachment it uses provider-private memory with no generated
 administrator. Identities are keyed by verified provider authority and subject,
-never by email. Restart continuity, account connection and administration need
-their dedicated host acceptance tests. SAML fixtures/providers must supply a
+never by email. Restart continuity, account connection and current-account administration have
+dedicated actual Caddy acceptance tests. Empty-email administration remains
+conditional on the current stored automatic account having no local aliases. SAML fixtures/providers must supply a
 non-transient NameID; GitHub requires its immutable numeric ID. Existing access
 JWTs retain their bounded expiry, and old external refresh evidence may require
 a fresh login. Preserve the library's new routes and complete request URL.

@@ -107,8 +107,10 @@ import (
 //
 // Attachment and login-store references delegate through the same parser.
 // Attachment selects a concrete local store by name; omission uses private memory.
-// A login-store reference parses but cannot provision until Caddy supplies the
-// named runtime backend through ServerOptions; the current app supplies none.
+// A login-store reference selects a named oauth login store declaration. The app
+// supplies its exact runtime handle through ServerOptions after pure reference
+// checks; omission retains private memory. A namespace isolates deployments, and
+// the provider adds its complete normalized configuration to that binding.
 func parseCaddyfileOAuthIdentityProvider(d *caddyfile.Dispenser, app *App, name string, shortcuts []string) error {
 	cfg := app.Config
 	var lines [][]string

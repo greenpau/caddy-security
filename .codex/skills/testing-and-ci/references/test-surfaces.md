@@ -668,3 +668,32 @@ partial-construction cleanup are checked by `TestAppCredential*` and existing
 app lifecycle E2E. `TestSQLiteCredential*` and `TestSecurityAPIKey*` cover parsing,
 consumer behavior and private offline provisioning. Preserve secrets command
 regressions when changing the shared private-file and JSON input helpers.
+
+
+## Shared upstream OAuth transactions
+
+`oauth_login_store_sqlite_test.go`, `caddyfile_oauth_login_store_test.go` and
+`caddyfile_oauth_login_store_resolution_test.go` qualify pure normalization,
+complete encoded parser delegation, native/deferred selectors and exact secret
+values. Registered Caddyfile fixtures retain declaration-order independence.
+`app_oauth_login_stores_test.go` covers all retained references, immutable
+factories, runtime metadata, partial acquisition, reverse cleanup, deferred Start
+and request drain. `app_oauth_login_store_storage_test.go` checks all known storage
+categories, canonical sharing/capacity, hardlinks, sidecars, managed directories,
+candidate/active comparisons and ancestor retargeting before deferred Start.
+
+`TestCaddySharedOAuthLoginStoreE2E` launches two actual Caddy command processes
+behind a verified TLS fixture proxy. Its command entrypoint adds only an isolated
+private CA pool, as in runtime-state tests; it imports the production modules.
+Both backend and issuer TLS remain verified. It covers nested/root portal mounts,
+peer callback completion, independently verified JWTs and protected peer routes,
+wrong-browser preservation, simultaneous single-use callbacks, graceful stop,
+restart replay, failed candidates, namespace/configuration isolation, cancellation
+of a claimed exchange, database capacity and omitted-memory controls. The direct
+OAuth control qualifies injection in one process; its separate pending map is
+not distributed. The parent test is race instrumented; built command processes
+are CGO-disabled production builds, not instrumented subprocess coverage.
+
+Detailed storage expiry and transaction-failure matrices belong to the selected
+public SQLite/backend/root tests. Their results supplement actual Caddy evidence;
+they do not replace it or establish multi-host availability.

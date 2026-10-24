@@ -38,10 +38,10 @@ realm and database path are distinct values; never use a path as implicit identi
 | Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
 | Registration workflows | `security.registration_workflows.<driver>` | Native/global declarations and bundled SQLite enrollment; exact borrowed dependencies and explicit portal registry selection |
 | Signing/refresh storage | `security.cryptographic_signing.<driver>`, `security.session_and_refresh_storage.<driver>` | Proposed; standalone engine APIs do not select portal backends |
-| OAuth login storage | `security.oauth_login_stores.<driver>` | Proposed; public root option exists, host loader does not |
+| OAuth login storage | `security.oauth_login_stores.<driver>` | Native/global named declarations and bundled SQLite storage; immutable factories supply exact borrowed runtime handles through root options |
 
-These proposed namespaces are design conventions, not registered modules or
-accepted Caddyfile syntax. Add loaders only with a supported consumer and its
+The signing/refresh namespaces remain design conventions, not registered modules
+or accepted Caddyfile syntax. Add loaders only with a supported consumer and its
 acceptance tests. Do not add a universal map-based plugin executor or a second
 process-global runtime registry.
 
@@ -148,6 +148,38 @@ The [runtime lifecycle contract](runtime-lifecycle.md) owns errors, reservations
 and concurrent cleanup. Future category adapters must preserve these invariants
 and define any worker shutdown ordering before sharing this resource mechanism.
 
+## OAuth pending-login factories
+
+`OAuthLoginStoreBackendModule.PrepareOAuthLoginStore` returns an immutable
+`OAuthLoginStoreFactory`. Its `OAuthLoginStoreConfig` returns copied name, driver
+and config-hash metadata; `NewOAuthLoginStore` consumes the frozen prepared
+configuration. It must not reread mutable exported module fields at deferred
+Start. The bundled SQLite factory normalizes public defaults and duration spelling.
+Its descriptor hash establishes host factory agreement, not the provider namespace.
+
+The returned `OAuthLoginStore` embeds the public transaction interface and
+attests the same metadata plus initialized/not-closed readiness through
+`OAuthLoginStoreConfig`. The host contains metadata panics, including invalid
+typed nils, and collects optional closers before inspecting a constructor error.
+Do not probe readiness by creating a sentinel login or wrap transaction errors
+with retries. The runtime delegates operations unchanged. A custom companion
+owns truthful metadata, storage separation and the public transactional contract.
+
+Reference preflight runs even without any backend declaration, for every retained
+OAuth provider. The new selector check is pure: full OAuth validation can read
+pinned JWKS files and remains with existing provider validation. Reject malformed
+native selector bytes before JSON encoding can repair them. Runtime handles do
+not enter Params or JSON; each root receives a fresh map of exact instances.
+
+SQLite storage may share a canonical file only with matching capacity. Known
+cross-category database/sidecar aliases and managed-directory containment fail
+before factories, including candidate/active comparisons in both directions.
+Keep the immutable opening path alongside physical ownership; re-resolve opening
+paths before deferred construction while retaining the old app's physical graph
+through drain. No raw database open is needed for these checks. External path
+replacement after admission remains outside the guarantee.
+See [shared login storage](../../configuration-oauth-providers/references/shared-login-storage.md).
+
 ## Public injection audit
 
 Recheck these boundaries against the selected module before each adapter change.
@@ -159,7 +191,7 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | External authorization | `Gatekeeper.SetExternalAuthorizer`; attached to the private root through the host binding and bundled HTTP JSON factory |
 | Secrets | Host `SecretsManager` resolves values before root construction; separate adapter must preserve exact types and redact `GetConfig` metadata |
 | Messaging | `messaging.Config.AddProvider` preserves runtime injections through validation, excludes them from JSON, and is consumed by registry `SetMessaging`; bind after config restoration and before validation/construction; SQLite delivery uses the app-owned bounded worker |
-| OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; supply named runtime bindings on each construction, close only after consumers drain; the current app does not supply these bindings |
+| OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; the host validates every retained provider reference, supplies fresh named handles on each construction and closes them only after consumers drain and the root closes |
 | API-key authenticators | Validate `PolicyConfig`, then call its `AuthProxyConfig.AddAuthenticator` before `NewServer` on that same private graph. The root retains these runtime bindings and checks `HasAuthProxies`. Waiting to call `Gatekeeper.AddAuthenticators` after root construction fails for an injected-only realm |
 | Identity stores | Derive `Config.ExternalIdentityStores` through `ids.NewExternalIdentityStoreConfig` before validation and supply `ServerOptions.IdentityStores` before root construction. Exact names/kinds/realms, configured handles and persistence digests are validated; injected handles remain caller-owned. See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md) |
 | Ticket identity providers | Derive `Config.ExternalIdentityProviders` and supply `ServerOptions.IdentityProviders`. Root checks exact configured metadata and borrows the same dynamic instance, including its attachment interface; it never reconfigures or closes caller-owned providers |

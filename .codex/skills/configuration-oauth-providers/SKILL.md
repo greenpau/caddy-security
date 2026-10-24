@@ -1,13 +1,14 @@
 ---
 name: configuration-oauth-providers
-description: "Configure external OAuth/OIDC login providers, credentials, scopes, issuer/audience trust, JWKS, PKCE, and portal enablement. Named relying-party registrations and portal OPs belong to OAuth applications."
+description: "Configure external OAuth/OIDC login providers, credentials, scopes, issuer/audience trust, JWKS, PKCE, portal enablement, and named pending-login storage. Named relying-party registrations and portal OPs belong to OAuth applications."
 ---
 
 # Configuration OAuth Providers
 
 ## Purpose
 
-Use this skill to configure `oauth identity provider <name>` blocks. The
+Use this skill to configure `oauth identity provider <name>` and named
+`oauth login store` blocks. The
 Caddyfile syntax is authoritative in `caddyfile_identity.go` and
 `caddyfile_identity_provider_oauth.go`; it delegates to the shared upstream
 OAuth parser. The provisioning behavior is authoritative in
@@ -22,6 +23,9 @@ but SAML uses the local `go-authcrunch/pkg/idp/saml` implementation.
 
 Read [shared parsing, grammar compatibility, and trust](references/shared-parser.md)
 when changing OAuth directives, issuer/audience, keys, or parser validation.
+Use [shared pending-login storage](references/shared-login-storage.md) for named
+`oauth login store` declarations, provider namespaces, SQLite capacity, runtime
+ownership and callbacks completed by another local Caddy process.
 
 The [qualified operator examples](../configuration/references/operator-examples.md)
 include an actual TLS journey using explicit issuer/access-token audience and

@@ -44,6 +44,7 @@ func init() {
 //			logging { skip <exact|partial|prefix|suffix|regex> text <value> }
 //			state { directory <absolute-private-directory> }
 //			oauth registration store { path <absolute-private-directory> }
+//			oauth login store <driver> <name> { ... }
 //			secrets <module> <id> { ... }
 //			credentials <name> { ... }
 //			messaging <email|file|sqlite> provider <name> { ... }
@@ -106,11 +107,16 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 		}
 		if d.Val() == "oauth" {
 			if !d.NextArg() {
-				return nil, d.Errf("expected oauth application, oauth registration store, or oauth identity provider header")
+				return nil, d.Errf("expected oauth application, oauth registration store, oauth login store, or oauth identity provider header")
 			}
 			kind := d.Val()
 			d.Prev()
 			switch kind {
+			case "login":
+				if err := parseCaddyfileOAuthLoginStore(d, app); err != nil {
+					return nil, err
+				}
+				continue
 			case "registration":
 				if app.OAuthRegistrationStore != nil {
 					return nil, d.Errf("duplicate oauth registration store")
@@ -145,7 +151,7 @@ func parseCaddyfile(d *caddyfile.Dispenser, previous any) (any, error) {
 				// Resolve identity providers after collecting applications.
 			default:
 				// A malformed/grouped header may contain a misplaced secret.
-				return nil, d.Errf("expected oauth application, oauth registration store, or oauth identity provider header")
+				return nil, d.Errf("expected oauth application, oauth registration store, oauth login store, or oauth identity provider header")
 			}
 		}
 		declaration := d.NewFromNextSegment()

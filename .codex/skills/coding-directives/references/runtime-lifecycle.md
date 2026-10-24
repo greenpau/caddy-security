@@ -203,9 +203,13 @@ Client registrations and signing-key files remain persisted independently of
 runtime disposal. Supply the existing registration credentials and key paths to
 the next configuration; do not regenerate them on every load. The config copy
 preserves those values. Access JWTs can remain valid when verification keys and
-policy remain compatible. Without `Config.State`, OIDC sessions, pending
-requests, grants and portal refresh state are volatile. With it, completed
-authority and generated keys survive a stop/start; pending requests do not.
+policy remain compatible. Without `Config.State`, OIDC sessions, grants and portal refresh state are
+volatile. With it, completed authority and generated keys survive a stop/start;
+root snapshots do not preserve pending requests. An explicitly selected SQLite
+OAuth login store independently preserves upstream pending-login evidence until
+its own expiry. Closing a client does not purge a peer's pending work. This does
+not distribute completed portal sessions or direct-policy pending maps. See
+[shared login storage](../../configuration-oauth-providers/references/shared-login-storage.md).
 
 ## Validation
 

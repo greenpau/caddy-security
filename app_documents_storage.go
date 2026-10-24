@@ -31,8 +31,9 @@ type documentsStorageBinding struct {
 // Detached scalar paths remain available through request drain. No reference to
 // mutable module configuration, realm slices or declarative JSON is retained.
 type appStorageInventory struct {
-	files       []identityProviderStorageFile
-	directories []string
+	files              []identityProviderStorageFile
+	directories        []string
+	openingDirectories []string
 }
 
 func (app *App) prepareStorageInventory(config *authcrunch.Config) error {
@@ -58,10 +59,12 @@ func (app *App) prepareStorageInventory(config *authcrunch.Config) error {
 	if app.OAuthRegistrationStore != nil {
 		inventory.directories = append(inventory.directories, app.OAuthRegistrationStore.Path)
 	}
+	inventory.openingDirectories = slices.Clone(inventory.directories)
 	// Remember physical paths where available, including existing ancestors of
 	// future files. Failure here does not introduce new policy for unrelated
 	// modules; comparisons involving Documents enforce availability below.
 	for i, file := range inventory.files {
+		inventory.files[i].openingPath = file.path
 		if paths, err := storageFileNamespace(file); err == nil {
 			inventory.files[i].path = paths[0]
 		}
@@ -85,7 +88,14 @@ func (app *App) validateStorageInventory(config *authcrunch.Config) error {
 	if app.storageInventory == nil {
 		return app.prepareStorageInventory(config)
 	}
-	return app.validateDocumentsStorage(*app.storageInventory)
+	// Re-resolve immutable opening paths, never the exported module fields.
+	// The published inventory retains the physical ownership graph until drain.
+	inventory := refreshStorageInventory(*app.storageInventory)
+	if err := app.validateDocumentsStorage(inventory); err != nil {
+		return err
+	}
+	app.storageInventory = &inventory
+	return nil
 }
 
 func (app *App) validateDocumentsStorage(inventory appStorageInventory) error {
@@ -113,6 +123,9 @@ func (app *App) validateDocumentsStorage(inventory appStorageInventory) error {
 }
 
 func validateDocumentsStorageInventory(inventory appStorageInventory) error {
+	if err := validateOAuthLoginStoreStorageInventory(inventory); err != nil {
+		return err
+	}
 	for i, file := range inventory.files {
 		for j := range i {
 			if err := validateDocumentsStoragePair(file, inventory.files[j], false); err != nil {
@@ -124,6 +137,9 @@ func validateDocumentsStorageInventory(inventory appStorageInventory) error {
 }
 
 func validateDocumentsStorageTransition(candidate, active appStorageInventory) error {
+	if err := validateOAuthLoginStoreStorageTransition(candidate, active); err != nil {
+		return err
+	}
 	for _, file := range candidate.files {
 		for _, old := range active.files {
 			if err := validateDocumentsStoragePair(file, old, true); err != nil {
