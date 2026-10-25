@@ -10,6 +10,9 @@ for complete Caddyfile/native-JSON journeys and operational limits.
 ## Reproducible evidence
 
 Create a new private directory under this repository's `tmp/`, with `umask 077`.
+Apply that umask to evidence creation; run the CI child with an ordinary umask
+such as `022`. Permission-negative fixtures request public directory modes, and
+an inherited `077` can turn those fixtures into valid private directories.
 Preserve HEAD, dirty status, source-file SHA-256 manifest, a source archive and
 working-tree patch; a commit ID alone does not identify an uncommitted candidate.
 Record `VERSION` separately from the embedded main-module pseudo-version. Keep
@@ -17,6 +20,15 @@ commands, target environment, original exit codes, stdout/stderr and failures.
 Record dependency module sums/origin revisions and `go mod verify`, Go/Node/browser
 versions, scanner revision and vulnerability database timestamp. Never export the
 whole process environment: it may contain service or publication credentials.
+
+Check available disk space before the full gate and each target build. Account
+for the compiler, build caches, linker temporary files and retained artifacts;
+the test guard's artifact budget does not reserve free filesystem space. Keep
+downloaded Go distributions and task-local caches in underscore-prefixed
+directories so package discovery excludes their source fixtures. Record cache
+and temporary-directory overrides. Preserve a disk-full failure before removing
+disposable build output and retrying; foreign-target caches can be discarded
+after their artifacts and metadata have been retained.
 
 Run the required gate from this checkout with bounded concurrency:
 

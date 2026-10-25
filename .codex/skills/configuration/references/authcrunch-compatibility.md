@@ -59,8 +59,13 @@ a fresh login. Preserve the library's new routes and complete request URL.
 Named PS256 access signers bind through root descriptors and borrowed runtime
 maps, with explicit portal/policy trust profiles. See
 [selected access signing](../../configuration-crypto/references/access-signing.md).
-The SQLite refresh store still has only the public standalone manager binding;
-its portal storage adapter remains separate work. SQLite password identities use derived `ExternalIdentityStores`
+Named SQLite refresh stores bind through `ExternalRefreshStores` descriptors
+and the typed `ServerOptions.RefreshStores` runtime map. The app owns the
+backend and drains consumers before cleanup; persistent root state coordinates
+activation and configuration generations. See
+[managed refresh storage](../../configuration-authentication/references/refresh-storage.md)
+for declarations, restart guarantees and uncertainty recovery.
+SQLite password identities use derived `ExternalIdentityStores`
 descriptors and the typed `ServerOptions.IdentityStores` runtime map. The host
 constructs them before the root, owns cleanup and preserves backend epochs.
 See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md)
