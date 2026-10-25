@@ -1,0 +1,11 @@
+{
+	security {
+		identity provider sqlite application {
+			realm application
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/tickets.db"
+			public_origin https://auth.example.test
+			issuer_url https://issuer.example.test/login
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/tickets.db"
+		}
+	}
+}

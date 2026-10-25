@@ -1,0 +1,132 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":443"
+          ],
+          "routes": [
+            {
+              "match": [
+                {
+                  "host": [
+                    "app.example.test"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "subroute",
+                          "routes": [
+                            {
+                              "handle": [
+                                {
+                                  "gatekeeper_name": "enriched",
+                                  "handler": "authorization",
+                                  "route_matcher": "*"
+                                },
+                                {
+                                  "body": "protected resource",
+                                  "handler": "static_response"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            }
+          ]
+        }
+      }
+    },
+    "security": {
+      "config": {
+        "authorization_policies": [
+          {
+            "name": "enriched",
+            "auth_url_path": "/auth",
+            "auth_redirect_query_param": "redirect_url",
+            "auth_redirect_status_code": 302,
+            "access_list_rules": [
+              {
+                "conditions": [
+                  "match department engineering"
+                ],
+                "action": "allow log debug"
+              }
+            ],
+            "access_list_fields": [
+              {
+                "name": "department",
+                "claim": "enrichment.department",
+                "type": "string"
+              }
+            ],
+            "raw_crypto_key_store_config": [
+              "crypto key verify synthetic-static-claims-fixture-key"
+            ],
+            "crypto_key_store_config": {
+              "raw_key_configs": [
+                "crypto key verify synthetic-static-claims-fixture-key"
+              ],
+              "auto_generate_tag": "default",
+              "auto_generate_algo": "ES512"
+            },
+            "validate_bearer_header": true,
+            "api_key_header_name": "X-Api-Key",
+            "auth_realm_header_name": "X-Auth-Realm"
+          }
+        ]
+      },
+      "claims_enrichment": [
+        {
+          "policy": "enriched",
+          "config": {
+            "source": "static",
+            "version": "v1",
+            "issuer": "https://login.example.test/auth/login",
+            "realm": "local",
+            "subject_claim": "directory_id",
+            "tenant_claim": "tenant",
+            "audience": "app",
+            "timeout": "1s",
+            "max_age": "1m",
+            "attributes": [
+              {
+                "name": "enrichment.department",
+                "type": "string"
+              },
+              {
+                "name": "permissions",
+                "type": "string_list"
+              },
+              {
+                "name": "settings",
+                "type": "json"
+              },
+              {
+                "name": "literal",
+                "type": "json"
+              }
+            ]
+          },
+          "backend": {
+            "driver": "static",
+            "claims_json": "{\"enrichment.department\":\"engineering\",\"literal\":\"{env.STATIC_CLAIMS_VALUE}\",\"permissions\":[\"read\",\"write\"],\"settings\":{\"empty\":\"\",\"enabled\":true,\"optional\":null,\"quota\":9007199254740993,\"weight\":1.2300e+10}}"
+          }
+        }
+      ]
+    }
+  }
+}

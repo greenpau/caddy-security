@@ -1,0 +1,12 @@
+{
+	security {
+		user registration sqlite signup {
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/signup.db"
+			identity_store accounts
+			realm staff
+			email_provider notifications
+			public_origin https://auth.example.test
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/signup.db"
+		}
+	}
+}

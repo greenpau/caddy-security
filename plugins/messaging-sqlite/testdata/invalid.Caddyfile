@@ -1,0 +1,8 @@
+{
+	security {
+		messaging sqlite provider notifications {
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/outbox.db"
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/outbox.db"
+		}
+	}
+}

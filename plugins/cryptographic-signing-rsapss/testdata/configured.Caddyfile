@@ -1,0 +1,61 @@
+{
+	security {
+		local identity store localdb {
+			realm local
+			path :memory:
+		}
+		authentication portal literal {
+			enable identity store localdb
+			crypto key current verify from file /private/access-current-public.pem
+			crypto key retiring verify from file /private/access-retiring-public.pem
+			access signer primary
+			access token profile {
+				issuer https://auth.example.test/auth
+				audience service-a
+				key ids retiring current
+				max lifetime 900
+			}
+		}
+		authentication portal deferred {
+			enable identity store localdb
+			crypto key current verify from file /private/access-current-public.pem
+			crypto key retiring verify from file /private/access-retiring-public.pem
+			access signer {env.ACCESS_SIGNER_FIXTURE_NAME}
+			access token profile {
+				issuer {env.ACCESS_SIGNER_FIXTURE_ISSUER}
+				audience {env.ACCESS_SIGNER_FIXTURE_AUDIENCE}
+				key ids retiring {env.ACCESS_SIGNER_FIXTURE_KID}
+				max lifetime {env.ACCESS_SIGNER_FIXTURE_SECONDS}
+			}
+		}
+		authorization policy literal {
+			allow roles authp/user
+			crypto key current verify from file /private/access-current-public.pem
+			crypto key retiring verify from file /private/access-retiring-public.pem
+			access token profile {
+				issuer https://auth.example.test/auth
+				audience service-a
+				key ids retiring current
+				max lifetime 900
+			}
+		}
+		authorization policy deferred {
+			allow roles authp/user
+			crypto key current verify from file /private/access-current-public.pem
+			crypto key retiring verify from file /private/access-retiring-public.pem
+			access token profile {
+				issuer {env.ACCESS_SIGNER_FIXTURE_ISSUER}
+				audience {env.ACCESS_SIGNER_FIXTURE_AUDIENCE}
+				key ids retiring {env.ACCESS_SIGNER_FIXTURE_KID}
+				max lifetime {env.ACCESS_SIGNER_FIXTURE_SECONDS}
+			}
+		}
+		access signer rsapss primary {
+			key file "/private signing, {env.LITERAL_KEY_PATH}/access.pem"
+			key id current
+			issuer https://auth.example.test/auth
+			audience service-a
+			max lifetime 900s
+		}
+	}
+}

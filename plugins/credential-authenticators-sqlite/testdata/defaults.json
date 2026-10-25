@@ -1,0 +1,16 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "credential_authenticators": [
+        {
+          "driver": "sqlite",
+          "name": "keys",
+          "realm": "staff",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/keys.db",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

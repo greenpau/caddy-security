@@ -1,0 +1,30 @@
+{
+	security {
+		authorization policy app_policy {
+			crypto key verify synthetic-external-authorization-fixture-key
+			validate bearer header
+			external authorization httpjson {
+				endpoint https://policy.example.test/decide
+				policy reports
+				version revision-1
+				issuer https://login.example.test/auth/login
+				realm local
+				subject claim directory_id
+				tenant claim tenant
+				attribute roles
+				attribute department
+				timeout 500ms
+				tls ca file "/private roots/ca.pem"
+				tls client certificate /private/client.pem /private/client-key.pem
+			}
+			allow roles viewer
+		}
+	}
+}
+
+https://app.example.test {
+	route {
+		authorize with app_policy
+		respond "protected resource"
+	}
+}

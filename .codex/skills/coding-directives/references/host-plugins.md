@@ -95,7 +95,10 @@ pointer `CaddyModule` receiver to avoid copying its runtime mutex.
 the parent app. It checks typed contracts, strict native decoding, unchanged
 configuration, secret resolution and the absence of premature storage creation.
 Each companion also owns category-local external-package parser, factory,
-failure and real-backend tests. Keep private state tests beside their own
+failure and real-backend tests. Its `caddyfile_adapt_test.go` explicitly imports
+the app for full Caddy adaptation of its dedicated `testdata/` fixtures; this
+test-only dependency does not change production package boundaries or the
+standalone loading inventory. Keep private state tests beside their own
 category. Root dispatch/adaptation, alias, storage-preflight, lifecycle and
 TLS/browser E2E tests remain with the app. Run both surfaces when changing a
 companion; directory registration alone does not prove consumer integration.

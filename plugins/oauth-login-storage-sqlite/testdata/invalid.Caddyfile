@@ -1,0 +1,9 @@
+{
+	security {
+		oauth login store sqlite shared {
+			path /private/logins.db
+			capacity 1
+			capacity 2
+		}
+	}
+}

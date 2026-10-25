@@ -1,0 +1,26 @@
+{
+	security {
+		oauth login store sqlite early {
+			path "/private oauth/early.db"
+		}
+		oauth identity provider literal {
+			realm literal
+			driver linkedin
+			client_id literal-client
+			client_secret synthetic-secret
+			login store early namespace deployment-a
+		}
+		oauth identity provider upstream {
+			realm upstream
+			driver linkedin
+			client_id shared-client
+			client_secret synthetic-secret
+			login store {env.OAUTH_LOGIN_STORE} namespace {env.OAUTH_LOGIN_NAMESPACE}
+		}
+		oauth login store sqlite shared {
+			path "/private oauth, {env.LITERAL_PATH}/logins.db"
+			timeout 1000ms
+			capacity 37
+		}
+	}
+}

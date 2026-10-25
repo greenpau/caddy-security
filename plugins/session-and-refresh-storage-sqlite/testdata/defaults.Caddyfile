@@ -1,0 +1,7 @@
+{
+	security {
+		token refresh store sqlite {$PLUGIN_ADAPT_NAME} {
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/sessions.db"
+		}
+	}
+}

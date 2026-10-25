@@ -1,0 +1,16 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "secrets_managers": [
+        {
+          "driver": "sqlite",
+          "name": "signing",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/secrets.db",
+          "record": "}",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

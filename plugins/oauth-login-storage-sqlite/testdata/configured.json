@@ -1,0 +1,107 @@
+{
+  "apps": {
+    "security": {
+      "config": {
+        "identity_providers": [
+          {
+            "name": "literal",
+            "kind": "oauth",
+            "params": {
+              "base_auth_url": "https://www.linkedin.com/oauth/",
+              "client_id": "literal-client",
+              "client_secret": "synthetic-secret",
+              "driver": "linkedin",
+              "identity_token_field_name": "id_token",
+              "login_icon": {
+                "background_color": "#1e88e5",
+                "class_name": "lab la-linkedin la-2x",
+                "color": "white",
+                "text": "LinkedIn",
+                "text_color": "#37474f"
+              },
+              "login_store": {
+                "name": "early",
+                "namespace": "deployment-a"
+              },
+              "metadata_url": "https://www.linkedin.com/oauth/.well-known/openid-configuration",
+              "realm": "literal",
+              "required_token_fields": [
+                "access_token",
+                "id_token"
+              ],
+              "response_type": [
+                "code"
+              ],
+              "scopes": [
+                "openid",
+                "email",
+                "profile"
+              ]
+            }
+          },
+          {
+            "name": "upstream",
+            "kind": "oauth",
+            "params": {
+              "base_auth_url": "https://www.linkedin.com/oauth/",
+              "client_id": "shared-client",
+              "client_secret": "synthetic-secret",
+              "driver": "linkedin",
+              "identity_token_field_name": "id_token",
+              "login_icon": {
+                "background_color": "#1e88e5",
+                "class_name": "lab la-linkedin la-2x",
+                "color": "white",
+                "text": "LinkedIn",
+                "text_color": "#37474f"
+              },
+              "login_store": {
+                "name": "{env.OAUTH_LOGIN_STORE}",
+                "namespace": "{env.OAUTH_LOGIN_NAMESPACE}"
+              },
+              "metadata_url": "https://www.linkedin.com/oauth/.well-known/openid-configuration",
+              "realm": "upstream",
+              "required_token_fields": [
+                "access_token",
+                "id_token"
+              ],
+              "response_type": [
+                "code"
+              ],
+              "scopes": [
+                "openid",
+                "email",
+                "profile"
+              ]
+            }
+          }
+        ]
+      },
+      "oauth_provider_directives": {
+        "upstream": [
+          "realm upstream",
+          "driver linkedin",
+          "client_id shared-client",
+          "client_secret synthetic-secret",
+          "login store {env.OAUTH_LOGIN_STORE} namespace {env.OAUTH_LOGIN_NAMESPACE}"
+        ]
+      },
+      "oauth_login_stores": [
+        {
+          "capacity": 10000,
+          "driver": "sqlite",
+          "name": "early",
+          "path": "/private oauth/early.db",
+          "timeout": "1s"
+        },
+        {
+          "capacity": 37,
+          "driver": "sqlite",
+          "name": "shared",
+          "path": "/private oauth, {env.LITERAL_PATH}/logins.db",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

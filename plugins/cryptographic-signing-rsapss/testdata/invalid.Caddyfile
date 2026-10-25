@@ -1,0 +1,12 @@
+{
+	security {
+		access signer rsapss primary {
+			key file /private/access.pem
+			key id current
+			issuer https://auth.example.test/auth
+			audience service-a
+			max lifetime 15m
+			max lifetime 900s
+		}
+	}
+}

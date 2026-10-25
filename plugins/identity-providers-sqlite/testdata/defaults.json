@@ -1,0 +1,20 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "identity_providers": [
+        {
+          "driver": "sqlite",
+          "name": "application",
+          "realm": "application",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/tickets.db",
+          "public_origin": "https://auth.example.test",
+          "issuer_url": "https://issuer.example.test/login",
+          "base_path": "/auth",
+          "cookie_name": "AUTHP_PROVIDER_SESSION_ID",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

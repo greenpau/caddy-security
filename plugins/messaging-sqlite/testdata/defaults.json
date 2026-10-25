@@ -1,0 +1,15 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "messaging_providers": [
+        {
+          "driver": "sqlite",
+          "name": "notifications",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/outbox.db",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

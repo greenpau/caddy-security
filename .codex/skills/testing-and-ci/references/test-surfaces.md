@@ -29,7 +29,7 @@ proxy origin remain separate deployment responsibilities.
 ## Bundled companion packages
 
 Each `plugins/<category>-<backend>/consumer_test.go` exercises the public adapter
-independently of the root app. Self-contained adapter cases live here; root
+directly. Self-contained adapter cases live here; root
 tests retain global dispatch/adaptation, compatibility aliases, resource graphs,
 commands, route admission and actual Caddy journeys. Category contracts remain
 separate under `pkg/plugin`; `oauth_login_storage_test.go` directly tests its
@@ -55,6 +55,18 @@ belong to their individual categories. `plugins/consumer_test.go` remains the cr
 strict native loading inventory and verifies that importing companions does not
 register the root app. Do not replace behavioral cases with that inventory or
 combine category suites/contracts into an aggregate file.
+
+Every companion also owns `caddyfile_adapt_test.go` and a dedicated `testdata/`
+directory. These integration tests explicitly register the security app and use
+`internal/caddyfiletest` to compare complete Caddy-adapted JSON, including module
+selectors and portal/policy references. Configured, default/literal or timing,
+and invalid fixtures exercise each category. Inputs end in `.Caddyfile` and
+have exactly one `.json` or `.error` expectation; optional `.env` files use
+test-scoped environment restoration. The runner rejects empty fixture sets,
+ambiguous expectations and unexpected warnings. It preserves JSON numbers and
+array ordering while ignoring object key ordering. Keep the separate
+`plugins/consumer_test.go` binary free of parent app imports so it continues to
+prove standalone companion registration.
 
 Category-local `failure_test.go` suites qualify setup errors through private,
 per-call operation boundaries, without replacing mutable package globals or
@@ -774,7 +786,8 @@ Add or update these tests when directive parsing behavior changes:
 - `caddyfile_test.go`: app-level parse coverage.
 
 Adapt tests live in `TestCaddyfileAdaptAuthenticationToJSON` in
-`caddyfile_adapt_test.go`. Each case uses
+the root `caddyfile_adapt_test.go`, with companion-local `TestCaddyfileAdapt`
+tests described above. Each root case uses
 `testdata/caddyfile_adapt/<prefix>.Caddyfile` as input and compares against
 `<prefix>.json`. Optional `<prefix>.env` files provide environment variables;
 blank lines and comments are ignored, and variables are cleaned up by the test.

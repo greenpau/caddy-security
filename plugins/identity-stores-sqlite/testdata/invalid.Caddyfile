@@ -1,0 +1,9 @@
+{
+	security {
+		identity store sqlite accounts {
+			realm staff
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/accounts.db"
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/accounts.db"
+		}
+	}
+}

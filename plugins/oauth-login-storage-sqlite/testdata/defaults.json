@@ -1,0 +1,16 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "oauth_login_stores": [
+        {
+          "driver": "sqlite",
+          "name": "pending",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/pending.db",
+          "timeout": "1s",
+          "capacity": 10000
+        }
+      ]
+    }
+  }
+}

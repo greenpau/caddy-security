@@ -1,0 +1,18 @@
+{
+	security {
+		authorization policy enriched {
+			claims enrichment static {
+				source static
+				version v1
+				issuer https://login.example.test/auth/login
+				realm local
+				subject claim directory_id
+				tenant claim tenant
+				audience app
+				attribute department string
+				claim department json true
+			}
+			allow roles viewer
+		}
+	}
+}

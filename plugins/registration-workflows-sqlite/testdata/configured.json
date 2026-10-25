@@ -1,0 +1,140 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":443"
+          ],
+          "routes": [
+            {
+              "match": [
+                {
+                  "host": [
+                    "auth.example.test"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "subroute",
+                          "routes": [
+                            {
+                              "handle": [
+                                {
+                                  "handler": "authenticator",
+                                  "portal_name": "myportal",
+                                  "route_matcher": "*"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "match": [
+                        {
+                          "path": [
+                            "/auth/*"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            }
+          ]
+        }
+      }
+    },
+    "security": {
+      "config": {
+        "authentication_portals": [
+          {
+            "name": "myportal",
+            "ui": {},
+            "cookie_config": {
+              "session_id_cookie_name": "AUTHP_SESSION_ID",
+              "referer_cookie_name": "AUTHP_REDIRECT_URL",
+              "sandbox_id_cookie_name": "AUTHP_SANDBOX_ID",
+              "identity_token_cookie_name": "AUTHP_ID_TOKEN",
+              "access_token_cookie_name": "AUTHP_ACCESS_TOKEN",
+              "refresh_token_cookie_name": "AUTHP_REFRESH_TOKEN",
+              "oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
+              "oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+              "saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
+              "cross_device_session_id_cookie_name": "AUTHP_CROSS_DEVICE_SESSION_ID",
+              "cookie_name_prefix": "AUTHP"
+            },
+            "identity_stores": [
+              "accounts"
+            ],
+            "user_registries": [
+              "signup"
+            ],
+            "token_validator_options": {},
+            "raw_crypto_key_store_config": [
+              "crypto key sign-verify synthetic-identity-signing-secret"
+            ],
+            "crypto_key_store_config": {
+              "raw_key_configs": [
+                "crypto key sign-verify synthetic-identity-signing-secret"
+              ],
+              "auto_generate_tag": "default",
+              "auto_generate_algo": "ES512"
+            },
+            "token_grantor_options": {},
+            "portal_admin_roles": {
+              "authp/admin": true
+            },
+            "portal_user_roles": {
+              "authp/user": true
+            },
+            "portal_guest_roles": {
+              "authp/guest": true
+            },
+            "api": {
+              "profile_enabled": true
+            }
+          }
+        ]
+      },
+      "identity_stores": [
+        {
+          "driver": "sqlite",
+          "name": "accounts",
+          "path": "/private identities/accounts.db",
+          "realm": "staff",
+          "timeout": "750ms"
+        }
+      ],
+      "messaging_providers": [
+        {
+          "driver": "sqlite",
+          "name": "notifications",
+          "path": "/private identities/outbox.db",
+          "timeout": "1s"
+        }
+      ],
+      "registration_workflows": [
+        {
+          "base_path": "/auth",
+          "driver": "sqlite",
+          "email_provider": "notifications",
+          "identity_store": "accounts",
+          "name": "signup",
+          "path": "/private identities/pending.db",
+          "public_origin": "https://auth.example.test",
+          "realm": "staff",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

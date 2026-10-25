@@ -1,0 +1,37 @@
+{
+	security {
+		authorization policy enriched {
+			crypto key verify synthetic-static-claims-fixture-key
+			validate bearer header
+			claims enrichment static {
+				source static
+				version v1
+				issuer https://login.example.test/auth/login
+				realm local
+				subject claim directory_id
+				tenant claim tenant
+				audience app
+				attribute enrichment.department string
+				claim enrichment.department engineering
+				attribute permissions string list
+				claim permissions json `["read","write"]`
+				attribute settings json
+				claim settings json `{"enabled":true,"quota":9007199254740993,"weight":1.2300e+10,"empty":"","optional":null}`
+				attribute literal json
+				claim literal "{env.STATIC_CLAIMS_VALUE}"
+			}
+			acl field department {
+				claim enrichment.department
+				type string
+			}
+			allow department engineering
+		}
+	}
+}
+
+https://app.example.test {
+	route {
+		authorize with enriched
+		respond "protected resource"
+	}
+}

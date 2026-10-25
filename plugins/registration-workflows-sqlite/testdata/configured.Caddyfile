@@ -1,0 +1,32 @@
+{
+	security {
+		identity store sqlite accounts {
+			realm staff
+			path "/private identities/accounts.db"
+			timeout 750ms
+		}
+		messaging sqlite provider notifications {
+			path "/private identities/outbox.db"
+		}
+		user registration sqlite signup {
+			path "/private identities/pending.db"
+			identity_store accounts
+			realm staff
+			email_provider notifications
+			public_origin https://auth.example.test
+			base_path /auth
+			timeout 1000ms
+		}
+		authentication portal myportal {
+			enable identity store accounts
+			enable user registration signup
+			crypto key sign-verify synthetic-identity-signing-secret
+		}
+	}
+}
+
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

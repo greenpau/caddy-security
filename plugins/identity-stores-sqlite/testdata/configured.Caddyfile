@@ -1,0 +1,19 @@
+{
+	security {
+		identity store sqlite accounts {
+			realm staff
+			path "/private identities/accounts.db"
+			timeout 750ms
+		}
+		authentication portal myportal {
+			enable identity store accounts
+			crypto key sign-verify synthetic-identity-signing-secret
+		}
+	}
+}
+
+https://auth.example.test {
+	route /auth/* {
+		authenticate with myportal
+	}
+}

@@ -1,0 +1,35 @@
+{
+  "apps": {
+    "security": {
+      "config": {
+        "messaging": {
+          "raw_configs": [
+            [
+              "name smtp-local",
+              "kind email",
+              "address 127.0.0.1:1025",
+              "protocol smtp",
+              "passwordless",
+              "sender auth@example.test"
+            ]
+          ]
+        }
+      },
+      "messaging_providers": [
+        {
+          "delivery": "smtp-local",
+          "driver": "sqlite",
+          "name": "notifications",
+          "path": "/private mail/outbox.db",
+          "timeout": "1.5s"
+        },
+        {
+          "driver": "sqlite",
+          "name": "queue-only",
+          "path": "/private mail/outbox.db",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

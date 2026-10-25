@@ -1,0 +1,9 @@
+{
+	security {
+		credential authenticator sqlite keys {
+			realm staff
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/keys.db"
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/keys.db"
+		}
+	}
+}

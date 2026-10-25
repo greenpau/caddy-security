@@ -1,0 +1,17 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "refresh_stores": [
+        {
+          "driver": "sqlite",
+          "name": "sessions",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/sessions.db",
+          "timeout": "1s",
+          "max_sessions": 10000,
+          "max_rotations": 1024
+        }
+      ]
+    }
+  }
+}

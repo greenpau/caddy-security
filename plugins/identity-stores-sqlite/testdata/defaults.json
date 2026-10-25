@@ -1,0 +1,16 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "identity_stores": [
+        {
+          "driver": "sqlite",
+          "name": "accounts",
+          "realm": "staff",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/accounts.db",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}

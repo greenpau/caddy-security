@@ -32,9 +32,11 @@ Bundled backend companions live in `plugins/<category>-<backend>`. Run
 `go test -mod=readonly -race -count=1 ./plugins/... ./pkg/plugin` for their
 category-local parser, factory, real backend and ownership tests, plus direct
 OAuth storage metadata validation. Keep public tests in external test packages;
-private runtime-state tests stay with their category. The standalone companion
-binaries intentionally do not import the parent app. Select the affected root
-dispatch, native alias, storage/lifecycle and actual Caddy E2E parents as well.
+private runtime-state tests stay with their category. The standalone inventory
+in `plugins/consumer_test.go` intentionally does not import the parent app.
+Category-local adapt integration tests register the app explicitly. Select the
+affected root dispatch, native alias, storage/lifecycle and actual Caddy E2E
+parents as well.
 See the [companion test inventory](references/test-surfaces.md#bundled-companion-packages).
 
 Collect companion statement coverage explicitly when changing these packages:
@@ -43,6 +45,16 @@ Inspect `go tool cover -func=.coverage/plugin-package-tests/coverage.out` and
 uncovered branches; a root-only profile does not measure extracted companions.
 Keep category contracts and their executable tests in separate `pkg/plugin`
 files. Interface-only contracts do not need existence assertions.
+
+Each companion owns `caddyfile_adapt_test.go` and fixtures directly under its
+`testdata/` directory. Use the shared runner in `internal/caddyfiletest` to adapt
+complete Caddyfiles through the registered Caddy adapter. Pair each input with
+exactly one semantic `.json` expectation or exact `.error` expectation; optional
+`.env` entries are restored after each case. Select these tests with
+`make test TEST='^TestCaddyfileAdapt|^TestCompanionModules' TEST_DIR='./plugins/...'`.
+Keep root app adaptation and runtime-resolution fixtures in their existing
+location. These companion fixtures qualify configuration output and errors;
+they do not provision backends or replace runtime E2E coverage.
 
 Follow the [repository scope](../coding-directives/SKILL.md#repository-scope).
 Create and run tests in this module only; never run sibling suites to validate

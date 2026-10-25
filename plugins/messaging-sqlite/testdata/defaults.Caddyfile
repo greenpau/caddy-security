@@ -1,0 +1,7 @@
+{
+	security {
+		messaging sqlite provider {$PLUGIN_ADAPT_NAME} {
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/outbox.db"
+		}
+	}
+}

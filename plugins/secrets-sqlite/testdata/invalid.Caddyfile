@@ -1,0 +1,9 @@
+{
+	security {
+		secrets sqlite signing {
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/secrets.db"
+			record "}"
+			path "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/secrets.db"
+		}
+	}
+}

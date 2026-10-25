@@ -1,0 +1,19 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "access_signers": [
+        {
+          "driver": "rsapss",
+          "name": "primary",
+          "key_file": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/access.pem",
+          "key_id": "current",
+          "algorithm": "PS256",
+          "issuer": "https://auth.example.test/auth",
+          "audience": "service-a",
+          "max_lifetime": "15m0s"
+        }
+      ]
+    }
+  }
+}

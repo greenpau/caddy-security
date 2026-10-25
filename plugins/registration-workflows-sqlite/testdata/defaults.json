@@ -1,0 +1,20 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "registration_workflows": [
+        {
+          "driver": "sqlite",
+          "name": "signup",
+          "path": "/private plugin fixtures, {env.PLUGIN_ADAPT_LITERAL}/signup.db",
+          "identity_store": "accounts",
+          "realm": "staff",
+          "email_provider": "notifications",
+          "public_origin": "https://auth.example.test",
+          "base_path": "/auth",
+          "timeout": "1s"
+        }
+      ]
+    }
+  }
+}
