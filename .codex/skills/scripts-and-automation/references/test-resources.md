@@ -30,16 +30,20 @@ outside the test budget. Smaller hosts can legitimately refuse large fixtures.
 The reusable GitHub Actions build workflow explicitly sets `TEST_MEMORY_MB=6144`
 (6 GiB) for its public `ubuntu-24.04` runner, including release validation.
 [GitHub documents 16 GB RAM for this runner](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
-This gives the race-enabled Caddy and Chrome process tree additional headroom;
-local defaults, Go's per-process soft target, concurrency and all other guards
-remain unchanged. Do not copy this override onto an 8 GiB host: the guard rejects
-budgets above half of detected physical RAM. Reassess the override if the runner
-type or repository visibility changes.
+This gives each race-enabled Caddy/Chrome shard additional headroom. Hosted shards
+also set `TEST_GOMAXPROCS=4`, `TEST_PACKAGE_PARALLELISM=2`, `TEST_PARALLELISM=4`,
+`TEST_GO_MEMORY_MB=1024`, `TEST_MAX_PROCESSES=256`, and `TEST_ARTIFACT_MB=512`.
+Local defaults remain unchanged. Do not copy the aggregate memory override onto
+an 8 GiB host: the guard rejects budgets above half of detected physical RAM.
+Reassess the overrides if runner capacity or repository visibility changes.
 
-The full suite runs Caddy journeys sequentially; cross-device expiration alone
-waits five minutes. Keep the 60-minute package budget inside the 70-minute guard
-budget and the 75-minute CI job budget, leaving time for compilation, reports,
-setup, builds and uploads. Individual E2E subprocess deadlines remain shorter.
+An unsplit local suite runs Caddy journeys sequentially; hosted CI partitions the
+root package across separate runners. Cross-device expiration alone waits five
+minutes. Keep the 60-minute package budget inside the 70-minute guard budget.
+Hosted shard jobs allow 85 minutes for separate guarded discovery, setup, reports
+and uploads. Individual E2E subprocess deadlines remain shorter. Read the
+[parallel CI contract](../../testing-and-ci/references/parallel-ci.md) when
+changing these boundaries or comparing shard timing/resource evidence.
 For browser scenarios, dispose completed contexts before opening unrelated
 devices; Chrome retains renderer and window processes while contexts stay live.
 Check the resource evidence with the unchanged memory limit after such changes.
@@ -50,8 +54,9 @@ show little elapsed time. Compare `run.json` start/end timestamps with
 `duration_ns` and inspect the failing request timestamps before diagnosing a
 timeout regression. Preserve the failed bundle and rerun after stabilizing the
 host; do not relax expiry checks or automatically retry a failed assertion.
-On macOS with AC power, `caffeinate -is make test` holds temporary idle and
-system-sleep assertions for the command's lifetime. The `-s` assertion only
+On macOS with AC power, prefix the selected test command with `caffeinate -is`
+to hold temporary idle and system-sleep assertions for the command's lifetime;
+retain its `TEST` and package filters. The `-s` assertion only
 applies on AC power; an idle-only assertion can still allow a return to deep idle
 after a maintenance wake. Check `pmset -g assertions` when sleep continues.
 These assertions do not change persistent power settings or prevent clock

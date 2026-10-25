@@ -162,11 +162,18 @@ copy feedback to replace the waiting or cancellation message.
   checks source quota despite untrusted forwarded addresses and verifies expiry
   releases capacity. It deliberately adds five minutes to the full Go suite.
 
-Use this command for focused evidence, then `make ci-check` for the full gate:
+Select the affected unit and E2E parents from this inventory. For parser and
+core lifecycle changes, a focused selection is:
 
 ```bash
-make test TEST='TestPortalCrossDevice|TestPortalCookie|TestCaddyCrossDevice' TEST_DIR=.
+make test TEST='^TestPortalCrossDevice|^TestCaddyCrossDeviceE2E' TEST_DIR=.
 ```
+
+Add cookie, provider or browser tests when their contracts change. Select
+`TestCaddyCrossDeviceExpirationE2E` only when deadline, expiry or quota behavior
+needs its real five-minute journey. Follow
+[change-based test selection](../testing-and-ci/SKILL.md#select-tests-from-the-change)
+without an automatic full-gate follow-up.
 
 Keep failures in separate coverage bundles. Sibling tests and official
 OP conformance do not substitute for these Caddy journeys.

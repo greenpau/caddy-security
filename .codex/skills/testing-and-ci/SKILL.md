@@ -19,9 +19,10 @@ Origin headers, or fabricate successful callbacks to make a conformance run pass
 ## Overview
 
 Use this skill for caddy-security test selection, fixture maintenance, and CI
-reproduction. Prefer the narrowest `go test` command while editing, then use
-Makefile targets when the user asks for the repository workflow, report
-artifacts, or CI-like validation.
+reproduction. Select tests from the changed behavior for both development and
+final validation. Do not run the full suite as a routine completion step. Use
+filtered Makefile targets when reports are needed; reserve full-suite commands
+for explicitly requested full-suite, CI-reproduction, or release workflows.
 
 The Go module is rooted at the repository top level. Most tests live in the
 root `security` package and cover Caddyfile parsing, Caddyfile adaptation, and
@@ -66,6 +67,40 @@ Documentation/skill-only edits use metadata, link, and source checks from
 [skill-authoring](../skill-authoring/SKILL.md); they do not require new runtime
 tests.
 
+## Select Tests From the Change
+
+Before running tests, inspect the diff, changed functions and their consumers.
+Use `rg` and the relevant part of
+[test surfaces](references/test-surfaces.md) to identify the smallest sufficient
+set of existing or new tests. Feature test inventories describe available
+coverage; they are not lists to run in full for every change.
+
+- Select unit tests for the changed behavior and meaningful failure paths, plus
+  the E2E parent tests that exercise the affected user flow. Include adjacent
+  consumers only when they share the changed contract or helper.
+- For parser changes, include the affected adaptation subtests. Add runtime
+  resolution subtests when resolved output or replacement behavior changes.
+  A fixture-only correction need not run every adaptation or resolution case.
+- For test-helper changes, run its focused regression tests and the E2E parents
+  that consume it. Select the parent that launches an isolated process; running
+  an environment-gated process helper directly can report only a skip.
+- For dependency changes, inspect changed upstream contracts and select their
+  host integration tests. A version bump alone does not require every suite.
+- For documentation/skill-only edits, use metadata, link and source checks.
+
+State which tests were selected and why they cover the change before execution.
+Choose the affected package (`.` for root-package tests), and use `-run` with
+specific test names or subtest selectors. Use `-count=1` for fresh evidence and
+`-race` where concurrency, shared state or lifecycle behavior needs it. Filtered
+Make workflows already enable both.
+
+Stop when the selected checks pass. Broaden or repeat only after new edits,
+failures, or an identified coverage gap; explain which additional behavior the
+new selection verifies. Do not automatically follow focused checks with
+`go test ./...`, unfiltered `make test`/`make qtest`, or `make ci-check`.
+In the final report, name the checks actually run and their scope; a focused
+pass does not establish full-suite success.
+
 ## Syntax and Example Audits
 
 Follow [Syntax maintenance](../configuration/references/syntax-maintenance.md)
@@ -86,28 +121,31 @@ formatting, and relevant existing tests instead of adding tests that mirror pros
 
 ## Command Selection
 
-Use direct Go tests for quick feedback:
+Use direct Go tests with explicit selectors and packages. For example, a change
+to the SQLite COMMIT uncertainty fixture selects its regression and client E2E:
 
 ```bash
-go test ./...
-go test -run TestParseCaddyfileAuthorization ./...
-go test -run TestCaddyfileAdaptAuthenticationToJSON ./...
-go test -run TestResolveRuntimeAppConfig ./...
+go test -mod=readonly -race -count=1 -run '^(TestSQLiteRefreshCommitFault|TestCaddySQLiteRefreshUncertaintyE2E)$' .
 ```
 
-Use `make test` for the repository report lifecycle. `go.mod` pins
+Use filtered `make test` or `make qtest` for the repository report lifecycle.
+Both need an explicit `TEST` selector: `qtest` narrows the default package to
+`.` but still runs every test in that package when `TEST` is omitted.
+Set `TEST_DIR` or `QUICK_TEST_DIR` to the affected packages. `go.mod` pins
 `github.com/greenpau/tested`, invoked as `go tool tested`; it owns `-json`,
 `-coverprofile`, child-process status, and coherent reports. Do not reintroduce
 `go test | tee`, log-grep success detection, richgo, tparse, or go-test-report.
 
 ```bash
-make test
-make test TEST='TestParseCaddyfileAuthorization' TEST_DIR='.'
-make qtest TEST='TestParseCaddyfileAuthorization'
+make test TEST='^TestSQLiteRefreshCommitFault|^TestCaddySQLiteRefreshUncertaintyE2E' TEST_DIR='.'
+make qtest TEST='^TestSQLiteRefreshCommitFault|^TestCaddySQLiteRefreshUncertaintyE2E' QUICK_TEST_DIR='.'
 make run-reports
-make test-automation
-make ci-check
 ```
+
+The two test commands are alternatives for the same selection; do not run both
+without a reason. Run `make test-automation` when the changed automation needs
+its fixtures. Unfiltered `go test ./...`, `make test` and `make ci-check` belong
+to the explicit full-workflow scope described above and under CI Workflow.
 
 Lifecycle runs use `-mod=readonly -race -count=1 -p 1 -parallel 2
 -timeout 60m -v`. The macOS/Linux resource guard bounds the whole process tree,
@@ -139,8 +177,8 @@ tests. The Caddy journeys also have their own shorter child-process deadlines.
 If CI times out, inspect the captured test events and active test duration to
 distinguish an exhausted package budget from a stuck individual journey.
 Keep the job budget larger than the package budget so setup, builds and report
-upload can finish; the current workflow allows 75 minutes around the 60-minute
-Go package limit.
+upload can finish; hosted shard jobs allow 85 minutes around the 60-minute Go
+package limit and a separate guarded discovery pass.
 
 Reports land in `.coverage`. `make qtest` defaults to the root package (`.`) with
 reports in `.coverage/quick`; override `QUICK_TEST_DIR` and `TEST` for another
@@ -194,13 +232,17 @@ OAuth, registration, or cookie behavior changes after adaptation, also add or
 update `<prefix>_resolved.json` and include the prefix in
 `TestResolveRuntimeAppConfig`.
 
-After fixture edits, run the focused test first, then a broader command:
+After fixture edits, select the affected subtests by their `t.Run` names, which
+can differ from fixture filenames. For example, changes to named refresh-store
+adaptation and runtime resolution use these selections:
 
 ```bash
-go test -run TestCaddyfileAdaptAuthenticationToJSON ./...
-go test -run TestResolveRuntimeAppConfig ./...
-go test ./...
+go test -mod=readonly -count=1 -run '^TestCaddyfileAdaptAuthenticationToJSON$/named_SQLite_refresh_store' .
+go test -mod=readonly -count=1 -run '^TestResolveRuntimeAppConfig$/named_refresh_storage' .
 ```
+
+Add the relevant parser unit and runtime E2E tests if implementation changed;
+passing the affected fixtures does not require an automatic full-suite run.
 
 If `*_tmp_input.json` or `*_tmp_output.json` files remain after a failing
 runtime resolution test, inspect them, fix the fixture or implementation, and
@@ -210,26 +252,27 @@ wants debug artifacts kept.
 ## CI Workflow
 
 `.github/workflows/build.yml` runs on pushes/PRs to `main`, manual dispatch,
-and reusable workflow calls. Its test job skips `main` push events whose head
-commit message starts with `ops: released v`: the release script atomically
-pushes that commit and its tag, and `release.yml` runs the gate for the tag.
-Ordinary pushes, PRs, manual runs, and release tag validation still run tests.
-It selects the Ubuntu runner, Go and Node versions declared in the workflow,
-with `GOTOOLCHAIN=local`, Python and NSS utilities. It checks the
-runner's Google Chrome installation for browser E2E. It resolves a versioned
-artifact identity, runs `make dep` and `make ci-check`, and checks that
-validation did not modify tracked source or add untracked source files.
-The reusable job sets `TEST_MEMORY_MB=6144` (6 GiB) for the public Ubuntu runner;
-release validation inherits that budget. Local resource defaults remain unchanged.
-See [test resource controls](../scripts-and-automation/references/test-resources.md)
-for the runner capacity and the guard's physical-memory reserve.
+and reusable workflow calls. A planning job resolves one artifact identity and
+an exhaustive matrix. Repository quality gates run alongside ten Go shards in
+separate runner checkouts: nine disjoint selections of the large root package
+and one selection containing every other discovered package. Every ordinary run
+validates the full suite. Local `make ci-check` remains sequential.
 
-After the gate is attempted, it always uploads `.coverage/`, including hidden
-files and partial failure evidence, with 14-day retention. Missing artifacts
-fail the upload and test failures remain failures. Actions are pinned to
-immutable revisions and the test workflow has read-only contents permission.
+The final `Tests and coverage` job preserves the existing branch-protection and
+release check. It requires every dependency to succeed, verifies each discovered
+root test completed exactly once, validates the report evidence, and merges
+atomic coverage counters without counting root statements multiple times.
+Failed or unexpectedly skipped jobs cannot produce a successful gate.
 
-For local CI reproduction, use:
+Read the [parallel CI contract](references/parallel-ci.md) for shard ownership,
+new-test fallback, cache keys, browser prerequisites, failure artifacts, coverage
+integrity and automation regression coverage. The workflow retains the existing
+release-main-push skip; the reusable tag validation still runs all gates before
+GoReleaser. Actions use immutable revisions and read-only contents permission.
+Hosted resource overrides and the 85-minute shard budget leave local defaults
+unchanged; see [test resource controls](../scripts-and-automation/references/test-resources.md).
+
+When the user explicitly requests local CI reproduction, use:
 
 ```bash
 make dep
@@ -315,6 +358,9 @@ validator instead of running the Go suite.
 
 - A code change is supported by unit and E2E evidence for its observable behavior;
   parser-only success cannot stand in for authentication, authorization, or restart.
+- Selected tests are justified by the diff and affected contracts. Passing them
+  completes routine validation without a full-suite run; the report identifies
+  the actual selection and any uncovered or blocked behavior.
 - The relevant repo-local skills reflect the final code and validation evidence,
   following [keeping skills current](../skill-authoring/SKILL.md#keep-skills-current-after-code-changes).
   Review affected examples, test references, and acceptance scenarios before

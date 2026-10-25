@@ -14,8 +14,9 @@ The checked revision is therefore the same revision qualified by the reusable
 test workflow. Checkout retrieves full history for release notes and tag checks.
 
 The `validate` job calls `.github/workflows/build.yml`; GoReleaser requires its
-success. That gate runs `make ci-check` and uploads tested reports. The separate
-build run for a `main` push skips its test job when the head commit
+success. That gate runs `make ci-quality` and ten complete Go shards in parallel;
+the stable `Tests and coverage` check verifies execution and combines coverage.
+The separate build run for a `main` push skips validation when the head commit
 message starts with the release script's `ops: released v` prefix. The script
 atomically pushes `main` and the release tag, so release validation owns testing
 for that revision. The skip is limited to the branch push; the reusable gate
@@ -58,10 +59,15 @@ GoReleaser's [archive documentation](https://goreleaser.com/customization/packag
 describes build selectors, file placement and Windows format overrides.
 
 Coverage is a separate diagnostic artifact. The reusable build workflow uploads
-the complete `.coverage/` bundle as `caddy-security_coverage_<artifact-id>`,
-including hidden files, with 14-day retention. Upload runs even after a failed
-quality gate; missing files fail the upload and test failures remain failures.
-Version/tag identity comes from `make artifact-id`. README Caddy download URLs
+individual `caddy-security_coverage_<artifact-id>_shard_<name>` bundles even after
+a failed test attempt. Its final gate downloads available evidence and uploads
+the aggregate `.coverage/` bundle as `caddy-security_coverage_<artifact-id>`,
+including hidden files, with 14-day retention. Successful validation additionally
+produces a complete execution/coverage summary and merged profile. Missing files
+fail uploads and test failures remain failures; reruns replace matching artifact
+names. Version/tag identity comes from a shared `make artifact-id` invocation.
+Read the [parallel CI contract](../../testing-and-ci/references/parallel-ci.md)
+for completeness and failure handling. README Caddy download URLs
 are another distribution surface and are not the GoReleaser asset inventory.
 
 ## go-authcrunch Release Notes

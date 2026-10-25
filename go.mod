@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.4.0
+	github.com/greenpau/go-authcrunch v1.4.1
 	github.com/greenpau/versioned v1.0.36
 	github.com/quic-go/quic-go v0.63.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -208,5 +208,3 @@ tool (
 	github.com/greenpau/tested
 	github.com/greenpau/versioned/cmd/versioned
 )
-
-replace github.com/greenpau/go-authcrunch v1.4.0 => ../go-authcrunch

@@ -395,13 +395,18 @@ physical file isolation, migration, ownership and uncertain-commit recovery.
   across restart, and durable logout. The state skill owns its process, storage
   and reload checks; the ordinary refresh suites above qualify volatile behavior.
 
-Run the focused group and broader repository validation from this checkout:
+Select tests for the changed refresh contracts from this inventory. For portal
+refresh grammar and issuance changes, the relevant unit and Caddy E2E group is:
 
 ```sh
-go test -mod=readonly -race -count=1 -run 'TestPortalTokenRefresh|TestCaddyTokenRefreshE2E|TestCaddyOIDCProviderE2E|TestCaddyfileAdaptAuthenticationToJSON|TestResolveRuntimeAppConfig' .
-make test
-make build
+go test -mod=readonly -race -count=1 -run '^TestPortalTokenRefresh|^TestCaddyTokenRefreshE2E$' .
 ```
+
+Add only affected adaptation and resolution subtests when configuration changes;
+select OIDC, persistence or browser journeys when those interactions change.
+Build a standalone command only when the selected flow requires it. Follow
+[change-based test selection](../../testing-and-ci/SKILL.md#select-tests-from-the-change)
+without an automatic full-suite follow-up.
 
 Upstream sources and its refresh-token-implementation skill are read-only
 references. Do not run sibling tests or change sibling files to validate this

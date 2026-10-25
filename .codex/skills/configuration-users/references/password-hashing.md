@@ -144,7 +144,9 @@ plaintext replacements. Resource-bound rejection never derives at invalid costs.
 Library scheduling/vector tests remain upstream evidence; this suite does not
 claim timing equivalence or complete user-signup approval/SMTP qualification.
 
+For password import or Argon2 changes, select the relevant tests from this group
+without an automatic full repository gate:
+
 ```sh
 go test -mod=readonly -run 'TestPasswordImport|TestSecurityCredentialArgon2|TestCaddyPasswordArgon2E2E' .
-make ci-check
 ```

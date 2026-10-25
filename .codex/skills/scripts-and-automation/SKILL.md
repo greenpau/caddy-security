@@ -49,9 +49,11 @@ change. Follow [keeping skills current](../skill-authoring/SKILL.md#keep-skills-
 so documented commands, side effects, prerequisites, and validation match the
 resulting workflow.
 
-Prefer narrow `go test` commands for quick validation while editing. Use the
-Makefile targets when the user asks for the repository workflow, reports,
-release preparation, fixture formatting, or CI-like behavior.
+Follow [change-based test selection](../testing-and-ci/SKILL.md#select-tests-from-the-change)
+for development and final validation. Identify the affected tests before running
+them, and use filtered Makefile targets when reports are requested. Full-suite
+commands are for explicitly requested full-suite, CI-reproduction or release
+workflows, not an automatic follow-up to a focused fix.
 
 ## Command Selection
 
@@ -61,22 +63,26 @@ directories, script side effects, cleanup paths, and output overrides before
 execution. Run this module's automation; sibling source-module build, test,
 formatting, license, dependency, and cleanup workflows remain out of scope.
 
-- Use `go test ./...` for a fast all-package check without coverage reports.
-- Use `go test -run <TestName> ./...` for focused validation.
+- Use `go test -mod=readonly -count=1 -run '<selected-test-regex>' <affected-package>`
+  for focused validation; add `-race` when the changed behavior warrants it.
+  Root-package tests use `.`. Unfiltered `go test ./...` runs the full suite.
 - Use `make build` to validate `VERSION` and the authenticator fallback, compile
   `cmd/authcrunch` and `cmd/caddy-authenticator` into their corresponding `bin/`
   executables with `-mod=readonly -trimpath`, and print both versions. It injects
   `VERSION` into the authenticator's `main.appVersion` linker variable.
 - Use `make` when the user asks for the default build; it runs `info` and
   `build`.
-- Use `make test` for uncached, race-enabled Go tests and complete reports
+- Use `make test TEST='<selected-test-regex>' TEST_DIR='<affected-package>'`
+  for uncached, race-enabled Go tests and complete reports
   through pinned `go tool tested` and the resource guard. `TEST` is a regex,
   `TEST_DIR` accepts package patterns, and `TEST_TIMEOUT` is a quoted per-package duration (default `60m`).
   `MINIMUM_COVERAGE=1` checks for nonzero coverage; it is not a coverage goal.
   Read [test resource controls](references/test-resources.md) for concurrency,
   memory, wall-time limits, cancellation, live output and resource evidence.
-- Use `make qtest` for the root package (`.`) by default, or set
-  `QUICK_TEST_DIR` and `TEST` for another scope. Reports go to `.coverage/quick`.
+- Use `make qtest TEST='<selected-test-regex>'` for selected root-package tests,
+  or set `QUICK_TEST_DIR` for another package. Reports go to `.coverage/quick`.
+  Without `TEST`, qtest still runs every test in the selected package; it is
+  not an automatic shortcut for focused validation.
 - Use `make run-reports` to rebuild presentations from recorded tested evidence.
   It preserves failure status. `make coverage` is an alias for this operation;
   it does not rerun tests.
@@ -112,8 +118,15 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   repeated cleanup, and refuses active runs/preparation. It does not clean
   ordinary `.coverage/` or unrelated temporary files. See the
   [cleanup scope](../configuration-oauth-applications/references/oidc-conformance.md#remove-test-output-keep-prerequisites).
-- Use `make ci-check` for sequential version, automation, full Go test/report,
-  and build gates, including under `make -j`.
+- Use `make ci-check` only for an explicitly requested CI/full-gate workflow or
+  as required by an explicitly invoked release workflow. It runs sequential
+  version, automation, full Go test/report and build gates, including under
+  `make -j`; requesting focused reports alone does not call for it.
+- Hosted CI runs `make ci-quality` (version, automation fixtures and build)
+  alongside `make ci-test-shard CI_SHARD=<name>` in separate runner checkouts.
+  Read the [parallel CI contract](../testing-and-ci/references/parallel-ci.md)
+  before changing shard selection, caching, failure gates or combined coverage.
+  These are CI entry points, not shortcuts for focused local validation.
 - Use `make version-check` for read-only version validation and
   `make artifact-id` for version/timestamp/commit identity and CI outputs.
   After an explicit VERSION edit, `make version-sync` updates the authenticator's
@@ -125,7 +138,7 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   `.coverage/` and `bin/` directories.
 
 If documentation mentions `make ctest`, treat it as stale in this repository and
-choose `make test`, `make qtest`, or direct `go test` instead.
+choose filtered `make test`, filtered `make qtest`, or direct `go test` instead.
 
 ## Tooling and Dependencies
 
@@ -287,10 +300,12 @@ coverage and writes reports; never patch a finished bundle's coverage percentage
 
 ## CI Notes
 
-The reusable `.github/workflows/build.yml` runs `make dep` and `make ci-check`,
-checks source remains unchanged, and uploads the complete `.coverage/` bundle
-after an attempted gate, including failure evidence. Release CI requires this
-same gate. The [testing contract](../testing-and-ci/SKILL.md) owns local
+The reusable `.github/workflows/build.yml` runs repository quality gates and ten
+Go shards concurrently, checks source remains unchanged, and retains each shard's
+evidence plus an aggregate `.coverage/` bundle. Its stable `Tests and coverage`
+check requires every gate and verifies full test selection before merging
+coverage. Release CI requires this same gate. The
+[testing contract](../testing-and-ci/SKILL.md) owns local
 reproduction; [release ownership](../release-and-versioning/SKILL.md) covers
 artifact identities and tag requirements.
 

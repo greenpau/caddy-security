@@ -176,9 +176,12 @@ and checks the runner's Google Chrome before `make ci-check`; the browser test i
 part of the normal Go suite. This is local Chrome integration evidence, not a
 promise about every browser or production proxy.
 
+Select the affected delegation, launcher or real-browser tests from this group
+according to the diff. A focused pass completes that validation without an
+automatic full repository gate.
+
 ```sh
 go test -mod=readonly -race -count=1 -run 'TestAuthnTokenRefreshDelegation|TestCaddyRefreshBrowser|TestCaddyTokenRefreshBrowserE2E' .
-make ci-check
 ```
 
 Upstream `refresh-token-transports` and handler/UI sources are read-only

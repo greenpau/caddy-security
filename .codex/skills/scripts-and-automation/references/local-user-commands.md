@@ -296,11 +296,12 @@ and cache filenames can contain the same digits by chance. The automation
 regressions in `assets/scripts/tests/terminal_output_test.py` cover this collision
 and ensure unexpected fields, changed paths, and leaked text still fail.
 
-Run focused tests, then the repository suite:
+Select checks for the changed terminal, command or Caddy integration behavior.
+The following are available focused groups; run the relevant ones and build
+only when command compilation or version output needs validation:
 
 ```sh
 python3 -m unittest discover -s assets/scripts/tests -p 'terminal_output_test.py' -v
 go test -mod=readonly -run 'TestSecurity(Local|Credential|Terminal)|TestCaddySecurityLocal' .
-make test
 make build
 ```

@@ -137,7 +137,7 @@ dep:
 	@go mod verify
 	@$(MAKE) install-test-tools
 
-.PHONY: test-automation ci-check version-check version-sync artifact-id
+.PHONY: test-automation ci-check ci-quality ci-test-shard version-check version-sync artifact-id
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 
@@ -181,6 +181,15 @@ ci-check:
 	@$(MAKE) test-automation
 	@$(MAKE) test TEST=. TEST_DIR=./... COVERAGE_DIR=.coverage MINIMUM_COVERAGE=1
 	@$(MAKE) build
+
+# Hosted CI runs these gates alongside Go shards in separate checkouts.
+ci-quality:
+	@$(MAKE) version-check
+	@$(MAKE) test-automation
+	@$(MAKE) build
+
+ci-test-shard:
+	@$(PYTHON) assets/scripts/ci_tests.py run "$(CI_SHARD)"
 
 version-check:
 	@$(PYTHON) assets/scripts/version.py check

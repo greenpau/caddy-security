@@ -3,6 +3,10 @@
 Read the sections matching the behavior being changed. These are existing test
 surfaces and their limits; names alone do not establish coverage for a new change.
 Source and fixture paths below are relative to the repository root.
+Select tests from the affected contracts under
+[change-based test selection](../SKILL.md#select-tests-from-the-change).
+This inventory identifies candidates; a feature entry does not require running
+every listed suite or following focused checks with a full repository gate.
 
 `plugin_authn_mount_test.go` and the explicit/reserved mount adaptation fixtures
 cover Caddyfile and native JSON declarations, canonical shape and reserved route
@@ -82,9 +86,14 @@ and independently verified resource access are required; an in-process pointer
 swap or JWT decoding alone does not establish restart continuity.
 
 `TestCaddySQLiteRefreshUncertaintyE2E` runs its isolated process helper with the
-real SQLite backend and an observed wrapper. A separate SQL read transaction
-forces an actual driver-COMMIT failure after signing; no synthetic store error
-or fabricated HTTP failure replaces it. `token_refresh_sqlite_browser_e2e_test.go`
+real SQLite backend and an observed wrapper. After signing, a test-only trigger
+adds a deferred foreign-key violation to the real digest insertion, so SQLite
+rejects COMMIT. Reader contention is resolved at BEGIN EXCLUSIVE and cannot
+exercise this failure. Remove the trigger and its table before reopening, since
+the backend validates its exact schema. `TestSQLiteRefreshCommitFault` checks
+live-context uncertainty, retained handle quarantine after fault removal and
+healthy reopen. No synthetic store error or fabricated HTTP failure replaces
+the real COMMIT failure. `token_refresh_sqlite_browser_e2e_test.go`
 and its Node driver use real Chrome, normal cookies and natural form recovery.
 Delivered 503 sets blocked state in both tabs, and neither exchanges the old
 family before or after backend reopen. Fresh login yields a new SID, then normal
@@ -317,7 +326,7 @@ binary is not the instrumented Go test helper; its code does not contribute to
 parent coverage. Unit and existing instrumented command tests cover the host code.
 
 Run the focused `TestPasswordImport|TestSecurityCredentialArgon2|TestCaddyPasswordArgon2E2E`
-selection, then `make ci-check`. See
+selection when password import or Argon2 behavior changes. See
 [password hashing](../../configuration-users/references/password-hashing.md)
 for the supported formats and security boundary. Algorithm vectors and padded
 work counts remain the library's responsibility; no wall-clock equivalence is
@@ -386,7 +395,7 @@ intermittent failures. Repeating its process helper in one Go process can carry
 Caddy's global TLS/runtime state between runs and is not equivalent evidence.
 
 Run `make qtest TEST='TestAuthzRedirectRequestTargets|TestAuthorizationRedirectBrowserPolling|TestCaddyAuthorizationRedirectE2E'`
-for race-enabled regression reports, then the normal `make ci-check` gate.
+for race-enabled regression reports when those redirect contracts change.
 
 ## Shared test mechanics
 

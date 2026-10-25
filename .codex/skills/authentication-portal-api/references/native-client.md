@@ -226,8 +226,9 @@ authenticate or authorize the resource.
 
 Run these tests in this repository. Upstream authentication-client source and
 skills are read-only references, not instructions to run sibling suites.
+Select from this group according to the changed client or login contract;
+do not append a full repository gate to focused validation.
 
 ```sh
 go test -mod=readonly -race -count=1 -run 'TestAuthnJSONLoginDelegation|TestAuthenticationClient|TestCaddyAuthenticationClientE2E' .
-make ci-check
 ```

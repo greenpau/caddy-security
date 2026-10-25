@@ -274,6 +274,10 @@ blocks. Avoid comments that merely restate the code.
 Code changes require relevant unit tests and E2E tests that exercise the changed
 behavior under the [required coverage contract](../testing-and-ci/SKILL.md#required-coverage-for-code-changes).
 Add or amend missing coverage and run the applicable checks in this repository.
+Use the testing skill's [change-based selection](../testing-and-ci/SKILL.md#select-tests-from-the-change)
+for final validation as well as editing: identify the unit tests, E2E parents
+and affected fixture subtests that cover the diff. Do not append a full-suite
+run to a focused code fix by default.
 
 Add focused parser coverage in the closest `caddyfile_*_test.go` when changing
 Caddyfile syntax or validation. Include malformed cases when the parser has a
@@ -293,8 +297,9 @@ Use `go-cmp` diffs or semantic JSON map comparison for test assertions. Avoid
 order-sensitive string comparisons for JSON unless the surrounding test already
 requires formatted output.
 
-After fixture or parser work, run the narrow relevant test first, then broaden
-according to the `testing-and-ci` skill.
+After fixture or parser work, run the selected tests and affected fixture
+subtests. Broaden only when another changed contract or failure requires it,
+following the `testing-and-ci` skill.
 
 ## Acceptance criteria
 

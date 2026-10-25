@@ -16,21 +16,38 @@ concurrency:
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
-  core:
-    name: Tests and coverage
+  selection:
+    name: Plan parallel validation
     # The release script pushes main and its tag together; release.yml tests the tag.
     if: >-
       ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' ||
           !startsWith(github.event.head_commit.message, 'ops: released v') }}
     runs-on: ubuntu-24.04
-    # Leave time around the 60-minute Go package limit for setup, builds and reports.
-    timeout-minutes: 75
+    timeout-minutes: 5
+    outputs:
+      artifact_id: ${{ steps.artifact.outputs.artifact_id }}
+      matrix: ${{ steps.shards.outputs.matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Resolve shared artifact identity
+        id: artifact
+        run: make artifact-id
+      - name: Select complete shard matrix
+        id: shards
+        run: |
+          matrix=$(python3 assets/scripts/ci_tests.py matrix)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+  quality:
+    name: Repository quality gates
+    needs: selection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     env:
       GOTOOLCHAIN: local
       PYTHONDONTWRITEBYTECODE: '1'
-      # Public Ubuntu runners have 16 GB RAM; allow browser E2E headroom.
-      # The guard still reserves at least half of physical RAM for the system.
-      TEST_MEMORY_MB: '6144'
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -40,34 +57,155 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: '1.26.10'
-      - name: Set up Node.js for browser E2E
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+          cache: false
+      - name: Cache Go modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          node-version: '24'
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes make libnss3-tools python3
-          google-chrome --version
-      - name: Resolve versioned artifact identity
-        id: artifact
-        run: make artifact-id
-      - name: Install pinned test tool and module dependencies
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
+      - name: Cache Go builds
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/go-build
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-
+      - name: Install pinned tools and module dependencies
         run: make dep
       - name: Run repository quality gates
         id: tests
-        run: make ci-check
+        run: make ci-quality
       - name: Verify validation did not modify source
         if: ${{ always() && steps.tests.outcome != 'skipped' }}
         run: |
           git diff --exit-code
           test -z "$(git ls-files --others --exclude-standard)"
-      - name: Upload test and coverage bundle
+  go:
+    name: Go tests (${{ matrix.shard }})
+    needs: selection
+    runs-on: ubuntu-24.04
+    # Keep setup, inventory, reports and upload outside the 70-minute test guard.
+    timeout-minutes: 85
+    strategy:
+      # Preserve every shard's evidence if one fails.
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.selection.outputs.matrix) }}
+    env:
+      GOTOOLCHAIN: local
+      PYTHONDONTWRITEBYTECODE: '1'
+      # CI runners have 4 CPUs and 16 GB RAM. Keep laptop defaults in Make.
+      TEST_MEMORY_MB: '6144'
+      TEST_GO_MEMORY_MB: '1024'
+      TEST_GOMAXPROCS: '4'
+      TEST_PACKAGE_PARALLELISM: '2'
+      TEST_PARALLELISM: '4'
+      TEST_TIMEOUT: '60m'
+      TEST_WALL_TIMEOUT: '4200'
+      TEST_MAX_PROCESSES: '256'
+      TEST_ARTIFACT_MB: '512'
+      CI_SHARD: ${{ matrix.shard }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - name: Cache Go modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
+      - name: Cache Go builds
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/go-build
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-
+      - name: Set up Node.js for browser E2E
+        if: ${{ matrix.browser }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Install browser prerequisites
+        if: ${{ matrix.browser }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libnss3-tools
+          google-chrome --version
+      - name: Download and verify module dependencies
+        run: |
+          go mod download
+          go mod verify
+      - name: Run Go test shard
+        id: tests
+        run: make ci-test-shard
+      - name: Summarize timings and resource use
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: python3 assets/scripts/ci_tests.py summarize "$CI_SHARD"
+      - name: Verify validation did not modify source
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+      - name: Upload shard evidence
         if: ${{ always() && steps.tests.outcome != 'skipped' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: caddy-security_coverage_${{ steps.artifact.outputs.artifact_id }}
+          name: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}_shard_${{ matrix.shard }}
+          path: .coverage/shards/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: true
+  core:
+    # Preserve the existing branch-protection and reusable release check.
+    name: Tests and coverage
+    needs: [selection, quality, go]
+    if: ${{ !cancelled() && needs.selection.result != 'skipped' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Download shard evidence
+        id: download
+        if: ${{ needs.selection.result == 'success' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}_shard_*
+          path: .coverage/shards/
+          merge-multiple: true
+      - name: Require complete validation
+        if: ${{ always() }}
+        env:
+          SELECTION_RESULT: ${{ needs.selection.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          GO_RESULT: ${{ needs.go.result }}
+        run: python3 assets/scripts/ci_tests.py gate
+      - name: Verify complete execution and combine coverage
+        run: python3 assets/scripts/ci_tests.py merge
+      - name: Upload complete test and coverage bundle
+        if: ${{ always() && steps.download.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}
           path: .coverage/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+          overwrite: true

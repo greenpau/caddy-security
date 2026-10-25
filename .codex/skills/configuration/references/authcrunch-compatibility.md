@@ -212,8 +212,10 @@ Remaining distinctions:
   and non-pass outcomes. The normal unit/E2E gate is separate from
   [official conformance](../../configuration-oauth-applications/references/oidc-conformance.md).
 
-The [testing workflow](../../testing-and-ci/SKILL.md) owns the race-enabled
-full suite, automation checks, build and reports. Keep audit manifests and raw
+The [testing workflow](../../testing-and-ci/SKILL.md#select-tests-from-the-change)
+owns selecting checks for affected dependency contracts, including relevant
+race-enabled unit/E2E tests, automation, builds and reports. A dependency update
+does not automatically call for the full suite. Keep audit manifests and raw
 adapter diagnostics under this checkout's `tmp/`; they may include synthetic
 credentials. Run skill metadata/link validation for documentation changes and
 inspect the resulting diff. Use release/license regeneration only when its inputs changed;

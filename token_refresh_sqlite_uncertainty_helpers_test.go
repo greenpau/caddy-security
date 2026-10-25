@@ -44,8 +44,8 @@ import (
 )
 
 // These modules exist only in the test executable. All metadata and operations
-// delegate to the actual bundled implementations. The only fault is a real SQL
-// read transaction acquired after genuine signing, before Rotate commits.
+// delegate to the actual bundled implementations. The only fault is a deferred
+// SQL constraint installed after genuine signing that rejects Rotate's COMMIT.
 type sqliteCommitSignerModule struct{ RSAPSSAccessSigner }
 type sqliteCommitStoreModule struct{ SQLiteRefreshStore }
 type sqliteCommitSignerFactory struct {
@@ -70,7 +70,7 @@ type sqliteCommitActiveStore struct {
 }
 
 type sqliteCommitObservation struct {
-	SignCalls, ReaderLocks, RotateCalls, Uncertain, Canceled      int
+	SignCalls, CommitFaults, RotateCalls, Uncertain, Canceled     int
 	RefreshRequests, Lookups, LoginPosts, StoreOpens, StoreCloses int
 	Staged                                                        string
 	Tokens                                                        []string
@@ -78,14 +78,11 @@ type sqliteCommitObservation struct {
 	Responses                                                     []oidcRPResponse
 }
 type sqliteCommitWitness struct {
-	mu            sync.Mutex
-	observation   sqliteCommitObservation
-	managed       tokenrefresh.ManagedStore
-	reader        *sql.DB
-	readerContext context.Context
-	readerCancel  context.CancelFunc
-	held          *sql.Tx
-	armed         bool
+	mu          sync.Mutex
+	observation sqliteCommitObservation
+	managed     tokenrefresh.ManagedStore
+	faultDB     *sql.DB
+	armed       bool
 }
 
 var sqliteCommitWitnesses sync.Map
@@ -198,21 +195,37 @@ func (s *sqliteCommitSigner) Sign(ctx context.Context, claims map[string]any) (s
 	}
 	w.armed = false
 	w.observation.Staged = token
-	if w.reader == nil || w.held != nil || w.readerContext == nil {
-		return "", errors.New("COMMIT reader was not ready")
+	if w.faultDB == nil {
+		return "", errors.New("COMMIT fault database was not ready")
 	}
-	held, err := w.reader.BeginTx(w.readerContext, &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return "", errors.New("COMMIT reader could not begin")
+	if err := sqliteCommitFaultSchema(ctx, w.faultDB, true); err != nil {
+		return "", errors.New("COMMIT fault could not be installed")
 	}
-	var count int
-	if err := held.QueryRowContext(w.readerContext, "SELECT count(*) FROM sqlite_schema").Scan(&count); err != nil {
-		_ = held.Rollback()
-		return "", errors.New("COMMIT reader could not acquire a read lock")
-	}
-	w.held = held
-	w.observation.ReaderLocks++
+	w.observation.CommitFaults++
 	return token, nil
+}
+
+func sqliteCommitFaultSchema(ctx context.Context, db *sql.DB, install bool) error {
+	statements := []string{"DROP TRIGGER IF EXISTS fixture_reject_commit", "DROP TABLE IF EXISTS fixture_commit_failure"}
+	if install {
+		// BEGIN EXCLUSIVE resolves reader contention before mutation. Instead,
+		// let the real digest insertion succeed and reject only its COMMIT.
+		statements = []string{
+			"CREATE TABLE fixture_commit_failure (family TEXT REFERENCES refresh_families_v2(id) DEFERRABLE INITIALLY DEFERRED)",
+			"CREATE TRIGGER fixture_reject_commit AFTER INSERT ON refresh_digests_v2 BEGIN INSERT INTO fixture_commit_failure VALUES('missing-family'); END",
+		}
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 func (w *sqliteCommitWitness) snapshot() sqliteCommitObservation {
 	w.mu.Lock()
@@ -328,7 +341,7 @@ func newSQLiteCommitFixture(t *testing.T, cert, key string, roots *x509.CertPool
 	f.accessSignerFixture = newAccessSignerFixture(t, options, cert, key, roots)
 	f.running = true
 	t.Cleanup(func() {
-		f.ReleaseReader(t)
+		f.ClearCommitFailure(t)
 		f.stop(t)
 		f.capture()
 		snapshot := witness.snapshot()
@@ -349,44 +362,40 @@ func (f *sqliteCommitFixture) ArmCommitFailure(t *testing.T) sqliteCommitObserva
 	t.Helper()
 	f.witness.mu.Lock()
 	defer f.witness.mu.Unlock()
-	if !f.running || f.witness.reader != nil || f.witness.armed {
+	if !f.running || f.witness.faultDB != nil || f.witness.armed {
 		t.Fatal("COMMIT fixture cannot be armed twice")
 	}
 	endpoint := (&url.URL{Scheme: "file", Path: f.storePath}).String() + "?mode=rw"
-	reader, err := sql.Open("sqlite", endpoint)
+	db, err := sql.Open("sqlite", endpoint)
 	if err != nil {
-		t.Fatal("cannot open the private COMMIT reader")
+		t.Fatal("cannot open the private COMMIT fault database")
 	}
-	reader.SetMaxOpenConns(1)
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	var journal string
-	if err := reader.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journal); err != nil || journal != "delete" {
-		cancel()
-		_ = reader.Close()
-		t.Fatal("COMMIT fixture requires an ordinary rollback journal")
+	db.SetMaxOpenConns(1)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		t.Fatal("cannot connect to the private COMMIT fault database")
 	}
-	f.witness.reader, f.witness.readerContext, f.witness.readerCancel = reader, ctx, cancel
+	f.witness.faultDB = db
 	f.witness.armed = true
 	return f.witness.observation
 }
-func (f *sqliteCommitFixture) ReleaseReader(t *testing.T) {
+func (f *sqliteCommitFixture) ClearCommitFailure(t *testing.T) {
 	t.Helper()
 	f.witness.mu.Lock()
-	held, reader, cancel := f.witness.held, f.witness.reader, f.witness.readerCancel
-	f.witness.held, f.witness.reader, f.witness.readerCancel = nil, nil, nil
+	db := f.witness.faultDB
+	f.witness.faultDB = nil
 	f.witness.armed = false
 	f.witness.mu.Unlock()
-	if held != nil {
-		if err := held.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			t.Error("cannot release the COMMIT reader transaction")
+	if db != nil {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(t.Context()), 2*time.Second)
+		defer cancel()
+		if err := sqliteCommitFaultSchema(ctx, db, false); err != nil {
+			t.Error("cannot remove the COMMIT fault schema")
 		}
-	}
-	if cancel != nil {
-		cancel()
-	}
-	if reader != nil {
-		if err := reader.Close(); err != nil {
-			t.Error("cannot close the COMMIT reader")
+		if err := db.Close(); err != nil {
+			t.Error("cannot close the COMMIT fault database")
 		}
 	}
 }
@@ -394,8 +403,8 @@ func (f *sqliteCommitFixture) AssertUncertain(t *testing.T, before sqliteCommitO
 	t.Helper()
 	f.capture()
 	now := f.witness.snapshot()
-	if now.SignCalls != before.SignCalls+1 || now.ReaderLocks != before.ReaderLocks+1 || now.RotateCalls != before.RotateCalls+1 || now.Uncertain != before.Uncertain+1 || now.Canceled != before.Canceled || now.RefreshRequests != before.RefreshRequests+1 {
-		t.Fatal("refresh did not reach one real, live-context uncertain COMMIT")
+	if now.SignCalls != before.SignCalls+1 || now.CommitFaults != before.CommitFaults+1 || now.RotateCalls != before.RotateCalls+1 || now.Uncertain != before.Uncertain+1 || now.Canceled != before.Canceled || now.RefreshRequests != before.RefreshRequests+1 {
+		t.Fatalf("refresh did not reach one real, live-context uncertain COMMIT: signing=%d faults=%d rotations=%d uncertain=%d canceled=%d requests=%d", now.SignCalls-before.SignCalls, now.CommitFaults-before.CommitFaults, now.RotateCalls-before.RotateCalls, now.Uncertain-before.Uncertain, now.Canceled-before.Canceled, now.RefreshRequests-before.RefreshRequests)
 	}
 	if now.Staged == "" || len(now.Responses) != len(before.Responses)+1 {
 		t.Fatal("uncertain COMMIT omitted its private staging evidence")
@@ -418,7 +427,7 @@ func (f *sqliteCommitFixture) assertNoExchange(t *testing.T, before sqliteCommit
 }
 func (f *sqliteCommitFixture) RestartSameConfig(t *testing.T) {
 	t.Helper()
-	f.ReleaseReader(t)
+	f.ClearCommitFailure(t)
 	f.witness.mu.Lock()
 	managed := f.witness.managed
 	f.witness.mu.Unlock()

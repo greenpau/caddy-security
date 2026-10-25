@@ -162,6 +162,8 @@ only the private trust pool; the command, app and handlers are production Caddy.
 request admission through downstream completion; `TestAuthzResponseContract`
 checks ordinary JWT/error compatibility.
 
-Run the focused selection, then `make ci-check`. Separately built command
+Select the focused tests for the changed OAuth or handler contract, following
+[change-based test selection](../../testing-and-ci/SKILL.md#select-tests-from-the-change).
+Separately built command
 processes do not contribute to the Go parent coverage profile; the focused unit
 and existing instrumented Caddy tests provide that coverage.
