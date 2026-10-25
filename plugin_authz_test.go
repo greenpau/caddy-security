@@ -16,9 +16,11 @@ package security
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -283,78 +285,154 @@ func TestAuthzPathDelegation(t *testing.T) {
 }
 
 func TestAuthorizationHandlerAdmissionAndDrain(t *testing.T) {
-	policy := &authz.PolicyConfig{Name: "drain", AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}}, BypassConfigs: []*bypass.Config{{MatchType: "exact", URI: "/public"}}}
+	for _, mode := range []string{"bypassed", "authorized"} {
+		for _, outcome := range []string{"return", "error", "panic"} {
+			t.Run(mode+"/"+outcome, func(t *testing.T) {
+				policy := &authz.PolicyConfig{Name: "drain", ValidateBearerHeader: true,
+					RawCryptoKeyStoreConfig: []string{"crypto key verify " + authorizationPathKey},
+					AccessListRules:         []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}},
+				}
+				if mode == "bypassed" {
+					policy.BypassConfigs = []*bypass.Config{{MatchType: "exact", URI: "/public"}}
+				}
+				app := provisionLifecycleApp(t, &authcrunch.Config{AuthorizationPolicies: []*authz.PolicyConfig{policy}})
+				handler := AuthorizationHandler{AuthzMiddleware: AuthzMiddleware{app: app, GatekeeperName: "drain"}}
+				token := authorizationPathToken(t)
+				request := func() *http.Request {
+					r := httptest.NewRequest("GET", "https://app.example/public", nil)
+					if mode == "authorized" {
+						r.Header.Set("Authorization", "Bearer "+token)
+					}
+					return r.WithContext(context.WithValue(r.Context(), caddy.ReplacerCtxKey, caddy.NewReplacer()))
+				}
+				type result struct {
+					err        error
+					panicValue any
+				}
+				entered, release := make(chan struct{}), make(chan struct{})
+				finished := make(chan result, 1)
+				var releaseOnce sync.Once
+				unblock := func() { releaseOnce.Do(func() { close(release) }) }
+				defer unblock()
+				downstreamError := errors.New("synthetic downstream error")
+				go func() {
+					var got result
+					defer func() { got.panicValue = recover(); finished <- got }()
+					got.err = handler.ServeHTTP(httptest.NewRecorder(), request(), caddyhttp.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) error {
+						close(entered)
+						<-release
+						// These values must survive disposal of the borrowed runtime.
+						repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+						roles, exists := repl.Get("http.auth.user.roles")
+						if (mode == "authorized" && (!exists || roles != "viewer")) || (mode == "bypassed" && exists) {
+							return fmt.Errorf("downstream identity changed after cleanup")
+						}
+						switch outcome {
+						case "error":
+							return downstreamError
+						case "panic":
+							panic("synthetic downstream panic")
+						}
+						return nil
+					}))
+				}()
+				awaitLifecycle(t, entered, "downstream handler")
+				cleanup := make(chan error, 1)
+				go func() { cleanup <- app.Cleanup() }()
+				select {
+				case err := <-cleanup:
+					if err != nil {
+						t.Fatal(err)
+					}
+				case <-time.After(3 * time.Second):
+					t.Fatal("cleanup waited for downstream after authorization finished")
+				}
+				if _, err := app.server.GetGatekeeperByName("drain"); !errors.Is(err, authcrunch.ErrServerClosed) {
+					t.Fatal("runtime remained open after authorization drained")
+				}
+				select {
+				case <-finished:
+					t.Fatal("downstream returned before its explicit release")
+				default:
+				}
+				response, retained := httptest.NewRecorder(), request()
+				calls := 0
+				err := handler.ServeHTTP(response, retained, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { calls++; return nil }))
+				denial, ok := err.(caddyhttp.HandlerError)
+				if !ok || denial.StatusCode != 503 || calls != 0 || response.Header().Get("Cache-Control") != "no-store" {
+					t.Fatal("retained handler admitted shutdown request or lost its denial contract")
+				}
+				if value, ok := retained.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer).Get("http.auth.authorizer.error"); !ok || value == "" {
+					t.Fatal("shutdown denial lost the error-route placeholder")
+				}
+				unblock()
+				select {
+				case got := <-finished:
+					if outcome == "panic" {
+						if got.panicValue != "synthetic downstream panic" {
+							t.Fatal("downstream panic was changed")
+						}
+					} else if got.panicValue != nil || (outcome == "error" && got.err != downstreamError) || (outcome == "return" && got.err != nil) {
+						t.Fatal("downstream result was changed", got.err, got.panicValue)
+					}
+				case <-time.After(3 * time.Second):
+					t.Fatal("downstream handler did not return")
+				}
+				if err := app.Cleanup(); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
+
+func TestAuthorizationHandlerDrainsAuthorization(t *testing.T) {
+	policy := &authz.PolicyConfig{Name: "drain", RawCryptoKeyStoreConfig: []string{"crypto key verify " + authorizationPathKey},
+		AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}},
+	}
 	app := provisionLifecycleApp(t, &authcrunch.Config{AuthorizationPolicies: []*authz.PolicyConfig{policy}})
-	gate, err := app.getGatekeeper("drain")
-	if err != nil {
-		t.Fatal(err)
-	}
-	handler := AuthorizationHandler{AuthzMiddleware: AuthzMiddleware{app: app, gatekeeper: gate}}
-	request := func() *http.Request {
-		r := httptest.NewRequest("GET", "https://app.example/public", nil)
-		return r.WithContext(context.WithValue(r.Context(), caddy.ReplacerCtxKey, caddy.NewReplacer()))
-	}
-	entered, release, finished := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	handler := AuthorizationHandler{AuthzMiddleware: AuthzMiddleware{app: app, GatekeeperName: "drain"}}
+	hold := &lifecycleHold{entered: make(chan struct{}), release: make(chan struct{})}
+	var once sync.Once
+	unblock := func() { once.Do(func() { close(hold.release) }) }
+	defer unblock()
+	response := httptest.NewRecorder()
+	writer := &lifecycleHeldWriter{ResponseWriter: response, hold: hold, ctx: t.Context()}
+	r := httptest.NewRequest("GET", "https://app.example/private", nil)
+	r = r.WithContext(context.WithValue(r.Context(), caddy.ReplacerCtxKey, caddy.NewReplacer()))
+	finished := make(chan error, 1)
 	go func() {
-		finished <- handler.ServeHTTP(httptest.NewRecorder(), request(), caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { close(entered); <-release; return nil }))
+		finished <- handler.ServeHTTP(writer, r, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error {
+			return errors.New("denied request reached downstream")
+		}))
 	}()
-	<-entered
+	awaitLifecycle(t, hold.entered, "gatekeeper response")
 	cleanup := make(chan error, 1)
 	go func() { cleanup <- app.Cleanup() }()
-	deadline := time.NewTimer(5 * time.Second)
-	defer deadline.Stop()
-	// Observe admission closing before testing retained handlers, without racing
-	// request acquisition against a cleanup goroutine that has not started yet.
-	tick := time.NewTicker(time.Millisecond)
-	defer tick.Stop()
-	for {
-		app.mu.Lock()
-		disposing := app.disposing
-		app.mu.Unlock()
-		if disposing {
-			break
-		}
-		select {
-		case <-tick.C:
-		case <-deadline.C:
-			close(release)
-			t.Fatal("cleanup did not close admission")
-		}
-	}
-	response := httptest.NewRecorder()
-	calls := 0
-	retained := request()
-	err = handler.ServeHTTP(response, retained, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { calls++; return nil }))
-	denial, ok := err.(caddyhttp.HandlerError)
-	if !ok || denial.StatusCode != 503 || calls != 0 {
-		close(release)
-		t.Fatal("retained handler admitted shutdown request")
-	}
-	if value, ok := retained.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer).Get("http.auth.authorizer.error"); !ok || value == "" {
-		close(release)
-		t.Fatal("shutdown denial lost the error-route placeholder")
-	}
+	waitDisposing(t, app)
 	select {
 	case <-cleanup:
-		close(release)
-		t.Fatal("runtime disposed before downstream returned")
+		t.Fatal("runtime closed while authorization was still writing its response")
 	default:
 	}
-	close(release)
+	if _, err := app.server.GetGatekeeperByName("drain"); err != nil {
+		t.Fatal("runtime closed before authorization drained", err)
+	}
+	unblock()
 	select {
 	case err := <-finished:
-		if err != nil {
-			t.Fatal(err)
+		if err != nil || response.Code != http.StatusFound || response.Header().Get("Cache-Control") != "no-store" {
+			t.Fatal("held gatekeeper response changed", err, response.Code)
 		}
-	case <-deadline.C:
-		t.Fatal("handler did not return")
+	case <-time.After(3 * time.Second):
+		t.Fatal("authorization did not return")
 	}
 	select {
 	case err := <-cleanup:
 		if err != nil {
 			t.Fatal(err)
 		}
-	case <-deadline.C:
-		t.Fatal("request reference leaked (or double acquired)")
+	case <-time.After(3 * time.Second):
+		t.Fatal("authorization admission leaked")
 	}
 }

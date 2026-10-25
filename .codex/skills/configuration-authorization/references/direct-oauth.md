@@ -160,9 +160,12 @@ with the external Host preserved; the unpinned case rejects those requests.
 Chrome independently checks the Secure/HttpOnly/Lax cookie journey with private
 CA trust and an invalid-certificate negative control. The fixture main changes
 only the private trust pool; the command, app and handlers are production Caddy.
-`TestAuthorizationHandlerAdmissionAndDrain` checks retained handlers and single
-request admission through downstream completion; `TestAuthzResponseContract`
-checks ordinary JWT/error compatibility.
+`TestAuthorizationHandlerAdmissionAndDrain` checks retained handlers and releases
+authorization admission before downstream execution, including errors and panic
+unwinding. `TestAuthorizationHandlerDrainsAuthorization` preserves draining of
+active gatekeeper work; `TestCaddyAuthorizationStreamingE2E` verifies reloads with
+open downstream streams and WebSockets. `TestAuthzResponseContract` checks
+ordinary JWT/error compatibility.
 
 Select the focused tests for the changed OAuth or handler contract, following
 [change-based test selection](../../testing-and-ci/SKILL.md#select-tests-from-the-change).

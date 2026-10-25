@@ -40,13 +40,11 @@ func (AuthorizationHandler) CaddyModule() caddy.ModuleInfo {
 
 // ServeHTTP only runs downstream after explicit authorization or bypass.
 func (m AuthorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	release, ok := m.app.acquireRequest()
-	if !ok {
-		return authorizationError(w, r, caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down")))
-	}
-	defer release()
 	response := caddyhttp.NewResponseRecorder(w, nil, nil)
-	user, authorized, err := m.authenticate(response, r)
+	// Authenticate pins the runtime only while using AuthCrunch and returns
+	// detached identity strings. Downstream streams must not hold up app cleanup:
+	// a later reverse-proxy cleanup may be what closes their connections.
+	user, authorized, err := m.Authenticate(response, r)
 	if response.Status() != 0 {
 		return nil // Preserve handled status, cookies, body and protocol failures.
 	}

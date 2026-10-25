@@ -126,7 +126,8 @@ func (m *AuthzMiddleware) Validate() error {
 	return nil
 }
 
-// Authenticate translates successful gatekeeper identity into Caddy metadata.
+// Authenticate pins the runtime through the gatekeeper call and copies successful
+// identity into independent Caddy metadata before releasing admission.
 func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
 	release, ok := m.app.acquireRequest()
 	if !ok {
@@ -134,13 +135,6 @@ func (m AuthzMiddleware) Authenticate(w http.ResponseWriter, r *http.Request) (c
 		return caddyauth.User{}, false, caddyhttp.Error(http.StatusServiceUnavailable, fmt.Errorf("security app is shutting down"))
 	}
 	defer release()
-	return m.authenticate(w, r)
-}
-
-// authenticate borrows an already admitted runtime. The route handler retains
-// its single admission through downstream completion; the legacy authenticator
-// owns admission only for its authentication call.
-func (m AuthzMiddleware) authenticate(w http.ResponseWriter, r *http.Request) (caddyauth.User, bool, error) {
 	gatekeeper := m.gatekeeper
 	if gatekeeper == nil {
 		var err error

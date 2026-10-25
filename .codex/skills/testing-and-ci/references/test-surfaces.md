@@ -649,6 +649,13 @@ claims cannot select another local account after the upstream fix; see
 [profile isolation](../../authentication-portal-api/references/profile-public-keys.md#canonical-profile-identity-regression).
 
 Runtime ownership unit tests live in `app_lifecycle_test.go`.
+`TestAuthorizationHandlerAdmissionAndDrain` and
+`TestAuthorizationHandlerDrainsAuthorization` distinguish downstream connection
+lifetime from active AuthCrunch work. `TestCaddyAuthorizationStreamingE2E` in
+`authorization_streaming_e2e_test.go` keeps a real TLS SSE response open across
+successive admin API reloads, checks proxied WebSocket closure and `/config/`
+availability, and covers authorized/bypassed routes with HTTP/1.1 and HTTP/2
+streams. Use these when changing admission or the authorization route handler.
 `TestCaddyLifecycleE2E` in `app_lifecycle_e2e_test.go` launches a bounded child
 process with real Caddy listeners and reloads; `TestCaddyLifecycleProcess` is
 its subprocess helper. Use these for app/plugin lifecycle changes, including

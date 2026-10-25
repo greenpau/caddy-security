@@ -65,19 +65,23 @@ not reinterpret that configuration as synchronous discovery.
 
 ## Request draining and failures
 
-Each `AuthnMiddleware.ServeHTTP`, `AuthorizationHandler.ServeHTTP`, and legacy
-`AuthzMiddleware.Authenticate` call acquires
-one app request reference before touching a borrowed runtime object. Admission
-and reference acquisition share the cleanup mutex. Cleanup disables admission
-before waiting, which prevents new references from racing the wait. The request
+`AuthnMiddleware.ServeHTTP` and `AuthzMiddleware.Authenticate` acquire one app
+request reference before touching a borrowed runtime object. Admission and
+reference acquisition share the cleanup mutex. Cleanup disables admission before
+waiting, which prevents new references from racing the wait. Each operation
 releases its reference on return, including errors and panic unwinding.
 
-The route authorization handler keeps its single reference through downstream
-completion and releases on return or panic. It delegates to an already-admitted
-authentication helper, avoiding double acquisition during retirement. The legacy
-authenticator can track only its own call through Caddy's authentication chain. Calls that have not entered AuthCrunch when retirement
-starts fail closed. An authentication portal returns a Caddy 503 error. The
-authorization provider returns an error and no authenticated user; Caddy's
+`AuthorizationHandler.ServeHTTP` uses the same `Authenticate` method as the legacy
+provider. Its single admission covers gatekeeper processing, handled response
+writes, and copying identity into an independent map of strings. Admission ends
+before publishing those strings to Caddy placeholders and invoking downstream.
+Downstream handlers never borrow the AuthCrunch runtime through this operation.
+Do not retain admission through a downstream WebSocket or streamed response:
+Caddy's later reverse-proxy cleanup may be required to close that connection,
+and synchronous cleanup order is unspecified. Calls that have not entered
+AuthCrunch when retirement starts fail closed. An authentication portal returns
+a Caddy 503 error. The authorization provider returns an error and no
+authenticated user; Caddy's
 authentication middleware normally turns that rejection into 401. The route
 `AuthorizationHandler` used by current Caddyfiles preserves the 503 and every
 other handled gatekeeper response instead of running an error route over it.
@@ -86,9 +90,11 @@ Cleanup waits synchronously, so the reload operation can wait while the new
 deployment is already serving. It can outlast the HTTP grace period. It never
 closes a server underneath a still-running AuthCrunch call. Configure suitable
 HTTP read/write and upstream timeouts for the deployment: an indefinitely
-blocked handler can indefinitely delay cleanup. Canceling a request alone does
-not release its reference; its handler must return. No untracked background
-drain goroutine or forced close timer is used.
+blocked AuthCrunch operation can indefinitely delay cleanup. A downstream stream
+whose authorization has completed does not delay security cleanup, and its
+remaining lifetime belongs to Caddy and the upstream. Canceling a request alone
+does not release an active AuthCrunch reference; its operation must return. No
+untracked background drain goroutine or forced close timer is used.
 
 Provider disposal belongs to `Server.Close`: it cancels and joins delayed
 discovery, JWKS requests, retries, and maintenance workers. Caddy does not close
@@ -251,6 +257,18 @@ not distribute completed portal sessions or direct-policy pending maps. See
 [shared login storage](../../configuration-oauth-providers/references/shared-login-storage.md).
 
 ## Validation
+
+`TestAuthorizationHandlerAdmissionAndDrain` holds authorized and bypassed
+downstream handlers open while cleanup completes, verifies detached metadata and
+retired-handler rejection, and preserves downstream return, error and panic
+behavior. `TestAuthorizationHandlerDrainsAuthorization` holds a real gatekeeper
+response inside authorization and requires cleanup to wait for it.
+`TestCaddyAuthorizationStreamingE2E` exercises actual Caddy TLS and its `/load`
+and `/config/` admin routes with an SSE response and proxied WebSocket open.
+Both authorized and bypassed paths cover HTTP/1.1 and HTTP/2 streaming responses,
+two consecutive reloads, disposal of old security runtimes, proxy-owned WebSocket
+closure, and continued delivery on the original stream. Stream continuation
+makes this regression independent of randomized module cleanup order.
 
 `app_lifecycle_test.go` covers fresh graphs, partial provisioning, repeated and
 concurrent cleanup, admission versus drain, shared providers across portals,
