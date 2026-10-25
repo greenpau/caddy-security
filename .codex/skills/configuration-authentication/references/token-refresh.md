@@ -353,7 +353,8 @@ physical file isolation, migration, ownership and uncertain-commit recovery.
 
 ## Validation
 
-- `caddyfile_refresh_store_test.go`, `refresh_store_sqlite_test.go`,
+- `plugins/session-and-refresh-storage-sqlite/consumer_test.go`, its
+  `caddyfile_test.go`, root `caddyfile_refresh_store_test.go`, `refresh_store_sqlite_test.go`,
   `app_refresh_stores_test.go`, `app_refresh_store_lifecycle_test.go` and
   `app_refresh_store_storage_test.go`: delegated backend/selector grammar,
   one-pass native/deferred resolution, immutable factories, partial cleanup,

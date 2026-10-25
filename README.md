@@ -18,6 +18,12 @@ To retain sessions and generated signing keys across restarts, enable
 It supports portals and direct OAuth policies without a portal. Persistent
 deployments require a complete stop/start; overlapping reload is rejected.
 
+AuthCrunch backend companions live in [`plugins/`](plugins), with category and
+backend names joined, such as `claims-enrichment-static` and
+`identity-stores-sqlite`. The standard Caddy Security build includes all 11
+companions. See the [package and module mapping](.codex/skills/coding-directives/references/host-plugins.md#bundled-companion-packages)
+for their integration contracts and validation.
+
 Please show your **appreciation for this work** and :star: :star: :star:
 
 Please consider **sponsoring this project** via Github Sponsors!

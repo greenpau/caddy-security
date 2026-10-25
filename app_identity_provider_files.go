@@ -52,13 +52,13 @@ func (app *App) configuredStorageFiles(config *authcrunch.Config) []identityProv
 	var files []identityProviderStorageFile
 	for _, binding := range app.refreshStores {
 		if factory, ok := binding.factory.(*sqliteRefreshStoreFactory); ok && factory != nil {
-			config := factory.sqliteConfig()
+			config := factory.SQLiteConfig()
 			files = append(files, identityProviderStorageFile{path: config.Path, sqlite: true, refresh: true, maxSessions: config.MaxSessions, maxRotations: config.MaxRotations})
 		}
 	}
 	for _, binding := range app.oauthLoginStores {
 		if factory, ok := binding.factory.(*sqliteOAuthLoginStoreFactory); ok && factory != nil {
-			config := factory.sqliteConfig()
+			config := factory.SQLiteConfig()
 			files = append(files, identityProviderStorageFile{path: config.Path, sqlite: true, oauth: true, capacity: config.Capacity})
 		}
 	}

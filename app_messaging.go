@@ -29,6 +29,8 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	messagingsqlite "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // MessagingProviderBackendModule validates configuration without opening storage.
@@ -36,10 +38,7 @@ import (
 // On failure, return a closable partial result or unwind before returning nil.
 // Module Cleanup must not close returned providers. The constructor context only
 // bounds setup; the app owns worker cancellation separately from Caddy cleanup.
-type MessagingProviderBackendModule interface {
-	MessagingProviderName() (string, error)
-	NewMessagingProvider(context.Context) (messaging.Provider, error)
-}
+type MessagingProviderBackendModule = plugin.MessagingProviderBackendModule
 
 type preparedMessagingProvider struct {
 	name        string

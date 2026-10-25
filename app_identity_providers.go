@@ -24,6 +24,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // IdentityProviderBackendModule prepares an external provider without opening
@@ -32,10 +34,7 @@ import (
 // optional HTTP login and attachment capabilities. Return a safely closable
 // partial handle or a real nil after unwinding acquisition on failure. Module
 // Cleanup must not close the runtime; the app drains requests before disposal.
-type IdentityProviderBackendModule interface {
-	IdentityProviderConfig() (*idp.ExternalIdentityProviderConfig, error)
-	NewIdentityProvider(context.Context) (idp.IdentityProvider, error)
-}
+type IdentityProviderBackendModule = plugin.IdentityProviderBackendModule
 
 type preparedIdentityProvider struct {
 	config          idp.ExternalIdentityProviderConfig
@@ -75,7 +74,7 @@ func (app *App) prepareIdentityProviders(ctx caddy.Context, config *authcrunch.C
 		seen[descriptor.Name] = true
 		var attachmentStore string
 		if ticket, ok := module.(*SQLiteTicketIdentityProvider); ok {
-			normalized, err := ticket.config()
+			normalized, err := ticket.BackendConfig()
 			if err != nil {
 				return fmt.Errorf("identity provider %d attachment configuration is invalid", i)
 			}

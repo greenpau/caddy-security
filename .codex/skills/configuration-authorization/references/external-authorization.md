@@ -145,12 +145,15 @@ or clearing otherwise valid credentials merely because the service denied.
 
 `caddyfile_authz_external.go` delegates binding and transport parsing;
 `app_external_authorization.go` prepares and attaches the typed binding;
-`external_authorization_httpjson.go` owns the factory and TLS resources.
+`plugins/external-authorization-httpjson/plugin.go` owns the factory and TLS resources.
 `app.go` owns publication, rollback and drain. HTTP handlers remain thin
 delegates to AuthCrunch.
 
 Unit coverage belongs in `caddyfile_authz_external_test.go`,
-`app_external_authorization_test.go` and `external_authorization_httpjson_test.go`.
+`app_external_authorization_test.go`, the companion's
+`plugins/external-authorization-httpjson/consumer_test.go` and `tls_test.go`.
+`external_authorization_httpjson_test.go` retains assembled shared TLS fixtures;
+the independent companion tests use their own controlled HTTPS service.
 The `testcase_authorize_external` and `testcase_authorize_external_invalid`
 adaptation fixtures check both accepted output and rejection. Host E2E belongs
 in `external_authorization_httpjson_e2e_test.go`: require trusted TLS/mTLS, real

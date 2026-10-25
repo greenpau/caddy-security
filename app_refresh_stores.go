@@ -25,23 +25,20 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // RefreshStoreBackendModule prepares an immutable factory without opening files
 // or acquiring resources. Module cleanup never owns returned store handles.
-type RefreshStoreBackendModule interface {
-	PrepareRefreshStore() (RefreshStoreFactory, error)
-}
+type RefreshStoreBackendModule = plugin.RefreshStoreBackendModule
 
 // RefreshStoreFactory freezes copied configuration and core metadata. Every
 // constructor call transfers a fresh store to the app; later module mutations
 // cannot change it. A failed constructor returns a safely closable partial
 // handle, or real nil after unwinding acquisition. The context applies to setup,
 // not runtime lifetime. Optional io.Closer ownership belongs solely to the app.
-type RefreshStoreFactory interface {
-	RefreshStoreConfig() (tokenrefresh.ExternalStoreConfig, error)
-	NewRefreshStore(context.Context) (tokenrefresh.ManagedStore, error)
-}
+type RefreshStoreFactory = plugin.RefreshStoreFactory
 
 type preparedRefreshStore struct {
 	config  tokenrefresh.ExternalStoreConfig

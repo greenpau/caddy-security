@@ -178,9 +178,11 @@ through a separately controlled recovery process; do not blindly issue again.
 
 ## Validation
 
-`credential_authenticator_sqlite_test.go` covers public parsing, no-I/O validation,
+`plugins/credential-authenticators-sqlite/consumer_test.go` covers public parsing, no-I/O validation,
 consumer refusal to create storage, cancellation, rejected Basic authentication,
-fresh revocation and closed handles. `app_credential_authenticators_test.go`
+fresh revocation and closed handles. Its `ownership_test.go` adds independent
+handles, setup cancellation, realm binding and unsafe storage rejection.
+`app_credential_authenticators_test.go`
 covers binding rejection, preserved declarations, shared handles, failure unwind,
 request drain and persistent Start. `command_api_key_test.go` covers strict input,
 private output, no overwrite, realm-bound idempotent revocation and redacted errors.

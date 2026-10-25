@@ -25,6 +25,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // ClaimsEnrichmentBinding selects one backend and a complete identity binding
@@ -48,9 +50,7 @@ type ClaimsEnrichmentBinding struct {
 // close that backend. On error, return acquired resources as a closable backend
 // or unwind them before returning nil. Return real nil, not a typed nil. Do not
 // share a closable backend between calls; each call transfers one ownership.
-type ClaimsEnrichmentBackendModule interface {
-	NewClaimsEnrichmentBackend(context.Context, enrichment.Config) (enrichment.Backend, error)
-}
+type ClaimsEnrichmentBackendModule = plugin.ClaimsEnrichmentBackendModule
 
 type preparedClaimsEnrichment struct {
 	policy string

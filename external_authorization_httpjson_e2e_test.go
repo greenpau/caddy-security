@@ -497,7 +497,7 @@ acl rule {
 			t.Fatal(err)
 		}
 		old := active.(*App)
-		backend := old.pluginClosers[0].(*httpJSONExternalBackend)
+		backend := old.pluginClosers[0].(external.Backend)
 		for _, bad := range []string{strings.Replace(baseline, service.ca, service.ca+".missing", 1), strings.Replace(baseline, "version revision-1", "version \"\"", 1)} {
 			f.input = bad
 			if err := f.reload(""); err == nil {

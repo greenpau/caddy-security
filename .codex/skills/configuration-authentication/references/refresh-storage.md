@@ -121,7 +121,10 @@ owns request transport and response details.
 
 Pure module/parser tests cover defaults, duplicate grammar, literal fields,
 no-I/O preparation, descriptor normalization and native/deferred one-pass
-selection. App tests cover malformed bindings, input snapshots, partial handles,
+selection. Standalone `plugins/session-and-refresh-storage-sqlite/consumer_test.go`
+and `caddyfile_test.go` qualify frozen factories, managed activation, real
+rotation/replay and independent handles. Root tests retain global selection,
+native aliases and failures. App tests cover malformed bindings, input snapshots, partial handles,
 root rejection, deferred Start, lease draining and exact cleanup order. Storage
 admission tests exercise all known file categories, hardlinks, symlinks, sidecars,
 managed directories and candidate/active ownership without requiring a ticket or

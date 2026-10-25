@@ -128,11 +128,11 @@ prefixes cannot be declared as outputs.
 ## Maintenance and acceptance
 
 Trace `caddyfile_authz_enrichment.go` through both shared parsers,
-`claims_enrichment_static.go`, the app factory boundary and the gatekeeper's
+`plugins/claims-enrichment-static/plugin.go`, the app factory boundary and the gatekeeper's
 required enricher. Keep backend-specific validation separate from shared grammar.
 Do not implement another authorization engine in the HTTP handler.
 
-`claims_enrichment_static_test.go` covers native string transport, exact numbers,
+`plugins/claims-enrichment-static/consumer_test.go` covers native string transport, exact numbers,
 independent snapshots and malformed configuration. `caddyfile_authz_enrichment_test.go`
 covers shared defaults, quoting, bindings, rejection and no partial publication.
 The registered positive/negative adaptation fixtures cover the emitted app JSON.

@@ -20,6 +20,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	enrichmentparser "github.com/greenpau/go-authcrunch/pkg/authz/enrichment/parser"
 	staticparser "github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static/parser"
+
+	staticplugin "github.com/greenpau/caddy-security/plugins/claims-enrichment-static"
 )
 
 // parseCaddyfileClaimsEnrichment parses one flat block per authorization policy:
@@ -72,7 +74,7 @@ func parseCaddyfileClaimsEnrichment(d *caddyfile.Dispenser, policy string) (*Cla
 	if err != nil {
 		return nil, d.Errf("%v", err)
 	}
-	if err := validateStaticClaimsBinding(binding, config); err != nil {
+	if err := staticplugin.ValidateBinding(binding, config); err != nil {
 		return nil, d.Errf("%v", err)
 	}
 	// Both Caddy's config tree and inline module loader round bare JSON numbers.

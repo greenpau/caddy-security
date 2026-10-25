@@ -24,6 +24,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authz/external"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // ExternalAuthorizationBinding selects one backend and a complete identity binding
@@ -47,9 +49,7 @@ type ExternalAuthorizationBinding struct {
 // close that backend. On error, return acquired resources as a closable backend
 // or unwind them before returning nil. Return real nil, not a typed nil. Do not
 // share a closable backend between calls; each call transfers one ownership.
-type ExternalAuthorizationBackendModule interface {
-	NewExternalAuthorizationBackend(context.Context, external.Config) (external.Backend, error)
-}
+type ExternalAuthorizationBackendModule = plugin.ExternalAuthorizationBackendModule
 
 type preparedExternalAuthorization struct {
 	policy string

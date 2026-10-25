@@ -122,7 +122,7 @@ func parseSQLiteSecretsInput(data []byte, action string) (*sqlite.Config, map[st
 	if err != nil {
 		return invalid()
 	}
-	if _, err := (&SQLiteSecretsManager{Name: config.Name, Path: config.Path, Record: config.Record, Timeout: config.Timeout}).config(); err != nil {
+	if _, err := (&SQLiteSecretsManager{Name: config.Name, Path: config.Path, Record: config.Record, Timeout: config.Timeout}).BackendConfig(); err != nil {
 		return invalid()
 	}
 	values, has := doc["values"]

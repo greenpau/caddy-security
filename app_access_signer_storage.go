@@ -35,7 +35,7 @@ func (app *App) configuredAccessKeyFiles(config *authcrunch.Config) ([]identityP
 	}
 	for _, binding := range app.accessSigners {
 		if factory, ok := binding.factory.(*rsapssAccessSignerFactory); ok && factory != nil {
-			addFile(factory.signingConfig().KeyFile)
+			addFile(factory.SigningConfig().KeyFile)
 		}
 	}
 	addKeys := func(keyStore *kms.CryptoKeyStoreConfig, raw []string) error {

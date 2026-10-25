@@ -17,7 +17,6 @@ package security
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,11 +29,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
-	"github.com/greenpau/go-authcrunch/pkg/ids"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	identitysqlite "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 	messagingsqlite "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
-	registrationsqlite "github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite"
 )
 
 func sqliteRegistrationTestConfig(t *testing.T) *SQLiteRegistrationWorkflow {
@@ -56,48 +52,6 @@ func sqliteRegistrationTestLoad(t *testing.T, raw json.RawMessage) (any, context
 		t.Fatal("Caddy did not load exactly one registration module")
 	}
 	return modules[0], cancel, nil
-}
-
-func TestSQLiteRegistrationParser(t *testing.T) {
-	good := "signup {\npath \"/private registrations/pending.db\"\nidentity_store accounts\nrealm staff\nemail_provider notifications\npublic_origin https://portal.example.test\n}"
-	cases := map[string]string{
-		"valid":          good,
-		"missing_block":  "signup",
-		"extra_header":   strings.Replace(good, "signup {", "signup other {", 1),
-		"missing_path":   strings.Replace(good, "path \"/private registrations/pending.db\"\n", "", 1),
-		"relative_path":  strings.Replace(good, "/private registrations/pending.db", "pending.db", 1),
-		"duplicate":      strings.Replace(good, "realm staff", "realm staff\nrealm staff", 1),
-		"extra_value":    strings.Replace(good, "realm staff", "realm staff other", 1),
-		"nested":         strings.Replace(good, "realm staff", "realm staff {\n nested value\n}", 1),
-		"unknown":        strings.Replace(good, "realm staff", "realm staff\napproval required", 1),
-		"missing_origin": strings.Replace(good, "public_origin https://portal.example.test\n", "", 1),
-		"origin_http":    strings.Replace(good, "https://portal.example.test", "http://portal.example.test", 1),
-		"origin_path":    strings.Replace(good, "https://portal.example.test", "https://portal.example.test/auth", 1),
-		"base_reserved":  strings.Replace(good, "realm staff", "realm staff\nbase_path /api", 1),
-		"timeout":        strings.Replace(good, "realm staff", "realm staff\ntimeout 31s", 1),
-		"unterminated":   strings.TrimSuffix(good, "}"),
-	}
-	for name, input := range cases {
-		t.Run(name, func(t *testing.T) {
-			var module SQLiteRegistrationWorkflow
-			err := module.UnmarshalCaddyfile(caddyfile.NewTestDispenser(input))
-			if name != "valid" {
-				if err == nil {
-					t.Fatal("invalid workflow syntax accepted")
-				}
-				return
-			}
-			if err != nil || module.Timeout != "1s" || module.BasePath != "/auth" || module.IdentityStore != "accounts" {
-				t.Fatal("parser lost defaults or dependency binding", err)
-			}
-		})
-	}
-	var module SQLiteRegistrationWorkflow
-	literal := strings.Replace(good, "/private registrations/pending.db", "/private/{env.REGISTRATIONS}/pending.db", 1)
-	literal = strings.Replace(literal, "realm staff", "realm staff\ntimeout 1000ms\nbase_path /", 1)
-	if err := module.UnmarshalCaddyfile(caddyfile.NewTestDispenser(literal)); err != nil || module.Path != "/private/{env.REGISTRATIONS}/pending.db" || module.BasePath != "/" || module.Timeout != "1s" {
-		t.Fatal("literal path or normalized defaults changed", err)
-	}
 }
 
 func TestSQLiteRegistrationDispatch(t *testing.T) {
@@ -153,44 +107,6 @@ func TestSQLiteRegistrationPortalSelection(t *testing.T) {
 				t.Fatal("explicit workflow selection lost", err)
 			}
 		})
-	}
-}
-
-func TestSQLiteRegistrationValidationIsReadOnly(t *testing.T) {
-	module := sqliteRegistrationTestConfig(t)
-	module.Path = filepath.Join(filepath.Dir(module.Path), "missing", "pending.db")
-	module.Timeout = ""
-	module.BasePath = ""
-	before, _ := json.Marshal(module)
-	var digest string
-	for _, timeout := range []string{"", "1s", "1000ms", "1000000us"} {
-		copy := *module
-		copy.Timeout = timeout
-		descriptor, err := copy.RegistrationWorkflowConfig()
-		if err != nil || descriptor.Validate() != nil || descriptor.Name != "signup" || descriptor.IdentityStore != "accounts" || descriptor.EmailProvider != "notifications" || descriptor.Realm != "staff" {
-			t.Fatal("normalized descriptor is invalid", err)
-		}
-		if digest != "" && descriptor.ConfigDigest != digest {
-			t.Fatal("equivalent timeout spellings changed persistent configuration digest")
-		}
-		digest = descriptor.ConfigDigest
-		encoded, _ := json.Marshal(descriptor)
-		if strings.Contains(string(encoded), module.Path) || strings.Contains(string(encoded), module.PublicOrigin) {
-			t.Fatal("descriptor disclosed private backend configuration")
-		}
-	}
-	after, _ := json.Marshal(module)
-	if string(before) != string(after) {
-		t.Fatal("validation mutated module configuration")
-	}
-	if _, err := os.Stat(filepath.Dir(module.Path)); !os.IsNotExist(err) {
-		t.Fatal("validation created storage")
-	}
-	copy := *module
-	copy.PublicOrigin = "https://other.example.test"
-	descriptor, err := copy.RegistrationWorkflowConfig()
-	if err != nil || descriptor.ConfigDigest == digest {
-		t.Fatal("public origin was omitted from persistent binding")
 	}
 }
 
@@ -271,114 +187,4 @@ func sqliteRegistrationTestEntry(id string) map[string]string {
 	data["password"] = lifecyclePassword
 	data["return_url"] = "/welcome"
 	return data
-}
-
-func TestSQLiteRegistrationConsumerAndBorrowedOwnership(t *testing.T) {
-	declaration := sqliteRegistrationTestConfig(t)
-	store, outbox := sqliteRegistrationTestDependencies(t, declaration)
-	entry, cancel, err := sqliteRegistrationTestLoad(t, caddyconfig.JSONModuleObject(declaration, "driver", "sqlite", nil))
-	if err != nil {
-		t.Fatal(err)
-	}
-	module := entry.(*SQLiteRegistrationWorkflow)
-	setup, cancelSetup := context.WithCancel(t.Context())
-	provider, err := module.NewRegistrationWorkflow(setup, store, outbox)
-	cancelSetup()
-	cancel()
-	if err != nil {
-		t.Fatal(err)
-	}
-	workflow := provider.(*registrationsqlite.Workflow)
-	t.Cleanup(func() { _ = workflow.Close() })
-	info, err := os.Stat(module.Path)
-	if err != nil || info.Mode().Perm() != 0600 {
-		t.Fatal("pending storage is not private", err)
-	}
-	id := strings.Repeat("a", 64)
-	data := sqliteRegistrationTestEntry(id)
-	if err := workflow.AddRegistrationEntry(id, data); err != nil {
-		t.Fatal(err)
-	}
-	if err := workflow.Notify(data); err != nil {
-		t.Fatal("module cancellation retired the runtime", err)
-	}
-	message, err := outbox.Claim(t.Context())
-	if err != nil || !strings.Contains(message.Body, module.PublicOrigin+"/auth/register") {
-		t.Fatal("confirmation did not use configured origin and mount", err)
-	}
-	if err := outbox.Acknowledge(t.Context(), message.ID, message.Lease); err != nil {
-		t.Fatal(err)
-	}
-	if err := workflow.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := outbox.CheckReady(t.Context()); err != nil || !store.Configured() {
-		t.Fatal("workflow disposed borrowed dependencies", err)
-	}
-	restored, err := module.NewRegistrationWorkflow(t.Context(), store, outbox)
-	if err != nil {
-		t.Fatal(err)
-	}
-	current := restored.(*registrationsqlite.Workflow)
-	t.Cleanup(func() { _ = current.Close() })
-	metadata, err := current.GetRegistrationEntry(id)
-	if err != nil || metadata["username"] != "alice" || metadata["password"] != "" || metadata["registration_code"] != "" {
-		t.Fatal("reopened workflow lost safe pending metadata", err)
-	}
-	if err := current.ConfirmRegistration(t.Context(), id, data["registration_code"]); err != nil {
-		t.Fatal(err)
-	}
-	if err := current.ConfirmRegistration(t.Context(), id, data["registration_code"]); !errors.Is(err, registrationsqlite.ErrDenied) {
-		t.Fatal("confirmation replay accepted", err)
-	}
-	if _, err := store.FetchUserData("alice", "alice@example.test"); err != nil {
-		t.Fatal("confirmation did not commit the account", err)
-	}
-}
-
-func TestSQLiteRegistrationFactoryDependencyFailures(t *testing.T) {
-	for _, kind := range []string{"nil_store", "typed_nil_store", "nil_outbox", "typed_nil_outbox", "wrapped_store", "wrapped_outbox", "wrong_store", "wrong_outbox", "closed_outbox", "closed_store", "canceled", "missing_parent"} {
-		t.Run(kind, func(t *testing.T) {
-			module := sqliteRegistrationTestConfig(t)
-			store, outbox := sqliteRegistrationTestDependencies(t, module)
-			var accounts ids.IdentityStore = store
-			var mail messaging.Provider = outbox
-			ctx := t.Context()
-			switch kind {
-			case "nil_store":
-				accounts = nil
-			case "typed_nil_store":
-				accounts = (*identitysqlite.Store)(nil)
-			case "nil_outbox":
-				mail = nil
-			case "typed_nil_outbox":
-				mail = (*messagingsqlite.Outbox)(nil)
-			case "wrapped_store":
-				accounts = &struct{ *identitysqlite.Store }{store}
-			case "wrapped_outbox":
-				mail = &struct{ *messagingsqlite.Outbox }{outbox}
-			case "wrong_store":
-				module.IdentityStore = "other"
-			case "wrong_outbox":
-				module.EmailProvider = "other"
-			case "closed_outbox":
-				_ = outbox.Close()
-			case "closed_store":
-				_ = store.Close()
-			case "canceled":
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithCancel(ctx)
-				cancel()
-			case "missing_parent":
-				module.Path = filepath.Join(filepath.Dir(module.Path), "missing", "pending.db")
-			}
-			provider, err := module.NewRegistrationWorkflow(ctx, accounts, mail)
-			if provider != nil || !errors.Is(err, registrationsqlite.ErrUnavailable) || strings.Contains(err.Error(), module.Path) {
-				t.Fatal("invalid dependency returned a handle or exposed storage details", err)
-			}
-			if _, err := os.Stat(module.Path); !os.IsNotExist(err) {
-				t.Fatal("rejected workflow created pending storage")
-			}
-		})
-	}
 }

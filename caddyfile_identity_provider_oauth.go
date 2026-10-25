@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	idpparser "github.com/greenpau/go-authcrunch/pkg/idp/parser"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+
+	"github.com/greenpau/caddy-security/internal/caddyfileutil"
 )
 
 // parseCaddyfileOAuthIdentityProvider collects the whole upstream provider body.
@@ -201,32 +201,10 @@ func parseCaddyfileOAuthIdentityProvider(d *caddyfile.Dispenser, app *App, name 
 	return nil
 }
 
-func validateOAuthDirectiveTokens(args []string) error {
-	for _, arg := range args {
-		// EncodeArgs can trim a trailing empty token; validate before encoding.
-		if !utf8.ValidString(arg) || strings.TrimSpace(arg) == "" || strings.ContainsAny(arg, "\r\n\x00") {
-			return fmt.Errorf("empty or invalid OAuth directive argument")
-		}
-	}
-	return nil
-}
+func validateOAuthDirectiveTokens(args []string) error { return caddyfileutil.ValidateTokens(args) }
 
-// encodeOAuthDirective preserves validated Caddy tokens through the shared CSV
-// codec. EncodeArgs and DecodeArgs trim record-edge whitespace, while the CSV
-// writer does not quote every trailing Unicode space (for example a tab or NBSP).
-// If the normal encoding changes a token, quote every field explicitly using
-// CSV escaping. Issuers, audiences, secrets, and key paths must remain exact.
-func encodeOAuthDirective(args []string) string {
-	encoded := cfgutil.EncodeArgs(args)
-	if decoded, err := cfgutil.DecodeArgs(encoded); err == nil && slices.Equal(args, decoded) {
-		return encoded
-	}
-	quoted := make([]string, len(args))
-	for i, arg := range args {
-		quoted[i] = `"` + strings.ReplaceAll(arg, `"`, `""`) + `"`
-	}
-	return strings.Join(quoted, " ")
-}
+// encodeOAuthDirective preserves exact tokens through the shared directive codec.
+func encodeOAuthDirective(args []string) string { return caddyfileutil.EncodeDirective(args) }
 
 func translateOAuthDirective(args []string) ([][]string, error) {
 	switch args[0] {

@@ -83,7 +83,7 @@ func (app *App) preparePortalMounts(config *authcrunch.Config) error {
 				continue
 			}
 			if module, ok := prepared.module.(*SQLiteTicketIdentityProvider); ok {
-				cfg, err := module.config()
+				cfg, err := module.BackendConfig()
 				if err != nil {
 					return fmt.Errorf("portal %q ticket mount configuration is invalid", portal.Name)
 				}
@@ -95,7 +95,7 @@ func (app *App) preparePortalMounts(config *authcrunch.Config) error {
 				continue
 			}
 			if module, ok := prepared.module.(*SQLiteRegistrationWorkflow); ok {
-				cfg, err := module.config()
+				cfg, err := module.BackendConfig()
 				if err != nil {
 					return fmt.Errorf("portal %q registration mount configuration is invalid", portal.Name)
 				}

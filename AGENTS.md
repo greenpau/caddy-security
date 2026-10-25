@@ -78,16 +78,16 @@ modules register from package `init` hooks.
   ACLs, shortcuts, bypass rules, crypto, header injection, and miscellaneous
   policy settings. `caddyfile_utils.go` contains small parser helpers.
 - `app_messaging.go` binds caller-owned notification providers.
-  `messaging_sqlite.go` adapts private SQLite outboxes; bounded SMTP delivery
+  `plugins/messaging-sqlite` adapts private SQLite outboxes; bounded SMTP delivery
   workers start with the app and stop after producers drain.
 - `caddyfile_resolve.go` applies Caddy replacer values and
   `security.secrets.*` plugin lookups to authcrunch configuration during
   provisioning.
 - `app_identity_stores.go` binds host-owned identity stores to the AuthCrunch
-  root. `identity_store_sqlite.go` provides password identities through
+  root. `plugins/identity-stores-sqlite` provides password identities through
   `security.identity_stores.sqlite`; `command_identity_sqlite.go` supplies
   private offline account provisioning and mutation commands.
-- `caddyfile_credential_authenticator.go` and `credential_authenticator_sqlite.go`
+- `caddyfile_credential_authenticator.go` and `plugins/credential-authenticators-sqlite`
   declare named API-key backends. `app_credential_authenticators.go` binds them
   before root construction and shares handles only within one app.
   `command_api_key.go` owns private offline SQLite key issuance and revocation;
@@ -101,6 +101,12 @@ modules register from package `init` hooks.
 - `app_registration_workflows.go` binds caller-owned enrollment workflows after
   account stores and notification queues; SQLite signup requires explicit portal
   selection and confirms directly into its account store.
+- `plugins/<category>-<backend>/` contains the bundled Caddy companions for
+  AuthCrunch backends, including claims, external decisions, secrets, identities,
+  credentials, messaging, enrollment, signing and OAuth/refresh storage.
+  `pkg/plugin` owns their public typed contracts; root adapter files retain
+  compatibility aliases. The coding directives' host-plugin reference owns
+  package mappings, registration and lifetime rules.
 - `*_test.go` files sit beside the code they exercise. `caddyfile_adapt_test.go`
   is fixture-driven and compares Caddyfile input against expected adapted JSON.
 - `testdata/caddyfile_adapt/` contains `.Caddyfile`, `.json`, optional `.env`,

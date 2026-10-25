@@ -156,7 +156,7 @@ authorize /api/* with api_policy
   `caddyfile_identity_provider.go` and `caddyfile_identity_provider_oauth.go`,
   delegating to `go-authcrunch/pkg/idp/parser` and `pkg/idp/oauth/parser`.
   Storage declarations use `caddyfile_oauth_login_store.go` and
-  `oauth_login_store_sqlite.go`, delegating the body to
+  `plugins/oauth-login-storage-sqlite/plugin.go`, delegating the body to
   `plugins/oauth-login-storage/sqlite/parser`.
 - Use [configuration-oauth-applications](../configuration-oauth-applications/SKILL.md)
   to register named OAuth clients, configure private registration storage and

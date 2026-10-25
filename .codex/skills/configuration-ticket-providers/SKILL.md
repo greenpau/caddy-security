@@ -211,6 +211,10 @@ skip rules do not provide this redaction or resolve the separate host logger iss
 `TestSQLiteTicket*`, `TestAppIdentityProvider*` and `testcase_identity_provider_sqlite`
 cover text/native declarations, implicit and explicit attachments, no-I/O
 validation, exact runtime bindings, storage separation and owned lifecycle.
+Standalone public parser, descriptor, attachment, browser-binding and durable
+ticket cases live in `plugins/identity-providers-sqlite/consumer_test.go`,
+`attachment_test.go` and `binding_test.go`. Root tests retain global dispatch,
+native aliases, route wiring, attachment admission and shared storage ownership.
 `testcase_identity_attachments` adds attached SAML/LDAP/ticket adaptation;
 `TestAppIdentityProviderAttachment*` checks target preflight, deferred snapshots,
 file-backed identity and unchanged third-party ownership. The connected-provider

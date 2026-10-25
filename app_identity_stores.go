@@ -24,6 +24,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // IdentityStoreBackendModule prepares a store without opening runtime storage.
@@ -34,10 +36,7 @@ import (
 // invalid plugin are contained so other acquired stores can still be closed.
 // Runtime calls use request contexts; the setup context is not a shutdown signal.
 // Module Cleanup must not close the returned store.
-type IdentityStoreBackendModule interface {
-	IdentityStoreConfig() (*ids.ExternalIdentityStoreConfig, error)
-	NewIdentityStore(context.Context) (ids.IdentityStore, error)
-}
+type IdentityStoreBackendModule = plugin.IdentityStoreBackendModule
 
 type preparedIdentityStore struct {
 	config ids.ExternalIdentityStoreConfig

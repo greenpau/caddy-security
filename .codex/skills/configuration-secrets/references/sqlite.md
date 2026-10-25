@@ -136,10 +136,13 @@ for debug logging or expose the private runtime config through introspection.
 
 ## Verification
 
-The sources are `secrets_sqlite.go`, `command_secrets.go`, `app.go`, and the
-runtime resolver. `secrets_sqlite_test.go` covers parser/native JSON, metadata,
-exact types, snapshot detachment, cleanup, duplicate manager IDs, invalid storage,
-and private failures. `command_secrets_test.go` covers private input, strict JSON,
+The sources are `plugins/secrets-sqlite/plugin.go`, `command_secrets.go`, `app.go`, and the
+runtime resolver. `plugins/secrets-sqlite/consumer_test.go` and `caddyfile_test.go`
+cover parsing, metadata, exact types, snapshot detachment, cleanup, invalid storage,
+no runtime database dependency and reprovision rejection. Root
+`secrets_sqlite_test.go` retains global dispatch, native loading, resolver type
+rejection, duplicate manager IDs and private app failures.
+`command_secrets_test.go` covers private input, strict JSON,
 invalid replacement and trusted mutation. The registered
 `testcase_secrets_sqlite` adaptation fixture verifies module and consumer shape.
 

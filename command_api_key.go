@@ -100,7 +100,7 @@ func parseSQLiteAPIKeyInput(data []byte, action string) (*sqliteAPIKeyInput, err
 	if err != nil {
 		return invalid()
 	}
-	if _, err := (&SQLiteCredentialAuthenticator{Name: cfg.Name, Path: cfg.Path, Realm: cfg.Realm, Timeout: cfg.Timeout}).config(); err != nil {
+	if _, err := (&SQLiteCredentialAuthenticator{Name: cfg.Name, Path: cfg.Path, Realm: cfg.Realm, Timeout: cfg.Timeout}).BackendConfig(); err != nil {
 		return invalid()
 	}
 	input := &sqliteAPIKeyInput{config: cfg}

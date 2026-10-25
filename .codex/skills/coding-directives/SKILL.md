@@ -77,6 +77,13 @@ Keep the root package focused on Caddy app/plugin wiring and Caddyfile parsing.
 Use `pkg/util` only for small reusable helpers that are truly package-external
 or shared across multiple root-package files.
 
+Keep bundled AuthCrunch backend companions under
+`plugins/<category>-<backend>`, with typed public extension contracts in
+`pkg/plugin`. The root imports the companions through compatibility aliases;
+companions must not import the root. The
+[host plugin contract](references/host-plugins.md#bundled-companion-packages)
+owns the package mapping, registration, shared parsing and validation surfaces.
+
 ## Caddy Modules
 
 For runtime construction, ownership, request draining, reload, or cleanup work,

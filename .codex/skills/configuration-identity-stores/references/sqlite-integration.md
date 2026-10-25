@@ -33,7 +33,7 @@ before validation. Do not supply those derived descriptors inside the native
 AuthCrunch config. They bind exact name/kind/realm plus a configuration digest
 for persistence; runtime handles remain outside serialized configuration.
 
-`caddyfile_identity_backend.go` dispatches modules, `identity_store_sqlite.go`
+`caddyfile_identity_backend.go` dispatches modules, `plugins/identity-stores-sqlite/plugin.go`
 delegates the parser, and `app_identity_stores.go` constructs handles before
 `NewServerWithOptions`. Built-in local/LDAP declarations keep their existing
 syntax and factory. The SQLite API-key authenticator remains a separate backend;
@@ -114,7 +114,9 @@ it does not select SQLite refresh-token storage.
 
 ## Validation
 
-`TestSQLiteIdentity*` and `TestAppIdentity*` cover parsing, native binding,
+`plugins/identity-stores-sqlite/consumer_test.go` and `ownership_test.go` cover
+public parsing, descriptors, real account authentication and independent handles.
+Root `TestSQLiteIdentity*` and `TestAppIdentity*` cover native binding,
 normalization, isolation and resource ownership; the adaptation fixture is
 `testcase_identity_sqlite`. `TestCaddySQLiteIdentityE2E` builds the production
 command without cgo and exercises verified TLS browser/native/Basic login,

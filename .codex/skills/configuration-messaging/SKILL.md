@@ -225,8 +225,10 @@ above; queue delivery does not turn a header into an envelope recipient.
 
 ## Validation surfaces
 
-`messaging_sqlite_test.go` covers public parsing, native modules, private storage,
-queue isolation, stale leases and durable reopen. `app_messaging_test.go` covers
+`plugins/messaging-sqlite/consumer_test.go` and `ownership_test.go` cover public
+parsing, private storage, independent queue handles, stale leases and durable
+reopen. Root `messaging_sqlite_test.go` retains dispatch, native loading and
+adaptation. `app_messaging_test.go` covers
 binding validation, candidate cleanup and producer drain;
 `app_messaging_worker_test.go` covers budgets, cancellation, failure redaction
 and concurrent workers. `app_messaging_e2e_test.go` exercises actual TLS Caddy

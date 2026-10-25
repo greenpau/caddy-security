@@ -45,6 +45,63 @@ realm and database path are distinct values; never use a path as implicit identi
 The categories retain their typed public consumers. Do not add a universal
 map-based plugin executor or a second process-global runtime registry.
 
+## Bundled companion packages
+
+Implement each companion in `plugins/<category>-<backend>/plugin.go`, flattening
+the AuthCrunch category/backend boundary. These packages share this repository's
+Go module and dependency pins; they are not nested modules. Each imports its
+corresponding AuthCrunch backend and registers its own Caddy module exactly once.
+
+| AuthCrunch backend under `plugins/` | Caddy companion under `plugins/` | Caddy module ID |
+| --- | --- | --- |
+| `claims-enrichment/static` | `claims-enrichment-static` | `security.claims_enrichment.static` |
+| `credential-authenticators/sqlite` | `credential-authenticators-sqlite` | `security.credential_authenticators.sqlite` |
+| `cryptographic-signing/rsapss` | `cryptographic-signing-rsapss` | `security.access_signers.rsapss` |
+| `external-authorization/httpjson` | `external-authorization-httpjson` | `security.external_authorization.httpjson` |
+| `identity-providers/sqlite` | `identity-providers-sqlite` | `security.identity_providers.sqlite` |
+| `identity-stores/sqlite` | `identity-stores-sqlite` | `security.identity_stores.sqlite` |
+| `messaging/sqlite` | `messaging-sqlite` | `security.messaging.sqlite` |
+| `oauth-login-storage/sqlite` | `oauth-login-storage-sqlite` | `security.oauth_login_stores.sqlite` |
+| `registration-workflows/sqlite` | `registration-workflows-sqlite` | `security.registration_workflows.sqlite` |
+| `secrets/sqlite` | `secrets-sqlite` | `security.secrets.sqlite` |
+| `session-and-refresh-storage/sqlite` | `session-and-refresh-storage-sqlite` | `security.refresh_stores.sqlite` |
+
+`pkg/plugin` owns the public category contracts and OAuth storage metadata, with
+one Go file per category (for example `claims_enrichment.go`,
+`identity_stores.go` and `oauth_login_storage.go`). Keep related factories,
+runtime interfaces and metadata validation together in their category file;
+`doc.go` contains only the package description.
+Companions depend on those contracts, AuthCrunch and shared lexical helpers in
+`internal/caddyfileutil`; they do not import the parent `security` package.
+Keep lifecycle, root assembly, route integration, worker management and
+cross-backend storage admission in the app. Delegate backend grammar to the
+existing public AuthCrunch parser packages.
+
+The original root adapter filenames retain type aliases and import the companion
+packages. Root factory interfaces alias `pkg/plugin` as well, preserving method
+signatures for existing consumers. Importing the root still bundles all 11
+modules, including the normal `cmd/authcrunch` build; existing Caddyfiles, JSON
+selectors and module IDs retain their meanings. Importing a companion alone
+registers its backend module without registering the parent app. Do not add a
+second registration hook to an alias file or make companions depend on the root.
+
+Host admission inspects detached `BackendConfig` snapshots and immutable
+`Factory.SQLiteConfig`/`Factory.SigningConfig` snapshots. These expose declarative
+opening paths for existing alias checks; they never transfer a runtime handle or
+permit mutation of prepared configuration. The SQLite secrets module uses a
+pointer `CaddyModule` receiver to avoid copying its runtime mutex.
+
+`plugins/consumer_test.go` loads every companion through Caddy without importing
+the parent app. It checks typed contracts, strict native decoding, unchanged
+configuration, secret resolution and the absence of premature storage creation.
+Each companion also owns category-local external-package parser, factory,
+failure and real-backend tests. Keep private state tests beside their own
+category. Root dispatch/adaptation, alias, storage-preflight, lifecycle and
+TLS/browser E2E tests remain with the app. Run both surfaces when changing a
+companion; directory registration alone does not prove consumer integration.
+The [test inventory](../../testing-and-ci/references/test-surfaces.md#bundled-companion-packages)
+maps local cases to assembled consumers and explains package coverage.
+
 ## Native claims enrichment binding
 
 `App.ClaimsEnrichment` is JSON `claims_enrichment`, an optional list of
@@ -128,6 +185,12 @@ acquisition must either return the closable partial backend with its error or
 unwind everything before returning nil. Non-closable backends own no resources
 that need disposal. Construction errors and Close errors must not leak supplied
 values through logs; the host reports binding/resource positions instead.
+
+Qualify setup failures with dependencies supplied to one private invocation,
+including errors after successful reads and acquisition. Do not replace global
+constructors, encoders or file operations: one candidate's fault must not alter
+another binding or an already serving runtime. Keep public factories and typed
+category contracts unchanged, and assert disposal plus withheld publication.
 
 For claims enrichment, the app constructs its root, obtains each named
 gatekeeper, creates the backend and `enrichment.Enricher`, and calls
@@ -290,13 +353,13 @@ authenticated requests, rejected candidates, validation-only cleanup, a blocked
 lookup across replacement, and final stop. It verifies transport trust.
 
 These tests establish the host factory/lifecycle seam. Static adapter coverage
-lives in `claims_enrichment_static_test.go`, `caddyfile_authz_enrichment_test.go`
+lives in `plugins/claims-enrichment-static/consumer_test.go`, `caddyfile_authz_enrichment_test.go`
 and `claims_enrichment_static_e2e_test.go`, plus adaptation fixtures. Each other
 companion needs its own native/text round trips, real authentication/authorization
 E2E, backend failures and resource assertions. `app_external_authorization_test.go`
 checks the external binding and mixed-category cleanup; the HTTP JSON adapter's
 unit and TLS E2E tests qualify its service transport and protected requests.
-SQLite credential coverage lives in `credential_authenticator_sqlite_test.go`,
+SQLite credential coverage lives in `plugins/credential-authenticators-sqlite/`,
 `app_credential_authenticators_test.go`, `command_api_key_test.go` and
 `credential_authenticator_sqlite_e2e_test.go`; its production TLS journey also
 checks CLI revocation, storage failure, reload and restart.

@@ -153,6 +153,10 @@ native round trips and literal module configuration. `TestAppRegistration*`
 covers explicit selection, immutable declarations, exact dependencies, distinct
 storage, partial factories, plugin metadata errors, rejected replacements,
 request drain and deferred persistent construction.
+The standalone `plugins/registration-workflows-sqlite/consumer_test.go` owns
+public parser/descriptors, exact borrowed SQLite dependencies (including realm),
+durable registration/confirmation and dependency survival after workflow close.
+Global dispatch, portal selection, native aliases and app ownership remain root tests.
 
 `TestCaddySQLiteRegistrationE2E` follows signup to SMTP delivery, confirmation,
 and native/Basic/Chrome password login with independently verified tokens. Its

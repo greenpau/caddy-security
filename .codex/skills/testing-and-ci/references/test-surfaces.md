@@ -24,6 +24,56 @@ proxy origin remain separate deployment responsibilities.
 - Conditional authentication coverage
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
+- Bundled companion packages
+
+## Bundled companion packages
+
+Each `plugins/<category>-<backend>/consumer_test.go` exercises the public adapter
+independently of the root app. Self-contained adapter cases live here; root
+tests retain global dispatch/adaptation, compatibility aliases, resource graphs,
+commands, route admission and actual Caddy journeys. Category contracts remain
+separate under `pkg/plugin`; `oauth_login_storage_test.go` directly tests its
+executable metadata validator.
+
+| Companion directory | Local evidence beyond registration | Assembled Caddy E2E parents |
+| --- | --- | --- |
+| `claims-enrichment-static` | String transport, exact numbers, nested copies, binding rejection, cancellation, real lookups | `TestCaddyStaticClaimsE2E` |
+| `credential-authenticators-sqlite` | Parser, issued keys, fresh revocation, realm/context checks, private existing storage, independent handles | `TestCaddySQLiteCredentialsE2E` |
+| `cryptographic-signing-rsapss` | Pure/frozen factories, parser, malformed keys, real RSA-PSS signatures verified independently | `TestCaddyAccessSignerE2E`, `TestCaddyAccessSignerPersistenceE2E` |
+| `external-authorization-httpjson` | Pure validation, bounded TLS files, real mTLS decisions, cancellation, independent transports and failed replacement | `TestCaddyExternalAuthorizationE2E`, `TestCaddyExternalAuthorizationOAuthE2E` |
+| `identity-providers-sqlite` | Parser/descriptors, detached attachments, HTTP/attachment capabilities, browser binding, single use, durable pending tickets and peer survival | `TestCaddySQLiteTicketE2E` |
+| `identity-stores-sqlite` | Parser/descriptors, account authentication, password-only capabilities, existing storage, setup cancellation and independent handles | `TestCaddySQLiteIdentityE2E`, `TestCaddySQLiteIdentityCommandsE2E` |
+| `messaging-sqlite` | Parser/delivery references, durable acceptance and reopen, lease ownership, private storage, independent queue handles | `TestCaddySQLiteMessagingE2E` |
+| `oauth-login-storage-sqlite` | Parser, normalized/frozen factories, transactional delegation, request cancellation, namespace/callback binding, peer survival, readiness and closed rejection | `TestCaddySharedOAuthLoginStoreE2E` |
+| `registration-workflows-sqlite` | Parser/descriptors, exact SQLite dependencies and realm, durable signup/confirmation, borrowed account/outbox ownership | `TestCaddySQLiteRegistrationE2E` |
+| `secrets-sqlite` | Parser, existing private records, coherent detached snapshots, exact types, literal keys, no runtime database dependency, concurrent cleanup and reprovision rejection | `TestCaddySQLiteSecretsE2E` |
+| `session-and-refresh-storage-sqlite` | Parser, normalized/frozen factories, public managed activation, rotation/replay and peer ownership | `TestCaddySQLiteRefreshE2E`, `TestCaddySQLiteRefreshPersistenceE2E`, `TestCaddySQLiteRefreshUncertaintyE2E` |
+
+Additional `caddyfile_test.go`, `ownership_test.go`, `binding_test.go`,
+`attachment_test.go`, `context_test.go`, `tls_test.go` and `failure_test.go` files
+belong to their individual categories. `plugins/consumer_test.go` remains the cross-category
+strict native loading inventory and verifies that importing companions does not
+register the root app. Do not replace behavioral cases with that inventory or
+combine category suites/contracts into an aggregate file.
+
+Category-local `failure_test.go` suites qualify setup errors through private,
+per-call operation boundaries, without replacing mutable package globals or
+exporting test APIs. HTTP JSON tests inject failures after path validation and
+verify bounded reads, exactly-once file closure, late cancellation and disposal
+of a real idle TLS connection after constructor failure. OAuth and refresh tests
+withhold factories when encoding or descriptor construction fails. Secrets tests
+use real SQLite clients to reject canceled or failed-close snapshots, verify
+the client is closed, and preserve the durable record. Direct public tests cover
+nil declarations/factories and binding validation before acquisition. Preserve
+these guards and their failure assertions when refactoring setup.
+
+Run the affected companion package and root parents together when a contract
+changes. All non-root packages are discovered by the existing CI packages shard;
+no new shard configuration is required. Instrument companion packages explicitly
+for statement coverage; default root-only E2E coverage cannot establish it.
+Detailed backend schema, capacity, expiry and commit-fault matrices remain
+upstream. Host ownership, failure withholding, worker drain and uncertainty
+acceptance retain their assembled app tests.
 
 ## Selected access signing
 
@@ -776,10 +826,13 @@ regressions when changing the shared private-file and JSON input helpers.
 
 ## Shared upstream OAuth transactions
 
+`plugins/oauth-login-storage-sqlite/consumer_test.go`, `caddyfile_test.go` and
+`context_test.go` qualify pure normalization, complete encoded parser delegation,
+transaction ownership, cancellation and peer survival. Root
 `oauth_login_store_sqlite_test.go`, `caddyfile_oauth_login_store_test.go` and
-`caddyfile_oauth_login_store_resolution_test.go` qualify pure normalization,
-complete encoded parser delegation, native/deferred selectors and exact secret
-values. Registered Caddyfile fixtures retain declaration-order independence.
+`caddyfile_oauth_login_store_resolution_test.go` retain native loading, global
+dispatch, deferred selectors and exact secret values. Registered Caddyfile
+fixtures retain declaration-order independence.
 `app_oauth_login_stores_test.go` covers all retained references, immutable
 factories, runtime metadata, partial acquisition, reverse cleanup, deferred Start
 and request drain. `app_oauth_login_store_storage_test.go` checks all known storage

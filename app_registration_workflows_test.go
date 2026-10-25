@@ -190,7 +190,7 @@ func appRegistrationTestApp(t *testing.T, createAccounts bool) (*App, *SQLiteReg
 	accounts := &SQLiteIdentityStore{Name: workflow.IdentityStore, Realm: workflow.Realm, Path: filepath.Join(dir, "accounts.db"), Timeout: "5s"}
 	outbox := &SQLiteMessagingProvider{Name: workflow.EmailProvider, Path: filepath.Join(dir, "outbox.db"), Timeout: "5s"}
 	if createAccounts {
-		cfg, err := accounts.config()
+		cfg, err := accounts.BackendConfig()
 		if err != nil {
 			t.Fatal(err)
 		}

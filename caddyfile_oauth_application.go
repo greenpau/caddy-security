@@ -18,6 +18,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch"
 	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
+
+	"github.com/greenpau/caddy-security/internal/caddyfileutil"
 )
 
 // readOAuthApplication collects a named client for the upstream named parser,
@@ -135,13 +137,4 @@ func parseCaddyfileOAuthApplication(d *caddyfile.Dispenser, cfg *authcrunch.Conf
 // oauthApplicationArgs keeps structural closing braces out of field values.
 // RemainingArgs accepts them, which could turn a missing client_id into "}" and
 // let NextBlock consume an enclosing security brace to finish the application.
-func oauthApplicationArgs(d *caddyfile.Dispenser) ([]string, error) {
-	args := []string{d.Val()}
-	for d.NextArg() {
-		if d.Val() == "}" && !d.Token().Quoted() {
-			return nil, d.Errf("unexpected closing brace in oauth application directive")
-		}
-		args = append(args, d.Val())
-	}
-	return args, nil
-}
+func oauthApplicationArgs(d *caddyfile.Dispenser) ([]string, error) { return caddyfileutil.Args(d) }

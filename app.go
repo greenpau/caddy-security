@@ -26,8 +26,9 @@ import (
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
-
 	"go.uber.org/zap"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 var (
@@ -44,11 +45,7 @@ func init() {
 	caddy.RegisterModule(&App{})
 }
 
-type SecretsManager interface {
-	GetConfig(context.Context) map[string]interface{}
-	GetSecret(context.Context) (map[string]interface{}, error)
-	GetSecretByKey(context.Context, string) (interface{}, error)
-}
+type SecretsManager = plugin.SecretsManager
 
 // App implements security manager.
 type App struct {

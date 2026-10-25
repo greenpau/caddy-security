@@ -17,12 +17,9 @@ package security
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/caddyserver/caddy/v2"
@@ -57,132 +54,6 @@ func sqliteSecretsTestModule(t *testing.T, cfg *sqlite.Config) (*SQLiteSecretsMa
 		t.Fatal(err)
 	}
 	return m, cancel
-}
-
-func TestSQLiteSecretsSnapshot(t *testing.T) {
-	cfg := sqliteSecretsTestConfig(t)
-	sqliteSecretsTestPut(t, cfg, map[string]any{"key": "first-private-key", "literal.dot": "a \n b", "number": json.Number("9007199254740993"), "null": nil, "empty": "", "object": map[string]any{"array": []any{true, json.Number("1.00")}}})
-	m, _ := sqliteSecretsTestModule(t, cfg)
-	data, err := m.GetSecret(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if data["number"] != json.Number("9007199254740993") || data["null"] != nil {
-		t.Fatal("changed JSON types")
-	}
-	data["object"].(map[string]any)["array"].([]any)[0] = false
-	delete(data, "key")
-	again, _ := m.GetSecret(t.Context())
-	if again["key"] != "first-private-key" || !again["object"].(map[string]any)["array"].([]any)[0].(bool) {
-		t.Fatal("snapshot aliases caller")
-	}
-	if v, err := m.GetSecretByKey(t.Context(), "literal.dot"); err != nil || v != "a \n b" {
-		t.Fatal("dotted key or whitespace changed")
-	}
-	if v, err := m.GetSecretByKey(t.Context(), "null"); err != nil || v != nil {
-		t.Fatal("null conflated with missing")
-	}
-	if _, err := m.GetSecretByKey(t.Context(), "missing"); !errors.Is(err, sqlite.ErrNotFound) {
-		t.Fatal("missing accepted")
-	}
-	for _, key := range []string{"number", "null", "object", "empty"} {
-		if _, _, err := replaceSecretValue(t.Context(), []SecretsManager{m}, "secrets:signing:"+key); err == nil {
-			t.Fatal("invalid consumer type accepted", key)
-		}
-	}
-	sqliteSecretsTestPut(t, cfg, map[string]any{"key": "second-private-key", "other": "same-revision"})
-	if v, _ := m.GetSecretByKey(t.Context(), "key"); v != "first-private-key" {
-		t.Fatal("existing candidate changed")
-	}
-	fresh, _ := sqliteSecretsTestModule(t, cfg)
-	if v, _ := fresh.GetSecretByKey(t.Context(), "key"); v != "second-private-key" {
-		t.Fatal("new candidate did not refresh")
-	}
-	metadata := m.GetConfig(t.Context())
-	metadata["name"] = "mutated"
-	if m.GetConfig(t.Context())["name"] != "signing" {
-		t.Fatal("metadata aliases caller")
-	}
-	encoded, _ := json.Marshal(m)
-	meta, _ := json.Marshal(m.GetConfig(t.Context()))
-	for _, sentinel := range []string{"first-private-key", "second-private-key", "same-revision"} {
-		if strings.Contains(string(encoded)+string(meta), sentinel) {
-			t.Fatal("payload in metadata/JSON")
-		}
-	}
-	if strings.Contains(string(meta), cfg.Path) {
-		t.Fatal("path in metadata")
-	}
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	if _, err := m.GetSecret(ctx); !errors.Is(err, context.Canceled) {
-		t.Fatal("cancellation ignored")
-	}
-	// Concurrent readers and module cleanup share only the snapshot; the database
-	// handle was closed before Provision returned, so disposal needs no database.
-	var readers sync.WaitGroup
-	for range 8 {
-		readers.Go(func() {
-			for range 20 {
-				_, _ = m.GetSecret(t.Context())
-			}
-		})
-	}
-	_ = m.Cleanup()
-	_ = m.Cleanup()
-	readers.Wait()
-	if _, err := m.GetSecret(t.Context()); !errors.Is(err, sqlite.ErrUnavailable) {
-		t.Fatal("closed snapshot usable")
-	}
-}
-
-func TestSQLiteSecretsConfiguration(t *testing.T) {
-	cfg := sqliteSecretsTestConfig(t)
-	module := &SQLiteSecretsManager{Name: cfg.Name, Path: cfg.Path, Record: cfg.Record}
-	if err := module.Validate(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(cfg.Path); !os.IsNotExist(err) {
-		t.Fatal("validation performed IO")
-	}
-	ctx, cancel := caddy.NewContext(caddy.Context{Context: t.Context()})
-	defer cancel()
-	if err := module.Provision(ctx); err == nil {
-		t.Fatal("missing database accepted")
-	}
-	if _, err := os.Stat(cfg.Path); !os.IsNotExist(err) {
-		t.Fatal("consumer created database")
-	}
-	for _, kind := range []string{"record_missing", "unsafe_mode", "foreign_schema", "invalid_name", "invalid_timeout"} {
-		t.Run(kind, func(t *testing.T) {
-			cfg := sqliteSecretsTestConfig(t)
-			sqliteSecretsTestPut(t, cfg, map[string]any{"key": "private-sentinel"})
-			m := &SQLiteSecretsManager{Name: cfg.Name, Path: cfg.Path, Record: cfg.Record, Timeout: cfg.Timeout}
-			switch kind {
-			case "record_missing":
-				m.Record = "absent"
-			case "unsafe_mode":
-				if err := os.Chmod(cfg.Path, 0644); err != nil {
-					t.Fatal(err)
-				}
-			case "foreign_schema":
-				if err := os.WriteFile(cfg.Path, []byte("private-corrupt-database"), 0600); err != nil {
-					t.Fatal(err)
-				}
-			case "invalid_name":
-				m.Name = "bad:name"
-			case "invalid_timeout":
-				m.Timeout = "0s"
-			}
-			err := m.Provision(ctx)
-			if err == nil {
-				t.Fatal("invalid backend accepted")
-			}
-			if strings.Contains(err.Error(), cfg.Path) || strings.Contains(err.Error(), "private-") {
-				t.Fatal("unredacted failure")
-			}
-		})
-	}
 }
 
 func TestParseCaddyfileSQLiteSecrets(t *testing.T) {
@@ -304,6 +175,17 @@ func TestAppSQLiteSecretsPrivateErrors(t *testing.T) {
 		}
 		if err == nil || strings.Contains(err.Error(), marker) || !strings.Contains(err.Error(), "private secrets") {
 			t.Fatal("private consumer failure was not redacted")
+		}
+	}
+}
+
+func TestSQLiteSecretsConsumerTypes(t *testing.T) {
+	cfg := sqliteSecretsTestConfig(t)
+	sqliteSecretsTestPut(t, cfg, map[string]any{"number": json.Number("9007199254740993"), "null": nil, "object": map[string]any{"key": true}, "empty": ""})
+	m, _ := sqliteSecretsTestModule(t, cfg)
+	for _, key := range []string{"number", "null", "object", "empty"} {
+		if _, _, err := replaceSecretValue(t.Context(), []SecretsManager{m}, "secrets:signing:"+key); err == nil {
+			t.Fatal("invalid consumer type accepted", key)
 		}
 	}
 }

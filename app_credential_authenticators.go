@@ -26,27 +26,21 @@ import (
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // CredentialAuthenticator is an app-owned fresh API-key backend. Basic methods
 // exist only for the upstream interface; host bindings never enable them.
 // Each lookup receives the protected request's context and bypasses caches.
-type CredentialAuthenticator interface {
-	authproxy.ContextAuthenticator
-	authproxy.FreshAuthenticator
-	io.Closer
-	GetConfig() map[string]any
-}
+type CredentialAuthenticator = plugin.CredentialAuthenticator
 
 // CredentialAuthenticatorBackendModule prepares configuration without opening
 // runtime resources. Each factory call transfers a distinct backend to the app,
 // shared only by that app's matching policies. Setup context is not a shutdown
 // signal; module Cleanup must not close the returned handle. On failure return
 // a closable partial result or unwind acquisition, using a real nil interface.
-type CredentialAuthenticatorBackendModule interface {
-	CredentialIdentity() (name, realm string)
-	NewCredentialAuthenticator(context.Context) (CredentialAuthenticator, error)
-}
+type CredentialAuthenticatorBackendModule = plugin.CredentialAuthenticatorBackendModule
 
 type preparedCredentialAuthenticator struct {
 	name, realm string

@@ -156,7 +156,10 @@ restored. This does not revoke stateless access tokens if their signing key is
 explicitly trusted again.
 
 Module/parser tests, storage-preflight tests and the actual Caddy signer suites
-jointly own acceptance. Require independent signature verification, all issuance
+jointly own acceptance. Independent factory, parser, key-failure and signature
+tests live in `plugins/cryptographic-signing-rsapss/consumer_test.go` and
+`caddyfile_test.go`; root tests retain dispatch, aliases, app wiring and journeys.
+Require independent signature verification, all issuance
 categories, strict rejection with positive controls, credential withholding,
 cookie/name contracts, rotation, failed candidates and real process persistence.
 Legacy `rsa_pss_e2e_test.go` remains verification-only compatibility coverage.

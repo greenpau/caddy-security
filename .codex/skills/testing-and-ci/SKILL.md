@@ -28,6 +28,22 @@ The Go module is rooted at the repository top level. Most tests live in the
 root `security` package and cover Caddyfile parsing, Caddyfile adaptation, and
 runtime authcrunch config resolution.
 
+Bundled backend companions live in `plugins/<category>-<backend>`. Run
+`go test -mod=readonly -race -count=1 ./plugins/... ./pkg/plugin` for their
+category-local parser, factory, real backend and ownership tests, plus direct
+OAuth storage metadata validation. Keep public tests in external test packages;
+private runtime-state tests stay with their category. The standalone companion
+binaries intentionally do not import the parent app. Select the affected root
+dispatch, native alias, storage/lifecycle and actual Caddy E2E parents as well.
+See the [companion test inventory](references/test-surfaces.md#bundled-companion-packages).
+
+Collect companion statement coverage explicitly when changing these packages:
+`make test TEST='^Test' TEST_DIR='./plugins/... ./pkg/plugin' COVERAGE_DIR='.coverage/plugin-package-tests'`.
+Inspect `go tool cover -func=.coverage/plugin-package-tests/coverage.out` and
+uncovered branches; a root-only profile does not measure extracted companions.
+Keep category contracts and their executable tests in separate `pkg/plugin`
+files. Interface-only contracts do not need existence assertions.
+
 Follow the [repository scope](../coding-directives/SKILL.md#repository-scope).
 Create and run tests in this module only; never run sibling suites to validate
 work here or fix a failing test by editing the sibling. `TEST_DIR` and

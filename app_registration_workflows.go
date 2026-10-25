@@ -26,6 +26,8 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // RegistrationWorkflowBackendModule prepares enrollment without opening storage.
@@ -34,10 +36,7 @@ import (
 // nil after unwinding acquisition. Module Cleanup must not dispose the provider.
 // Neither factories nor providers may close their borrowed store or messaging
 // provider. The app drains requests before closing workflows and dependencies.
-type RegistrationWorkflowBackendModule interface {
-	RegistrationWorkflowConfig() (*registry.ExternalUserRegistryConfig, error)
-	NewRegistrationWorkflow(context.Context, ids.IdentityStore, messaging.Provider) (registry.Provider, error)
-}
+type RegistrationWorkflowBackendModule = plugin.RegistrationWorkflowBackendModule
 
 type preparedRegistrationWorkflow struct {
 	config      registry.ExternalUserRegistryConfig
@@ -100,15 +99,15 @@ func (app *App) prepareRegistrationWorkflows(ctx caddy.Context, config *authcrun
 			if !accountOK || !outboxOK || accounts == nil || outbox == nil {
 				return fmt.Errorf("registration workflow %d requires bundled SQLite identity and messaging modules", i)
 			}
-			workflowConfig, err := sqlite.config()
+			workflowConfig, err := sqlite.BackendConfig()
 			if err != nil {
 				return fmt.Errorf("registration workflow %d configuration is invalid", i)
 			}
-			accountConfig, err := accounts.config()
+			accountConfig, err := accounts.BackendConfig()
 			if err != nil {
 				return fmt.Errorf("registration workflow %d account configuration is invalid", i)
 			}
-			outboxConfig, err := outbox.config()
+			outboxConfig, err := outbox.BackendConfig()
 			if err != nil {
 				return fmt.Errorf("registration workflow %d outbox configuration is invalid", i)
 			}
