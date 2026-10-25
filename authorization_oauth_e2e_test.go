@@ -36,6 +36,28 @@ import (
 // Exercise the production Caddy command with local, independently signed OIDC
 // assertions and verified TLS. No portal or authenticate route is present.
 func TestCaddyDirectOAuthE2E(t *testing.T) {
+	binary := buildDirectOAuthCaddy(t)
+	for _, custom := range []bool{false, true} {
+		t.Run(fmt.Sprintf("custom_%t", custom), func(t *testing.T) {
+			f := newDirectCaddy(t, binary, custom)
+			f.journeys(t)
+			t.Run("termination", func(t *testing.T) { f.termination(t, custom) })
+			if !custom {
+				f.browserJourney(t)
+			}
+			f.lifecycle(t)
+		})
+	}
+}
+
+// Keep the real five-minute pending-login expiry on its own CI runner.
+func TestCaddyDirectOAuthExpirationE2E(t *testing.T) {
+	f := newDirectCaddy(t, buildDirectOAuthCaddy(t), false)
+	f.pendingExpiry(t)
+}
+
+func buildDirectOAuthCaddy(t *testing.T) string {
+	t.Helper()
 	binary := filepath.Join(t.TempDir(), "caddy")
 	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
 	defer cancel()
@@ -44,18 +66,7 @@ func TestCaddyDirectOAuthE2E(t *testing.T) {
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build Caddy: %v\n%s", err, output)
 	}
-	for _, custom := range []bool{false, true} {
-		t.Run(fmt.Sprintf("custom_%t", custom), func(t *testing.T) {
-			f := newDirectCaddy(t, binary, custom)
-			f.journeys(t)
-			t.Run("termination", func(t *testing.T) { f.termination(t, custom) })
-			if !custom {
-				f.browserJourney(t)
-				t.Run("pending_expiry", func(t *testing.T) { f.pendingExpiry(t) })
-			}
-			f.lifecycle(t)
-		})
-	}
+	return binary
 }
 
 type directCaddy struct {

@@ -470,10 +470,19 @@ func (f *authenticationClientFixture) noOIDCSession(t *testing.T, client *http.C
 }
 
 func TestCaddyAuthenticationClientE2E(t *testing.T) {
+	runCaddyAuthenticationClientE2E(t, "legacy")
+}
+
+func TestCaddyAuthenticationClientNativeE2E(t *testing.T) {
+	runCaddyAuthenticationClientE2E(t, "native")
+}
+
+func runCaddyAuthenticationClientE2E(t *testing.T, mode string) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 600*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyAuthenticationClientProcess$", "-test.v", "-test.timeout=570s")
-	cmd.Env = append(os.Environ(), "CADDY_SECURITY_AUTHCLIENT_CHILD=1")
+	cmd.Env = append(os.Environ(), "CADDY_SECURITY_AUTHCLIENT_CHILD=1", "CADDY_SECURITY_AUTHCLIENT_MODE="+mode)
 	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -485,9 +494,14 @@ func TestCaddyAuthenticationClientProcess(t *testing.T) {
 	if os.Getenv("CADDY_SECURITY_AUTHCLIENT_CHILD") != "1" {
 		t.Skip("subprocess helper")
 	}
+	mode := os.Getenv("CADDY_SECURITY_AUTHCLIENT_MODE")
+	if mode != "" && mode != "legacy" && mode != "native" {
+		t.Fatal("invalid authentication client scenario group")
+	}
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cert, key, roots := cookieTLSCertificate(t)
+	selected := 0
 	for _, tc := range []struct {
 		name, mount                 string
 		refresh, body, custom, oidc bool
@@ -498,6 +512,10 @@ func TestCaddyAuthenticationClientProcess(t *testing.T) {
 		{"native nested custom with OIDC", "/tenant/auth", true, true, true, true},
 		{"body disabled", "/auth", true, false, false, false},
 	} {
+		if mode != "" && tc.refresh != (mode == "native") {
+			continue
+		}
+		selected++
 		t.Run(tc.name, func(t *testing.T) {
 			database, keys := authenticationClientDatabase(t)
 			f := newAuthenticationClientFixture(t, tc.mount, database, cert, key, roots, tc.refresh, tc.body, tc.custom, tc.oidc)
@@ -513,5 +531,8 @@ func TestCaddyAuthenticationClientProcess(t *testing.T) {
 				f.cliConnect(t, cert)
 			}
 		})
+	}
+	if selected == 0 {
+		t.Fatal("authentication client scenario group is empty")
 	}
 }

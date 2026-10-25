@@ -1,5 +1,6 @@
 """Check test deadline arguments without compiling or waiting for Go tests."""
 
+import itertools
 import json
 import os
 from pathlib import Path
@@ -15,7 +16,35 @@ ROOT = Path(__file__).resolve().parents[3]
 (ROOT / 'tmp').mkdir(exist_ok=True)
 
 
+def workflow_job_timeout(workflow, job):
+    """Read a named job's budget without accepting another job or step's timeout."""
+    match = re.search(rf'^  {re.escape(job)}:\n(?P<body>.*?)(?=^  \S|\Z)',
+                      workflow, re.M | re.S)
+    if match is None:
+        raise ValueError(f'Missing workflow job: {job}')
+    timeout = re.search(r'^    timeout-minutes: ([1-9]\d*)[ \t]*$', match['body'], re.M)
+    if timeout is None:
+        raise ValueError(f'Missing timeout for workflow job: {job}')
+    return int(timeout[1])
+
+
 class TestTimeoutTests(unittest.TestCase):
+    def test_job_timeout_is_independent_of_job_order_and_step_timeouts(self):
+        jobs = {
+            'selection': '  selection:\n    timeout-minutes: 5\n',
+            'quality': '  quality:\n    timeout-minutes: 45\n',
+            'go': '  go:\n    steps:\n      - timeout-minutes: 1\n    timeout-minutes: 85\n',
+            'core': '  core:\n    timeout-minutes: 10\n',
+        }
+        for order in itertools.permutations(jobs):
+            with self.subTest(order=order):
+                workflow = 'jobs:\n' + ''.join(jobs[name] for name in order)
+                self.assertEqual(workflow_job_timeout(workflow, 'go'), 85)
+        for workflow in ('jobs:\n' + jobs['quality'],
+                         'jobs:\n  go:\n    steps:\n      - timeout-minutes: 85\n' + jobs['quality']):
+            with self.subTest(workflow=workflow), self.assertRaises(ValueError):
+                workflow_job_timeout(workflow, 'go')
+
     def test_default_and_override_precedence_for_all_test_targets(self):
         with tempfile.TemporaryDirectory(dir=ROOT / 'tmp', prefix='_caddy-security-timeout-') as directory:
             root = Path(directory)
@@ -78,7 +107,7 @@ class TestTimeoutTests(unittest.TestCase):
                             # deadline; CI also needs setup/build/upload time.
                             self.assertGreaterEqual(budget['timeout_seconds'], package_seconds + 600)
                             workflow = (ROOT / '.github/workflows/build.yml').read_text()
-                            job_minutes = int(re.search(r'^\s+timeout-minutes: (\d+)$', workflow, re.M)[1])
+                            job_minutes = workflow_job_timeout(workflow, 'go')
                             self.assertGreaterEqual(job_minutes * 60, budget['timeout_seconds'] + 300)
 
 

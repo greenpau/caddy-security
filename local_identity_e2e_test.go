@@ -427,10 +427,23 @@ func (f *localIdentityFixture) assertResource(t *testing.T, token string) {
 }
 
 func TestCaddyLocalIdentityE2E(t *testing.T) {
+	runLocalIdentityE2E(t, "password")
+}
+
+func TestCaddyLocalIdentityMFAE2E(t *testing.T) {
+	runLocalIdentityE2E(t, "mfa")
+}
+
+func TestCaddyLocalIdentityMutationE2E(t *testing.T) {
+	runLocalIdentityE2E(t, "mutations")
+}
+
+func runLocalIdentityE2E(t *testing.T, mode string) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 8*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCaddyLocalIdentityProcess$", "-test.v", "-test.timeout=7m")
-	cmd.Env = append(os.Environ(), "CADDY_SECURITY_LOCAL_IDENTITY_CHILD=1", "XDG_DATA_HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir())
+	cmd.Env = append(os.Environ(), "CADDY_SECURITY_LOCAL_IDENTITY_CHILD=1", "CADDY_SECURITY_LOCAL_IDENTITY_MODE="+mode, "XDG_DATA_HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir())
 	collectSubprocessCoverage(t, cmd)
 	cmd.WaitDelay = 5 * time.Second
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -442,15 +455,24 @@ func TestCaddyLocalIdentityProcess(t *testing.T) {
 	if os.Getenv("CADDY_SECURITY_LOCAL_IDENTITY_CHILD") != "1" {
 		t.Skip("subprocess helper")
 	}
+	mode := os.Getenv("CADDY_SECURITY_LOCAL_IDENTITY_MODE")
+	if mode != "" && mode != "password" && mode != "mfa" && mode != "mutations" {
+		t.Fatal("invalid local identity scenario group")
+	}
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cert, key, roots := cookieTLSCertificate(t)
+	selected := 0
 	for _, tc := range []struct{ name, refresh, oidc string }{
 		{"legacy", "", ""}, {"refresh", "local", ""}, {"oidc", "", "local"},
 		{"both", "local", "local"}, {"unselected", "excluded", "excluded"},
 		{"only-refresh-selected", "local", "excluded"}, {"only-oidc-selected", "excluded", "local"},
 	} {
 		for _, mfa := range []bool{false, true} {
+			if mode == "mutations" || (mode == "password" && mfa) || (mode == "mfa" && !mfa) {
+				continue
+			}
+			selected++
 			t.Run(fmt.Sprintf("login/%s/mfa=%v", tc.name, mfa), func(t *testing.T) {
 				mount := "/tenant/auth"
 				if mfa {
@@ -533,6 +555,12 @@ func TestCaddyLocalIdentityProcess(t *testing.T) {
 			})
 		}
 	}
-	t.Run("mutations", func(t *testing.T) { testLocalIdentityMutations(t, cert, key, roots) })
-	t.Run("public-keys", func(t *testing.T) { testLocalIdentityPublicKeys(t, cert, key, roots) })
+	if mode == "" || mode == "mutations" {
+		selected += 2
+		t.Run("mutations", func(t *testing.T) { testLocalIdentityMutations(t, cert, key, roots) })
+		t.Run("public-keys", func(t *testing.T) { testLocalIdentityPublicKeys(t, cert, key, roots) })
+	}
+	if selected == 0 {
+		t.Fatal("local identity scenario group is empty")
+	}
 }

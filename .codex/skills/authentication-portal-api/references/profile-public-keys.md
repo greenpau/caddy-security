@@ -51,7 +51,7 @@ without JSON's UTF-8 normalization. It also rejects malformed/private armor
 and a valid Ed25519 SSH key outside the supported format boundary.
 RSA cases check each historical fingerprint format and independently decode the
 stored OpenSSH representation to verify the original public key is preserved.
-`profile_public_key_e2e_test.go`, run by `TestCaddyLocalIdentityE2E`, exercises
+`profile_public_key_e2e_test.go`, run by `TestCaddyLocalIdentityMutationE2E`, exercises
 uploads, inventories, duplicates, negative inputs, body limits, file reopening,
 Caddy stop/start, and another user's fetch/delete isolation with untransformed
 identities. It verifies historical PGP metadata and RSA/ssh-rsa behavior through

@@ -2,9 +2,11 @@
 """Run exhaustive Go test/package shards and verify their CI evidence."""
 
 import argparse
+from functools import lru_cache
 import hashlib
 import html
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -12,9 +14,21 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-ROOT_SHARDS = ('root-core', 'root-clients', 'root-cli', 'root-direct-oauth',
-               'root-oidc', 'root-refresh', 'root-browser', 'root-cross-device', 'root-runtime')
+RUNTIME_SHARDS = tuple(f'root-runtime-{number:02d}' for number in range(1, 25))
+ROOT_SHARDS = ('root-direct-oauth-expiry', 'root-cross-device-expiry',
+               'root-core', 'root-browser', 'root-clients-legacy', 'root-clients-native',
+               'root-cli-authenticator', 'root-cli-identity', 'root-cli-commands',
+               'root-direct-oauth', 'root-oidc', 'root-oidc-rp', 'root-jwks',
+               'root-access-signers', 'root-access-signers-persistence',
+               'root-refresh', 'root-refresh-sqlite', 'root-refresh-browser',
+               'root-cross-device', *RUNTIME_SHARDS)
 SHARDS = (*ROOT_SHARDS, 'packages')
+BROWSER_SHARDS = ('root-browser', 'root-direct-oauth', 'root-refresh-browser',
+                  'root-refresh-sqlite', 'root-cross-device', *RUNTIME_SHARDS)
+BROWSER_TESTS = {'TestCaddyDirectOAuthE2E', 'TestCaddyConnectedAccountsE2E',
+                 'TestCaddyDocumentsE2E', 'TestCaddySQLiteIdentityE2E',
+                 'TestCaddySQLiteRegistrationE2E', 'TestCaddySQLiteTicketE2E',
+                 'TestCaddySQLiteRefreshUncertaintyE2E'}
 TESTED_FILES = {'coverage.html', 'coverage.out', 'index.html', 'junit.xml', 'run.json',
                 'stderr.log', 'summary.json', 'test_output.html', 'test_output.jsonl'}
 
@@ -55,37 +69,130 @@ def partition(graph):
     return result
 
 
+@lru_cache(maxsize=1)
+def runtime_timings():
+    data = json.loads((ROOT / 'assets/scripts/ci_runtime_timings.json').read_text())
+    if data['schema'] != 'caddy-security/ci-runtime-timings/v1':
+        raise ValueError('Unsupported runtime timing inventory')
+    values = data['seconds']
+    for name, seconds in (*values.items(), *data['split_parent_seconds'].items()):
+        if (not re.fullmatch(r'(Test|Example|Fuzz)\w*', name)
+                or not isinstance(seconds, (int, float)) or not math.isfinite(seconds)
+                or seconds <= 0):
+            raise ValueError('Invalid runtime timing entry')
+    # Each independent local-identity group initially uses one third of the
+    # former combined parent duration; replace estimates after hosted evidence.
+    estimate = data['split_parent_seconds']['TestCaddyLocalIdentityE2E'] / 3
+    return {**values, **dict.fromkeys(('TestCaddyLocalIdentityE2E',
+                                      'TestCaddyLocalIdentityMFAE2E',
+                                      'TestCaddyLocalIdentityMutationE2E'), estimate)}
+
+
+def runtime_weight(name):
+    """Use recorded CI durations with conservative fallbacks for new parents."""
+    measured = runtime_timings().get(name)
+    if measured is not None:
+        return measured
+    if name.startswith('TestCaddy') and name.endswith('E2E'):
+        return 90
+    return 2 if name.startswith('TestApp') else 1
+
+
 def root_partition(names):
-    """Keep top-level tests intact, with exhaustive fallback for new names."""
+    """Keep top-level tests intact and balance remaining runtime journeys."""
     if (not names or names != sorted(set(names))
             or any(not re.fullmatch(r'(Test|Example|Fuzz)\w*', name) for name in names)):
         raise ValueError('Invalid root test inventory')
     groups = {name: [] for name in ROOT_SHARDS}
+    runtime = []
     for name in names:
-        # Long journeys get separate runners. Priority keeps overlapping names
-        # together, e.g. browser refresh belongs with other refresh scenarios.
-        if 'CrossDevice' in name:
+        if 'CrossDeviceExpiration' in name:
+            shard = 'root-cross-device-expiry'
+        elif 'CrossDevice' in name:
             shard = 'root-cross-device'
+        elif 'DirectOAuthExpiration' in name:
+            shard = 'root-direct-oauth-expiry'
         elif 'DirectOAuth' in name:
             shard = 'root-direct-oauth'
+        elif 'AuthenticationClientNative' in name:
+            shard = 'root-clients-native'
         elif 'AuthenticationClient' in name:
-            shard = 'root-clients'
+            shard = 'root-clients-legacy'
+        elif 'SQLiteIdentityCommands' in name:
+            shard = 'root-cli-identity'
+        elif 'CaddyAuthenticator' in name:
+            shard = 'root-cli-authenticator'
         elif 'Authenticator' in name or 'SecurityCredential' in name or 'CommandsE2E' in name:
-            shard = 'root-cli'
+            shard = 'root-cli-commands'
         elif 'Refresh' in name:
-            shard = 'root-refresh'
-        elif any(word in name for word in ('OIDC', 'JWKS', 'AccessSigner')):
+            if 'Browser' in name:
+                shard = 'root-refresh-browser'
+            elif 'SQLiteRefresh' in name or 'RefreshStore' in name:
+                shard = 'root-refresh-sqlite'
+            else:
+                shard = 'root-refresh'
+        elif 'AccessSignerPersistence' in name:
+            shard = 'root-access-signers-persistence'
+        elif 'AccessSigner' in name:
+            shard = 'root-access-signers'
+        elif 'JWKS' in name:
+            shard = 'root-jwks'
+        elif 'OIDCRelyingParty' in name:
+            shard = 'root-oidc-rp'
+        elif 'OIDC' in name:
             shard = 'root-oidc'
         elif 'Browser' in name:
             shard = 'root-browser'
         elif name.startswith(('TestApp', 'TestCaddy')):
-            shard = 'root-runtime'
+            runtime.append(name)
+            continue
         else:
             shard = 'root-core'
         groups[shard].append(name)
+    # Longest-first assignment spreads measured long journeys across runners. New names participate automatically; lexical tie breaks are stable.
+    weights = dict.fromkeys(RUNTIME_SHARDS, 0)
+    for name in sorted(runtime, key=lambda name: (-runtime_weight(name), name)):
+        shard = min(RUNTIME_SHARDS, key=lambda shard: (weights[shard], shard))
+        groups[shard].append(name)
+        weights[shard] += runtime_weight(name)
+    for selected in groups.values():
+        selected.sort()
     if any(not group for group in groups.values()):
         raise ValueError('Expected nonempty root test shards')
     return groups
+
+
+def matrix(names=None):
+    groups = root_partition(names) if names is not None else None
+    return dict(include=[dict(
+        shard=shard, cache_group=shard.split('-')[0],
+        browser=(any('Browser' in name or name in BROWSER_TESTS
+                     for name in groups[shard]) if groups is not None and shard in groups
+                 else shard in BROWSER_SHARDS)) for shard in SHARDS])
+
+
+def prepare():
+    """Compile shared race/coverage and Caddy fixtures once without running tests."""
+    plan = partition(packages())
+    output = coverage_directory() / 'prepare'
+    output.mkdir(parents=True, exist_ok=True)
+    return subprocess.run(
+        [sys.executable, str(ROOT / 'assets/scripts/test_guard.py'), 'run',
+         sys.executable, str(Path(__file__).resolve()), 'warm',
+         plan[ROOT_SHARDS[0]][0], str(output)], cwd=ROOT,
+        env=dict(os.environ, COVERAGE_DIR=str(output))).returncode
+
+
+def warm(package, output):
+    inventory(package, output)
+    binaries = ROOT / 'tmp/ci-prepare'
+    binaries.mkdir(parents=True, exist_ok=True)
+    for flags, target, name in (
+            (['-trimpath'], './testdata/runtime_state_caddy', 'caddy'),
+            (['-race'], './cmd/caddy-authenticator', 'caddy-authenticator')):
+        subprocess.run(['go', 'build', '-mod=readonly', *flags,
+                        '-o', str(binaries / name), target], cwd=ROOT,
+                       check=True, timeout=240)
 
 
 def inventory(package, output):
@@ -139,7 +246,9 @@ def run(shard):
     # Explicit Make arguments override inherited filters, including MAKEFLAGS.
     result = subprocess.run(['make', 'test', 'TEST=' + pattern,
                              'TEST_DIR=' + ' '.join(plan[shard]),
-                             'MINIMUM_COVERAGE=1', 'COVERAGE_DIR=' + str(output)], cwd=ROOT)
+                             # External-binary journeys can have no parent hits.
+                             # The complete merged suite enforces the 1% policy.
+                             'MINIMUM_COVERAGE=0', 'COVERAGE_DIR=' + str(output)], cwd=ROOT)
     selection['complete'] = result.returncode == 0
     selection_path.write_text(json.dumps(selection, indent=2) + '\n')
     return result.returncode if result.returncode >= 0 else 1
@@ -196,10 +305,10 @@ def summarize(shard):
 def gate():
     """A failed or unexpectedly skipped dependency must fail the stable check."""
     results = {name: os.environ.get(name) for name in
-               ('SELECTION_RESULT', 'GO_RESULT', 'QUALITY_RESULT')}
+               ('SELECTION_RESULT', 'GO_RESULT', 'QUALITY_RESULT', 'PREPARE_RESULT')}
     if any(result != 'success' for result in results.values()):
         raise ValueError(f'Incomplete validation: {results}')
-    print('All Go shards and repository quality gates passed.')
+    print('All Go shards, shared preparation and repository quality gates passed.')
 
 
 def verify_manifest(output):
@@ -358,8 +467,12 @@ def merge():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
-    commands.add_parser('matrix')
+    commands.add_parser('matrix').add_argument('--inventory', type=Path)
     commands.add_parser('plan')
+    commands.add_parser('prepare')
+    warming = commands.add_parser('warm')
+    warming.add_argument('package')
+    warming.add_argument('output', type=Path)
     listing = commands.add_parser('inventory')
     listing.add_argument('package')
     listing.add_argument('output', type=Path)
@@ -369,10 +482,12 @@ def main():
     commands.add_parser('merge')
     args = parser.parse_args()
     if args.command == 'matrix':
-        print(json.dumps(dict(include=[dict(shard=name, cache_group=name.split('-')[0],
-                                           browser=name in ('root-browser', 'root-refresh',
-                                                            'root-cross-device'))
-                                       for name in SHARDS])))
+        names = json.loads(args.inventory.read_text()) if args.inventory else None
+        print(json.dumps(matrix(names)))
+    elif args.command == 'prepare':
+        return prepare()
+    elif args.command == 'warm':
+        warm(args.package, args.output)
     elif args.command == 'inventory':
         inventory(args.package, args.output)
     elif args.command == 'plan':

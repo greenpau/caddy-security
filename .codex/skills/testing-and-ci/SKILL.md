@@ -252,11 +252,13 @@ wants debug artifacts kept.
 ## CI Workflow
 
 `.github/workflows/build.yml` runs on pushes/PRs to `main`, manual dispatch,
-and reusable workflow calls. A planning job resolves one artifact identity and
-an exhaustive matrix. Repository quality gates run alongside ten Go shards in
-separate runner checkouts: nine disjoint selections of the large root package
-and one selection containing every other discovered package. Every ordinary run
-validates the full suite. Local `make ci-check` remains sequential.
+and reusable workflow calls. A planning job resolves one artifact identity.
+Repository quality gates and shared build preparation run alongside
+one another, then 44 Go shards run in separate checkouts: 43 disjoint root
+selections, including 24 balanced runtime groups, and one containing every other
+package. Preparation derives browser prerequisites from the actual inventory
+and shares compiled builds to reduce repeated setup. A quality or preparation
+failure skips the whole matrix. Local `make ci-check` remains sequential.
 
 The final `Tests and coverage` job preserves the existing branch-protection and
 release check. It requires every dependency to succeed, verifies each discovered

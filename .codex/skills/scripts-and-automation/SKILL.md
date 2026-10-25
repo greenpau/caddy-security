@@ -123,7 +123,9 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
   version, automation, full Go test/report and build gates, including under
   `make -j`; requesting focused reports alone does not call for it.
 - Hosted CI runs `make ci-quality` (version, automation fixtures and build)
-  alongside `make ci-test-shard CI_SHARD=<name>` in separate runner checkouts.
+  alongside `make ci-prepare` (guarded discovery/shared compilation without test
+  bodies). Both must pass before parallel `make ci-test-shard CI_SHARD=<name>`
+  jobs start in separate checkouts. A prerequisite failure skips the Go matrix.
   Read the [parallel CI contract](../testing-and-ci/references/parallel-ci.md)
   before changing shard selection, caching, failure gates or combined coverage.
   These are CI entry points, not shortcuts for focused local validation.
@@ -300,9 +302,9 @@ coverage and writes reports; never patch a finished bundle's coverage percentage
 
 ## CI Notes
 
-The reusable `.github/workflows/build.yml` runs repository quality gates and ten
-Go shards concurrently, checks source remains unchanged, and retains each shard's
-evidence plus an aggregate `.coverage/` bundle. Its stable `Tests and coverage`
+The reusable `.github/workflows/build.yml` runs repository quality gates before
+starting 44 concurrent Go shards, checks source remains unchanged, and retains
+each shard's evidence plus an aggregate `.coverage/` bundle. Its stable `Tests and coverage`
 check requires every gate and verifies full test selection before merging
 coverage. Release CI requires this same gate. The
 [testing contract](../testing-and-ci/SKILL.md) owns local

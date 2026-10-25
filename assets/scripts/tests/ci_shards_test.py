@@ -14,8 +14,14 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[3]
-ROOT_SHARDS = ('root-core', 'root-clients', 'root-cli', 'root-direct-oauth',
-               'root-oidc', 'root-refresh', 'root-browser', 'root-cross-device', 'root-runtime')
+RUNTIME_SHARDS = tuple(f'root-runtime-{number:02d}' for number in range(1, 25))
+ROOT_SHARDS = ('root-direct-oauth-expiry', 'root-cross-device-expiry',
+               'root-core', 'root-browser', 'root-clients-legacy', 'root-clients-native',
+               'root-cli-authenticator', 'root-cli-identity', 'root-cli-commands',
+               'root-direct-oauth', 'root-oidc', 'root-oidc-rp', 'root-jwks',
+               'root-access-signers', 'root-access-signers-persistence',
+               'root-refresh', 'root-refresh-sqlite', 'root-refresh-browser',
+               'root-cross-device', *RUNTIME_SHARDS)
 SHARDS = (*ROOT_SHARDS, 'packages')
 MODULE = 'example.invalid/cishards'
 
@@ -29,17 +35,49 @@ class CIShardsUnitTests(unittest.TestCase):
     def test_partition_is_exhaustive_and_keeps_overlapping_journeys_together(self):
         expected = {
             'root-core': ['ExampleValue', 'FuzzFuture', 'TestFuture'],
-            'root-clients': ['TestAuthenticationClient'],
-            'root-cli': ['TestAuthenticator'],
-            'root-direct-oauth': ['TestDirectOAuthRefresh'],
-            'root-oidc': ['TestOIDC'],
-            'root-refresh': ['TestOIDCRefreshBrowser'],
             'root-browser': ['TestBrowser'],
+            'root-clients-legacy': ['TestAuthenticationClient'],
+            'root-clients-native': ['TestAuthenticationClientNative'],
+            'root-cli-authenticator': ['TestCaddyAuthenticatorE2E'],
+            'root-cli-identity': ['TestCaddySQLiteIdentityCommandsE2E'],
+            'root-cli-commands': ['TestSecurityCredential'],
+            'root-direct-oauth': ['TestDirectOAuthRefresh'],
+            'root-direct-oauth-expiry': ['TestCaddyDirectOAuthExpirationE2E'],
+            'root-oidc': ['TestOIDC'],
+            'root-oidc-rp': ['TestCaddyOIDCRelyingPartyE2E'],
+            'root-jwks': ['TestJWKS'],
+            'root-access-signers': ['TestAccessSigner'],
+            'root-access-signers-persistence': ['TestCaddyAccessSignerPersistenceE2E'],
+            'root-refresh': ['TestRefresh'],
+            'root-refresh-sqlite': ['TestSQLiteRefresh'],
+            'root-refresh-browser': ['TestOIDCRefreshBrowser'],
             'root-cross-device': ['TestCrossDeviceBrowser'],
-            'root-runtime': ['TestAppFuture', 'TestCaddyFuture'],
+            'root-cross-device-expiry': ['TestCaddyCrossDeviceExpirationE2E'],
         }
-        names = sorted(itertools.chain.from_iterable(expected.values()))
-        self.assertEqual(self.ci.root_partition(names), expected)
+        runtime = [f'TestAppFuture{number:02d}' for number in range(48)]
+        names = sorted([*itertools.chain.from_iterable(expected.values()), *runtime])
+        groups = self.ci.root_partition(names)
+        self.assertEqual({key: groups[key] for key in expected}, expected)
+        selected = list(itertools.chain.from_iterable(groups[key] for key in RUNTIME_SHARDS))
+        self.assertEqual(sorted(selected), runtime)
+        self.assertEqual(len(selected), len(set(selected)))
+        self.assertTrue(all(len(groups[key]) == 2 for key in RUNTIME_SHARDS))
+        self.assertEqual(groups, self.ci.root_partition(names))
+        # Preserve isolated long journeys as new runtime parents are added.
+        long = ['TestCaddySecurityLocalE2E']
+        extra = [f'TestCaddyFuture{number:02d}E2E' for number in range(32)]
+        balanced = self.ci.root_partition(sorted([*names, *long, *extra]))
+        for name in long:
+            group = next(values for values in balanced.values() if name in values)
+            self.assertEqual([test for test in group if test.endswith('E2E')], [name])
+        browser_names = sorted(set(names) | self.ci.BROWSER_TESTS)
+        browser_groups = self.ci.root_partition(browser_names)
+        flags = {row['shard']: row['browser'] for row in self.ci.matrix(browser_names)['include']}
+        for name in self.ci.BROWSER_TESTS:
+            shard = next(key for key, values in browser_groups.items() if name in values)
+            self.assertTrue(flags[shard], name)
+        self.assertFalse(flags['root-direct-oauth-expiry'])
+        self.assertFalse(flags['root-cross-device-expiry'])
         for invalid in ([], names + [names[-1]], ['TestOnly'], ['invalid/name']):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 self.ci.root_partition(invalid)
@@ -68,11 +106,11 @@ class CIShardsTests(unittest.TestCase):
                                     'GOWORK', 'MINIMUM_COVERAGE')}
         self.env.update(PYTHONDONTWRITEBYTECODE='1', GOWORK='off',
                         COVERAGE_DIR='reports with spaces', TEST='^MustNotExcludeTests$',
-                        TEST_DIR='./missing', GIT_COMMIT='fixture', GIT_BRANCH='main')
+                        TEST_DIR='./missing', GIT_COMMIT='fixture', GIT_BRANCH='main', PREPARE_RESULT='success')
         shutil.copyfile(ROOT / 'Makefile', self.root / 'Makefile')
         scripts = self.root / 'assets/scripts'
         scripts.mkdir(parents=True)
-        for name in ('ci_tests.py', 'test_guard.py'):
+        for name in ('ci_tests.py', 'ci_runtime_timings.json', 'test_guard.py'):
             shutil.copyfile(ROOT / 'assets/scripts' / name, scripts / name)
         (self.root / 'VERSION').write_text('1.0.0\n')
         pinned = re.search(r'github.com/greenpau/tested (v\S+)', (ROOT / 'go.mod').read_text()).group(1)
@@ -110,10 +148,10 @@ class CIShardsTests(unittest.TestCase):
     def test_e2e_complete_disjoint_shards_reports_and_failed_rerun(self):
         expected = {
             **{name: [''] for name in ROOT_SHARDS},
-            'packages': ['cmd/server', 'pkg/future', 'pkg/enums'],
+            'packages': ['cmd/caddy-authenticator', 'cmd/server', 'pkg/future', 'pkg/enums'],
         }
         for directory in itertools.chain.from_iterable(expected.values()):
-            self.package(directory, tested=directory != 'pkg/enums')
+            self.package(directory, tested=directory not in ('pkg/enums', 'cmd/caddy-authenticator'))
         root_source = self.root
         (root_source / 'value.go').write_text(
             'package fixture\n' + ''.join(
@@ -121,13 +159,13 @@ class CIShardsTests(unittest.TestCase):
                 for name in ('Value', 'Challenge', 'Session', 'Protocol', 'Unused')))
         (root_source / 'value_test.go').write_text('''package fixture
 import ("fmt"; "os"; "testing")
-func TestE2ECrossDevice(t *testing.T) {
+func TestE2ECrossDeviceBrowser(t *testing.T) {
  if Challenge() != 42 { t.Fatal("challenge") }
  t.Run("nested/Session", func(t *testing.T) { Challenge() })
 }
 func TestE2EDirectOAuth(t *testing.T) { Protocol() }
 func TestE2EAuthenticationClient(t *testing.T) { Value() }
-func TestE2EAuthenticator(t *testing.T) { Value() }
+func TestCaddyAuthenticatorE2E(t *testing.T) { Value() }
 func TestE2EBrowser(t *testing.T) { Value() }
 func TestAppRuntime(t *testing.T) { Value() }
 func TestE2ERefreshValue(t *testing.T) { Session() }
@@ -146,6 +184,26 @@ func FuzzSessionSeeds(f *testing.F) {
  f.Fuzz(func(t *testing.T, input string) { Session() })
 }
 ''')
+        additional = [
+            'TestAuthenticationClientNative', 'TestCaddySQLiteIdentityCommandsE2E',
+            'TestSecurityCredential', 'TestCaddyDirectOAuthExpirationE2E',
+            'TestCaddyCrossDeviceExpirationE2E', 'TestCaddyOIDCRelyingPartyE2E',
+            'TestJWKS', 'TestAccessSigner', 'TestCaddyAccessSignerPersistenceE2E',
+            'TestSQLiteRefresh', 'TestRefreshBrowser',
+            *(f'TestAppRuntime{number:02d}' for number in range(23)),
+        ]
+        with (root_source / 'value_test.go').open('a') as stream:
+            for name in additional:
+                # Model a separately built CLI journey with zero parent counters.
+                body = '' if name == 'TestCaddySQLiteIdentityCommandsE2E' else 'Value()'
+                stream.write(f'func {name}(t *testing.T) {{ {body} }}\n')
+        # Real preparation warms both fixture executables without running tests.
+        for target in ('testdata/runtime_state_caddy', 'cmd/caddy-authenticator'):
+            destination = self.root / target
+            destination.mkdir(parents=True, exist_ok=True)
+            if target.startswith('cmd/'):
+                (destination / 'value.go').unlink()
+            (destination / 'main.go').write_text('package main\nfunc main() {}\n')
         # Executable Go discovery respects build constraints, external test packages,
         # runnable examples and fuzz targets, rather than matching source text.
         (root_source / 'ignored_test.go').write_text(
@@ -155,16 +213,22 @@ func FuzzSessionSeeds(f *testing.F) {
             'package fixture_test\nimport "testing"\n'
             'func TestExternalNewFeature(t *testing.T) {}\n')
         source = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+        self.command('make', 'ci-prepare')
+        prepared = self.root / 'reports with spaces/prepare'
+        self.assertEqual(json.loads((prepared / 'resource-usage.json').read_text())['status'], 'passed')
+        self.assertTrue((prepared / 'tests.json').is_file())
+        self.assertTrue((self.root / 'tmp/ci-prepare/caddy').is_file())
+        self.assertTrue((self.root / 'tmp/ci-prepare/caddy-authenticator').is_file())
         plan = json.loads(self.cli('plan').stdout)
         expected = {shard: sorted(MODULE + ('/' + path if path else '') for path in paths)
                     for shard, paths in expected.items()}
         self.assertEqual(plan, expected)
-        matrix = json.loads(self.cli('matrix').stdout)['include']
+        matrix = json.loads(self.cli('matrix', '--inventory', str(prepared / 'tests.json')).stdout)['include']
         self.assertEqual([row['shard'] for row in matrix], list(SHARDS))
         self.assertEqual([row['cache_group'] for row in matrix],
-                         ['root'] * 9 + ['packages'])
+                         ['root'] * 43 + ['packages'])
         self.assertEqual([row['shard'] for row in matrix if row['browser']],
-                         ['root-refresh', 'root-browser', 'root-cross-device'])
+                         ['root-browser', 'root-refresh-browser', 'root-cross-device'])
         base = self.root / 'reports with spaces'
         for shard in SHARDS:
             if shard == 'root-core':
@@ -201,6 +265,10 @@ func FuzzSessionSeeds(f *testing.F) {
                 self.assertEqual(pattern, '.')
             self.assertEqual(command[-len(plan[shard]):], plan[shard])
             self.assertTrue((output / 'manifest.json').is_file())
+            if shard == 'root-cli-identity':
+                blocks = (output / 'coverage.out').read_text().splitlines()[1:]
+                self.assertTrue(blocks)
+                self.assertTrue(all(int(line.split()[-1]) == 0 for line in blocks))
             self.cli('summarize', shard)
             timing = json.loads((output / 'timing.json').read_text())
             self.assertEqual({p['package'] for p in timing['packages']}, set(plan[shard]))
@@ -208,8 +276,8 @@ func FuzzSessionSeeds(f *testing.F) {
         self.cli('merge')
         combined = base / 'combined'
         summary = json.loads((combined / 'summary.json').read_text())
-        self.assertEqual(summary['packages'], 4)
-        self.assertEqual(summary['root_tests'], 15)
+        self.assertEqual(summary['packages'], 5)
+        self.assertEqual(summary['root_tests'], 49)
         self.assertEqual(summary['covered'], 6)
         self.assertEqual(summary['statements'], 8)
         self.assertAlmostEqual(summary['percent'], 100 * 6 / 8)
@@ -342,8 +410,14 @@ func FuzzSessionSeeds(f *testing.F) {
             self.cli('gate', env=env,
                      success=(selection == go_result == quality_result == 'success'))
 
+        for prepare in ('failure', 'cancelled', 'skipped', ''):
+            self.cli('gate', env=dict(self.env, SELECTION_RESULT='success',
+                                     GO_RESULT='success', QUALITY_RESULT='success',
+                                     PREPARE_RESULT=prepare), success=False)
+
     def test_missing_graph_unknown_shard_and_incomplete_reports_fail(self):
         self.cli('plan', success=False)
+        self.command('make', 'ci-prepare', success=False)
         self.command('make', 'ci-test-shard', 'CI_SHARD=typo', success=False)
         self.cli('merge', success=False)
         self.assertFalse((self.root / 'reports with spaces/combined').exists())

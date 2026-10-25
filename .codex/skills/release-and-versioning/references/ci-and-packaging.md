@@ -14,8 +14,10 @@ The checked revision is therefore the same revision qualified by the reusable
 test workflow. Checkout retrieves full history for release notes and tag checks.
 
 The `validate` job calls `.github/workflows/build.yml`; GoReleaser requires its
-success. That gate runs `make ci-quality` and ten complete Go shards in parallel;
-the stable `Tests and coverage` check verifies execution and combines coverage.
+success. That gate requires `make ci-quality` and shared build preparation to
+pass before 44 complete Go shards run in parallel; a prerequisite failure skips
+the matrix and fails validation.
+The stable `Tests and coverage` check verifies execution and combines coverage.
 The separate build run for a `main` push skips validation when the head commit
 message starts with the release script's `ops: released v` prefix. The script
 atomically pushes `main` and the release tag, so release validation owns testing

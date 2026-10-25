@@ -38,10 +38,14 @@ an 8 GiB host: the guard rejects budgets above half of detected physical RAM.
 Reassess the overrides if runner capacity or repository visibility changes.
 
 An unsplit local suite runs Caddy journeys sequentially; hosted CI partitions the
-root package across separate runners. Cross-device expiration alone waits five
-minutes. Keep the 60-minute package budget inside the 70-minute guard budget.
+root package across separate runners and prepares shared race/fixture builds
+once. Direct OAuth pending expiry and cross-device expiration each wait five
+minutes on dedicated runners. Keep the 60-minute package budget inside the 70-minute guard budget.
 Hosted shard jobs allow 85 minutes for separate guarded discovery, setup, reports
-and uploads. Individual E2E subprocess deadlines remain shorter. Read the
+and uploads; these diagnostic limits are unchanged. The balancing target is
+under five minutes per ordinary shard and under seven minutes including setup.
+Cold-cache preparation and runner variability require hosted timing confirmation.
+Individual E2E subprocess deadlines remain shorter. Read the
 [parallel CI contract](../../testing-and-ci/references/parallel-ci.md) when
 changing these boundaries or comparing shard timing/resource evidence.
 For browser scenarios, dispose completed contexts before opening unrelated

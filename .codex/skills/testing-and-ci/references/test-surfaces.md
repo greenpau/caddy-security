@@ -627,7 +627,8 @@ checks omission of the refresh extension with a strict legacy schema.
 `TestAuthnJSONLoginDelegation` compares native/JSON rejection responses with
 direct portal dispatch, checking request headers/URL and response metadata at
 root/nested mounts. Its error cases also run through Caddy TLS.
-`TestCaddyAuthenticationClientE2E` covers password/MFA and API-key JSON login
+`TestCaddyAuthenticationClientE2E` and `TestCaddyAuthenticationClientNativeE2E`
+separate legacy/native scenarios while covering password/MFA and API-key JSON login
 through actual Caddy TLS with admin/profile APIs disabled, private credential
 reopening, independent resource authorization, explicit native refresh/logout,
 and the existing CLI consumer. It includes in-flight HTTP cancellation with
@@ -638,9 +639,10 @@ the refresh family. See the
 
 Local identity provisioning/reset units are in `local_identity_test.go`.
 `profile_public_key_test.go` checks public parser metadata and binary rejection.
-`TestCaddyLocalIdentityE2E` covers TLS login identity/realm/MFA combinations,
-management/profile credential mutations, reload invalidation, stateless access,
-and persisted user public keys. See
+`TestCaddyLocalIdentityE2E` and `TestCaddyLocalIdentityMFAE2E` cover TLS login
+identity/realm/password/MFA combinations. `TestCaddyLocalIdentityMutationE2E`
+covers management/profile mutations, reload invalidation, stateless access, and
+persisted user public keys. Each runs in an independent bounded child process. See
 [local identity compatibility](../../configuration-identity-stores/references/local-identity.md#caddy-validation).
 The default `TestCaddyProfileCanonicalIdentityRegression` verifies transformed
 claims cannot select another local account after the upstream fix; see
@@ -743,6 +745,8 @@ append `handle_errors` pages. Generic OIDC keeps nonce and S256 enabled and sign
 assertions independently. The suite includes a real Chrome cookie journey,
 policy ACL/source checks, wrong-origin/browser transplants, replays, provider
 failures, capacity, absolute expiry, logout during exchange and volatile reload.
+`TestCaddyDirectOAuthExpirationE2E` separately preserves the real five-minute
+pending-login expiry so it can run on its own CI runner.
 See the [direct OAuth acceptance surface](../../configuration-authorization/references/direct-oauth.md#consumer-validation)
 for parser fixtures, admission/draining units and protocol scope. Separate
 built commands are outside parent instrumentation. Existing portal, Basic,

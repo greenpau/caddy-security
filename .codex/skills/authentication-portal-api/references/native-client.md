@@ -197,7 +197,9 @@ the failed commit revoked the old family.
   unchanged request headers/URL and response status, JSON error fields, cache,
   CORS and cookie attributes; only timestamps and random tracking-cookie values
   differ between independent calls. The TLS suite runs the same rejection cases.
-- `TestCaddyAuthenticationClientE2E` runs real TLS Caddy at root/nested mounts
+- `TestCaddyAuthenticationClientE2E` covers legacy flows and
+  `TestCaddyAuthenticationClientNativeE2E` covers native/body-disabled flows.
+  Together they run real TLS Caddy at root/nested mounts
   with default/custom names, password/configured/prompted TOTP/combined MFA,
   aliases, canceled input, opt-in/off, API keys, private credential reopening,
   an independently authorized resource and native/OIDC separation. Existing
@@ -230,5 +232,5 @@ Select from this group according to the changed client or login contract;
 do not append a full repository gate to focused validation.
 
 ```sh
-go test -mod=readonly -race -count=1 -run 'TestAuthnJSONLoginDelegation|TestAuthenticationClient|TestCaddyAuthenticationClientE2E' .
+go test -mod=readonly -race -count=1 -run 'TestAuthnJSONLoginDelegation|TestAuthenticationClient|TestCaddyAuthenticationClient(E2E|NativeE2E)' .
 ```

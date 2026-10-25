@@ -105,7 +105,9 @@ Caddy generator now supports Argon2 through the upstream parser and constructor.
 See [password hashing](../../configuration-users/references/password-hashing.md)
 for exact formats, bounds, defaults, ownership and the test coverage limits.
 
-`TestCaddyLocalIdentityE2E` launches an isolated Caddy process with verified TLS,
+`TestCaddyLocalIdentityE2E`, `TestCaddyLocalIdentityMFAE2E`, and
+`TestCaddyLocalIdentityMutationE2E` separate password, MFA, and mutation/public-key
+journeys. Each launches an isolated Caddy process with verified TLS,
 private temporary identity files, management/profile APIs, and separate resource
 authorization. It explicitly configures and checks temporary Caddy storage;
 `DefaultStorage` captures its path at package initialization, so changing XDG

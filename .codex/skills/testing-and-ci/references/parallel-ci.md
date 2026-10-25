@@ -1,23 +1,46 @@
 # Parallel GitHub validation
 
 Read this reference when changing `.github/workflows/build.yml`,
-`assets/scripts/ci_tests.py`, or the `ci-quality`/`ci-test-shard` Make targets.
+`assets/scripts/ci_tests.py`, the timing inventory, or the `ci-quality`/`ci-prepare`/`ci-test-shard` Make targets.
 
 ## Execution and selection
 
-The planning job resolves a shared versioned artifact identity and emits a
-ten-entry matrix without compiling Go. `make ci-quality` runs version checks,
-Python automation fixtures and both binary builds on one runner, concurrently
-with the Go matrix. `make ci-check` retains its sequential local/release-script
-behavior and is not invoked by the hosted workflow.
+The planning job resolves a shared versioned artifact identity. Repository
+quality gates and shared Go build preparation run concurrently. Preparation
+emits a 44-entry Go matrix from the discovered root test inventory. Both jobs
+must succeed before any Go shard starts; a quality failure skips the matrix.
+`make ci-check` retains its sequential local/release-script behavior.
 
-Nine shards split the root package by top-level test name, in priority order:
-cross-device, direct OAuth, authentication client, CLI/credential commands,
-refresh, OIDC/JWKS/access signers, remaining browser tests, app/Caddy runtime,
-then core. New tests fall into an existing group, including the core fallback;
-new non-root packages automatically join the tenth `packages` shard. Keep parent
-tests and their subtests together. Do not add `t.Parallel` to Caddy lifecycle
-journeys to obtain cross-runner concurrency.
+Forty-three shards split the root package and one `packages` shard discovers
+every other package. The split preserves every top-level test and its subtests:
+
+| Workload | Split |
+| --- | --- |
+| Runtime | 24 numbered groups, longest recorded journeys assigned first |
+| Local identity | Separate password, MFA, mutation/public-key parents |
+| Authentication client | Legacy and native parent tests |
+| CLI | Authenticator journeys, SQLite identity commands, other commands |
+| Direct OAuth | Normal journeys and a dedicated pending-expiration parent |
+| OIDC | Provider, relying party, JWKS, access signers, signer persistence |
+| Refresh | Protocol/provider, SQLite, browser |
+| Cross-device | Normal journeys and dedicated real-time expiration |
+| Other | Existing core, browser and non-root package groups |
+
+Runtime planning uses the recorded per-test durations in
+`assets/scripts/ci_runtime_timings.json` with deterministic longest-first
+assignment and lexical tie breaks. Preserve the source run/revision with timing
+updates. New E2E parents use a conservative 90-second fallback; other unrecorded
+app tests use two seconds. The three new local-identity parents initially share
+an equal estimate from the former combined parent; replace those estimates with
+separate hosted measurements. New names and packages remain exhaustively selected.
+
+Aim for less than five minutes per ordinary shard and less than seven minutes
+including setup/reporting. Confirm this with subsequent hosted timing evidence;
+these are targets, not replacement deadlines or guaranteed runner performance.
+The direct OAuth and cross-device expiration parents must still wait the real
+five-minute protocol lifetime. Keep each on its own runner with prepared builds;
+do not shorten or mock expiry to meet a timing target. Do not add `t.Parallel`
+to Caddy lifecycle journeys to obtain cross-runner concurrency.
 
 Each shard discovers this module's package graph with read-only `go list`.
 Root shards list runnable tests, examples and fuzz targets with matching
@@ -35,21 +58,44 @@ the resource lock serializes guarded work within one checkout.
 ## Caches and runner setup
 
 Module caches are shared by OS, architecture, compiler version and `go.sum`.
-Build caches additionally include the shard and commit, with earlier shard/root
-cache fallbacks for reuse. Distinct commit keys allow changed source to refresh
-the cache instead of indefinitely reusing an immutable cache entry.
+Per-shard build caches also include the shard and commit, with older shard/root
+fallbacks. A separate preparation job runs `make ci-prepare` under the resource
+guard: it lists the instrumented root tests, warms the trimpath Caddy fixture
+build and race-enabled authenticator build, and publishes a common build cache.
+Listing/building does not run test bodies. Its evidence is `.coverage/prepare/`;
+binaries stay under ignored `tmp/ci-prepare/`.
 
-Only refresh, browser and cross-device shards install Node 24 and NSS tooling
-and verify the runner's Google Chrome. Keep that prerequisite mapping aligned
-with test ownership. The quality job and other Go shards avoid browser setup.
-All Go shards retain race detection, fresh execution, the 1-percent nonempty
-coverage policy and whole-process-tree guards. Read
+Each shard first restores its own build cache, then overlays the prepared cache
+for the same compiler, dependency hash and commit. This preserves nested build
+reuse while avoiding repeated cold compilation of the instrumented root package.
+A cache miss still allows guarded Go discovery/builds to reconstruct the cache;
+a preparation/build error fails validation. Never reuse cache presence as proof
+that a test ran or skip the fresh tested invocation.
+
+The build workflow pins checkout and Go setup to Node 24 action runtimes.
+Keep these action runtimes distinct from the Go compiler and browser Node
+version pins. Review action metadata and supported inputs before upgrading;
+checkout still disables persisted credentials and Go setup leaves caching to
+the explicit cache steps.
+
+Preparation derives each matrix row's browser prerequisite from its selected
+test names, including parents that call browser helpers without `Browser` in
+their names. Keep `BROWSER_TESTS` aligned with those callers. Only those rows
+install Node 24/NSS and verify Chrome. Preparation and quality avoid browser
+setup; standalone expiration rows also avoid it.
+All Go shards retain race detection, fresh execution and whole-process-tree
+guards. Individual shards use a zero coverage minimum because a separately built
+command can exercise the real integration without parent-binary counters. The
+complete merged profile still enforces the existing 1-percent nonempty policy;
+manifest/source-block checks reject incomplete root profiles. Normal local Make
+coverage defaults remain unchanged. Read
 [resource controls](../../scripts-and-automation/references/test-resources.md)
 before changing hosted budgets; local defaults remain unchanged.
 
 ## Completion and failure evidence
 
-Matrix `fail-fast` is disabled so one failure does not cancel other evidence.
+Quality failures prevent the whole Go matrix from starting. Within a started
+matrix, `fail-fast` is disabled so one shard failure does not cancel other evidence.
 Each attempted shard writes selection status, tested reports, raw events,
 resource evidence and a timing summary under `.coverage/shards/<name>/`.
 GitHub step summaries show package durations, elapsed time and peak memory;
@@ -58,9 +104,11 @@ actual hosted runs. A failed discovery or rerun invalidates the prior selection
 before it can reuse old successful reports.
 
 Each attempted shard uploads its bundle even on failure. The final `core` job,
-still named `Tests and coverage`, requires successful planning, quality and Go
-matrix results. It downloads available shard bundles, retains failures, and
-cannot turn an omitted, failed or cancelled gate into success. The release-main
+still named `Tests and coverage`, requires successful planning, quality, preparation and Go
+matrix results. It downloads available shard bundles when the matrix was
+attempted; a matrix skipped after a prerequisite failure does not trigger artifact
+download or upload. It retains failures and cannot turn an omitted, failed or
+cancelled gate into success. The release-main
 push skip applies to planning and its dependents; reusable release-tag validation
 still runs the complete matrix before publishing.
 
@@ -84,8 +132,10 @@ and no successful aggregate index/profile.
 
 `assets/scripts/tests/ci_shards_test.py` contains focused partition tests and a
 real Make/Go/tested fixture in a disposable directory inside this checkout.
-It exercises new-name fallback, priority, discovery, exact filtering, real
-shards, comparison with an unsplit coverage profile, standard Go coverage tools,
+It exercises new-name fallback, weighted runtime balancing, browser prerequisite
+selection, guarded preparation, discovery, exact filtering, real shards with
+honest zero-counter external-command coverage, comparison with an unsplit profile,
+standard Go coverage tools,
 failure gates, failed reruns, corrupted/missing evidence and bundle isolation.
 The quality job discovers it through `make test-automation`. When local tests
 are authorized, use a focused automation selection while iterating:
@@ -93,6 +143,12 @@ are authorized, use a focused automation selection while iterating:
 ```sh
 python3 -m unittest discover -s assets/scripts/tests -p 'ci_shards_test.py' -v
 ```
+
+`assets/scripts/tests/test_timeout_test.py` verifies deadline arguments through
+the real Make/guard boundary. Its workflow budget check must select the named
+`go` job, independently of job order or nested step timeouts; planning, quality
+and aggregate jobs have separate, shorter budgets. Keep its Go-job selection
+regression when changing the workflow layout.
 
 Run `make test-automation` when validating the complete changed Make/tested
 lifecycle. Static syntax and metadata checks do not establish runtime success;

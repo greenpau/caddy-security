@@ -26,20 +26,14 @@ jobs:
     timeout-minutes: 5
     outputs:
       artifact_id: ${{ steps.artifact.outputs.artifact_id }}
-      matrix: ${{ steps.shards.outputs.matrix }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Resolve shared artifact identity
         id: artifact
         run: make artifact-id
-      - name: Select complete shard matrix
-        id: shards
-        run: |
-          matrix=$(python3 assets/scripts/ci_tests.py matrix)
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   quality:
     name: Repository quality gates
     needs: selection
@@ -50,11 +44,11 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.26.10'
           cache: false
@@ -83,16 +77,83 @@ jobs:
         run: |
           git diff --exit-code
           test -z "$(git ls-files --others --exclude-standard)"
+  prepare:
+    name: Prepare shared Go builds
+    outputs:
+      matrix: ${{ steps.shards.outputs.matrix }}
+    needs: selection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GOTOOLCHAIN: local
+      PYTHONDONTWRITEBYTECODE: '1'
+      TEST_MEMORY_MB: '6144'
+      TEST_GO_MEMORY_MB: '1024'
+      TEST_GOMAXPROCS: '4'
+      TEST_PACKAGE_PARALLELISM: '2'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - name: Cache Go modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
+      - name: Cache prepared Go builds
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/go-build
+          key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-root-
+      - name: Download and verify module dependencies
+        run: |
+          go mod download
+          go mod verify
+      - name: Compile shared test and fixture builds without running tests
+        id: prepare
+        run: make ci-prepare
+      - name: Select complete matrix and browser prerequisites
+        id: shards
+        run: |
+          matrix=$(python3 assets/scripts/ci_tests.py matrix --inventory .coverage/prepare/tests.json)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+      - name: Verify preparation did not modify source
+        if: ${{ always() && steps.prepare.outcome != 'skipped' }}
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+      - name: Upload preparation evidence
+        if: ${{ always() && steps.prepare.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caddy-security_preparation_${{ needs.selection.outputs.artifact_id }}
+          path: .coverage/prepare/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: true
   go:
     name: Go tests (${{ matrix.shard }})
-    needs: selection
+    # Do not start any shard unless all repository quality gates pass.
+    needs: [selection, quality, prepare]
     runs-on: ubuntu-24.04
     # Keep setup, inventory, reports and upload outside the 70-minute test guard.
     timeout-minutes: 85
     strategy:
       # Preserve every shard's evidence if one fails.
       fail-fast: false
-      matrix: ${{ fromJSON(needs.selection.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     env:
       GOTOOLCHAIN: local
       PYTHONDONTWRITEBYTECODE: '1'
@@ -109,11 +170,11 @@ jobs:
       CI_SHARD: ${{ matrix.shard }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.26.10'
           cache: false
@@ -134,6 +195,11 @@ jobs:
             go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-
             go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
             go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-
+      - name: Restore shared prepared Go builds
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/go-build
+          key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-${{ github.sha }}
       - name: Set up Node.js for browser E2E
         if: ${{ matrix.browser }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -173,18 +239,18 @@ jobs:
   core:
     # Preserve the existing branch-protection and reusable release check.
     name: Tests and coverage
-    needs: [selection, quality, go]
+    needs: [selection, quality, prepare, go]
     if: ${{ !cancelled() && needs.selection.result != 'skipped' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Download shard evidence
         id: download
-        if: ${{ needs.selection.result == 'success' }}
+        if: ${{ needs.selection.result == 'success' && needs.go.result != 'skipped' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}_shard_*
@@ -195,6 +261,7 @@ jobs:
         env:
           SELECTION_RESULT: ${{ needs.selection.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
+          PREPARE_RESULT: ${{ needs.prepare.result }}
           GO_RESULT: ${{ needs.go.result }}
         run: python3 assets/scripts/ci_tests.py gate
       - name: Verify complete execution and combine coverage

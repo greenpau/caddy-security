@@ -151,8 +151,10 @@ for both adapted and runtime-resolved JSON comparison. The built-Caddy
 `TestCaddyDirectOAuthE2E` uses a local TLS generic provider with independently
 signed assertions and a counted TLS protected upstream. It checks redirects,
 callbacks, identity metadata, replay, wrong-browser/origin transplants, malformed
-assertions, namespace/method rules, ACLs, cookie stripping, capacity, absolute session expiry, the fixed 300-second pending expiry,
-logout cancellation, shared-provider policy isolation and volatile reload.
+assertions, namespace/method rules, ACLs, cookie stripping, capacity, absolute
+session expiry, logout cancellation, shared-provider policy isolation and volatile
+reload. `TestCaddyDirectOAuthExpirationE2E` separately waits the fixed 300-second
+pending lifetime through the same built Caddy fixture on a dedicated CI runner.
 The custom-origin case also completes login through plaintext backend requests
 with the external Host preserved; the unpinned case rejects those requests.
 Chrome independently checks the Secure/HttpOnly/Lax cookie journey with private
