@@ -25,7 +25,9 @@ import (
 
 func sqliteCredentialsConfig(t *testing.T) *credentials.Config {
 	t.Helper()
-	return &credentials.Config{Name: "keys", Path: filepath.Join(registrationTestDirectory(t), "credentials.db"), Realm: "staff", Timeout: "500ms"}
+	// These fixtures exercise lifecycle and provisioning, not storage latency.
+	// Leave room for durable commits under race-enabled CI load.
+	return &credentials.Config{Name: "keys", Path: filepath.Join(registrationTestDirectory(t), "credentials.db"), Realm: "staff", Timeout: "5s"}
 }
 func sqliteCredentialsRaw(t *testing.T, cfg *credentials.Config) json.RawMessage {
 	t.Helper()
@@ -39,12 +41,12 @@ func sqliteCredentialsIssue(t *testing.T, cfg *credentials.Config) string {
 	t.Helper()
 	b, err := credentials.New(t.Context(), cfg)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("open SQLite credential fixture: %v", err)
 	}
 	defer b.Close()
 	key, err := b.Issue(t.Context(), "alice", "alice@example.test", []string{"authp/user"}, time.Now().Add(time.Hour))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("issue SQLite credential fixture key: %v", err)
 	}
 	return key
 }

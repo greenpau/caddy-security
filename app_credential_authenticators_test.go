@@ -300,6 +300,9 @@ func TestAppCredentialFailedCandidates(t *testing.T) {
 			if err == nil || strings.Contains(err.Error(), "private-sentinel") {
 				t.Fatal("missing/private construction failure", err)
 			}
+			if (failure == "identity" || failure == "stale") && !strings.Contains(err.Error(), "invalid runtime identity or freshness capability") {
+				t.Fatal("runtime identity/freshness validation was not reached", err)
+			}
 			if app.server != nil || len(app.pluginClosers) != 0 {
 				t.Fatal("failed candidate published")
 			}
