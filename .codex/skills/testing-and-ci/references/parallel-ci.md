@@ -72,7 +72,11 @@ A cache miss still allows guarded Go discovery/builds to reconstruct the cache;
 a preparation/build error fails validation. Never reuse cache presence as proof
 that a test ran or skip the fresh tested invocation.
 
-The build workflow pins checkout and Go setup to Node 24 action runtimes.
+Every JavaScript action in the build workflow is pinned to a Node 24 runtime,
+including Node setup and artifact upload/download. Check each pinned action's
+`action.yml`: selecting `node-version: 24` controls the installed browser-test
+toolchain, not the action's own runtime. Keep automatic package-manager caching
+disabled for Node setup because this workflow owns its caches explicitly.
 Keep these action runtimes distinct from the Go compiler and browser Node
 version pins. Review action metadata and supported inputs before upgrading;
 checkout still disables persisted credentials and Go setup leaves caching to
@@ -98,9 +102,11 @@ Quality failures prevent the whole Go matrix from starting. Within a started
 matrix, `fail-fast` is disabled so one shard failure does not cancel other evidence.
 Each attempted shard writes selection status, tested reports, raw events,
 resource evidence and a timing summary under `.coverage/shards/<name>/`.
-GitHub step summaries show package durations, elapsed time and peak memory;
-`timing.json` also retains the slowest top-level tests for rebalancing after
-actual hosted runs. A failed discovery or rerun invalidates the prior selection
+Successful shards keep these diagnostics in their artifacts without publishing
+individual GitHub job summaries. Failed or incomplete shards still publish
+package durations, elapsed time and peak memory for diagnosis. `timing.json`
+also retains the slowest top-level tests for rebalancing after actual hosted
+runs. A failed discovery or rerun invalidates the prior selection
 before it can reuse old successful reports.
 
 Each attempted shard uploads its bundle even on failure. The final `core` job,
@@ -120,13 +126,37 @@ identical root source blocks; only the intentionally shared root package may
 overlap. Sum its counters and count each statement once. Preserve each shard's
 original reports/manifests and keep the aggregate separate from a tested run.
 
-The combined artifact retains the existing
-`caddy-security_coverage_<artifact-id>` name. Open `.coverage/index.html` after
-extracting it; `.coverage/combined/` contains the execution summary and standard
-merged `coverage.out`. Individual artifacts append `_shard_<name>`. All include
-hidden files, fail on missing files, retain evidence for 14 days, and replace
-matching names on reruns. Failed runs can have only partial per-shard evidence
-and no successful aggregate index/profile.
+The primary `caddy-security_coverage_<artifact-id>` artifact uploads only
+`.coverage/report/`. Extract it and open `index.html` directly: it contains one
+searchable test report, annotated source coverage, merged `coverage.out`, JSON
+summary, JUnit, event projection and a SHA-256 manifest, without shard directories.
+The final job installs Go and uses the pinned tested public renderer through
+`assets/scripts/ci_coverage_report.go`; reporting does not rerun tests.
+Only after the primary artifact uploads successfully does `ci_tests.py summary`
+publish the merged result under that artifact's exact name. Show the entire
+module's cumulative package time and every Go package directory's time, including
+the root package across all root shards. Keep this sum distinct from the parallel
+test process wall span (earliest recorded shard start through latest finish).
+The same timing table appears in the report index, `timing.json` and `timing.md`.
+
+Coalesce the root package's lifecycle into one result while retaining every test
+and subtest outcome, including skips. Package elapsed time is cumulative shard
+work, not parallel wall time. `aggregation.json` records the shard plan and source
+manifest hashes. Preserve aggregate provenance rather than fabricating a
+single-process `run.json`. Render in a disposable staging directory and publish
+only after success; invalid evidence or renderer errors must leave the prior
+standalone report intact. The primary artifact uploads only after a successful
+merge, so failure evidence cannot masquerade as a complete run.
+
+`caddy-security_combined_coverage_<artifact-id>` uploads the entire `.coverage/`
+tree, preserving the previous diagnostic layout: its root index links to the
+unified report and `.coverage/combined/` execution summary/profile, and
+`.coverage/shards/` retains every original tested report and manifest. Downloaded
+shard evidence is still uploaded when the gate or report rendering fails.
+Individual artifacts append `_shard_<name>` to the primary artifact name. All
+include hidden files, fail on missing files, retain evidence for 14 days, and
+replace matching names on reruns. Failed runs can have only partial per-shard
+evidence and no successful aggregate index/profile.
 
 ## Regression validation
 
@@ -135,8 +165,12 @@ real Make/Go/tested fixture in a disposable directory inside this checkout.
 It exercises new-name fallback, weighted runtime balancing, browser prerequisite
 selection, guarded preparation, discovery, exact filtering, real shards with
 honest zero-counter external-command coverage, comparison with an unsplit profile,
-standard Go coverage tools,
-failure gates, failed reruns, corrupted/missing evidence and bundle isolation.
+standard Go coverage tools, standalone HTML/JSON/JUnit rendering and the actual
+workflow upload paths. It verifies skip preservation, aggregate manifest hashes,
+failure gates, failed reruns, corrupted/missing evidence, failed rendering and
+bundle isolation. It also verifies quiet successful shards, preserved failure
+summaries, and merged module/directory timings with parallel wall time reported
+separately from cumulative package work.
 The quality job discovers it through `make test-automation`. When local tests
 are authorized, use a focused automation selection while iterating:
 

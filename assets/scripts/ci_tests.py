@@ -2,6 +2,7 @@
 """Run exhaustive Go test/package shards and verify their CI evidence."""
 
 import argparse
+from datetime import datetime
 from functools import lru_cache
 import hashlib
 import html
@@ -12,6 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_SHARDS = tuple(f'root-runtime-{number:02d}' for number in range(1, 25))
@@ -297,7 +299,9 @@ def summarize(shard):
         lines.append(f"| {item['package']} | {item['seconds']:.2f} | {item['outcome']} |")
     text = '\n'.join(lines) + '\n'
     print(text)
-    if os.environ.get('GITHUB_STEP_SUMMARY'):
+    failed = (resource.get('status') != 'passed' or incomplete
+              or any(item['outcome'] == 'fail' for item in completed))
+    if failed and os.environ.get('GITHUB_STEP_SUMMARY'):
         with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as summary:
             summary.write(text)
 
@@ -331,6 +335,147 @@ def verify_manifest(output):
             raise ValueError(f'Tested artifact integrity mismatch: {name}')
     if not TESTED_FILES <= names:
         raise ValueError('Incomplete tested manifest')
+
+
+def report_events(base, root_package):
+    """Project disjoint test events into one package lifecycle per package.
+
+    Root package elapsed time is cumulative shard work, not parallel wall time.
+    Original byte-for-byte streams remain in the separate evidence bundle.
+    """
+    start, terminal = None, None
+    elapsed = 0
+    for shard in SHARDS:
+        for event in read_events(base / 'shards' / shard / 'test_output.jsonl'):
+            if event.get('Package') == root_package and not event.get('Test'):
+                if event['Action'] == 'start':
+                    if start is None or event.get('Time', '') < start.get('Time', ''):
+                        start = dict(event)
+                if event['Action'] in ('pass', 'skip'):
+                    elapsed += event.get('Elapsed', 0)
+                    if terminal is None or event.get('Time', '') > terminal.get('Time', ''):
+                        terminal = dict(event)
+    if terminal is None:
+        raise ValueError('Missing aggregate root package outcome')
+    if start is not None:
+        yield start
+    for shard in SHARDS:
+        for event in read_events(base / 'shards' / shard / 'test_output.jsonl'):
+            if (event.get('Package') == root_package and not event.get('Test')
+                    and event['Action'] in ('start', 'pass', 'skip')):
+                continue
+            yield event
+    yield dict(terminal, Action='pass', Elapsed=elapsed)
+
+
+def package_timings(base, root_package):
+    """Measure the parallel process span separately from cumulative package work."""
+    starts, finishes, packages = [], [], {}
+    for shard in SHARDS:
+        output = base / 'shards' / shard
+        execution = json.loads((output / 'run.json').read_text())
+        start, finish = [datetime.fromisoformat(execution[name].replace('Z', '+00:00'))
+                         for name in ('started_at', 'finished_at')]
+        if start.tzinfo is None or finish.tzinfo is None or finish < start:
+            raise ValueError(f'Invalid process timing for {shard}')
+        starts.append(start)
+        finishes.append(finish)
+        for event in read_events(output / 'test_output.jsonl'):
+            if event.get('Test') or event.get('Action') not in ('pass', 'skip'):
+                continue
+            name = event['Package']
+            seconds = event.get('Elapsed', 0)
+            if not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or seconds < 0:
+                raise ValueError(f'Invalid package timing for {name}')
+            package = packages.setdefault(name, dict(
+                package=name, directory='.' if name == root_package else name[len(root_package) + 1:],
+                seconds=0, outcome='skip'))
+            package['seconds'] += seconds
+            if event['Action'] == 'pass':
+                package['outcome'] = 'pass'
+    return dict(schema='caddy-security/ci-timing/v1',
+                started_at=min(starts).isoformat(), finished_at=max(finishes).isoformat(),
+                wall_seconds=(max(finishes) - min(starts)).total_seconds(),
+                package_seconds=sum(package['seconds'] for package in packages.values()),
+                packages=[packages[name] for name in sorted(packages)])
+
+
+def timing_markdown(timing, summary):
+    name = os.environ.get('COVERAGE_ARTIFACT_NAME', 'caddy-security_coverage')
+    lines = [f'### {name}', '',
+             f'Merged coverage: **{summary["percent"]:.2f}%** '
+             f'({summary["covered"]}/{summary["statements"]} statements).', '',
+             f'Test process wall span: **{timing["wall_seconds"]:.2f}s** '
+             '(first shard start to last shard finish).',
+             f'Entire module cumulative package time: **{timing["package_seconds"]:.2f}s**.', '',
+             'Package times sum parallel shard executions; they are not wall time.', '',
+             '| Directory | Seconds | Result |', '| --- | ---: | --- |']
+    for package in timing['packages']:
+        lines.append(f'| `{package["directory"]}` | {package["seconds"]:.2f} '
+                     f'| {package["outcome"]} |')
+    return '\n'.join(lines) + '\n'
+
+
+def publish_summary():
+    text = (coverage_directory() / 'report/timing.md').read_text()
+    print(text)
+    if os.environ.get('GITHUB_STEP_SUMMARY'):
+        with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as stream:
+            stream.write(text)
+
+
+def publish_report(base, root_package, profile, summary, timing):
+    """Render one standalone report without inventing a tested child run."""
+    with tempfile.TemporaryDirectory(prefix='.ci-report-', dir=base) as temporary:
+        staging = Path(temporary)
+        (staging / 'coverage.out').write_text(profile)
+        with (staging / 'test_output.jsonl').open('w', encoding='utf-8') as stream:
+            for event in report_events(base, root_package):
+                stream.write(json.dumps(event) + '\n')
+        with (staging / 'stderr.log').open('wb') as stream:
+            for shard in SHARDS:
+                path = base / 'shards' / shard / 'stderr.log'
+                if path.stat().st_size:
+                    stream.write(f'\n--- {shard} ---\n'.encode())
+                    with path.open('rb') as source:
+                        for chunk in iter(lambda: source.read(1024 * 1024), b''):
+                            stream.write(chunk)
+        provenance = dict(summary, schema='caddy-security/ci-report/v1',
+                          package_elapsed='cumulative shard seconds',
+                          event_stream='projection; original streams retained in shard evidence',
+                          sources={name: dict(manifest_sha256=hashlib.sha256(
+                              (base / 'shards' / name / 'manifest.json').read_bytes()).hexdigest())
+                              for name in SHARDS})
+        (staging / 'aggregation.json').write_text(json.dumps(provenance, indent=2) + '\n')
+        (staging / 'timing.json').write_text(json.dumps(timing, indent=2) + '\n')
+        (staging / 'timing.md').write_text(timing_markdown(timing, summary))
+        subprocess.run(['go', 'run', '-mod=readonly', 'assets/scripts/ci_coverage_report.go',
+                        str(staging)], cwd=ROOT, check=True, timeout=300)
+        rows = ''.join(f'<tr><td>{html.escape(package["directory"])}</td>'
+                       f'<td>{package["seconds"]:.2f}</td><td>{package["outcome"]}</td></tr>'
+                       for package in timing['packages'])
+        timings_html = ('<section aria-label="Package timings"><h2>Package timings</h2>'
+                        f'<p>Test process wall span: {timing["wall_seconds"]:.2f}s. '
+                        f'Entire module cumulative package time: {timing["package_seconds"]:.2f}s.</p>'
+                        '<p>Package times sum parallel shard executions; they are not wall time.</p>'
+                        '<table><thead><tr><th>Directory</th><th>Seconds</th><th>Result</th></tr></thead>'
+                        f'<tbody>{rows}</tbody></table></section>')
+        index = staging / 'index.html'
+        index.write_text(index.read_text().replace('</body>', timings_html + '</body>', 1))
+        entries = []
+        for path in sorted(staging.iterdir()):
+            digest = hashlib.sha256()
+            with path.open('rb') as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                    digest.update(chunk)
+            entries.append(dict(name=path.name, size=path.stat().st_size, sha256=digest.hexdigest()))
+        (staging / 'manifest.json').write_text(json.dumps(dict(
+            schema='caddy-security/ci-report-manifest/v1', version=1,
+            algorithm='sha256', files=entries), indent=2) + '\n')
+        output = base / 'report'
+        output.mkdir(parents=True, exist_ok=True)
+        for path in staging.iterdir():
+            path.replace(output / path.name)
 
 
 def merge():
@@ -443,6 +588,8 @@ def merge():
     output.mkdir(parents=True, exist_ok=True)
     profile = mode + '\n' + ''.join(
         f'{block} {statements} {count}\n' for block, (statements, count) in sorted(blocks.items()))
+    timing = package_timings(base, root_package)
+    publish_report(base, root_package, profile, summary, timing)
     (output / 'coverage.out').write_text(profile)
     (output / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     links = ''.join(f'<li><a href="../shards/{name}/index.html">{html.escape(name)}</a>'
@@ -456,12 +603,10 @@ def merge():
     (base / 'index.html').write_text(
         '<!doctype html><html lang="en"><meta charset="utf-8">'
         '<title>Caddy Security CI reports</title><h1>Caddy Security CI reports</h1>'
+        '<p><a href="report/index.html">Unified test and coverage report</a></p>'
         '<p><a href="combined/index.html">Complete suite and combined coverage</a></p>\n')
     text = f"Full suite: {len(all_packages)} packages; combined coverage {summary['percent']:.2f}%.\n"
     print(text)
-    if os.environ.get('GITHUB_STEP_SUMMARY'):
-        with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as step:
-            step.write(text)
 
 
 def main():
@@ -480,6 +625,7 @@ def main():
         commands.add_parser(command).add_argument('shard', choices=SHARDS)
     commands.add_parser('gate')
     commands.add_parser('merge')
+    commands.add_parser('summary')
     args = parser.parse_args()
     if args.command == 'matrix':
         names = json.loads(args.inventory.read_text()) if args.inventory else None
@@ -498,6 +644,8 @@ def main():
         summarize(args.shard)
     elif args.command == 'gate':
         gate()
+    elif args.command == 'summary':
+        publish_summary()
     else:
         merge()
     return 0

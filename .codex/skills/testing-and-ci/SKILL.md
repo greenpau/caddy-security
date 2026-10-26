@@ -293,6 +293,10 @@ release check. It requires every dependency to succeed, verifies each discovered
 root test completed exactly once, validates the report evidence, and merges
 atomic coverage counters without counting root statements multiple times.
 Failed or unexpectedly skipped jobs cannot produce a successful gate.
+The primary coverage artifact is a standalone merged report; the separate
+`caddy-security_combined_coverage` artifact preserves original shard evidence.
+Successful runs publish only the merged GitHub summary, including module and
+package-directory timings; failed shards retain individual diagnostic summaries.
 
 Read the [parallel CI contract](references/parallel-ci.md) for shard ownership,
 new-test fallback, cache keys, browser prerequisites, failure artifacts, coverage

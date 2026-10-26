@@ -11,6 +11,9 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
+import xml.etree.ElementTree as ET
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -28,6 +31,7 @@ MODULE = 'example.invalid/cishards'
 
 class CIShardsUnitTests(unittest.TestCase):
     def setUp(self):
+        (ROOT / 'tmp').mkdir(exist_ok=True)
         spec = importlib.util.spec_from_file_location('ci_tests', ROOT / 'assets/scripts/ci_tests.py')
         self.ci = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.ci)
@@ -93,6 +97,82 @@ class CIShardsUnitTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 self.ci.partition(invalid)
 
+    def test_report_coalesces_root_lifecycle_and_preserves_test_events(self):
+        self.ci.SHARDS = ('later', 'earlier', 'packages')
+        with tempfile.TemporaryDirectory(dir=ROOT / 'tmp') as temporary:
+            base = Path(temporary)
+            original = []
+            for shard, package, hour, elapsed in (
+                    ('later', MODULE, 2, 3), ('earlier', MODULE, 1, 5),
+                    ('packages', MODULE + '/other', 1, 2)):
+                events = [dict(Action='start', Package=package, Time=f'2026-10-25T0{hour}:00:00Z'),
+                          dict(Action='run', Package=package, Test='Test' + shard),
+                          dict(Action='skip', Package=package, Test='Test' + shard),
+                          dict(Action='pass', Package=package, Elapsed=elapsed,
+                               Time=f'2026-10-25T0{hour}:01:00Z')]
+                original.extend(events)
+                output = base / 'shards' / shard / 'test_output.jsonl'
+                output.parent.mkdir(parents=True)
+                output.write_text(''.join(json.dumps(event) + '\n' for event in events))
+            projected = list(self.ci.report_events(base, MODULE))
+            root = [event for event in projected if event['Package'] == MODULE and not event.get('Test')]
+            self.assertEqual([event['Action'] for event in root], ['start', 'pass'])
+            self.assertEqual(root[0]['Time'], '2026-10-25T01:00:00Z')
+            self.assertEqual(root[1]['Time'], '2026-10-25T02:01:00Z')
+            self.assertEqual(root[1]['Elapsed'], 8)
+            self.assertEqual([event for event in projected if event.get('Test')],
+                             [event for event in original if event.get('Test')])
+            self.assertEqual([event for event in projected if event['Package'] != MODULE],
+                             [event for event in original if event['Package'] != MODULE])
+
+    def test_package_timings_distinguish_parallel_span_and_cumulative_work(self):
+        self.ci.SHARDS = ('first', 'second', 'packages')
+        with tempfile.TemporaryDirectory(dir=ROOT / 'tmp') as temporary:
+            base = Path(temporary)
+            for shard, package, start, finish, elapsed in (
+                    ('first', MODULE, '00:00:00+00:00', '00:00:05+00:00', 3),
+                    ('second', MODULE, '00:00:01+00:00', '00:00:04+00:00', 4),
+                    ('packages', MODULE + '/other', '01:00:00+01:00', '01:00:09+01:00', 6)):
+                output = base / 'shards' / shard
+                output.mkdir(parents=True)
+                (output / 'run.json').write_text(json.dumps(dict(
+                    started_at='2026-10-25T' + start, finished_at='2026-10-25T' + finish)))
+                (output / 'test_output.jsonl').write_text(json.dumps(dict(
+                    Action='pass', Package=package, Elapsed=elapsed)) + '\n')
+            timing = self.ci.package_timings(base, MODULE)
+            self.assertEqual(timing['wall_seconds'], 9)
+            self.assertEqual(timing['package_seconds'], 13)
+            self.assertEqual([(item['directory'], item['seconds']) for item in timing['packages']],
+                             [('.', 7), ('other', 6)])
+            execution = base / 'shards/first/run.json'
+            execution.write_text(json.dumps(dict(started_at='2026-10-25T00:00:10Z',
+                                                 finished_at='2026-10-25T00:00:05Z')))
+            with self.assertRaises(ValueError):
+                self.ci.package_timings(base, MODULE)
+
+    def test_successful_shard_keeps_timings_without_publishing_job_summary(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / 'tmp') as temporary:
+            base = Path(temporary)
+            summary = base / 'job-summary.md'
+            with mock.patch.object(self.ci, 'ROOT', base), mock.patch.dict(os.environ, dict(
+                    COVERAGE_DIR='reports', GITHUB_STEP_SUMMARY=str(summary))):
+                output = self.ci.directory('root-core')
+                output.mkdir(parents=True)
+                (output / 'resource-usage.json').write_text(json.dumps(dict(status='passed')))
+                (output / 'selection.json').write_text(json.dumps(dict(complete=True)))
+                events = output / 'test_output.jsonl'
+                events.write_text(json.dumps(dict(Action='pass', Package=MODULE, Elapsed=2)) + '\n')
+                self.ci.summarize('root-core')
+                self.assertFalse(summary.exists())
+                self.assertEqual(json.loads((output / 'timing.json').read_text())['packages'][0]['seconds'], 2)
+                events.write_text(json.dumps(dict(Action='fail', Package=MODULE, Elapsed=2)) + '\n')
+                self.ci.summarize('root-core')
+                self.assertIn('fail', summary.read_text())
+                previous = summary.read_bytes()
+                events.write_text(json.dumps(dict(Action='pass', Package=MODULE, Elapsed=2)) + '\n')
+                self.ci.summarize('root-core')
+                self.assertEqual(summary.read_bytes(), previous)
+
 
 class CIShardsTests(unittest.TestCase):
     def setUp(self):
@@ -106,11 +186,13 @@ class CIShardsTests(unittest.TestCase):
                                     'GOWORK', 'MINIMUM_COVERAGE')}
         self.env.update(PYTHONDONTWRITEBYTECODE='1', GOWORK='off',
                         COVERAGE_DIR='reports with spaces', TEST='^MustNotExcludeTests$',
-                        TEST_DIR='./missing', GIT_COMMIT='fixture', GIT_BRANCH='main', PREPARE_RESULT='success')
+                        TEST_DIR='./missing', GIT_COMMIT='fixture', GIT_BRANCH='main', PREPARE_RESULT='success',
+                        GITHUB_STEP_SUMMARY=str(self.root / 'job-summary.md'),
+                        COVERAGE_ARTIFACT_NAME='caddy-security_coverage_fixture')
         shutil.copyfile(ROOT / 'Makefile', self.root / 'Makefile')
         scripts = self.root / 'assets/scripts'
         scripts.mkdir(parents=True)
-        for name in ('ci_tests.py', 'ci_runtime_timings.json', 'test_guard.py'):
+        for name in ('ci_tests.py', 'ci_runtime_timings.json', 'ci_coverage_report.go', 'test_guard.py'):
             shutil.copyfile(ROOT / 'assets/scripts' / name, scripts / name)
         (self.root / 'VERSION').write_text('1.0.0\n')
         pinned = re.search(r'github.com/greenpau/tested (v\S+)', (ROOT / 'go.mod').read_text()).group(1)
@@ -177,6 +259,7 @@ func TestE2EValue(t *testing.T) {
 func TestE2EValueLonger(t *testing.T) { Value() }
 func TestE2EValueSession(t *testing.T) { Session() }
 func TestE2ENewFeature(t *testing.T) { Value() }
+func TestSkipped(t *testing.T) { t.Skip("retained skip") }
 func ExampleValue() { fmt.Println(Value()); // Output: 42
 }
 func FuzzSessionSeeds(f *testing.F) {
@@ -256,7 +339,7 @@ func FuzzSessionSeeds(f *testing.F) {
                                  names)
                 events = [json.loads(line) for line in
                           (output / 'test_output.jsonl').read_text().splitlines()]
-                actual = [e['Test'] for e in events if e['Action'] == 'pass'
+                actual = [e['Test'] for e in events if e['Action'] in ('pass', 'skip')
                           and e.get('Test') and '/' not in e['Test']]
                 self.assertEqual(sorted(actual), names)
                 discovery = json.loads((output / 'discovery/resource-usage.json').read_text())
@@ -273,14 +356,83 @@ func FuzzSessionSeeds(f *testing.F) {
             timing = json.loads((output / 'timing.json').read_text())
             self.assertEqual({p['package'] for p in timing['packages']}, set(plan[shard]))
             self.assertTrue(timing['slowest_tests'])
+        job_summary = Path(self.env['GITHUB_STEP_SUMMARY'])
+        self.assertFalse(job_summary.exists())
         self.cli('merge')
+        self.assertFalse(job_summary.exists())
         combined = base / 'combined'
         summary = json.loads((combined / 'summary.json').read_text())
         self.assertEqual(summary['packages'], 5)
-        self.assertEqual(summary['root_tests'], 49)
+        self.assertEqual(summary['root_tests'], 50)
         self.assertEqual(summary['covered'], 6)
         self.assertEqual(summary['statements'], 8)
         self.assertAlmostEqual(summary['percent'], 100 * 6 / 8)
+        report = base / 'report'
+        timings = json.loads((report / 'timing.json').read_text())
+        self.assertGreater(timings['wall_seconds'], 0)
+        self.assertEqual({item['package'] for item in timings['packages']},
+                         {package for group in plan.values() for package in group})
+        expected_seconds = sum(item['seconds'] for shard in SHARDS for item in
+                               json.loads((base / 'shards' / shard / 'timing.json').read_text())['packages'])
+        self.assertAlmostEqual(timings['package_seconds'], expected_seconds)
+        self.cli('summary')
+        self.assertIn('### caddy-security_coverage_fixture', job_summary.read_text())
+        self.assertIn('Entire module cumulative package time:', job_summary.read_text())
+        self.assertIn('Test process wall span:', job_summary.read_text())
+        for package in timings['packages']:
+            self.assertIn(f'| `{package["directory"]}` | {package["seconds"]:.2f}', job_summary.read_text())
+        self.assertIn('Entire module cumulative package time:', (report / 'index.html').read_text())
+        self.assertIn('ci_tests.py summary', (ROOT / '.github/workflows/build.yml').read_text())
+        unified = json.loads((report / 'summary.json').read_text())
+        self.assertEqual(unified['outcome'], 'passed')
+        self.assertEqual(unified['counts']['packages']['total'], 5)
+        self.assertEqual(unified['counts']['tests']['skipped'], 1)
+        self.assertEqual(unified['coverage']['statements'], summary['statements'])
+        self.assertEqual(unified['coverage']['covered'], summary['covered'])
+        self.assertFalse((report / 'run.json').exists())
+        self.assertTrue(all(path.is_file() for path in report.iterdir()))
+        self.assertIn('tested-coverage-theme-v1', (report / 'coverage.html').read_text())
+        occurrences = {(package['name'], test['name']): test['status']
+                       for package in unified['packages'] for test in package.get('tests', [])}
+        expected_occurrences = {}
+        for shard in SHARDS:
+            for line in (base / 'shards' / shard / 'test_output.jsonl').read_text().splitlines():
+                event = json.loads(line)
+                if event.get('Test') and event['Action'] in ('pass', 'skip'):
+                    expected_occurrences[event['Package'], event['Test']] = (
+                        'passed' if event['Action'] == 'pass' else 'skipped')
+        self.assertEqual(occurrences, expected_occurrences)
+        self.assertEqual(unified['counts']['tests']['total'], len(expected_occurrences))
+        cases = ET.parse(report / 'junit.xml').findall('.//testcase')
+        self.assertEqual(len(cases), len(expected_occurrences))
+        self.assertEqual(len([case for case in cases if case.find('skipped') is not None]), 1)
+        provenance = json.loads((report / 'aggregation.json').read_text())
+        self.assertEqual(set(provenance['sources']), set(SHARDS))
+        manifest = json.loads((report / 'manifest.json').read_text())
+        for entry in manifest['files']:
+            data = (report / entry['name']).read_bytes()
+            self.assertEqual(len(data), entry['size'])
+            self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'])
+
+        # Package the actual workflow upload paths, so the primary download
+        # opens directly while the separate diagnostic download retains shards.
+        workflow = (ROOT / '.github/workflows/build.yml').read_text().split('  core:\n', 1)[1]
+        for step, prefix, has_shards in (
+                ('Upload unified test and coverage report', 'caddy-security_coverage_', False),
+                ('Upload combined shard evidence', 'caddy-security_combined_coverage_', True)):
+            upload = workflow.split(f'      - name: {step}\n', 1)[1].split('      - name:', 1)[0]
+            self.assertIn('          name: ' + prefix + '${{', upload)
+            upload_path = re.search(r'^          path: (.+)$', upload, re.MULTILINE).group(1)
+            relative = Path(upload_path).relative_to('.coverage')
+            archive = shutil.make_archive(str(self.root / prefix), 'zip', base / relative)
+            with zipfile.ZipFile(archive) as bundle:
+                names = bundle.namelist()
+                self.assertIn('index.html', names)
+                self.assertEqual(any(name.startswith('shards/') for name in names), has_shards)
+                if not has_shards:
+                    self.assertIn('coverage.html', names)
+                    self.assertIn('test_output.html', names)
+                    self.assertTrue(all('/' not in name for name in names))
         # Compare a real unsplit run: overlapping root blocks must sum their
         # counters and count source statements once, preserving the coverage union.
         self.command('make', 'test', 'TEST=.', 'TEST_DIR=./...', 'COVERAGE_DIR=unsplit')
@@ -288,6 +440,7 @@ func FuzzSessionSeeds(f *testing.F) {
             return sorted(path.read_text().splitlines())
         self.assertEqual(profile(combined / 'coverage.out'),
                          profile(self.root / 'unsplit/coverage.out'))
+        self.assertEqual(profile(report / 'coverage.out'), profile(combined / 'coverage.out'))
         # The aggregate is a real Go coverage profile, usable by standard tooling.
         coverage = self.command('go', 'tool', 'cover', '-func', str(combined / 'coverage.out'))
         self.assertIn('75.0%', coverage.stdout)
@@ -300,6 +453,14 @@ func FuzzSessionSeeds(f *testing.F) {
 
         # Reject incomplete/overlapping/failed evidence without replacing the last good aggregate.
         good_profile = (combined / 'coverage.out').read_bytes()
+        good_report = {path.name: path.read_bytes() for path in report.iterdir()}
+        renderer = self.root / 'assets/scripts/ci_coverage_report.go'
+        original_renderer = renderer.read_bytes()
+        renderer.write_text('package main\nfunc broken(\n')
+        self.cli('merge', success=False)
+        renderer.write_bytes(original_renderer)
+        self.assertEqual({path.name: path.read_bytes() for path in report.iterdir()}, good_report)
+        self.assertEqual((combined / 'coverage.out').read_bytes(), good_profile)
         root = base / 'shards/root-core'
         def reject(path, data, reason):
             original = path.read_bytes()
@@ -316,12 +477,14 @@ func FuzzSessionSeeds(f *testing.F) {
             try:
                 self.assertIn(reason, self.cli('merge', success=False).stdout)
                 self.assertEqual((combined / 'coverage.out').read_bytes(), good_profile)
+                self.assertEqual({path.name: path.read_bytes() for path in report.iterdir()}, good_report)
             finally:
                 path.write_bytes(original)
                 manifest_path.write_bytes(original_manifest)
         corruptions = [
             ('run.json', lambda data: dict(data, capture_complete=False)),
             ('run.json', lambda data: dict(data, exit_code=1)),
+            ('run.json', lambda data: dict(data, started_at='invalid')),
             ('resource-usage.json', lambda data: dict(data, status='aborted')),
             ('selection.json', lambda data: dict(data, packages=[])),
             ('selection.json', lambda data: dict(data, complete=False)),

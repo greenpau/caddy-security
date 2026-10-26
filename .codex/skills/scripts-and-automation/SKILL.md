@@ -314,9 +314,10 @@ coverage and writes reports; never patch a finished bundle's coverage percentage
 
 The reusable `.github/workflows/build.yml` runs repository quality gates before
 starting 44 concurrent Go shards, checks source remains unchanged, and retains
-each shard's evidence plus an aggregate `.coverage/` bundle. Its stable `Tests and coverage`
-check requires every gate and verifies full test selection before merging
-coverage. Release CI requires this same gate. The
+each shard's evidence, a standalone merged coverage report, and a separate
+`caddy-security_combined_coverage` bundle with the original shard directories.
+Its stable `Tests and coverage` check requires every gate and verifies full
+test selection before merging coverage. Release CI requires this same gate. The
 [testing contract](../testing-and-ci/SKILL.md) owns local
 reproduction; [release ownership](../release-and-versioning/SKILL.md) covers
 artifact identities and tag requirements.

@@ -135,7 +135,7 @@ jobs:
           test -z "$(git ls-files --others --exclude-standard)"
       - name: Upload preparation evidence
         if: ${{ always() && steps.prepare.outcome != 'skipped' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: caddy-security_preparation_${{ needs.selection.outputs.artifact_id }}
           path: .coverage/prepare/
@@ -202,9 +202,10 @@ jobs:
           key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-${{ github.sha }}
       - name: Set up Node.js for browser E2E
         if: ${{ matrix.browser }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+          package-manager-cache: false
       - name: Install browser prerequisites
         if: ${{ matrix.browser }}
         run: |
@@ -228,7 +229,7 @@ jobs:
           test -z "$(git ls-files --others --exclude-standard)"
       - name: Upload shard evidence
         if: ${{ always() && steps.tests.outcome != 'skipped' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}_shard_${{ matrix.shard }}
           path: .coverage/shards/
@@ -243,6 +244,10 @@ jobs:
     if: ${{ !cancelled() && needs.selection.result != 'skipped' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      GOTOOLCHAIN: local
+      PYTHONDONTWRITEBYTECODE: '1'
+      COVERAGE_ARTIFACT_NAME: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -264,13 +269,33 @@ jobs:
           PREPARE_RESULT: ${{ needs.prepare.result }}
           GO_RESULT: ${{ needs.go.result }}
         run: python3 assets/scripts/ci_tests.py gate
+      - name: Set up Go for coverage reporting
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.10'
+          cache: false
       - name: Verify complete execution and combine coverage
+        id: merge
         run: python3 assets/scripts/ci_tests.py merge
-      - name: Upload complete test and coverage bundle
-        if: ${{ always() && steps.download.outcome == 'success' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Upload unified test and coverage report
+        id: coverage
+        if: ${{ !cancelled() && steps.merge.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: caddy-security_coverage_${{ needs.selection.outputs.artifact_id }}
+          path: .coverage/report/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: true
+      - name: Publish merged result and package timings
+        if: ${{ !cancelled() && steps.coverage.outcome == 'success' }}
+        run: python3 assets/scripts/ci_tests.py summary
+      - name: Upload combined shard evidence
+        if: ${{ always() && steps.download.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: caddy-security_combined_coverage_${{ needs.selection.outputs.artifact_id }}
           path: .coverage/
           include-hidden-files: true
           if-no-files-found: error

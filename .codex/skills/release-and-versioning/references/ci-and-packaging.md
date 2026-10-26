@@ -63,9 +63,12 @@ describes build selectors, file placement and Windows format overrides.
 Coverage is a separate diagnostic artifact. The reusable build workflow uploads
 individual `caddy-security_coverage_<artifact-id>_shard_<name>` bundles even after
 a failed test attempt. Its final gate downloads available evidence and uploads
-the aggregate `.coverage/` bundle as `caddy-security_coverage_<artifact-id>`,
-including hidden files, with 14-day retention. Successful validation additionally
-produces a complete execution/coverage summary and merged profile. Missing files
+the diagnostic `.coverage/` tree as
+`caddy-security_combined_coverage_<artifact-id>`, including all shard directories.
+Successful validation uploads `.coverage/report/` separately as
+`caddy-security_coverage_<artifact-id>`: a standalone merged report with its
+HTML entry point, annotated coverage, JSON and JUnit directly at the archive
+root. Both include hidden files and retain evidence for 14 days. Missing files
 fail uploads and test failures remain failures; reruns replace matching artifact
 names. Version/tag identity comes from a shared `make artifact-id` invocation.
 Read the [parallel CI contract](../../testing-and-ci/references/parallel-ci.md)
