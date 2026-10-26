@@ -1,0 +1,10 @@
+{
+	security {
+		credential authenticator consul keys {
+			realm staff
+			capacity 8
+			timeout 2s
+			prefix private/credentials
+		}
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"apps": {
+		"security": {
+			"config": {},
+			"credential_authenticators": [
+				{
+					"capacity": 8,
+					"driver": "consul",
+					"name": "keys",
+					"prefix": "private/credentials",
+					"realm": "staff",
+					"timeout": "2s"
+				}
+			]
+		}
+	}
+}

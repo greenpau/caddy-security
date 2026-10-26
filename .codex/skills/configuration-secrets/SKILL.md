@@ -1,6 +1,6 @@
 ---
 name: configuration-secrets
-description: "Configure security.secrets plugins and secret lookup values for users, credentials, and crypto. Use for SQLite provisioning, static/AWS wiring, and lookup failures; runtime field support belongs to runtime resolution."
+description: "Configure security.secrets plugins and secret lookup values for users, credentials, and crypto. Use for SQLite/Consul provisioning, static/AWS wiring, and lookup failures; runtime field support belongs to runtime resolution."
 ---
 
 # Configuration Secrets
@@ -12,7 +12,7 @@ secret-backed Caddyfile values. The parser is `caddyfile_secrets.go`; runtime
 replacement is in `caddyfile_resolve.go`.
 
 Secrets managers are Caddy modules under the `security.secrets` namespace.
-SQLite is bundled; static and AWS managers require external modules. The `security` app loads them through `SecretsManagerConfigs`; each
+SQLite and Consul are bundled; static and AWS managers require external modules. The `security` app loads them through `SecretsManagerConfigs`; each
 module must expose `GetConfig(ctx)["id"]`, `GetSecret(ctx)`, and
 `GetSecretByKey(ctx, key)`.
 
@@ -50,6 +50,13 @@ The third token is the manager ID, also called the secret ID in plugin logs and
 docs. It must match the middle segment of every lookup:
 `secrets:<secret_id>:<key>`. The inner block is owned by the selected secrets manager module; do not invent
 manager-specific fields. Manager IDs must be nonempty and unique across the app.
+
+## Consul Secrets Manager
+
+For the bundled `secrets consul MANAGER` declaration, use the
+[Consul secrets reference](references/consul.md). It reads an encrypted shared
+record into an immutable provisioning snapshot; trusted Go APIs own provisioning,
+and successful reload adopts rotation. The existing SQLite CLI stays separate.
 
 ## SQLite Secrets Manager
 

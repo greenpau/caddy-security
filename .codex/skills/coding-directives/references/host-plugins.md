@@ -33,7 +33,7 @@ realm and database path are distinct values; never use a path as implicit identi
 | Claims enrichment | `security.claims_enrichment.<driver>` | Native app binding below; bundled `static` adapter also has policy Caddyfile syntax |
 | Secrets | `security.secrets.<driver>` | Existing `SecretsManager` integration; external static/AWS module IDs remain unchanged |
 | External authorization | `security.external_authorization.<driver>` | Native app binding and bundled `httpjson` adapter with policy Caddyfile syntax |
-| Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled `sqlite` factory with global Caddyfile syntax; bind validated runtime proxy config before root construction |
+| Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled SQLite/Consul factories with global Caddyfile syntax; bind validated runtime proxy config before root construction |
 | Identity stores | `security.identity_stores.<driver>` | Native/global declarations and bundled SQLite factory; derived descriptors and runtime handles enter ordinary root assembly |
 | Identity providers | `security.identity_providers.<driver>` | Native/global declarations and bundled SQLite tickets; normalized descriptors and exact caller-owned providers enter ordinary root assembly |
 | Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
@@ -55,6 +55,7 @@ corresponding AuthCrunch backend and registers its own Caddy module exactly once
 | AuthCrunch backend under `plugins/` | Caddy companion under `plugins/` | Caddy module ID |
 | --- | --- | --- |
 | `claims-enrichment/static` | `claims-enrichment-static` | `security.claims_enrichment.static` |
+| `authproxy.ContextAuthenticator` (host Consul implementation) | `credential-authenticators-consul` | `security.credential_authenticators.consul` |
 | `credential-authenticators/sqlite` | `credential-authenticators-sqlite` | `security.credential_authenticators.sqlite` |
 | `cryptographic-signing/rsapss` | `cryptographic-signing-rsapss` | `security.access_signers.rsapss` |
 | `external-authorization/httpjson` | `external-authorization-httpjson` | `security.external_authorization.httpjson` |
@@ -66,6 +67,7 @@ corresponding AuthCrunch backend and registers its own Caddy module exactly once
 | `oauth.LoginStore` (host Consul implementation) | `oauth-login-storage-consul` | `security.oauth_login_stores.consul` |
 | `oauth-login-storage/sqlite` | `oauth-login-storage-sqlite` | `security.oauth_login_stores.sqlite` |
 | `registration-workflows/sqlite` | `registration-workflows-sqlite` | `security.registration_workflows.sqlite` |
+| Host `SecretsManager` (Consul snapshot implementation) | `secrets-consul` | `security.secrets.consul` |
 | `secrets/sqlite` | `secrets-sqlite` | `security.secrets.sqlite` |
 | `tokenrefresh.ManagedStore` (host Consul implementation) | `session-and-refresh-storage-consul` | `security.refresh_stores.consul` |
 | `session-and-refresh-storage/sqlite` | `session-and-refresh-storage-sqlite` | `security.refresh_stores.sqlite` |
@@ -474,3 +476,17 @@ before changing config defaults, schema, optimistic identity fences, replay
 history, generation retirement or deployment guarantees. Root state and local
 attachment ownership remain core concerns; do not implement a parallel portal
 session manager or bypass persistent refresh generation admission.
+
+## Consul credential and secrets companions
+
+`credential-authenticators-consul` implements fresh realm-bound API-key lookup
+through the existing app factory contract. `secrets-consul` snapshots one record
+during provisioning through the common secrets manager contract. Both reuse
+`internal/consulstate` and the configured Caddy Consul client; trusted public Go
+constructors supply issuance/revocation and secret mutation without public HTTP
+or CLI endpoints. Logical handles never own the global client. Read the
+[Consul API-key contract](../../configuration-authorization/references/consul-api-keys.md)
+and [Consul secrets contract](../../configuration-secrets/references/consul.md)
+before changing record identity, fresh lookup, snapshot/reload semantics or
+uncertain-write behavior. Secret module receivers must remain pointers because
+of their snapshot mutex; never copy their runtime state into native config.

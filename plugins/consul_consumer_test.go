@@ -16,14 +16,18 @@ package plugins_test
 
 import (
 	"encoding/json"
-	"github.com/caddyserver/caddy/v2"
-	_ "github.com/caddyserver/caddy/v2/modules/filestorage"
-	tickets "github.com/greenpau/caddy-security/plugins/identity-providers-consul"
-	accounts "github.com/greenpau/caddy-security/plugins/identity-stores-consul"
-	refresh "github.com/greenpau/caddy-security/plugins/session-and-refresh-storage-consul"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/caddyserver/caddy/v2"
+	_ "github.com/caddyserver/caddy/v2/modules/filestorage"
+
+	credentials "github.com/greenpau/caddy-security/plugins/credential-authenticators-consul"
+	tickets "github.com/greenpau/caddy-security/plugins/identity-providers-consul"
+	accounts "github.com/greenpau/caddy-security/plugins/identity-stores-consul"
+	secrets "github.com/greenpau/caddy-security/plugins/secrets-consul"
+	refresh "github.com/greenpau/caddy-security/plugins/session-and-refresh-storage-consul"
 )
 
 // Standalone companions must fail closed instead of silently selecting private
@@ -48,7 +52,7 @@ func TestConsulCompanionsRequireGlobalStorage(t *testing.T) {
 	if _, err := caddy.GetModule("security"); err == nil {
 		t.Fatal("companions imported the parent app")
 	}
-	for _, m := range []caddy.Module{&accounts.ConsulIdentityStore{Name: "accounts", Realm: "staff"}, &tickets.ConsulTicketIdentityProvider{Name: "tickets", Realm: "application", PublicOrigin: "https://auth.example.test", IssuerURL: "https://issuer.example.test/signin"}, &refresh.ConsulRefreshStore{Name: "sessions"}} {
+	for _, m := range []caddy.Module{&credentials.ConsulCredentialAuthenticator{Name: "keys", Realm: "staff"}, &secrets.ConsulSecretsManager{Name: "signing", Record: "tokens"}, &accounts.ConsulIdentityStore{Name: "accounts", Realm: "staff"}, &tickets.ConsulTicketIdentityProvider{Name: "tickets", Realm: "application", PublicOrigin: "https://auth.example.test", IssuerURL: "https://issuer.example.test/signin"}, &refresh.ConsulRefreshStore{Name: "sessions"}} {
 		t.Run(string(m.CaddyModule().ID), func(t *testing.T) {
 			raw, err := json.Marshal(m)
 			if err != nil {

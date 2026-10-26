@@ -1,0 +1,16 @@
+{
+	"apps": {
+		"security": {
+			"config": {},
+			"secrets_managers": [
+				{
+					"driver": "consul",
+					"name": "signing",
+					"prefix": "private/secrets",
+					"record": "tokens",
+					"timeout": "2s"
+				}
+			]
+		}
+	}
+}

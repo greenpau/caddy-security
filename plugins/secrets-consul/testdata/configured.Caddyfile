@@ -1,0 +1,9 @@
+{
+	security {
+		secrets consul signing {
+			record tokens
+			timeout 2s
+			prefix private/secrets
+		}
+	}
+}

@@ -1,6 +1,6 @@
 ---
 name: configuration-authorization
-description: "Configure authorization policies, ACLs, static claims enrichment, required external decisions, bypasses, identity headers, JWT verification, remote Basic/API-key auth, SQLite API keys, and direct OAuth without a portal."
+description: "Configure authorization policies, ACLs, static claims enrichment, required external decisions, bypasses, identity headers, JWT verification, remote Basic/API-key auth, SQLite/Consul API keys, and direct OAuth without a portal."
 ---
 
 # Configuration Authorization
@@ -323,11 +323,14 @@ promise immediate remote revocation from the same-app behavior. Third-party
 authenticators opt out only through the library's `authproxy.FreshAuthenticator`
 capability; this requires no new Caddyfile setting.
 
-For portal-free, immediately revocable API keys, use the bundled
-[SQLite credential authenticator](references/sqlite-api-keys.md). Its named global
-declaration is selected by the existing API-key policy syntax; Basic is unsupported.
-That reference owns private offline issuance and revocation as well as storage,
-realm binding, reload and failure behavior.
+For portal-free, immediately revocable API keys, read the bundled
+[SQLite credential authenticator](references/sqlite-api-keys.md) contract for
+private offline issuance, revocation, realm binding and storage failure behavior.
+For shared Consul API keys, read
+[Consul credential authenticators](references/consul-api-keys.md), including
+trusted Go issuance, fresh cross-replica revocation and required log filters.
+Both named global declarations use the existing API-key policy selector;
+Basic authentication is unsupported by these backends.
 
 Client checks for Basic and API-key auth:
 

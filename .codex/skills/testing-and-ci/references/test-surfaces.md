@@ -892,3 +892,21 @@ These checks qualify the [documented backend scope](../../configuration-state/re
 not distributed root epochs, portal sandboxes, local attachment targets or Consul
 cluster failover. Existing SQLite provider attachment tests cover the shared
 root attachment preflight and should be selected when that dispatcher changes.
+
+## Consul credentials and secrets
+
+Select `TestConsulCredential*`, `TestConsulSecrets*` and `TestCaddyfileAdapt` in
+`plugins/credential-authenticators-consul` and `plugins/secrets-consul` for these
+backends. `TestConsulCompanionsRequireGlobalStorage` in `plugins` covers unsupported
+storage without importing the root app. Category tests use disposable real Consul
+clients, including lost responses after committed mutations, capacity races,
+revocation, expiry, immutable snapshots and exact JSON value preservation.
+
+Run `TestCaddyConsulCredentialsSecretsE2E` for the production Caddy command,
+verified TLS, API-key authority across two processes, backend outage/recovery,
+secret-backed JWT rotation, rejected reload survival, restart and redacted logs.
+Select only the `Consul credentials and secrets` root adaptation case from
+`testcase_consul_credentials_secrets`. Supply `CADDY_SECURITY_TEST_CONSUL_BINARY`
+or Consul on PATH; skipped external cases do not establish deployment acceptance.
+The existing transaction helper is unchanged; these adapters do not distribute
+additional portal/root-state authority or qualify Consul cluster failover.
