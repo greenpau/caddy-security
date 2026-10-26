@@ -1,0 +1,16 @@
+{
+	"apps": {
+		"security": {
+			"config": {},
+			"oauth_login_stores": [
+				{
+					"capacity": 8,
+					"driver": "consul",
+					"name": "shared",
+					"prefix": "auth/pending",
+					"timeout": "5s"
+				}
+			]
+		}
+	}
+}

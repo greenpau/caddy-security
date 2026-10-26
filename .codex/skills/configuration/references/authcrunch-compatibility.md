@@ -72,7 +72,11 @@ See [SQLite identities](../../configuration-identity-stores/references/sqlite-in
 for declarations, administration and remaining profile/OP/attachment limits.
 `ServerOptions.OAuthLoginStores` remains a separate pending-login dependency.
 Do not duplicate the root runtime or relax persistent-state ownership.
-SQLite login-transaction storage is a local reference, not multi-host portal HA.
+SQLite login-transaction storage is a local reference. The
+[Consul companion](../../configuration-oauth-providers/references/consul-login-storage.md)
+uses Caddy's configured Consul client for cross-host pending transactions.
+Completed portal state and attached account identities retain their separate
+ownership; neither backend establishes full portal HA.
 
 The bundled `security.secrets.sqlite` adapter reads one private record per Caddy
 candidate and closes storage before constructing consumers. Trusted offline

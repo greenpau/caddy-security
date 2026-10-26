@@ -1,0 +1,16 @@
+{
+  "apps": {
+    "security": {
+      "config": {},
+      "oauth_login_stores": [
+        {
+          "driver": "consul",
+          "name": "shared",
+          "prefix": "security/oauth-logins",
+          "timeout": "3s",
+          "capacity": 1000
+        }
+      ]
+    }
+  }
+}

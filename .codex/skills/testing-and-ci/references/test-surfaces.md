@@ -864,6 +864,16 @@ OAuth control qualifies injection in one process; its separate pending map is
 not distributed. The parent test is race instrumented; built command processes
 are CGO-disabled production builds, not instrumented subprocess coverage.
 
+`plugins/oauth-login-storage-consul` covers conditional Consul transaction
+semantics, bounded capacity/expiry, cancellation, encrypted records, unavailable
+storage and uncertain committed writes. Its Caddyfile fixtures retain bare,
+empty-block and configured declarations. `TestCaddyConsulOAuthLoginStoreE2E`
+reuses the actual two-process Caddy journey with Caddy's configured Consul storage,
+plus disposable real Consul agents from `internal/consultest`. Set
+`CADDY_SECURITY_TEST_CONSUL_BINARY` or install `consul` on PATH to run that external
+service test; an unavailable binary produces an explicit skip. Keep this focused
+selection separate from a claim of Consul-cluster failover or full portal HA.
+
 Detailed storage expiry and transaction-failure matrices belong to the selected
 public SQLite/backend/root tests. Their results supplement actual Caddy evidence;
 they do not replace it or establish multi-host availability.

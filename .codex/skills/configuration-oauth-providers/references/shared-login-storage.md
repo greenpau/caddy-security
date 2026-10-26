@@ -1,7 +1,9 @@
 # Shared pending OAuth login storage
 
-Use this for upstream OAuth login callbacks that may reach another local Caddy
-process. The app supplies named public `oauth.LoginStore` handles through
+Use this for upstream OAuth login callbacks that may reach another Caddy
+process. SQLite shares one local database; the
+[Consul adapter](consul-login-storage.md) shares pending transactions across hosts
+through Caddy's configured `pteich/caddy-tlsconsul` client. The app supplies named public `oauth.LoginStore` handles through
 `ServerOptions.OAuthLoginStores`; providers retain ownership of authentication,
 PKCE, nonce, browser binding, exact callback and destination validation.
 
@@ -28,7 +30,8 @@ security {
 
 This is a fragment; configure the provider's actual issuer/discovery trust and
 portal routes under the [shared parser contract](shared-parser.md). Header form
-is exactly `oauth login store DRIVER NAME`. The SQLite flat block requires
+is exactly `oauth login store DRIVER NAME`. Consul has its own optional flat
+block and defaults documented in the linked adapter reference. The SQLite flat block requires
 `path VALUE` and accepts optional `timeout VALUE` and `capacity COUNT`, each once.
 The complete encoded body delegates to the public SQLite parser. Empty/unknown
 settings, nested blocks, duplicate fields and surplus arguments fail adaptation.

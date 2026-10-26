@@ -51,16 +51,8 @@ import (
 // fixture entrypoint adds only private TLS roots, without changing machine trust.
 // The parent remains race-instrumented; the bounded command build is cgo-free.
 func TestCaddySharedOAuthLoginStoreE2E(t *testing.T) {
-	binary := filepath.Join(t.TempDir(), "caddy")
-	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
-	build := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-trimpath", "-o", binary, "./testdata/runtime_state_caddy")
-	build.Env = append(os.Environ(), "CGO_ENABLED=0", "GOFLAGS=-trimpath -p=1")
-	build.WaitDelay = 5 * time.Second
-	output, err := build.CombinedOutput()
-	cancel()
-	if err != nil {
-		t.Fatalf("build actual Caddy command: %v\n%s", err, output)
-	}
+	binary := buildSharedOAuthCaddy(t)
+
 	t.Run("nested_shared_transactions", func(t *testing.T) {
 		f := newCaddySharedOAuthPair(t, binary, "/tenant/auth", 8, false)
 		f.qualifyTLS(t)
@@ -81,6 +73,21 @@ func TestCaddySharedOAuthLoginStoreE2E(t *testing.T) {
 	})
 }
 
+func buildSharedOAuthCaddy(t *testing.T) string {
+	t.Helper()
+	binary := filepath.Join(t.TempDir(), "caddy")
+	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
+	build := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-trimpath", "-o", binary, "./testdata/runtime_state_caddy")
+	build.Env = append(os.Environ(), "CGO_ENABLED=0", "GOFLAGS=-trimpath -p=1")
+	build.WaitDelay = 5 * time.Second
+	output, err := build.CombinedOutput()
+	cancel()
+	if err != nil {
+		t.Fatalf("build actual Caddy command: %v\n%s", err, output)
+	}
+	return binary
+}
+
 const sharedOAuthPeerHeader = "X-Caddy-Test-OAuth-Peer"
 
 type caddySharedOAuthProcess struct {
@@ -96,6 +103,7 @@ type caddySharedOAuthProcess struct {
 
 type caddySharedOAuthPair struct {
 	binary, origin, mount, callback, database, cert, key string
+	consulAddress                                        string
 	capacity                                             int
 	peers                                                [2]*caddySharedOAuthProcess
 	upstream, directUpstream                             *oauthE2EUpstream
@@ -119,7 +127,7 @@ type sharedOAuthHTTPResult struct {
 	err      error
 }
 
-func newCaddySharedOAuthPair(t *testing.T, binary, mount string, capacity int, direct bool) *caddySharedOAuthPair {
+func newCaddySharedOAuthPair(t *testing.T, binary, mount string, capacity int, direct bool, configure ...func(*caddySharedOAuthPair)) *caddySharedOAuthPair {
 	t.Helper()
 	cert, key, roots := cookieTLSCertificate(t)
 	pair, err := tls.LoadX509KeyPair(cert, key)
@@ -128,6 +136,9 @@ func newCaddySharedOAuthPair(t *testing.T, binary, mount string, capacity int, d
 	}
 	f := &caddySharedOAuthPair{binary: binary, mount: mount, capacity: capacity, cert: cert, key: key,
 		database: filepath.Join(registrationTestDirectory(t), "oauth.db"), signer: newJWKSKeyFiles(t, "RSA", "access")}
+	for _, option := range configure {
+		option(f)
+	}
 	f.secrets = append(f.secrets, oauthE2ESecret)
 	f.upstream = newOAuthE2EUpstream(t, pair, "EdDSA")
 	f.upstream.fixedSubject = "shared-oauth-subject"
@@ -255,9 +266,16 @@ route /_authcrunch/oauth2/direct/* {
 }
 `
 	}
+	backend := fmt.Sprintf("oauth login store sqlite shared {\npath %q\ntimeout 5s\ncapacity %d\n}", f.database, f.capacity)
+	globalStorage := ""
+	if f.consulAddress != "" {
+		globalStorage = fmt.Sprintf("storage consul {\naddress %q\nprefix issue508\naes_key 0123456789abcdef0123456789abcdef\n}", f.consulAddress)
+		backend = fmt.Sprintf("oauth login store consul shared {\ntimeout 5s\ncapacity %d\n}", f.capacity)
+	}
 	input := fmt.Sprintf(`{
  admin %s
  persist_config off
+ %s
  auto_https off
  servers {
   protocols h1 h2
@@ -275,11 +293,7 @@ route /_authcrunch/oauth2/direct/* {
   }
  }
  security {
-  oauth login store sqlite shared {
-   path %q
-   timeout 5s
-   capacity %d
-  }
+  %s
   oauth identity provider upstream {
    driver generic
    realm upstream
@@ -332,7 +346,7 @@ route /_authcrunch/oauth2/direct/* {
  route {
   respond "shared OAuth outside" 404
  }
-}`, p.admin, filepath.Join(p.workspace, "runtime.log"), f.database, f.capacity, oauthE2EClient, secret, f.upstream.server.URL, f.upstream.server.URL,
+}`, p.admin, globalStorage, filepath.Join(p.workspace, "runtime.log"), backend, oauthE2EClient, secret, f.upstream.server.URL, f.upstream.server.URL,
 		loginStore, f.signer.signer("access"), strings.TrimPrefix(f.origin, "https://"), f.signer.verifier("access"), directProvider,
 		p.origin, f.cert, f.key, filepath.Join(p.workspace, "access.log"), directRoutes, mount, portal, mount)
 	data, _, err := caddyconfig.GetAdapter("caddyfile").Adapt([]byte(input), nil)

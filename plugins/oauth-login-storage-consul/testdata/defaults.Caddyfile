@@ -1,0 +1,5 @@
+{
+	security {
+		oauth login store consul shared
+	}
+}

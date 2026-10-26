@@ -24,8 +24,10 @@ but SAML uses the local `go-authcrunch/pkg/idp/saml` implementation.
 Read [shared parsing, grammar compatibility, and trust](references/shared-parser.md)
 when changing OAuth directives, issuer/audience, keys, or parser validation.
 Use [shared pending-login storage](references/shared-login-storage.md) for named
-`oauth login store` declarations, provider namespaces, SQLite capacity, runtime
-ownership and callbacks completed by another local Caddy process.
+`oauth login store` declarations, provider namespaces, backend capacity, runtime
+ownership and callbacks completed by another Caddy process. Use the
+[Consul adapter](references/consul-login-storage.md) for multi-host pending
+transactions through Caddy's configured `pteich/caddy-tlsconsul` storage.
 
 The [qualified operator examples](../configuration/references/operator-examples.md)
 include an actual TLS journey using explicit issuer/access-token audience and

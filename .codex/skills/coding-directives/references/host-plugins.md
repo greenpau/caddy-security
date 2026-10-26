@@ -61,6 +61,7 @@ corresponding AuthCrunch backend and registers its own Caddy module exactly once
 | `identity-providers/sqlite` | `identity-providers-sqlite` | `security.identity_providers.sqlite` |
 | `identity-stores/sqlite` | `identity-stores-sqlite` | `security.identity_stores.sqlite` |
 | `messaging/sqlite` | `messaging-sqlite` | `security.messaging.sqlite` |
+| `oauth.LoginStore` (host Consul implementation) | `oauth-login-storage-consul` | `security.oauth_login_stores.consul` |
 | `oauth-login-storage/sqlite` | `oauth-login-storage-sqlite` | `security.oauth_login_stores.sqlite` |
 | `registration-workflows/sqlite` | `registration-workflows-sqlite` | `security.registration_workflows.sqlite` |
 | `secrets/sqlite` | `secrets-sqlite` | `security.secrets.sqlite` |
@@ -75,11 +76,16 @@ Companions depend on those contracts, AuthCrunch and shared lexical helpers in
 `internal/caddyfileutil`; they do not import the parent `security` package.
 Keep lifecycle, root assembly, route integration, worker management and
 cross-backend storage admission in the app. Delegate backend grammar to the
-existing public AuthCrunch parser packages.
+existing public AuthCrunch parser packages. The host-owned Consul OAuth backend
+uses its own small parser because AuthCrunch supplies the runtime interface
+rather than a Consul backend/parser. It borrows the configured
+`pteich/caddy-tlsconsul` client and uses conditional Consul transactions; generic
+CertMagic locking does not establish OAuth single-use semantics. The global
+client remains owned by Caddy when the app retires a transaction handle.
 
 The original root adapter filenames retain type aliases and import the companion
 packages. Root factory interfaces alias `pkg/plugin` as well, preserving method
-signatures for existing consumers. Importing the root still bundles all 11
+signatures for existing consumers. Importing the root still bundles all 12
 modules, including the normal `cmd/authcrunch` build; existing Caddyfiles, JSON
 selectors and module IDs retain their meanings. Importing a companion alone
 registers its backend module without registering the parent app. Do not add a

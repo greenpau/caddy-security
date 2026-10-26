@@ -1,0 +1,9 @@
+{
+	security {
+		oauth login store consul shared {
+			prefix auth/pending
+			timeout 5s
+			capacity 8
+		}
+	}
+}
