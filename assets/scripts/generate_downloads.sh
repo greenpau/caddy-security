@@ -1,9 +1,23 @@
 #!/bin/bash
 set -e
 
-printf "Generating download links\n"
-
 OUT_FILE=README.md
+DOWNLOAD_MARKER='<!-- caddy-security-downloads -->'
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != --check ]; }; then
+  echo "Usage: generate_downloads.sh [--check]" >&2
+  exit 2
+fi
+marker_count=$(grep -Fxc -- "$DOWNLOAD_MARKER" "$OUT_FILE" || true)
+case "$marker_count" in
+  1) ;;
+  0|'') echo "README download insertion marker is missing" >&2; exit 1 ;;
+  *) echo "README download insertion marker must occur exactly once" >&2; exit 1 ;;
+esac
+if [ "$#" -eq 1 ]; then
+  exit 0
+fi
+
+printf "Generating download links\n"
 
 declare -a _TARGET_OS
 declare -a _TARGET_ARCH
@@ -29,7 +43,7 @@ else
   sed -i '/\/caddyserver.com\/api\/download/d' README.md
 fi
 
-DLOAD_LINE=$(grep -Fn 'Download Caddy with the plugins enabled' README.md | cut -d":" -f1)
+DLOAD_LINE=$(grep -Fnx -- "$DOWNLOAD_MARKER" "$OUT_FILE" | cut -d":" -f1)
 DLOAD_LINE=$((DLOAD_LINE+1))
 
 for OS_ID in "${!_TARGET_OS[@]}"; do

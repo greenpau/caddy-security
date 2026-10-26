@@ -25,9 +25,14 @@ Keep these version surfaces distinct:
   again for the commit subject and annotated tag.
 - `assets/scripts/generate_downloads.sh` projects `VERSION` into README Caddy
   download URLs. It separately hard-codes the `caddy-trace` version. Verify its
-  `Download Caddy with the plugins enabled` insertion marker exists before
-  regenerating links, and inspect their placement afterward. The macOS branch
-  requires `gsed` as well as BSD `sed`.
+  `<!-- caddy-security-downloads -->` marker occurs exactly once on its own line
+  before regenerating links, and inspect their placement afterward. The visible
+  download caption can change independently. Run
+  `bash assets/scripts/generate_downloads.sh --check` to validate it without
+  changing files; release preflight uses
+  this same check before bumping. Missing or duplicate markers also stop direct
+  generation before deleting existing links. The macOS branch requires `gsed`
+  as well as BSD `sed`.
 - `go.mod` selects the go-authcrunch dependency version; `../go-authcrunch/VERSION`
   is the sibling library's release number. Neither sets this module's version.
   `make sync` updates dependency references and removes local replacements; it

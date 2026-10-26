@@ -9,6 +9,64 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[3]
+DOWNLOAD_MARKER = '<!-- caddy-security-downloads -->'
+
+
+class DownloadGenerationTests(unittest.TestCase):
+    def setUp(self):
+        (ROOT / 'tmp').mkdir(exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(prefix='release-downloads-', dir=ROOT / 'tmp')
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.script = self.root / 'generate_downloads.sh'
+        shutil.copyfile(ROOT / 'assets/scripts/generate_downloads.sh', self.script)
+        self.readme = self.root / 'README.md'
+        shutil.copyfile(ROOT / 'README.md', self.readme)
+        (self.root / 'VERSION').write_text('1.2.0\n')
+
+    def generate(self, *args):
+        return subprocess.run(['bash', str(self.script), *args], cwd=self.root,
+                              text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)
+
+    def test_read_only_check_accepts_repository_readme(self):
+        original = self.readme.read_bytes()
+        result = self.generate('--check')
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(self.readme.read_bytes(), original)
+        self.assertEqual((self.root / 'VERSION').read_text(), '1.2.0\n')
+
+    def test_invalid_marker_or_arguments_leave_download_links_unchanged(self):
+        original = self.readme.read_text()
+        for content, reason in (
+                (original.replace(DOWNLOAD_MARKER, ''), 'marker is missing'),
+                (original + '\n' + DOWNLOAD_MARKER + '\n', 'marker must occur exactly once')):
+            for arguments in ((), ('--check',)):
+                with self.subTest(reason=reason, arguments=arguments):
+                    self.readme.write_text(content)
+                    result = self.generate(*arguments)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(reason, result.stdout)
+                    self.assertEqual(self.readme.read_text(), content)
+        self.readme.write_text(original)
+        for arguments in (('--invalid',), ('--check', 'extra')):
+            result = self.generate(*arguments)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(self.readme.read_text(), original)
+
+    def test_download_generation_survives_caption_changes_and_is_idempotent(self):
+        _, marker, links = self.readme.read_text().partition(DOWNLOAD_MARKER)
+        self.assertTrue(marker)
+        caption = '# Available server downloads\n'
+        self.readme.write_text(caption + marker + links)
+        result = self.generate()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        generated = self.readme.read_text()
+        self.assertTrue(generated.startswith(caption + DOWNLOAD_MARKER + '\n'))
+        self.assertEqual(generated.count('caddyserver.com/api/download'), 2)
+        self.assertEqual(generated.count('caddy-security%40v1.2.0'), 2)
+        self.assertEqual(generated.count(DOWNLOAD_MARKER), 1)
+        self.assertEqual(self.generate().returncode, 0)
+        self.assertEqual(self.readme.read_text(), generated)
 
 
 class ReleaseTests(unittest.TestCase):
@@ -37,8 +95,7 @@ class ReleaseTests(unittest.TestCase):
                              '    app.SetVersion(appVersion, "1.1.64")\n}\n')
         (self.root / 'VERSION').write_text('1.1.64\n')
         (self.root / 'README.md').write_text(
-            '# Fixture\n\nDownload Caddy with the plugins enabled:\n'
-            '* <a href="https://caddyserver.com/api/download?old">old link</a>\n\nEnd.\n')
+            '# Fixture\n\n' + (ROOT / 'README.md').read_text() + '\nEnd.\n')
         (self.root / '.gitignore').write_text('.fixture/\n__pycache__/\n')
         (self.root / '.fixture').mkdir()
         # Public targets come from the actual Makefile. Recursive gates are bounded
@@ -251,6 +308,20 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.64')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), self.initial)
+
+    def test_duplicate_download_marker_fails_before_bump(self):
+        readme = self.root / 'README.md'
+        readme.write_text(readme.read_text() + '\n<!-- caddy-security-downloads -->\n')
+        self.run_command('git', 'add', 'README.md')
+        self.run_command('git', 'commit', '-qm', 'ops: duplicate fixture marker')
+        head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
+        result = self.release('minor', fast=True, ok=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('marker must occur exactly once', result.stdout)
+        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.64')
+        self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), head)
+        self.assertEqual(self.remote_head(), self.initial)
+        self.assertEqual(self.run_command('git', 'tag').stdout, '')
 
     def test_invalid_arguments_and_partial_targets_cannot_publish(self):
         for args in (('major',), ('patch', '--skip-test'), ('minor', '--skip-tests', 'extra'),

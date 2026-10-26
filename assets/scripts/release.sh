@@ -32,7 +32,7 @@ tag="v${version}"
 if git show-ref --verify --quiet "refs/tags/${tag}"; then fail "tag ${tag} already exists locally"; fi
 remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}")
 [ -z "$remote_tag" ] || fail "tag ${tag} already exists on origin"
-grep -Fq 'Download Caddy with the plugins enabled' README.md || fail "README download insertion marker is missing"
+bash assets/scripts/generate_downloads.sh --check
 if [ "$(uname -s)" = Darwin ]; then
     command -v gsed >/dev/null || fail "download generation requires gsed on macOS"
 fi
