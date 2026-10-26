@@ -82,6 +82,12 @@ owns those settings; mount callback/logout paths through the same policy.
 
 ## Named refresh storage
 
+Read [Consul companions](references/consul-companions.md) for shared password
+accounts, application tickets and Consul-managed refresh families. Consul refresh
+retains the exclusive root-state requirement and per-root namespace in the linked
+contract; this module alone does not distribute portal sessions or sandboxes.
+
+
 A portal selecting [named refresh storage](../configuration-authentication/references/refresh-storage.md)
 must enable this root state block. The SQLite database supplies transactional
 families and spent history; root state supplies the stable namespace, changing

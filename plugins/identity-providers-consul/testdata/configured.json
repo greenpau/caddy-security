@@ -1,0 +1,21 @@
+{
+	"apps": {
+		"security": {
+			"config": {},
+			"identity_providers": [
+				{
+					"base_path": "/auth",
+					"capacity": 8,
+					"cookie_name": "AUTHP_PROVIDER_SESSION_ID",
+					"driver": "consul",
+					"issuer_url": "https://issuer.example.test/signin",
+					"name": "tickets",
+					"prefix": "custom/tickets",
+					"public_origin": "https://auth.example.test",
+					"realm": "application",
+					"timeout": "2s"
+				}
+			]
+		}
+	}
+}

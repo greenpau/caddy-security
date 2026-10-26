@@ -83,6 +83,7 @@ func TestCaddyfileAdaptAuthenticationToJSON(t *testing.T) {
 		{name: "duplicate identity attachment rejected", inputFileNamePrefix: "testcase_identity_attachment_duplicate", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid identity attachment: duplicate identity attachment directive, at Caddyfile:6")},
 		{name: "shared Consul OAuth login storage", inputFileNamePrefix: "testcase_oauth_login_storage_consul"},
+		{name: "Consul identity and refresh companions", inputFileNamePrefix: "testcase_consul_companions"},
 		{name: "shared SQLite OAuth login storage and deferred selection", inputFileNamePrefix: "testcase_oauth_login_storage"},
 		{name: "SQLite OAuth login storage rejects duplicate capacity", inputFileNamePrefix: "testcase_oauth_login_storage_duplicate", shouldErr: true,
 			err: fmt.Errorf("parsing caddyfile tokens for 'security': invalid SQLite OAuth login storage configuration, at Caddyfile:7")},

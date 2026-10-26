@@ -1,0 +1,19 @@
+{
+	security {
+		identity store consul accounts {
+			realm staff
+			capacity 8
+			timeout 2s
+			prefix custom/accounts
+		}
+		identity provider consul tickets {
+			realm application
+			public_origin https://auth.example.test
+			issuer_url https://issuer.example.test/signin
+			capacity 8
+			timeout 2s
+			prefix custom/tickets
+		}
+		token refresh store consul sessions
+	}
+}

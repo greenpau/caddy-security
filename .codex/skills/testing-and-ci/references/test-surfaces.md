@@ -877,3 +877,18 @@ selection separate from a claim of Consul-cluster failover or full portal HA.
 Detailed storage expiry and transaction-failure matrices belong to the selected
 public SQLite/backend/root tests. Their results supplement actual Caddy evidence;
 they do not replace it or establish multi-host availability.
+
+## Consul identity, ticket and refresh companions
+
+Select `TestConsulIdentityStore`, `TestConsulTicketProvider`,
+`TestConsulRefreshStore`, their parser/adapt cases and
+`TestConsulStateTransactions` for account/ticket/refresh CAS changes. Their real
+Consul fixtures cover independent clients and ambiguous committed responses.
+Run root `TestCaddyConsulCompanionsE2E` for assembled Caddy HTTP/TLS, refresh
+restart/replay and a peer ticket callback; select the `Consul identity and refresh
+companions` root adaptation case too. Supply `CADDY_SECURITY_TEST_CONSUL_BINARY`
+or install Consul on PATH; missing binaries explicitly skip external cases.
+These checks qualify the [documented backend scope](../../configuration-state/references/consul-companions.md),
+not distributed root epochs, portal sandboxes, local attachment targets or Consul
+cluster failover. Existing SQLite provider attachment tests cover the shared
+root attachment preflight and should be selected when that dispatcher changes.

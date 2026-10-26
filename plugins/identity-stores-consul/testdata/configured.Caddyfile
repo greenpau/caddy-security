@@ -1,0 +1,10 @@
+{
+	security {
+		identity store consul accounts {
+			realm staff
+			capacity 8
+			timeout 2s
+			prefix custom/accounts
+		}
+	}
+}

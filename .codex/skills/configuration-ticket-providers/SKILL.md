@@ -1,11 +1,17 @@
 ---
 name: configuration-ticket-providers
-description: "Configure SQLite single-use ticket login issued by a trusted application, browser binding, storage and recovery. OAuth/SAML providers have separate owners."
+description: "Configure SQLite or Consul single-use ticket login issued by a trusted application, browser binding, storage and recovery. OAuth/SAML providers have separate owners."
 ---
 
 # Ticket Identity Providers
 
 ## Scope and trust boundary
+
+For shared `identity provider consul NAME` tickets, read
+[Consul companions](../configuration-state/references/consul-companions.md).
+The Consul provider preserves the trusted-application/browser-binding protocol;
+its attached account identity still follows the core local-store boundary.
+
 
 Use `identity provider sqlite <name>` for login tickets issued by an authenticated,
 authorized application. The application owns its user authentication and chooses

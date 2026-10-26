@@ -1,0 +1,17 @@
+{
+	"apps": {
+		"security": {
+			"config": {},
+			"identity_stores": [
+				{
+					"capacity": 8,
+					"driver": "consul",
+					"name": "accounts",
+					"prefix": "custom/accounts",
+					"realm": "staff",
+					"timeout": "2s"
+				}
+			]
+		}
+	}
+}

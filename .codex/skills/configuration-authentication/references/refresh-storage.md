@@ -2,6 +2,13 @@
 
 ## Selection and configuration
 
+For `token refresh store consul NAME`, read
+[Consul companions](../../configuration-state/references/consul-companions.md).
+The same core selection, equal-limit and root-state rules apply. Consul defaults
+are 1000 sessions and 128 rotations; set those limits explicitly in the selecting
+portal. The current core namespace remains private to one persistent root.
+
+
 Declare the backend in the global `security` block and select it inside each
 participating portal. Keep the database outside the managed root-state directory:
 

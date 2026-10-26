@@ -73,30 +73,39 @@ func (app *App) prepareIdentityProviders(ctx caddy.Context, config *authcrunch.C
 		}
 		seen[descriptor.Name] = true
 		var attachmentStore string
-		if ticket, ok := module.(*SQLiteTicketIdentityProvider); ok {
+		switch ticket := module.(type) {
+		case *SQLiteTicketIdentityProvider:
 			normalized, err := ticket.BackendConfig()
 			if err != nil {
 				return fmt.Errorf("identity provider %d attachment configuration is invalid", i)
 			}
 			if normalized.Attachment != nil {
 				attachmentStore = normalized.Attachment.LocalIdentityStore
-				matches := 0
-				invalidKind := false
-				for _, store := range config.IdentityStores {
-					if store != nil && store.Name == attachmentStore {
-						matches++
-						invalidKind = invalidKind || store.Kind != "local"
-					}
+			}
+		case *ConsulTicketIdentityProvider:
+			var err error
+			attachmentStore, err = ticket.AttachmentStoreName()
+			if err != nil {
+				return fmt.Errorf("identity provider %d attachment configuration is invalid", i)
+			}
+		}
+		if attachmentStore != "" {
+			matches := 0
+			invalidKind := false
+			for _, store := range config.IdentityStores {
+				if store != nil && store.Name == attachmentStore {
+					matches++
+					invalidKind = invalidKind || store.Kind != "local"
 				}
-				for _, store := range config.ExternalIdentityStores {
-					if store != nil && store.Name == attachmentStore {
-						matches++
-						invalidKind = true
-					}
+			}
+			for _, store := range config.ExternalIdentityStores {
+				if store != nil && store.Name == attachmentStore {
+					matches++
+					invalidKind = true
 				}
-				if matches != 1 || invalidKind {
-					return fmt.Errorf("identity provider %d attachment requires one configured local identity store", i)
-				}
+			}
+			if matches != 1 || invalidKind {
+				return fmt.Errorf("identity provider %d attachment requires one configured local identity store", i)
 			}
 		}
 		copy := *descriptor

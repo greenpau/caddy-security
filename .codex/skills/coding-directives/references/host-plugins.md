@@ -58,13 +58,16 @@ corresponding AuthCrunch backend and registers its own Caddy module exactly once
 | `credential-authenticators/sqlite` | `credential-authenticators-sqlite` | `security.credential_authenticators.sqlite` |
 | `cryptographic-signing/rsapss` | `cryptographic-signing-rsapss` | `security.access_signers.rsapss` |
 | `external-authorization/httpjson` | `external-authorization-httpjson` | `security.external_authorization.httpjson` |
+| `idp.HTTPLoginProvider` (host Consul ticket implementation) | `identity-providers-consul` | `security.identity_providers.consul` |
 | `identity-providers/sqlite` | `identity-providers-sqlite` | `security.identity_providers.sqlite` |
+| `ids.IdentityStore` (host Consul implementation) | `identity-stores-consul` | `security.identity_stores.consul` |
 | `identity-stores/sqlite` | `identity-stores-sqlite` | `security.identity_stores.sqlite` |
 | `messaging/sqlite` | `messaging-sqlite` | `security.messaging.sqlite` |
 | `oauth.LoginStore` (host Consul implementation) | `oauth-login-storage-consul` | `security.oauth_login_stores.consul` |
 | `oauth-login-storage/sqlite` | `oauth-login-storage-sqlite` | `security.oauth_login_stores.sqlite` |
 | `registration-workflows/sqlite` | `registration-workflows-sqlite` | `security.registration_workflows.sqlite` |
 | `secrets/sqlite` | `secrets-sqlite` | `security.secrets.sqlite` |
+| `tokenrefresh.ManagedStore` (host Consul implementation) | `session-and-refresh-storage-consul` | `security.refresh_stores.consul` |
 | `session-and-refresh-storage/sqlite` | `session-and-refresh-storage-sqlite` | `security.refresh_stores.sqlite` |
 
 `pkg/plugin` owns the public category contracts and OAuth storage metadata, with
@@ -85,9 +88,9 @@ client remains owned by Caddy when the app retires a transaction handle.
 
 The original root adapter filenames retain type aliases and import the companion
 packages. Root factory interfaces alias `pkg/plugin` as well, preserving method
-signatures for existing consumers. Importing the root still bundles all 12
-modules, including the normal `cmd/authcrunch` build; existing Caddyfiles, JSON
-selectors and module IDs retain their meanings. Importing a companion alone
+signatures for existing consumers. Importing the root still bundles the
+companions listed above in the normal `cmd/authcrunch` build; existing Caddyfiles,
+JSON selectors and module IDs retain their meanings. Importing a companion alone
 registers its backend module without registering the parent app. Do not add a
 second registration hook to an alias file or make companions depend on the root.
 
@@ -459,3 +462,15 @@ ticket handles may share one canonical file, without exclusive local-snapshot
 reservations; different hardlink names and cross-category aliases are rejected.
 See [ticket configuration](../../configuration-ticket-providers/SKILL.md) for
 trusted issuance, private identity lifetime, browser cookies and recovery.
+
+## Consul identity, ticket and refresh companions
+
+The host-owned Consul companions implement the public typed backend contracts
+using `internal/consulstate`. One encrypted bounded document per category/name
+atomically owns each backend's records. Factories retain a borrowed Caddy client;
+logical cleanup never closes it. Read
+[Consul companions](../../configuration-state/references/consul-companions.md)
+before changing config defaults, schema, optimistic identity fences, replay
+history, generation retirement or deployment guarantees. Root state and local
+attachment ownership remain core concerns; do not implement a parallel portal
+session manager or bypass persistent refresh generation admission.

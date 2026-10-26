@@ -1,0 +1,5 @@
+{
+	security {
+		token refresh store consul sessions
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"apps": {
+		"security": {
+			"config": {},
+			"refresh_stores": [
+				{
+					"driver": "consul",
+					"max_rotations": 128,
+					"max_sessions": 1000,
+					"name": "sessions",
+					"prefix": "security/refresh",
+					"timeout": "3s"
+				}
+			]
+		}
+	}
+}

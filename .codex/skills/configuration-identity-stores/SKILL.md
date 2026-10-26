@@ -1,6 +1,6 @@
 ---
 name: configuration-identity-stores
-description: "Configure local, LDAP or SQLite password identity stores, trusted SQLite administration, realms, databases, binds, TLS trust and group mappings. Delegates static local entries to configuration-users."
+description: "Configure local, LDAP, SQLite or Consul password identity stores, trusted SQLite administration, realms, databases, binds, TLS trust and group mappings. Delegates static local entries to configuration-users."
 ---
 
 # Configuration Identity Stores
@@ -25,6 +25,11 @@ For SQLite password accounts and trusted offline administration, read
 root runtime injection and preserves its own kind, epoch and password-only
 capabilities. The separate SQLite API-key authenticator does not create portal
 password accounts.
+
+For `identity store consul NAME`, read
+[Consul companions](../configuration-state/references/consul-companions.md).
+It supplies shared password accounts through Caddy's configured Consul client.
+It retains an external kind and cannot replace a core local attachment target.
 
 ## Local Stores
 

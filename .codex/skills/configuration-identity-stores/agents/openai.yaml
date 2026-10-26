@@ -1,4 +1,4 @@
 interface:
   display_name: "Configuration Identity Stores"
-  short_description: "Configure local, LDAP and SQLite stores"
-  default_prompt: "Use $configuration-identity-stores to configure identity stores or provision SQLite password accounts privately."
+  short_description: "Configure local, LDAP, SQLite and Consul stores"
+  default_prompt: "Use $configuration-identity-stores to configure identity stores or provision SQLite and Consul password accounts privately."
