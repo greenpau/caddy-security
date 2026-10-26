@@ -1,6 +1,6 @@
 ---
 name: release-and-versioning
-description: "Maintain VERSION, release targets, versioned artifacts, GoReleaser packaging, and publication. Use for release preparation, version checks, and explicitly requested releases; dependency refresh is separate."
+description: "Maintain VERSION, release notes, release targets, versioned artifacts, GoReleaser packaging, and publication. Use for release-note drafts, release preparation, version checks, and explicitly requested releases; dependency refresh is separate."
 ---
 
 # Release and Versioning
@@ -109,6 +109,17 @@ Unexpected staged, other tracked, or untracked changes stop publication.
 The commit subject is `ops: released v<VERSION>` and the exact tag is annotated.
 One atomic push publishes `HEAD:refs/heads/main` and that tag to origin; unrelated
 local tags are excluded. There is no fallback to separate pushes.
+
+## Release Notes
+
+When drafting or reviewing release notes, review both caddy-security commits
+and the go-authcrunch commits introduced by the dependency change. Derive the
+upstream endpoints from `go.mod` at the previous and target caddy-security
+revisions; the sibling checkout's HEAD or VERSION may describe a later release.
+Include relevant upstream commit links, distinguish Caddy integration from
+inherited runtime changes, and retain deployment and compatibility limits.
+Follow the [release-note drafting workflow](references/ci-and-packaging.md#release-note-drafts)
+for endpoint selection, source review, citations, and draft validation.
 
 ## Preparation and Publication
 

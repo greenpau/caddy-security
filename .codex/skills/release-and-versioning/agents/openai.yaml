@@ -1,4 +1,4 @@
 interface:
   display_name: "Release and Versioning"
-  short_description: "Manage caddy-security versions and releases"
-  default_prompt: "Use $release-and-versioning to review caddy-security version state and prepare the requested release workflow."
+  short_description: "Prepare versions, release notes, and publication"
+  default_prompt: "Use $release-and-versioning to review caddy-security version state, draft release notes from both repositories, and prepare the requested release workflow."

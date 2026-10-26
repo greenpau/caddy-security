@@ -75,6 +75,50 @@ Read the [parallel CI contract](../../testing-and-ci/references/parallel-ci.md)
 for completeness and failure handling. README Caddy download URLs
 are another distribution surface and are not the GoReleaser asset inventory.
 
+## Release-note Drafts
+
+Scope a draft to the previous caddy-security release and the intended target
+revision. Use the target tag when it exists; for unreleased work, identify the
+reviewed commit and disclose any included working-tree changes. Review the
+complete caddy-security commit range and diff, including compatibility changes
+that automated changelog filters may omit.
+
+Read `go.mod` at both endpoints with `git show <ref>:go.mod` and derive the
+go-authcrunch versions from those files. Review the upstream commit range and
+diff between those exact versions, including every intervening upstream release.
+Do not substitute the sibling's current HEAD, VERSION, or the latest published
+version. Resolve pseudo-versions to their commits; inspect replacements and
+state their effect rather than describing an unpublished replacement as a
+published dependency. If the dependency is unchanged, say so without importing
+unrelated upstream changes into the draft.
+
+Use read-only Git history or GitHub commit/compare pages as evidence. Read the
+relevant implementation and owning skills when a subject alone cannot establish
+behavior. Check that upstream features are exposed by the Caddy parser, app or
+HTTP integration before presenting them as usable Caddy capabilities. Keep
+inherited runtime fixes distinct from host integration and qualification-only
+changes. Preserve opt-in build requirements, migrations, state-sharing limits,
+and other material deployment boundaries; do not infer complete issue resolution
+or conformance from a feature's presence.
+
+Include comparison links for caddy-security and, when changed, go-authcrunch.
+Cite relevant individual commits from both repositories alongside the curated
+features and fixes, using `https://github.com/greenpau/<repo>/commit/<sha>`.
+Link relevant issues and pull requests beside the changes they motivated;
+verify their scope and label partial resolutions explicitly.
+An upstream version bump or an unreviewed list of commit subjects alone does not
+cover the dependency changes. If history is unavailable, report the gap rather
+than inventing or silently omitting upstream changes. Keep sibling repositories
+read-only; use the separate-copy procedure below if additional history is needed.
+
+Save a requested local draft under `tmp/releases/` unless the user selects a
+destination. For GitHub-ready Markdown, keep each prose paragraph and list item
+on one source line without a length limit; preserve blank lines, list structure
+and fenced code. Do not hard-wrap prose to repository code or commit-message
+line limits. Verify cited commits belong to the selected ranges and check links,
+version references and source claims. Drafting notes alone requires no Go tests,
+build, version bump, tag, commit, push or publication.
+
 ## go-authcrunch Release Notes
 
 `assets/scripts/generate_go_authcrunch_changelog.sh` supplies the release footer
