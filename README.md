@@ -18,11 +18,20 @@ To retain sessions and generated signing keys across restarts, enable
 It supports portals and direct OAuth policies without a portal. Persistent
 deployments require a complete stop/start; overlapping reload is rejected.
 
-AuthCrunch backend companions live in [`plugins/`](plugins), with category and
-backend names joined, such as `claims-enrichment-static` and
-`identity-stores-sqlite`. The standard Caddy Security build includes all 11
-companions. See the [package and module mapping](.codex/skills/coding-directives/references/host-plugins.md#bundled-companion-packages)
-for their integration contracts and validation.
+AuthCrunch backend companions live in [`plugins/`](plugins) and are opt-in.
+Build Caddy with the security app and a separate `--with` argument for each
+required companion, for example:
+
+```sh
+xcaddy build \
+    --with github.com/greenpau/caddy-security \
+    --with github.com/greenpau/caddy-security/plugins/credential-authenticators-sqlite
+```
+
+Use the same release or commit for the app and its companions. The default
+`cmd/authcrunch` and `make build` include no companions. See the
+[package and module mapping](.codex/skills/coding-directives/references/host-plugins.md#optional-companion-packages)
+for package paths and integration contracts.
 
 Please show your **appreciation for this work** and :star: :star: :star:
 
@@ -48,7 +57,7 @@ Run `bin/authcrunch security version` to display the linked go-authcrunch versio
 See [version diagnostics](.codex/skills/scripts-and-automation/SKILL.md#security-dependency-version)
 for module replacement details.
 
-Download Caddy with the plugins enabled:
+Download Caddy with the security app enabled:
 * <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.4.1&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
 * <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.4.1&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
 

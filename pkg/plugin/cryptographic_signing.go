@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/plugins/cryptographic-signing/rsapss"
 )
 
 // AccessSignerBackendModule prepares an immutable factory without loading keys
@@ -34,4 +35,9 @@ type AccessSignerBackendModule interface {
 type AccessSignerFactory interface {
 	AccessSignerConfig() (kms.ExternalAccessSignerConfig, error)
 	NewAccessSigner(context.Context) (kms.AccessSigner, error)
+}
+
+// RSAPSSStorageMetadata exposes the frozen key-file configuration for preflight.
+type RSAPSSStorageMetadata interface {
+	SigningConfig() rsapss.Config
 }

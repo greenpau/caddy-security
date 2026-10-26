@@ -73,17 +73,11 @@ func (app *App) prepareIdentityProviders(ctx caddy.Context, config *authcrunch.C
 		}
 		seen[descriptor.Name] = true
 		var attachmentStore string
-		switch ticket := module.(type) {
-		case *SQLiteTicketIdentityProvider:
-			normalized, err := ticket.BackendConfig()
-			if err != nil {
+		if isCompanionModule(module, "security.identity_providers.sqlite") || isCompanionModule(module, "security.identity_providers.consul") {
+			ticket, ok := module.(plugin.IdentityProviderAttachmentMetadata)
+			if !ok {
 				return fmt.Errorf("identity provider %d attachment configuration is invalid", i)
 			}
-			if normalized.Attachment != nil {
-				attachmentStore = normalized.Attachment.LocalIdentityStore
-			}
-		case *ConsulTicketIdentityProvider:
-			var err error
 			attachmentStore, err = ticket.AttachmentStoreName()
 			if err != nil {
 				return fmt.Errorf("identity provider %d attachment configuration is invalid", i)

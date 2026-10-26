@@ -34,3 +34,11 @@ import (
 type ExternalAuthorizationBackendModule interface {
 	NewExternalAuthorizationBackend(context.Context, external.Config) (external.Backend, error)
 }
+
+// ExternalAuthorizationTLS describes server trust and a paired mTLS service
+// identity. Files are read only when the selected backend constructs a runtime.
+type ExternalAuthorizationTLS struct {
+	RootCAFile            string `json:"root_ca_file,omitempty"`
+	ClientCertificateFile string `json:"client_certificate_file,omitempty"`
+	ClientKeyFile         string `json:"client_key_file,omitempty"`
+}

@@ -24,13 +24,22 @@ proxy origin remain separate deployment responsibilities.
 - Conditional authentication coverage
 - Shared test mechanics: CodeQL and subprocess coverage
 - Feature suites and Caddyfile adaptation/runtime resolution
-- Bundled companion packages
+- Optional companion packages
 
-## Bundled companion packages
+## Optional companion packages
+
+The default `cmd/authcrunch` contains no companions. Root tests opt in through
+`optional_companions_test.go`; companion-enabled executable fixtures declare
+explicit imports. `TestCaddyOptionalPluginsE2E` builds the default command and
+checks its dependency graph, module list, core configuration and missing-module
+errors. `TestCaddySQLiteCredentialsE2E` selects only SQLite credentials and checks
+that unrelated companions are absent before its real TLS/CLI journey. The common
+`testdata/companion_caddy` and private-root `testdata/runtime_state_caddy` fixtures
+explicitly import the companion inventory for other protocol journeys.
 
 Each `plugins/<category>-<backend>/consumer_test.go` exercises the public adapter
 directly. Self-contained adapter cases live here; root
-tests retain global dispatch/adaptation, compatibility aliases, resource graphs,
+tests retain global dispatch/adaptation, explicit module selection, resource graphs,
 commands, route admission and actual Caddy journeys. Category contracts remain
 separate under `pkg/plugin`; `oauth_login_storage_test.go` directly tests its
 executable metadata validator.
@@ -824,7 +833,7 @@ API-key and remote-authenticator regressions remain in the normal full suite.
 
 ## SQLite credential authentication
 
-`TestCaddySQLiteCredentialsE2E` builds the real production command without CGO,
+`TestCaddySQLiteCredentialsE2E` builds Caddy with explicit companion imports without CGO,
 issues keys through private CLI files and sends trusted TLS requests through two
 policies sharing one backend. It checks default/custom headers, stripping, ACL
 denial, wrong realms, malformed/Basic credentials, immediate revocation of a

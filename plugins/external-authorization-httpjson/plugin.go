@@ -48,11 +48,7 @@ type HTTPJSONExternalAuthorization struct {
 // ExternalAuthorizationTLS configures server trust and optional mTLS service
 // credentials. A root CA file replaces system roots for this backend only.
 // Certificate/key files must be supplied together; key bytes never enter JSON.
-type ExternalAuthorizationTLS struct {
-	RootCAFile            string `json:"root_ca_file,omitempty"`
-	ClientCertificateFile string `json:"client_certificate_file,omitempty"`
-	ClientKeyFile         string `json:"client_key_file,omitempty"`
-}
+type ExternalAuthorizationTLS = plugin.ExternalAuthorizationTLS
 
 func init() { caddy.RegisterModule(HTTPJSONExternalAuthorization{}) }
 

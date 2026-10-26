@@ -5,6 +5,13 @@ companions reuse the ready client, prefix and AES key from the configured
 `github.com/pteich/caddy-tlsconsul` global storage module. Other Consul storage
 implementations are rejected. They create no second connection configuration.
 
+Build with the corresponding explicit `--with` selections for
+`github.com/greenpau/caddy-security/plugins/identity-stores-consul`,
+`github.com/greenpau/caddy-security/plugins/identity-providers-consul` and/or
+`github.com/greenpau/caddy-security/plugins/session-and-refresh-storage-consul`.
+Select the app and companions at the same tag or commit. The root app includes
+none of these modules by default; see the [companion build contract](../../coding-directives/references/host-plugins.md#optional-companion-packages).
+
 ## Configuration
 
 These declarations belong inside one global `security` block:

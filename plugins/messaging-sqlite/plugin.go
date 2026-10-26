@@ -42,6 +42,14 @@ type SQLiteMessagingProvider struct {
 	Delivery string `json:"delivery,omitempty"`
 }
 
+// SQLiteStoragePath reports the declarative opening path without storage I/O.
+func (m *SQLiteMessagingProvider) SQLiteStoragePath() string {
+	if m == nil {
+		return ""
+	}
+	return m.Path
+}
+
 func init() { caddy.RegisterModule(SQLiteMessagingProvider{}) }
 
 // CaddyModule registers the SQLite messaging configuration module.
@@ -68,6 +76,9 @@ func (m *SQLiteMessagingProvider) BackendConfig() (*messagingsqlite.Config, erro
 
 // Validate checks literal configuration without touching storage or transports.
 func (m *SQLiteMessagingProvider) Validate() error { _, err := m.BackendConfig(); return err }
+
+// DeliveryProviderName identifies the separately declared email transport.
+func (m *SQLiteMessagingProvider) DeliveryProviderName() string { return m.Delivery }
 
 // MessagingProviderName returns the validated logical queue name.
 func (m *SQLiteMessagingProvider) MessagingProviderName() (string, error) {

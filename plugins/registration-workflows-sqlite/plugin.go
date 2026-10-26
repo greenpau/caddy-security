@@ -46,6 +46,14 @@ type SQLiteRegistrationWorkflow struct {
 	BasePath      string `json:"base_path,omitempty"`
 }
 
+// SQLiteStoragePath reports the declarative opening path without storage I/O.
+func (m *SQLiteRegistrationWorkflow) SQLiteStoragePath() string {
+	if m == nil {
+		return ""
+	}
+	return m.Path
+}
+
 func init() { caddy.RegisterModule(SQLiteRegistrationWorkflow{}) }
 
 // CaddyModule registers the SQLite registration configuration module.
@@ -69,6 +77,15 @@ func (m *SQLiteRegistrationWorkflow) BackendConfig() (*registrationsqlite.Config
 
 // Validate checks literals without opening storage or inspecting Caddy routes.
 func (m *SQLiteRegistrationWorkflow) Validate() error { _, err := m.BackendConfig(); return err }
+
+// PortalBasePath exposes the normalized enrollment mount without resources.
+func (m *SQLiteRegistrationWorkflow) PortalBasePath() (string, error) {
+	cfg, err := m.BackendConfig()
+	if err != nil {
+		return "", err
+	}
+	return cfg.BasePath, nil
+}
 
 // RegistrationWorkflowConfig binds normalized policy and dependency names to
 // persistent root state without publishing private backend configuration.

@@ -46,6 +46,14 @@ type SQLiteSecretsManager struct {
 	closed   bool
 }
 
+// SQLiteStoragePath reports the declarative opening path without storage I/O.
+func (m *SQLiteSecretsManager) SQLiteStoragePath() string {
+	if m == nil {
+		return ""
+	}
+	return m.Path
+}
+
 func init() { caddy.RegisterModule(&SQLiteSecretsManager{}) }
 
 // CaddyModule returns the bundled secrets adapter's registration.

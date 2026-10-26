@@ -20,6 +20,8 @@ import (
 	"slices"
 
 	"github.com/greenpau/go-authcrunch"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 type identityProviderStorageFile struct {
@@ -46,50 +48,50 @@ func (app *App) validateIdentityProviderFiles(config *authcrunch.Config) error {
 }
 
 // configuredStorageFiles copies scalar paths without opening any backend. Keep
-// every bundled category even when no ticket is configured: a Documents portal
+// every declared category even when no ticket is configured: a Documents portal
 // in a later candidate must also protect the currently serving storage graph.
 func (app *App) configuredStorageFiles(config *authcrunch.Config) []identityProviderStorageFile {
 	var files []identityProviderStorageFile
 	for _, binding := range app.refreshStores {
-		if factory, ok := binding.factory.(*sqliteRefreshStoreFactory); ok && factory != nil {
+		if factory, ok := binding.factory.(plugin.SQLiteRefreshStorageMetadata); ok {
 			config := factory.SQLiteConfig()
 			files = append(files, identityProviderStorageFile{path: config.Path, sqlite: true, refresh: true, maxSessions: config.MaxSessions, maxRotations: config.MaxRotations})
 		}
 	}
 	for _, binding := range app.oauthLoginStores {
-		if factory, ok := binding.factory.(*sqliteOAuthLoginStoreFactory); ok && factory != nil {
+		if factory, ok := binding.factory.(plugin.SQLiteOAuthLoginStorageMetadata); ok {
 			config := factory.SQLiteConfig()
 			files = append(files, identityProviderStorageFile{path: config.Path, sqlite: true, oauth: true, capacity: config.Capacity})
 		}
 	}
 	for _, binding := range app.identityProviders {
-		if module, ok := binding.module.(*SQLiteTicketIdentityProvider); ok && module != nil {
-			files = append(files, identityProviderStorageFile{path: module.Path, ticket: true, sqlite: true})
+		if module, ok := binding.module.(plugin.SQLiteStorage); ok {
+			files = append(files, identityProviderStorageFile{path: module.SQLiteStoragePath(), ticket: true, sqlite: true})
 		}
 	}
 	for _, binding := range app.identityStores {
-		if module, ok := binding.module.(*SQLiteIdentityStore); ok && module != nil {
-			files = append(files, identityProviderStorageFile{path: module.Path, sqlite: true})
+		if module, ok := binding.module.(plugin.SQLiteStorage); ok {
+			files = append(files, identityProviderStorageFile{path: module.SQLiteStoragePath(), sqlite: true})
 		}
 	}
 	for _, binding := range app.messagingProviders {
-		if module, ok := binding.module.(*SQLiteMessagingProvider); ok && module != nil {
-			files = append(files, identityProviderStorageFile{path: module.Path, sqlite: true})
+		if module, ok := binding.module.(plugin.SQLiteStorage); ok {
+			files = append(files, identityProviderStorageFile{path: module.SQLiteStoragePath(), sqlite: true})
 		}
 	}
 	for _, binding := range app.registrationWorkflows {
-		if module, ok := binding.module.(*SQLiteRegistrationWorkflow); ok && module != nil {
-			files = append(files, identityProviderStorageFile{path: module.Path, sqlite: true})
+		if module, ok := binding.module.(plugin.SQLiteStorage); ok {
+			files = append(files, identityProviderStorageFile{path: module.SQLiteStoragePath(), sqlite: true})
 		}
 	}
 	for _, binding := range app.credentialAuthenticators {
-		if module, ok := binding.module.(*SQLiteCredentialAuthenticator); ok && module != nil {
-			files = append(files, identityProviderStorageFile{path: module.Path, sqlite: true})
+		if module, ok := binding.module.(plugin.SQLiteStorage); ok {
+			files = append(files, identityProviderStorageFile{path: module.SQLiteStoragePath(), sqlite: true})
 		}
 	}
 	for _, manager := range app.secretsManagers {
-		if module, ok := manager.(*SQLiteSecretsManager); ok && module != nil {
-			files = append(files, identityProviderStorageFile{path: module.Path, sqlite: true})
+		if module, ok := manager.(plugin.SQLiteStorage); ok {
+			files = append(files, identityProviderStorageFile{path: module.SQLiteStoragePath(), sqlite: true})
 		}
 	}
 	if config != nil {

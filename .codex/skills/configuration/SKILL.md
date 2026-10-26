@@ -71,6 +71,12 @@ syntax catalogues with these placeholders are not runnable examples.
    `testdata/caddyfile_adapt/`. Test and fixture changes follow the
    [testing contract](../testing-and-ci/SKILL.md).
 
+Backend declarations implemented under `plugins/` require explicitly selecting
+that companion in the Caddy build with `--with`; importing the security app alone
+provides the core integrations. The [optional companion mapping](../coding-directives/references/host-plugins.md#optional-companion-packages)
+lists package paths and build syntax. Examples using those backends assume their
+companions have been selected.
+
 ## Common Shape
 
 ```caddyfile

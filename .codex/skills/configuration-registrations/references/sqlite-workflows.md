@@ -62,7 +62,7 @@ each identity store has at most one registry.
 The public SQLite parser owns backend grammar. Every setting occurs once and
 takes one value. The header supplies `name`. Fields are literal: Caddy runtime
 placeholders and secret lookups are not expanded. Required dependencies select
-the exact bundled SQLite identity-store and messaging modules; local/LDAP stores,
+the exact optional SQLite identity-store and messaging modules; local/LDAP stores,
 email/file senders and lookalike custom modules are not substitutes. The realm
 must match the selected store.
 

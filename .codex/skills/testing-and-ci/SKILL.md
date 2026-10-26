@@ -37,7 +37,7 @@ in `plugins/consumer_test.go` intentionally does not import the parent app.
 Category-local adapt integration tests register the app explicitly. Select the
 affected root dispatch, native alias, storage/lifecycle and actual Caddy E2E
 parents as well.
-See the [companion test inventory](references/test-surfaces.md#bundled-companion-packages).
+See the [companion test inventory](references/test-surfaces.md#optional-companion-packages).
 
 Collect companion statement coverage explicitly when changing these packages:
 `make test TEST='^Test' TEST_DIR='./plugins/... ./pkg/plugin' COVERAGE_DIR='.coverage/plugin-package-tests'`.

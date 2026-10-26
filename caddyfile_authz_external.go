@@ -17,9 +17,12 @@ package security
 import (
 	"encoding/json"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	externalparser "github.com/greenpau/go-authcrunch/pkg/authz/external/parser"
 	httpjsonparser "github.com/greenpau/go-authcrunch/plugins/external-authorization/httpjson/parser"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // parseCaddyfileExternalAuthorization parses one flat block per local policy:
@@ -47,6 +50,8 @@ import (
 // HTTPS only, with regular PEM files up to 1 MiB each. All values are literal;
 // no runtime placeholder/secret expansion or request-derived settings apply.
 // Every local allow requires external allow; explicit bypass retains its meaning.
+// The HTTP JSON companion must be explicitly linked; its registered Validate
+// method checks backend settings without constructing transports or reading keys.
 func parseCaddyfileExternalAuthorization(d *caddyfile.Dispenser, policy string) (*ExternalAuthorizationBinding, error) {
 	args := d.RemainingArgs()
 	if len(args) != 2 || args[0] != "authorization" || args[1] != "httpjson" {
@@ -57,7 +62,12 @@ func parseCaddyfileExternalAuthorization(d *caddyfile.Dispenser, policy string) 
 		return nil, err
 	}
 	var settings, transport []string
-	module := &HTTPJSONExternalAuthorization{}
+	module := struct {
+		Driver   string                           `json:"driver"`
+		Endpoint string                           `json:"endpoint"`
+		Timeout  string                           `json:"timeout,omitempty"`
+		TLS      *plugin.ExternalAuthorizationTLS `json:"tls,omitempty"`
+	}{Driver: "httpjson"}
 	seenTLS := make(map[string]bool)
 	for _, tokens := range body {
 		statement := encodeOAuthDirective(tokens)
@@ -69,7 +79,7 @@ func parseCaddyfileExternalAuthorization(d *caddyfile.Dispenser, policy string) 
 			transport = append(transport, statement)
 		case "tls":
 			if module.TLS == nil {
-				module.TLS = &ExternalAuthorizationTLS{}
+				module.TLS = &plugin.ExternalAuthorizationTLS{}
 			}
 			if len(tokens) < 2 || seenTLS[tokens[1]] {
 				return nil, d.Errf("invalid or duplicate external authorization TLS directive")
@@ -96,15 +106,24 @@ func parseCaddyfileExternalAuthorization(d *caddyfile.Dispenser, policy string) 
 		return nil, d.Errf("%v", err)
 	}
 	module.Endpoint, module.Timeout = config.Endpoint, config.Timeout
-	if err := module.Validate(); err != nil {
-		return nil, d.Errf("%v", err)
-	}
-	raw, err := json.Marshal(struct {
-		Driver string `json:"driver"`
-		*HTTPJSONExternalAuthorization
-	}{Driver: "httpjson", HTTPJSONExternalAuthorization: module})
+	raw, err := json.Marshal(module)
 	if err != nil {
 		return nil, d.Errf("invalid external authorization configuration")
+	}
+	info, err := caddy.GetModule("security.external_authorization.httpjson")
+	if err != nil {
+		return nil, d.Errf("%v", err)
+	}
+	backend := info.New()
+	if err := json.Unmarshal(raw, backend); err != nil {
+		return nil, d.Errf("invalid external authorization configuration")
+	}
+	validator, ok := backend.(caddy.Validator)
+	if !ok {
+		return nil, d.Errf("external authorization module has no validator")
+	}
+	if err := validator.Validate(); err != nil {
+		return nil, d.Errf("%v", err)
 	}
 	return &ExternalAuthorizationBinding{Policy: policy, Config: binding, BackendRaw: raw}, nil
 }

@@ -34,3 +34,9 @@ import (
 type ClaimsEnrichmentBackendModule interface {
 	NewClaimsEnrichmentBackend(context.Context, enrichment.Config) (enrichment.Backend, error)
 }
+
+// ClaimsEnrichmentBindingValidator checks a Caddyfile binding without constructing
+// a backend or acquiring resources. The registered companion owns this check.
+type ClaimsEnrichmentBindingValidator interface {
+	ValidateClaimsEnrichmentBinding(enrichment.Config) error
+}

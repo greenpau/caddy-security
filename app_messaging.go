@@ -81,8 +81,8 @@ func (app *App) prepareMessagingProviders(ctx caddy.Context, config *authcrunch.
 		}
 		seen[name] = true
 		binding := preparedMessagingProvider{name: name, module: module}
-		if sqlite, ok := module.(*SQLiteMessagingProvider); ok && sqlite.Delivery != "" {
-			provider := providers.ExtractEmailProvider(sqlite.Delivery)
+		if delivery, ok := module.(plugin.MessagingDeliveryMetadata); ok && isCompanionModule(module, "security.messaging.sqlite") && delivery.DeliveryProviderName() != "" {
+			provider := providers.ExtractEmailProvider(delivery.DeliveryProviderName())
 			if provider == nil {
 				return fmt.Errorf("messaging provider %d delivery must select an email provider", i)
 			}

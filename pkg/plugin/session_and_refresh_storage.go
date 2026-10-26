@@ -18,6 +18,7 @@ import (
 	"context"
 
 	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
+	refreshsqlite "github.com/greenpau/go-authcrunch/plugins/session-and-refresh-storage/sqlite"
 )
 
 // RefreshStoreBackendModule prepares an immutable factory without opening files
@@ -34,4 +35,9 @@ type RefreshStoreBackendModule interface {
 type RefreshStoreFactory interface {
 	RefreshStoreConfig() (tokenrefresh.ExternalStoreConfig, error)
 	NewRefreshStore(context.Context) (tokenrefresh.ManagedStore, error)
+}
+
+// SQLiteRefreshStorageMetadata exposes frozen opening-path and limit metadata.
+type SQLiteRefreshStorageMetadata interface {
+	SQLiteConfig() refreshsqlite.Config
 }

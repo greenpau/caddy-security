@@ -45,7 +45,7 @@ func TestCaddySQLiteIdentityE2E(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "caddy")
 	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
 	defer cancel()
-	build := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-trimpath", "-o", binary, "./cmd/authcrunch")
+	build := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-trimpath", "-o", binary, "./testdata/companion_caddy")
 	build.Env = append(os.Environ(), "CGO_ENABLED=0")
 	build.WaitDelay = 5 * time.Second
 	if output, err := build.CombinedOutput(); err != nil {

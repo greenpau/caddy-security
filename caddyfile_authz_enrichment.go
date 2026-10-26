@@ -17,11 +17,12 @@ package security
 import (
 	"encoding/json"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	enrichmentparser "github.com/greenpau/go-authcrunch/pkg/authz/enrichment/parser"
 	staticparser "github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static/parser"
 
-	staticplugin "github.com/greenpau/caddy-security/plugins/claims-enrichment-static"
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // parseCaddyfileClaimsEnrichment parses one flat block per authorization policy:
@@ -47,6 +48,8 @@ import (
 // no runtime replacement or identity lookup occurs. Quote JSON as one Caddy
 // token; use JSON strings for empty/whitespace values. A required enrichment
 // failure denies authorization; only the detached ACL view receives values.
+// The static companion must be explicitly linked; its pure registered validator
+// checks backend-specific binding constraints without constructing a runtime.
 func parseCaddyfileClaimsEnrichment(d *caddyfile.Dispenser, policy string) (*ClaimsEnrichmentBinding, error) {
 	args := d.RemainingArgs()
 	if len(args) != 2 || args[0] != "enrichment" || args[1] != "static" {
@@ -74,9 +77,6 @@ func parseCaddyfileClaimsEnrichment(d *caddyfile.Dispenser, policy string) (*Cla
 	if err != nil {
 		return nil, d.Errf("%v", err)
 	}
-	if err := staticplugin.ValidateBinding(binding, config); err != nil {
-		return nil, d.Errf("%v", err)
-	}
 	// Both Caddy's config tree and inline module loader round bare JSON numbers.
 	// Protect the complete object with one string before either sees its values.
 	claimsJSON, err := json.Marshal(config.Claims)
@@ -84,11 +84,26 @@ func parseCaddyfileClaimsEnrichment(d *caddyfile.Dispenser, policy string) (*Cla
 		return nil, d.Errf("invalid static claims configuration")
 	}
 	raw, err := json.Marshal(struct {
-		Driver string `json:"driver"`
-		*StaticClaimsEnrichment
-	}{Driver: "static", StaticClaimsEnrichment: &StaticClaimsEnrichment{ClaimsJSON: string(claimsJSON)}})
+		Driver     string `json:"driver"`
+		ClaimsJSON string `json:"claims_json"`
+	}{Driver: "static", ClaimsJSON: string(claimsJSON)})
 	if err != nil {
 		return nil, d.Errf("invalid static claims configuration")
+	}
+	info, err := caddy.GetModule("security.claims_enrichment.static")
+	if err != nil {
+		return nil, d.Errf("%v", err)
+	}
+	module := info.New()
+	if err := json.Unmarshal(raw, module); err != nil {
+		return nil, d.Errf("invalid static claims configuration")
+	}
+	validator, ok := module.(plugin.ClaimsEnrichmentBindingValidator)
+	if !ok {
+		return nil, d.Errf("static claims module has no binding validator")
+	}
+	if err := validator.ValidateClaimsEnrichmentBinding(*binding); err != nil {
+		return nil, d.Errf("%v", err)
 	}
 	return &ClaimsEnrichmentBinding{Policy: policy, Config: binding, BackendRaw: raw}, nil
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 Paul Greenberg greenpau@outlook.com
+// Copyright 2026 Paul Greenberg greenpau@outlook.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package security
+package plugin
 
-import companion "github.com/greenpau/caddy-security/plugins/session-and-refresh-storage-sqlite"
+// SQLiteStorage exposes a declarative opening path for host alias checks.
+// Reading it must not open storage or acquire runtime resources.
+type SQLiteStorage interface {
+	SQLiteStoragePath() string
+}
 
-// SQLiteRefreshStore is the bundled companion module; see plugins/session-and-refresh-storage-sqlite.
-type SQLiteRefreshStore = companion.SQLiteRefreshStore
-
-type sqliteRefreshStoreFactory = companion.Factory
+// PortalMountMetadata exposes a validated, detached portal mount restriction.
+// Reading it must not construct providers or inspect Caddy's route tree.
+type PortalMountMetadata interface {
+	PortalBasePath() (string, error)
+}

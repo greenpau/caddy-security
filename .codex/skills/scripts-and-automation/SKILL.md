@@ -171,6 +171,16 @@ intended.
 
 ## Development Builds
 
+`cmd/authcrunch` and `make build` include the core security app and HTTP
+integrations. Select every optional backend explicitly in an xcaddy build with
+its own `--with` argument; see the [companion mapping](../coding-directives/references/host-plugins.md#optional-companion-packages).
+The app and its companions should use the same tag or commit. The `plugins/`
+packages are not separate Go modules. Root tests and their companion-enabled
+fixture commands import required companions explicitly; those fixtures do not
+describe default production linkage. Offline SQLite administration remains
+available independently of Caddy module registration.
+
+
 `make devbuild` uses the explicitly permitted `../xcaddy-caddy-security`
 workspace. It removes files there, changes into that directory, and runs
 `xcaddy` to build Caddy with this module, the static secrets manager,

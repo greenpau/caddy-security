@@ -114,7 +114,7 @@ access JWT. Keep administration distinct from the user-confirmed connection flow
 ## Ownership and changes
 
 Built-in OAuth/SAML/LDAP bindings use the root's configured local instance.
-The host's bundled ticket module explicitly opts a fresh attachment into that
+The host's optional ticket module explicitly opts a fresh attachment into that
 same root store. Third-party provider modules retain their caller-prebound or
 implicit-memory contract. The root never rebuilds or closes borrowed providers;
 retirement drains Caddy requests, closes the root, then closes host-owned handles.

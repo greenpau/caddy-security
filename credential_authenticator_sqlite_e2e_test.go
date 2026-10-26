@@ -35,12 +35,13 @@ func TestCaddySQLiteCredentialsE2E(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "caddy")
 	buildCtx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
 	defer cancel()
-	build := exec.CommandContext(buildCtx, "go", "build", "-mod=readonly", "-trimpath", "-o", binary, "./cmd/authcrunch")
+	build := exec.CommandContext(buildCtx, "go", "build", "-mod=readonly", "-trimpath", "-o", binary, "./testdata/credential_companion_caddy")
 	build.Env = append(os.Environ(), "CGO_ENABLED=0")
 	build.WaitDelay = 5 * time.Second
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build CGO-free Caddy: %v\n%s", err, output)
 	}
+	assertOptionalCompanionModules(t, binary, "security.credential_authenticators.sqlite")
 	cert, tlsKey, roots := cookieTLSCertificate(t)
 	f := newPersistentCaddy(t, binary, cert, tlsKey, roots)
 	cfg := sqliteCredentialsConfig(t)

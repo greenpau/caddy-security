@@ -93,26 +93,24 @@ func (app *App) prepareRegistrationWorkflows(ctx caddy.Context, config *authcrun
 			return fmt.Errorf("registration workflow %d requires a declared messaging provider", i)
 		}
 		binding := preparedRegistrationWorkflow{config: *descriptor, module: module}
-		if sqlite, ok := module.(*SQLiteRegistrationWorkflow); ok {
-			accounts, accountOK := store.module.(*SQLiteIdentityStore)
-			outbox, outboxOK := provider.module.(*SQLiteMessagingProvider)
-			if !accountOK || !outboxOK || accounts == nil || outbox == nil {
+		if isCompanionModule(module, "security.registration_workflows.sqlite") {
+			if !isCompanionModule(store.module, "security.identity_stores.sqlite") || !isCompanionModule(provider.module, "security.messaging.sqlite") {
 				return fmt.Errorf("registration workflow %d requires bundled SQLite identity and messaging modules", i)
 			}
-			workflowConfig, err := sqlite.BackendConfig()
+			workflowPath, err := validatedSQLiteModulePath(module)
 			if err != nil {
 				return fmt.Errorf("registration workflow %d configuration is invalid", i)
 			}
-			accountConfig, err := accounts.BackendConfig()
+			accountPath, err := validatedSQLiteModulePath(store.module)
 			if err != nil {
 				return fmt.Errorf("registration workflow %d account configuration is invalid", i)
 			}
-			outboxConfig, err := outbox.BackendConfig()
+			outboxPath, err := validatedSQLiteModulePath(provider.module)
 			if err != nil {
 				return fmt.Errorf("registration workflow %d outbox configuration is invalid", i)
 			}
-			binding.sqliteFiles = []string{workflowConfig.Path, accountConfig.Path, outboxConfig.Path}
-			if workflowConfig.Path == accountConfig.Path || workflowConfig.Path == outboxConfig.Path || accountConfig.Path == outboxConfig.Path {
+			binding.sqliteFiles = []string{workflowPath, accountPath, outboxPath}
+			if workflowPath == accountPath || workflowPath == outboxPath || accountPath == outboxPath {
 				return fmt.Errorf("registration workflow %d requires distinct pending, identity and messaging files", i)
 			}
 		}

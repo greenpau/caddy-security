@@ -51,6 +51,15 @@ func (m *StaticClaimsEnrichment) Validate() error {
 	return err
 }
 
+// ValidateClaimsEnrichmentBinding checks the selected binding without resources.
+func (m *StaticClaimsEnrichment) ValidateClaimsEnrichmentBinding(binding enrichment.Config) error {
+	config, err := m.BackendConfig()
+	if err != nil {
+		return err
+	}
+	return ValidateBinding(&binding, config)
+}
+
 // Caddy decodes both its configuration tree and inline module objects through
 // float64. Transport the JSON object as a string, decoding only at this boundary.
 // BackendConfig returns a detached, validated configuration for host admission.
@@ -111,7 +120,8 @@ func ValidateBinding(binding *enrichment.Config, config *static.Config) error {
 }
 
 var (
-	_ caddy.Module                         = (*StaticClaimsEnrichment)(nil)
-	_ caddy.Validator                      = (*StaticClaimsEnrichment)(nil)
-	_ plugin.ClaimsEnrichmentBackendModule = (*StaticClaimsEnrichment)(nil)
+	_ caddy.Module                            = (*StaticClaimsEnrichment)(nil)
+	_ caddy.Validator                         = (*StaticClaimsEnrichment)(nil)
+	_ plugin.ClaimsEnrichmentBackendModule    = (*StaticClaimsEnrichment)(nil)
+	_ plugin.ClaimsEnrichmentBindingValidator = (*StaticClaimsEnrichment)(nil)
 )

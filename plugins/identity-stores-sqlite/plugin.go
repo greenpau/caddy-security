@@ -39,6 +39,14 @@ type SQLiteIdentityStore struct {
 	Timeout string `json:"timeout,omitempty"`
 }
 
+// SQLiteStoragePath reports the declarative opening path without storage I/O.
+func (m *SQLiteIdentityStore) SQLiteStoragePath() string {
+	if m == nil {
+		return ""
+	}
+	return m.Path
+}
+
 func init() { caddy.RegisterModule(SQLiteIdentityStore{}) }
 
 // CaddyModule registers the SQLite identity-store configuration module.

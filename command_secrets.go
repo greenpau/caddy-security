@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/plugins/secrets/sqlite"
@@ -122,7 +123,7 @@ func parseSQLiteSecretsInput(data []byte, action string) (*sqlite.Config, map[st
 	if err != nil {
 		return invalid()
 	}
-	if _, err := (&SQLiteSecretsManager{Name: config.Name, Path: config.Path, Record: config.Record, Timeout: config.Timeout}).BackendConfig(); err != nil {
+	if strings.Contains(config.Name, ":") {
 		return invalid()
 	}
 	values, has := doc["values"]

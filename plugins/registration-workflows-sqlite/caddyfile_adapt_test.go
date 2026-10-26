@@ -20,6 +20,8 @@ import (
 	// Register the app and its global Caddyfile option for full adaptation.
 	_ "github.com/greenpau/caddy-security"
 	"github.com/greenpau/caddy-security/internal/caddyfiletest"
+	_ "github.com/greenpau/caddy-security/plugins/identity-stores-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/messaging-sqlite"
 )
 
 func TestCaddyfileAdapt(t *testing.T) {

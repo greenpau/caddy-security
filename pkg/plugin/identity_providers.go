@@ -30,3 +30,11 @@ type IdentityProviderBackendModule interface {
 	IdentityProviderConfig() (*idp.ExternalIdentityProviderConfig, error)
 	NewIdentityProvider(context.Context) (idp.IdentityProvider, error)
 }
+
+// IdentityProviderAttachmentMetadata identifies an explicit root-owned local
+// attachment without acquiring resources. The host admits only its recognized
+// ticket module IDs to this ownership transfer; interface satisfaction alone
+// does not opt third-party providers into root assembly.
+type IdentityProviderAttachmentMetadata interface {
+	AttachmentStoreName() (string, error)
+}

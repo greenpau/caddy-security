@@ -38,6 +38,14 @@ type SQLiteCredentialAuthenticator struct {
 	Timeout string `json:"timeout,omitempty"`
 }
 
+// SQLiteStoragePath reports the declarative opening path without storage I/O.
+func (m *SQLiteCredentialAuthenticator) SQLiteStoragePath() string {
+	if m == nil {
+		return ""
+	}
+	return m.Path
+}
+
 func init() { caddy.RegisterModule(SQLiteCredentialAuthenticator{}) }
 
 // CaddyModule registers the bundled, API-key-only SQLite factory.

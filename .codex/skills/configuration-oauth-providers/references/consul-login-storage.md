@@ -1,6 +1,6 @@
 # Pending OAuth transactions in Caddy's Consul storage
 
-The bundled `security.oauth_login_stores.consul` module borrows the client from
+The optional `security.oauth_login_stores.consul` module borrows the client from
 Caddy's configured `github.com/pteich/caddy-tlsconsul` storage module. It supports
 an upstream OAuth/OIDC login starting on one Caddy host and its callback reaching
 another host. AuthCrunch retains nonce, PKCE, browser/callback binding and
@@ -41,9 +41,11 @@ Inside the global options block:
 
 Add the site's normal `authenticate with myportal` route. Existing global
 Consul address, ACL token, TLS and encryption settings are reused; there is no
-second Consul connection configuration. The adapter is bundled by the root
-package, including the regular local command, and imports the supported Consul
-storage module. Other modules registering the same `caddy.storage.consul` ID
+second Consul connection configuration. Build with explicit `--with` selections
+for `github.com/greenpau/caddy-security` and
+`github.com/greenpau/caddy-security/plugins/oauth-login-storage-consul`, plus
+`github.com/pteich/caddy-tlsconsul`. The root and regular local command include
+no companions by default. Other modules registering the same `caddy.storage.consul` ID
 cannot be linked alongside it.
 
 A bare `oauth login store consul shared` declaration or an empty block uses the

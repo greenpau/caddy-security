@@ -12,7 +12,10 @@ secret-backed Caddyfile values. The parser is `caddyfile_secrets.go`; runtime
 replacement is in `caddyfile_resolve.go`.
 
 Secrets managers are Caddy modules under the `security.secrets` namespace.
-SQLite and Consul are bundled; static and AWS managers require external modules. The `security` app loads them through `SecretsManagerConfigs`; each
+SQLite and Consul require their explicit `plugins/secrets-sqlite` and
+`plugins/secrets-consul` build selections; static and AWS managers require their
+external modules. The root app registers no secrets manager by default. The
+`security` app loads selected modules through `SecretsManagerConfigs`; each
 module must expose `GetConfig(ctx)["id"]`, `GetSecret(ctx)`, and
 `GetSecretByKey(ctx, key)`.
 
@@ -53,14 +56,14 @@ manager-specific fields. Manager IDs must be nonempty and unique across the app.
 
 ## Consul Secrets Manager
 
-For the bundled `secrets consul MANAGER` declaration, use the
+For the optional `secrets consul MANAGER` declaration, use the
 [Consul secrets reference](references/consul.md). It reads an encrypted shared
 record into an immutable provisioning snapshot; trusted Go APIs own provisioning,
 and successful reload adopts rotation. The existing SQLite CLI stays separate.
 
 ## SQLite Secrets Manager
 
-Use the [SQLite secrets reference](references/sqlite.md) to configure the bundled
+Use the [SQLite secrets reference](references/sqlite.md) to configure the optional
 `security.secrets.sqlite` module, provision records with `security secrets`,
 rotate consumers through explicit reload, and verify failure/restart behavior.
 The module reads one coherent record during provisioning and closes the database

@@ -45,6 +45,14 @@ type SQLiteTicketIdentityProvider struct {
 	Attachment   *attachment.Config `json:"attachment,omitempty"`
 }
 
+// SQLiteStoragePath reports the declarative opening path without storage I/O.
+func (m *SQLiteTicketIdentityProvider) SQLiteStoragePath() string {
+	if m == nil {
+		return ""
+	}
+	return m.Path
+}
+
 func init() { caddy.RegisterModule(SQLiteTicketIdentityProvider{}) }
 
 // CaddyModule registers the SQLite ticket provider configuration module.
@@ -77,6 +85,27 @@ func (m *SQLiteTicketIdentityProvider) BackendConfig() (*tickets.Config, error) 
 
 // Validate checks literals without storage, issuer requests or route inspection.
 func (m *SQLiteTicketIdentityProvider) Validate() error { _, err := m.BackendConfig(); return err }
+
+// AttachmentStoreName identifies the selected root-owned local attachment.
+func (m *SQLiteTicketIdentityProvider) AttachmentStoreName() (string, error) {
+	cfg, err := m.BackendConfig()
+	if err != nil {
+		return "", err
+	}
+	if cfg.Attachment == nil {
+		return "", nil
+	}
+	return cfg.Attachment.LocalIdentityStore, nil
+}
+
+// PortalBasePath exposes the normalized mount restriction without resources.
+func (m *SQLiteTicketIdentityProvider) PortalBasePath() (string, error) {
+	cfg, err := m.BackendConfig()
+	if err != nil {
+		return "", err
+	}
+	return cfg.BasePath, nil
+}
 
 // IdentityProviderConfig binds normalized backend settings without exposing them.
 func (m *SQLiteTicketIdentityProvider) IdentityProviderConfig() (*idp.ExternalIdentityProviderConfig, error) {

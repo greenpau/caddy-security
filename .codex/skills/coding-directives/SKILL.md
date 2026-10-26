@@ -77,11 +77,15 @@ Keep the root package focused on Caddy app/plugin wiring and Caddyfile parsing.
 Use `pkg/util` only for small reusable helpers that are truly package-external
 or shared across multiple root-package files.
 
-Keep bundled AuthCrunch backend companions under
+Keep optional AuthCrunch backend companions under
 `plugins/<category>-<backend>`, with typed public extension contracts in
-`pkg/plugin`. The root imports the companions through compatibility aliases;
-companions must not import the root. The
-[host plugin contract](references/host-plugins.md#bundled-companion-packages)
+`pkg/plugin`. The root must not import any package under `plugins/`, directly
+or transitively. Operators select each companion with an explicit xcaddy
+`--with github.com/greenpau/caddy-security/plugins/<category>-<backend>` argument
+or a Go import in their own executable. Companion packages must not import the
+root. Test-only aliases and fixture executables explicitly opt into their
+companions. The
+[host plugin contract](references/host-plugins.md#optional-companion-packages)
 owns the package mapping, registration, shared parsing and validation surfaces.
 
 ## Caddy Modules

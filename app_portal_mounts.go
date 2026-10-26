@@ -21,6 +21,8 @@ import (
 
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 type portalMountConstraint struct {
@@ -76,30 +78,30 @@ func (app *App) preparePortalMounts(config *authcrunch.Config) error {
 			}
 			binding.constraints = append(binding.constraints, portalMountConstraint{"oidc provider", mount})
 		}
-		// Bundled modules expose their normalized configuration without constructing
+		// Selected modules expose their normalized configuration without constructing
 		// providers. Opaque third-party descriptors retain their own restrictions.
 		for _, prepared := range app.identityProviders {
 			if !slices.Contains(portal.IdentityProviders, prepared.config.Name) {
 				continue
 			}
-			if module, ok := prepared.module.(*SQLiteTicketIdentityProvider); ok {
-				cfg, err := module.BackendConfig()
+			if module, ok := prepared.module.(plugin.PortalMountMetadata); ok {
+				path, err := module.PortalBasePath()
 				if err != nil {
 					return fmt.Errorf("portal %q ticket mount configuration is invalid", portal.Name)
 				}
-				binding.constraints = append(binding.constraints, portalMountConstraint{"ticket provider", cfg.BasePath})
+				binding.constraints = append(binding.constraints, portalMountConstraint{"ticket provider", path})
 			}
 		}
 		for _, prepared := range app.registrationWorkflows {
 			if !slices.Contains(portal.UserRegistries, prepared.config.Name) {
 				continue
 			}
-			if module, ok := prepared.module.(*SQLiteRegistrationWorkflow); ok {
-				cfg, err := module.BackendConfig()
+			if module, ok := prepared.module.(plugin.PortalMountMetadata); ok {
+				path, err := module.PortalBasePath()
 				if err != nil {
 					return fmt.Errorf("portal %q registration mount configuration is invalid", portal.Name)
 				}
-				binding.constraints = append(binding.constraints, portalMountConstraint{"registration workflow", cfg.BasePath})
+				binding.constraints = append(binding.constraints, portalMountConstraint{"registration workflow", path})
 			}
 		}
 		bindings[portal.Name] = binding

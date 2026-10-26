@@ -146,7 +146,7 @@ rejection, duplicate manager IDs and private app failures.
 invalid replacement and trusted mutation. The registered
 `testcase_secrets_sqlite` adaptation fixture verifies module and consumer shape.
 
-`TestCaddySQLiteSecretsE2E` builds the actual production command without CGO and
+`TestCaddySQLiteSecretsE2E` builds Caddy with explicit companion imports without CGO and
 uses a trusted TLS listener, password login and independent JWT verification.
 It exercises exact signing-key bytes, explicit reload, failed replacement then
 fresh consumer rebuild, invalid/missing keys and storage, rejected candidates,

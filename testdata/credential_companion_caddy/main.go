@@ -1,4 +1,4 @@
-// Copyright 2022 Paul Greenberg greenpau@outlook.com
+// Copyright 2026 Paul Greenberg greenpau@outlook.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package security
+package main
 
-import companion "github.com/greenpau/caddy-security/plugins/secrets-sqlite"
+import (
+	caddycmd "github.com/caddyserver/caddy/v2/cmd"
+	_ "github.com/caddyserver/caddy/v2/modules/standard"
+	_ "github.com/greenpau/caddy-security"
+	_ "github.com/greenpau/caddy-security/plugins/credential-authenticators-sqlite"
+	_ "github.com/greenpau/caddy-trace"
+)
 
-// SQLiteSecretsManager is the bundled companion module; see plugins/secrets-sqlite.
-type SQLiteSecretsManager = companion.SQLiteSecretsManager
+func main() { caddycmd.Main() }

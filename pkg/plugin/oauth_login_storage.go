@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
+	oauthsqlite "github.com/greenpau/go-authcrunch/plugins/oauth-login-storage/sqlite"
 )
 
 // OAuthLoginStoreConfig identifies an immutable host factory and its runtime.
@@ -61,6 +62,11 @@ type OAuthLoginStoreFactory interface {
 type OAuthLoginStore interface {
 	oauth.LoginStore
 	OAuthLoginStoreConfig() (OAuthLoginStoreConfig, error)
+}
+
+// SQLiteOAuthLoginStorageMetadata exposes frozen opening-path/capacity metadata.
+type SQLiteOAuthLoginStorageMetadata interface {
+	SQLiteConfig() oauthsqlite.Config
 }
 
 // Validate checks copied metadata without performing storage or network I/O.

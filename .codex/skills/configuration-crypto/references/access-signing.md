@@ -95,7 +95,7 @@ tokens. Direct OAuth policies reject these JWT profiles.
 
 The private signer accepts one unencrypted PKCS#8 or PKCS#1 two-prime RSA key,
 bounded to 16 KiB. It rejects symlinks and nonregular files. The app checks known
-key-read paths against bundled SQLite databases and their journal/WAL/SHM names
+key-read paths against optional SQLite databases and their journal/WAL/SHM names
 using filesystem metadata before opening keys. Deferred Start checks opening
 paths, current KMS environment paths and key-directory entries again. Serving
 apps retain their physical ownership inventory until requests drain. Keep

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // This executable runs Caddy's real command and production modules. Its only
-// fixture addition installs an isolated TLS root pool before any networking.
+// fixture additions select companions and install an isolated TLS root pool.
 package main
 
 import (
@@ -24,6 +24,23 @@ import (
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
 	_ "github.com/caddyserver/caddy/v2/modules/standard"
 	_ "github.com/greenpau/caddy-security"
+	_ "github.com/greenpau/caddy-security/plugins/claims-enrichment-static"
+	_ "github.com/greenpau/caddy-security/plugins/credential-authenticators-consul"
+	_ "github.com/greenpau/caddy-security/plugins/credential-authenticators-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/cryptographic-signing-rsapss"
+	_ "github.com/greenpau/caddy-security/plugins/external-authorization-httpjson"
+	_ "github.com/greenpau/caddy-security/plugins/identity-providers-consul"
+	_ "github.com/greenpau/caddy-security/plugins/identity-providers-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/identity-stores-consul"
+	_ "github.com/greenpau/caddy-security/plugins/identity-stores-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/messaging-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/oauth-login-storage-consul"
+	_ "github.com/greenpau/caddy-security/plugins/oauth-login-storage-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/registration-workflows-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/secrets-consul"
+	_ "github.com/greenpau/caddy-security/plugins/secrets-sqlite"
+	_ "github.com/greenpau/caddy-security/plugins/session-and-refresh-storage-consul"
+	_ "github.com/greenpau/caddy-security/plugins/session-and-refresh-storage-sqlite"
 	_ "github.com/greenpau/caddy-trace"
 )
 

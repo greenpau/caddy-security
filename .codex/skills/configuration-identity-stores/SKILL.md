@@ -21,7 +21,7 @@ Check `github.com/greenpau/go-authcrunch/pkg/ids` when changing this skill:
 validates the authcrunch parameter names produced by the Caddyfile parser.
 
 For SQLite password accounts and trusted offline administration, read
-[SQLite identities](references/sqlite-integration.md). The bundled module uses
+[SQLite identities](references/sqlite-integration.md). The optional module uses
 root runtime injection and preserves its own kind, epoch and password-only
 capabilities. The separate SQLite API-key authenticator does not create portal
 password accounts.

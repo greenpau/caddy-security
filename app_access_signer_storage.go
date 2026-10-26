@@ -21,6 +21,8 @@ import (
 
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+
+	"github.com/greenpau/caddy-security/pkg/plugin"
 )
 
 // configuredAccessKeyFiles reads metadata only. Opening and then closing even a
@@ -34,7 +36,7 @@ func (app *App) configuredAccessKeyFiles(config *authcrunch.Config) ([]identityP
 		files = append(files, identityProviderStorageFile{path: path, openingPath: path, keyRead: true})
 	}
 	for _, binding := range app.accessSigners {
-		if factory, ok := binding.factory.(*rsapssAccessSignerFactory); ok && factory != nil {
+		if factory, ok := binding.factory.(plugin.RSAPSSStorageMetadata); ok {
 			addFile(factory.SigningConfig().KeyFile)
 		}
 	}

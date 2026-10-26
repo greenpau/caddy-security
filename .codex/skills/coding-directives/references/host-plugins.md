@@ -30,22 +30,22 @@ realm and database path are distinct values; never use a path as implicit identi
 
 | Category | Host module naming | Status |
 | --- | --- | --- |
-| Claims enrichment | `security.claims_enrichment.<driver>` | Native app binding below; bundled `static` adapter also has policy Caddyfile syntax |
+| Claims enrichment | `security.claims_enrichment.<driver>` | Native app binding below; optional `static` adapter also has policy Caddyfile syntax |
 | Secrets | `security.secrets.<driver>` | Existing `SecretsManager` integration; external static/AWS module IDs remain unchanged |
-| External authorization | `security.external_authorization.<driver>` | Native app binding and bundled `httpjson` adapter with policy Caddyfile syntax |
-| Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and bundled SQLite/Consul factories with global Caddyfile syntax; bind validated runtime proxy config before root construction |
-| Identity stores | `security.identity_stores.<driver>` | Native/global declarations and bundled SQLite factory; derived descriptors and runtime handles enter ordinary root assembly |
-| Identity providers | `security.identity_providers.<driver>` | Native/global declarations and bundled SQLite tickets; normalized descriptors and exact caller-owned providers enter ordinary root assembly |
+| External authorization | `security.external_authorization.<driver>` | Native app binding and optional `httpjson` adapter with policy Caddyfile syntax |
+| Credential authenticators | `security.credential_authenticators.<driver>` | Native app declarations and optional SQLite/Consul factories with global Caddyfile syntax; bind validated runtime proxy config before root construction |
+| Identity stores | `security.identity_stores.<driver>` | Native/global declarations and optional SQLite factory; derived descriptors and runtime handles enter ordinary root assembly |
+| Identity providers | `security.identity_providers.<driver>` | Native/global declarations and optional SQLite tickets; normalized descriptors and exact caller-owned providers enter ordinary root assembly |
 | Messaging | `security.messaging.<driver>` | Native/global declarations and SQLite outboxes; optional named email delivery uses an app-owned bounded worker |
-| Registration workflows | `security.registration_workflows.<driver>` | Native/global declarations and bundled SQLite enrollment; exact borrowed dependencies and explicit portal registry selection |
-| Access signing | `security.access_signers.<driver>` | Immutable factory and borrowed root/portal signer; bundled `rsapss` |
-| Refresh storage | `security.refresh_stores.<driver>` | Native/global named declarations and bundled SQLite; immutable factories and borrowed generation views consumed by selected persistent portals |
-| OAuth login storage | `security.oauth_login_stores.<driver>` | Native/global named declarations and bundled SQLite storage; immutable factories supply exact borrowed runtime handles through root options |
+| Registration workflows | `security.registration_workflows.<driver>` | Native/global declarations and optional SQLite enrollment; exact borrowed dependencies and explicit portal registry selection |
+| Access signing | `security.access_signers.<driver>` | Immutable factory and borrowed root/portal signer; optional `rsapss` |
+| Refresh storage | `security.refresh_stores.<driver>` | Native/global named declarations and optional SQLite; immutable factories and borrowed generation views consumed by selected persistent portals |
+| OAuth login storage | `security.oauth_login_stores.<driver>` | Native/global named declarations and optional SQLite storage; immutable factories supply exact borrowed runtime handles through root options |
 
 The categories retain their typed public consumers. Do not add a universal
 map-based plugin executor or a second process-global runtime registry.
 
-## Bundled companion packages
+## Optional companion packages
 
 Implement each companion in `plugins/<category>-<backend>/plugin.go`, flattening
 the AuthCrunch category/backend boundary. These packages share this repository's
@@ -88,13 +88,38 @@ rather than a Consul backend/parser. It borrows the configured
 CertMagic locking does not establish OAuth single-use semantics. The global
 client remains owned by Caddy when the app retires a transaction handle.
 
-The original root adapter filenames retain type aliases and import the companion
-packages. Root factory interfaces alias `pkg/plugin` as well, preserving method
-signatures for existing consumers. Importing the root still bundles the
-companions listed above in the normal `cmd/authcrunch` build; existing Caddyfiles,
-JSON selectors and module IDs retain their meanings. Importing a companion alone
-registers its backend module without registering the parent app. Do not add a
-second registration hook to an alias file or make companions depend on the root.
+The root and `cmd/authcrunch` register the security app and HTTP integrations
+without importing any companion. Every package in `plugins/` is opt-in. Build
+with the root and each required companion at the same published tag or commit:
+
+```sh
+CADDY_SECURITY_REF='REPLACE_WITH_PUBLISHED_TAG_OR_COMMIT'
+xcaddy build \
+    --with "github.com/greenpau/caddy-security@${CADDY_SECURITY_REF}" \
+    --with "github.com/greenpau/caddy-security/plugins/oauth-login-storage-consul@${CADDY_SECURITY_REF}" \
+    --with github.com/pteich/caddy-tlsconsul@v1.5.0
+```
+
+Apply the same `--with` form to every selected package in the table above.
+Importing a companion registers only its own backend module and dependencies;
+it never registers the parent app or unrelated companions. Missing modules fail
+adaptation or provisioning. Do not add production imports from the root to
+companions, including concrete type aliases or parser imports.
+
+Root factory interfaces still alias `pkg/plugin`. Concrete companion types must
+be imported from their own package; their former production root aliases are
+removed. `optional_companions_test.go` retains test-only aliases for host tests.
+`testdata/companion_caddy` explicitly imports the complete companion inventory;
+`testdata/credential_companion_caddy` selects only SQLite credentials. The TLS
+trust fixture also declares its companion imports explicitly.
+
+Host preflight uses read-only typed metadata in `pkg/plugin`: SQLite paths,
+frozen refresh/OAuth/signing configuration and portal mounts. Module-ID admission
+continues to restrict root-owned ticket attachments to the SQLite/Consul ticket
+modules and SQLite SMTP delivery to the SQLite messaging module. Interface
+satisfaction alone never grants those ownership capabilities. Static Caddyfile
+claims validation is delegated to the explicitly registered companion's pure
+`ClaimsEnrichmentBindingValidator`; adaptation never opens a backend.
 
 Host admission inspects detached `BackendConfig` snapshots and immutable
 `Factory.SQLiteConfig`/`Factory.SigningConfig` snapshots. These expose declarative
@@ -113,7 +138,7 @@ standalone loading inventory. Keep private state tests beside their own
 category. Root dispatch/adaptation, alias, storage-preflight, lifecycle and
 TLS/browser E2E tests remain with the app. Run both surfaces when changing a
 companion; directory registration alone does not prove consumer integration.
-The [test inventory](../../testing-and-ci/references/test-surfaces.md#bundled-companion-packages)
+The [test inventory](../../testing-and-ci/references/test-surfaces.md#optional-companion-packages)
 maps local cases to assembled consumers and explains package coverage.
 
 ## Native claims enrichment binding
@@ -145,7 +170,7 @@ The static adapter transports its entire object in a `claims_json` string and
 uses `UseNumber` only after that boundary. Do not insert decoded numeric values
 into the outer Caddy JSON tree.
 
-The bundled static adapter has a
+The optional static adapter has a
 [policy Caddyfile block](../../configuration-authorization/references/static-claims.md).
 Backend fields and identity binding fields receive literal values without Caddy
 runtime replacement. Add any supported replacement centrally with its feature's
@@ -232,7 +257,7 @@ and define any worker shutdown ordering before sharing this resource mechanism.
 `OAuthLoginStoreFactory`. Its `OAuthLoginStoreConfig` returns copied name, driver
 and config-hash metadata; `NewOAuthLoginStore` consumes the frozen prepared
 configuration. It must not reread mutable exported module fields at deferred
-Start. The bundled SQLite factory normalizes public defaults and duration spelling.
+Start. The optional SQLite factory normalizes public defaults and duration spelling.
 Its descriptor hash establishes host factory agreement, not the provider namespace.
 
 The returned `OAuthLoginStore` embeds the public transaction interface and
@@ -263,7 +288,7 @@ See [shared login storage](../../configuration-oauth-providers/references/shared
 `RefreshStoreBackendModule.PrepareRefreshStore` returns an immutable
 `RefreshStoreFactory`; copied `ExternalStoreConfig` metadata comes from
 `RefreshStoreConfig`, and `NewRefreshStore` returns the exact public
-`tokenrefresh.ManagedStore`. The bundled SQLite factory delegates pure parsing
+`tokenrefresh.ManagedStore`. The optional SQLite factory delegates pure parsing
 and normalization, including equivalent timeout spelling, without opening the
 database. Runtime module fields are never reread at deferred Start. Reject
 invalid native selector bytes before JSON copying and raw module bytes before
@@ -314,7 +339,7 @@ An interface satisfied by a backend does not establish a usable root attachment.
 | Category | Public consumer and host consequence |
 | --- | --- |
 | Claims enrichment | `Server.GetGatekeeperByName` → `Gatekeeper.SetClaimsEnricher`; supported before publication through this host boundary |
-| External authorization | `Gatekeeper.SetExternalAuthorizer`; attached to the private root through the host binding and bundled HTTP JSON factory |
+| External authorization | `Gatekeeper.SetExternalAuthorizer`; attached to the private root through the host binding and optional HTTP JSON factory |
 | Secrets | Host `SecretsManager` resolves values before root construction; separate adapter must preserve exact types and redact `GetConfig` metadata |
 | Messaging | `messaging.Config.AddProvider` preserves runtime injections through validation, excludes them from JSON, and is consumed by registry `SetMessaging`; bind after config restoration and before validation/construction; SQLite delivery uses the app-owned bounded worker |
 | OAuth login storage | `NewServerWithOptions` and `ServerOptions.OAuthLoginStores`; the host validates every retained provider reference, supplies fresh named handles on each construction and closes them only after consumers drain and the root closes |
@@ -336,7 +361,7 @@ with root-owned portal names and existing bindings, and check all proxies before
 publication. Runtime bindings disappear on JSON serialization: restore them on
 each new graph after decoding. The backend remains caller-owned on constructor
 failure and root Close. Add regression coverage for this ordering; do not assume
-reparsing raw declarations preserves an injected handle. The bundled SQLite
+reparsing raw declarations preserves an injected handle. The optional SQLite
 adapter uses `CredentialAuthenticatorBackendModule`: `CredentialIdentity` supplies
 the exact name/realm and `NewCredentialAuthenticator` transfers a distinct
 context-aware, fresh, closable backend. The host verifies runtime identity and
@@ -383,7 +408,7 @@ checks CLI revocation, storage failure, reload and restart.
 `MessagingProviderBackendModule` supplies a validated name and a fresh
 `messaging.Provider`. Bind it into the app-private resolved messaging config
 before constructing the root. Runtime handles are excluded from native JSON.
-SQLite delivery is an explicit bundled capability, not an assumed method of
+SQLite delivery is an explicit optional capability, not an assumed method of
 arbitrary providers. Its queue factory has no module-level Cleanup ownership.
 The app starts workers only at Start, drains producers before cancellation,
 joins every worker, disposes the root, then closes queues in reverse acquisition
@@ -415,7 +440,7 @@ metadata, captures immutable public-key evidence, and borrows the exact signer.
 Contain only metadata/preparation/accessor and cleanup panics; never recover
 around signing or root construction.
 
-The bundled RSA-PSS factory's private-key path and every explicit selected
+The optional RSA-PSS factory's private-key path and every explicit selected
 portal/policy KMS key read enter the common storage inventory before any backend
 opens. Check physical paths, existing-file identities and SQLite sidecars, then
 recollect environment/directory-derived key reads during deferred startup before
@@ -437,7 +462,7 @@ lazy memory attachments are not initialized by this check. Preserve dynamic opti
 especially HTTP login and identity attachment; a wrapper that loses the provider's attachment cannot
 validate its proof through a newly created fallback.
 
-The bundled SQLite ticket module alone opts into
+The optional SQLite ticket module alone opts into
 `ServerOptions.IdentityProviderAttachmentStores` when its copied typed attachment
 has a nonempty target. Prepare the exact target name on the immutable app snapshot;
 require one configured built-in local declaration before factories run and pass
@@ -458,7 +483,7 @@ discard and close it, then construct a fresh instance. There is no unbind/reuse
 rollback contract. The root still never closes borrowed providers.
 
 Read-only host checks compare ticket database and sidecar paths with known
-bundled backend and local/dropbox files before live factories run. SQLite secret
+optional backend and local/dropbox files before live factories run. SQLite secret
 snapshots were already read and closed during configuration resolution. Compatible
 ticket handles may share one canonical file, without exclusive local-snapshot
 reservations; different hardlink names and cross-category aliases are rejected.

@@ -29,3 +29,9 @@ type MessagingProviderBackendModule interface {
 	MessagingProviderName() (string, error)
 	NewMessagingProvider(context.Context) (messaging.Provider, error)
 }
+
+// MessagingDeliveryMetadata names the email transport selected by an outbox.
+// The host enables its SQLite delivery worker only for the SQLite module ID.
+type MessagingDeliveryMetadata interface {
+	DeliveryProviderName() string
+}

@@ -96,17 +96,19 @@ modules register from package `init` hooks.
   roots are constructed in `App.Start`; overlapping persistent reload is rejected
   before candidate routes start, and Cleanup drains calls before root disposal.
 - `app_identity_providers.go` binds caller-owned login providers to the root;
-  the bundled SQLite ticket provider retains trusted application issuance and
+  the optional SQLite ticket provider retains trusted application issuance and
   its independent browser-binding cookie.
 - `app_registration_workflows.go` binds caller-owned enrollment workflows after
   account stores and notification queues; SQLite signup requires explicit portal
   selection and confirms directly into its account store.
-- `plugins/<category>-<backend>/` contains the bundled Caddy companions for
+- `plugins/<category>-<backend>/` contains opt-in Caddy companions for
   AuthCrunch backends, including claims, external decisions, secrets, identities,
   credentials, messaging, enrollment, signing and OAuth/refresh storage.
-  `pkg/plugin` owns their public typed contracts; root adapter files retain
-  compatibility aliases. The coding directives' host-plugin reference owns
-  package mappings, registration and lifetime rules.
+  `pkg/plugin` owns their public typed contracts. The root never imports
+  companion packages; operators select each one with an explicit xcaddy
+  `--with` argument. Concrete companion types live in their own packages. The
+  coding directives' host-plugin reference owns package mappings, registration
+  and lifetime rules.
 - `*_test.go` files sit beside the code they exercise. `caddyfile_adapt_test.go`
   is fixture-driven and compares Caddyfile input against expected adapted JSON.
 - `testdata/caddyfile_adapt/` contains `.Caddyfile`, `.json`, optional `.env`,

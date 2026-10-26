@@ -169,7 +169,7 @@ Use an absolute private local POSIX file with existing 0700 parent directories;
 database and sidecars require 0600. Storage is pure Go, unencrypted and unsuitable
 for a shared network filesystem. Ticket files and journal/WAL/shared-memory
 namespaces must be distinct from other database categories. The app checks known
-bundled declarations and local/dropbox files before live backend construction,
+optional declarations and local/dropbox files before live backend construction,
 including existing inode and parent-path aliases. Native SQLite paths are cleaned
 before alias checks, matching the constructors; local snapshot/dropbox paths keep
 their original traversal semantics. Custom modules own their own
@@ -183,7 +183,7 @@ issuance, multi-host availability or durable portal sessions.
 
 The app derives descriptors before root validation and opens fresh handles before
 root construction. Runtime bindings are absent from JSON. The root borrows the
-exact instances and never configures or closes them. Only a bundled ticket
+exact instances and never configures or closes them. Only a optional ticket
 module with a nonempty target opts into `IdentityProviderAttachmentStores`:
 the root captures its fresh unbound attachment, validates the exact enabled
 local declaration before acquisition, then binds the actual root store before
