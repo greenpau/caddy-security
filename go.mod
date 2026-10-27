@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.4.1
+	github.com/greenpau/go-authcrunch v1.5.0
 	github.com/greenpau/versioned v1.0.36
 	github.com/hashicorp/consul/api v1.29.4
 	github.com/pteich/caddy-tlsconsul v1.5.0

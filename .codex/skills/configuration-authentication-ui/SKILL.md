@@ -10,11 +10,21 @@ description: "Configure portal UI templates, static assets, themes, languages, l
 The selected embedded portal and OIDC pages supply their themed layouts and
 browser color preference behavior automatically. `theme basic` remains the
 only registered Caddy theme; do not invent `theme dark` or `theme light`.
-Profile assets include `profile/images/banner.svg`, `favicon.svg` and
-`logo.svg`. Custom static PNG assets remain supported. Avoid pinning internal
+Profile assets include `profile/favicon.svg` and `profile/logo.svg`.
+Custom static PNG assets remain supported. Avoid pinning internal
 hashed assets when customizing templates; inspect the selected embedded UI.
 Conditional flow selection and profile policy editing need no extra UI setting;
 see [authentication flows](../authentication-portal-api/references/authentication-flows.md).
+
+The embedded apps use `<mount>/profile/` (User Profile), `<mount>/operator/`
+(Security Manager) and `<mount>/documents/` (File Vault). The profile shell is
+always available; its APIs retain their independent enablement. Security Manager
+requires the admin API and an administrator role. File Vault requires an enabled,
+initialized Documents API and an administrator or user role; the same roles
+permit profile access. The portal adds links for enabled apps the user may access.
+Only each enabled app's exact `manifest.json` is public; other assets require
+authorization. Keep the full portal mount when routing these apps: the library
+supplies the HTML base path and embedded assets without separate Caddy handlers.
 
 ## Purpose
 

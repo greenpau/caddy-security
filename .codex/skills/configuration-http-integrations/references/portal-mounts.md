@@ -163,7 +163,7 @@ The shared mount validator checks each segment case-sensitively:
 | Reservation | Names |
 | --- | --- |
 | Segment starts with | `profile`, `portal`, `recover`, `forgot`, `register`, `whoami`, `logout`, `favicon`, `beacon`, `login` |
-| Complete segment | `connected-accounts`, `.well-known`, `api`, `apps`, `assets`, `barcode`, `basic`, `cross-device`, `oauth2`, `oidc`, `provider`, `qrcode`, `saml`, `sandbox` |
+| Complete segment | `operator`, `documents`, `connected-accounts`, `.well-known`, `api`, `apps`, `assets`, `barcode`, `basic`, `cross-device`, `oauth2`, `oidc`, `provider`, `qrcode`, `saml`, `sandbox` |
 
 Thus `/company/login-team` and `/company/api/auth` are rejected. Neutral
 lookalikes such as `/team-login`, `/saml-service`, `/cross-device-team`, `/auth`
