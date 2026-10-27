@@ -59,8 +59,8 @@ for module replacement details.
 
 Download Caddy with the security app enabled:
 <!-- caddy-security-downloads -->
-* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.6.0&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
-* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.6.0&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=windows&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.6.1&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">windows/amd64</a>
+* <a href="https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fgreenpau%2Fcaddy-security%40v1.6.1&p=github.com%2Fgreenpau%2Fcaddy-trace%40v1.1.13" target="_blank">linux/amd64</a>
 
 ## Tests and Reports
 
