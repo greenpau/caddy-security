@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -141,6 +142,9 @@ func newPasswordCaddyFixture(t *testing.T, binary, imported, cert, key string, r
 			return
 		}
 		assertAdminRedacted(t, data, f.secrets)
+		if t.Failed() {
+			t.Logf("Caddy executable diagnostics:\n%s", data)
+		}
 	})
 	f.start(t)
 	response := f.request(t, "GET", "/.well-known/jwks.json", nil, nil)
@@ -178,31 +182,55 @@ func (f *passwordCaddyFixture) start(t *testing.T) {
 	command, done := f.command, make(chan error, 1)
 	f.done = done
 	go func() { err := command.Wait(); log.Close(); done <- err }()
-	deadline := time.NewTimer(15 * time.Second)
-	defer deadline.Stop()
+	readyCtx, readyCancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer readyCancel()
+	exited, err := waitPasswordCaddyReady(readyCtx, f.plain, f.issuer+"/login", done)
+	if exited {
+		f.done = nil
+		cancel()
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.newBrowser(t)
+}
+
+// waitPasswordCaddyReady reports whether it consumed the process completion so
+// cleanup does not wait for that same result again. Probe bodies and headers
+// never enter diagnostics because they can carry authentication credentials.
+func waitPasswordCaddyReady(ctx context.Context, client *http.Client, endpoint string, done <-chan error) (bool, error) {
 	ticker := time.NewTicker(25 * time.Millisecond)
 	defer ticker.Stop()
+	lastProbe := errors.New("no HTTPS probe completed")
+	lastStatus := 0
 	for {
 		select {
-		case err := <-f.done:
-			f.done = nil
-			cancel()
-			t.Fatalf("Caddy executable exited before readiness: %v", err)
-		case <-deadline.C:
-			t.Fatal("Caddy executable did not become ready")
+		case err := <-done:
+			return true, fmt.Errorf("Caddy executable exited before readiness: %v", err)
+		case <-ctx.Done():
+			return false, fmt.Errorf("Caddy executable did not become ready: %w; last HTTPS probe: %v; last HTTP status: %d", ctx.Err(), lastProbe, lastStatus)
 		case <-ticker.C:
-			response, err := f.plain.Get(f.issuer + "/login")
+			request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 			if err != nil {
+				return false, errors.New("cannot construct Caddy readiness request")
+			}
+			response, err := client.Do(request)
+			if err != nil {
+				if requestErr, ok := err.(*url.Error); ok {
+					err = requestErr.Err
+				}
+				lastProbe = err
 				continue
 			}
 			response.Body.Close()
+			lastStatus = response.StatusCode
 			if response.TLS == nil || len(response.TLS.VerifiedChains) == 0 {
-				t.Fatal("fixture TLS was not verified")
+				return false, errors.New("fixture TLS was not verified")
 			}
-			if response.StatusCode == 200 {
-				f.newBrowser(t)
-				return
+			if response.StatusCode == http.StatusOK {
+				return false, nil
 			}
+			lastProbe = fmt.Errorf("HTTP status %d, want %d", response.StatusCode, http.StatusOK)
 		}
 	}
 }

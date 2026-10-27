@@ -396,6 +396,13 @@ and completion channel, independent of later fixture restarts. The new
 binary is not the instrumented Go test helper; its code does not contribute to
 parent coverage. Unit and existing instrumented command tests cover the host code.
 
+Startup probes require a verified HTTPS login response and bind outstanding
+requests to the existing 15-second readiness deadline. Failures
+report the last HTTP status and transport error; cleanup emits subprocess logs
+only after their credential-redaction checks pass. `TestPasswordCaddyReadiness`
+covers delayed availability, HTTP failure and credential-safe diagnostics,
+outstanding-request cancellation, early process exit and unverified transport.
+
 Run the focused `TestPasswordImport|TestSecurityCredentialArgon2|TestCaddyPasswordArgon2E2E`
 selection when password import or Argon2 behavior changes. See
 [password hashing](../../configuration-users/references/password-hashing.md)
