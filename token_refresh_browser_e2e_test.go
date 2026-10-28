@@ -126,6 +126,7 @@ type tokenRefreshBrowserProbe struct {
 type tokenRefreshBrowserState struct {
 	mu                                                               sync.Mutex
 	rotations, rotationRequests, lookups, logouts, active, maxActive int
+	lastRotationStatus                                               int
 	staleRendered, cutNext, holdNext, held                           bool
 	staleRelease, rotationRelease                                    chan struct{}
 	loginRequests                                                    int
@@ -151,7 +152,7 @@ func (m *tokenRefreshBrowserProbe) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		switch strings.TrimPrefix(r.URL.Path, control) {
 		case "status":
 			w.Header().Set("Content-Type", "application/json")
-			return json.NewEncoder(w).Encode(map[string]any{"rotations": s.rotations, "requests": s.rotationRequests, "lookups": s.lookups, "logouts": s.logouts, "stale_rendered": s.staleRendered, "held": s.held, "max_active": s.maxActive})
+			return json.NewEncoder(w).Encode(map[string]any{"rotations": s.rotations, "requests": s.rotationRequests, "lookups": s.lookups, "logouts": s.logouts, "stale_rendered": s.staleRendered, "held": s.held, "max_active": s.maxActive, "last_rotation_status": s.lastRotationStatus})
 		case "cut":
 			s.cutNext = true
 		case "hold":
@@ -243,8 +244,11 @@ func (m *tokenRefreshBrowserProbe) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		return err
 	}
 	s.mu.Lock()
-	if rotation && recorder.Code == 200 {
-		s.rotations++
+	if rotation {
+		s.lastRotationStatus = recorder.Code
+		if recorder.Code == 200 {
+			s.rotations++
+		}
 	}
 	release := s.staleRelease
 	if stale {

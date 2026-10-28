@@ -26,6 +26,16 @@ import (
 	"time"
 )
 
+func TestCaddyRefreshBrowserNavigation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "node", "--test", "testdata/browser/token_refresh_browser_navigation_test.cjs")
+	cmd.WaitDelay = time.Second
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("browser navigation regression: %v\n%s", err, output)
+	}
+}
+
 func TestCaddyRefreshBrowserTrust(t *testing.T) {
 	cert, _, _ := cookieTLSCertificate(t)
 	prepare := func(profile, certificate string, wantError bool) {

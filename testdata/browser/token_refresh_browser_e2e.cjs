@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 // A dependency-free CDP consumer. The Go fixture owns Chrome and the real Caddy TLS listener.
 const assert = require("node:assert/strict");
+const {createNavigation} = require("./token_refresh_browser_navigation.cjs");
 const [endpoint, origin, mount, refreshCookie, accessCookie, scenario, untrustedOrigin, wrongHostnameOrigin] = process.argv.slice(2);
 const password = require("node:fs").readFileSync(0, "utf8");
 const socket = new WebSocket(endpoint);
@@ -55,12 +56,7 @@ async function page(contextId) {
   await command("Runtime.enable", {}, sessionId);
   return sessionId;
 }
-async function navigate(page, path, sessionClient = false, expectedPath = path) {
-  const result = await command("Page.navigate", { url: origin + path }, page);
-  if (result.errorText) throw new Error("portal navigation failed");
-  await waitFor(() => evaluate(page, (url) => location.href === url && document.readyState === "complete", origin + expectedPath));
-  if (sessionClient) await waitFor(() => evaluate(page, () => !!window.AuthCrunchSession));
-}
+const navigate = createNavigation({command, evaluate, waitFor, origin});
 
 const storageKey = "authcrunch-session:" + mount;
 async function login(page, realm = "employees", accessOnly = false) {
@@ -146,8 +142,9 @@ async function coordinatedRefresh(first, second) {
   assert.equal((await snapshot(second)).requests,before.requests+1,"waiting tab sent a competing rotation");
   await control(second, "release_rotation");
   const [a,b]=await Promise.all([one,two]);
-  assert(a.ok && b.ok && a.session===b.session, "tabs did not share a successful rotation");
   const after=await snapshot(first);
+  const metadata=await state(first);
+  assert(a.ok && b.ok && a.session===b.session, "tabs did not share a successful rotation: "+JSON.stringify({first_ok:a.ok,second_ok:b.ok,same_session:a.session===b.session,pending:!!metadata?.pending,blocked:!!metadata?.blocked,before,after}));
   assert.equal(after.rotations-before.rotations,1,"concurrent tabs repeated rotation");
   assert.equal(after.requests-before.requests,1,"concurrent tabs sent another rotation");
   assert.equal(after.max_active,1,"refresh operations overlapped");

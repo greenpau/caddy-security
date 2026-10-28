@@ -74,10 +74,11 @@ class CIShardsUnitTests(unittest.TestCase):
         for name in long:
             group = next(values for values in balanced.values() if name in values)
             self.assertEqual([test for test in group if test.endswith('E2E')], [name])
-        browser_names = sorted(set(names) | self.ci.BROWSER_TESTS)
+        browser_callers = self.ci.BROWSER_TESTS | {'TestCaddyCompositionE2E'}
+        browser_names = sorted(set(names) | browser_callers)
         browser_groups = self.ci.root_partition(browser_names)
         flags = {row['shard']: row['browser'] for row in self.ci.matrix(browser_names)['include']}
-        for name in self.ci.BROWSER_TESTS:
+        for name in browser_callers:
             shard = next(key for key, values in browser_groups.items() if name in values)
             self.assertTrue(flags[shard], name)
         self.assertFalse(flags['root-direct-oauth-expiry'])
@@ -226,6 +227,27 @@ class CIShardsTests(unittest.TestCase):
 
     def cli(self, *args, **kwargs):
         return self.command('python3', 'assets/scripts/ci_tests.py', *args, **kwargs)
+
+    def test_matrix_cli_marks_composition_for_browser_setup(self):
+        names = [
+            'TestFuture', 'TestBrowser', 'TestAuthenticationClient',
+            'TestAuthenticationClientNative', 'TestCaddyAuthenticatorE2E',
+            'TestCaddySQLiteIdentityCommandsE2E', 'TestSecurityCredential',
+            'TestDirectOAuthRefresh', 'TestCaddyDirectOAuthExpirationE2E',
+            'TestOIDC', 'TestCaddyOIDCRelyingPartyE2E', 'TestJWKS',
+            'TestAccessSigner', 'TestCaddyAccessSignerPersistenceE2E',
+            'TestRefresh', 'TestSQLiteRefresh', 'TestOIDCRefreshBrowser',
+            'TestCrossDeviceBrowser', 'TestCaddyCrossDeviceExpirationE2E',
+            'TestCaddyCompositionE2E',
+            *(f'TestAppFuture{number:02d}' for number in range(24)),
+        ]
+        inventory = self.root / 'tests.json'
+        inventory.write_text(json.dumps(sorted(names)))
+        matrix = json.loads(self.cli('matrix', '--inventory', str(inventory)).stdout)['include']
+        runtime = [row for row in matrix if row['shard'] in RUNTIME_SHARDS]
+        self.assertEqual(len(runtime), len(RUNTIME_SHARDS))
+        self.assertEqual(sum(row['browser'] for row in runtime), 1,
+                         'The composition parent must enable browser setup')
 
     def test_e2e_complete_disjoint_shards_reports_and_failed_rerun(self):
         expected = {

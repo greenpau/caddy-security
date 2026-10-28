@@ -83,9 +83,11 @@ checkout still disables persisted credentials and Go setup leaves caching to
 the explicit cache steps.
 
 Preparation derives each matrix row's browser prerequisite from its selected
-test names, including parents that call browser helpers without `Browser` in
-their names. Keep `BROWSER_TESTS` aligned with those callers. Only those rows
-install Node 24/NSS and verify Chrome. Preparation and quality avoid browser
+test names, including `TestCaddyCompositionE2E` and other parents that call
+browser helpers without `Browser` in their names. Keep `BROWSER_TESTS` aligned
+with those callers. The composition browser case must receive the same pinned
+Node and browser prerequisites as the dedicated refresh-browser suite. Only
+those rows install Node 24/NSS and verify Chrome. Preparation and quality avoid browser
 setup; standalone expiration rows also avoid it.
 All Go shards retain race detection, fresh execution and whole-process-tree
 guards. Individual shards use a zero coverage minimum because a separately built

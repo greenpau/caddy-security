@@ -28,6 +28,7 @@ SHARDS = (*ROOT_SHARDS, 'packages')
 BROWSER_SHARDS = ('root-browser', 'root-direct-oauth', 'root-refresh-browser',
                   'root-refresh-sqlite', 'root-cross-device', *RUNTIME_SHARDS)
 BROWSER_TESTS = {'TestCaddyDirectOAuthE2E', 'TestCaddyConnectedAccountsE2E',
+                 'TestCaddyCompositionE2E',
                  'TestCaddyDocumentsE2E', 'TestCaddySQLiteIdentityE2E',
                  'TestCaddySQLiteRegistrationE2E', 'TestCaddySQLiteTicketE2E',
                  'TestCaddySQLiteRefreshUncertaintyE2E'}

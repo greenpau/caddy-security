@@ -154,6 +154,12 @@ API-key and explicit native-body logins remain separate contracts.
   infer revocation from uncertainty.
 - `TestCaddyRefreshBrowserStartup` verifies delayed/partial CDP readiness, early
   process exits, missing executables, deadline cleanup and process reaping.
+- `TestCaddyRefreshBrowserNavigation` runs the Node navigation regressions for a
+  delayed same-URL reload, coordinator readiness, continuation redirects,
+  same-document navigation and safe navigation failures. Cross-document waits
+  must observe a replacement main-frame loader before accepting the expected
+  URL and complete document; the previous page can already satisfy both during
+  a reload. Wait for the new document's coordinator after that boundary.
 - `TestCaddyRefreshBrowserTrust` checks that trust preparation rejects malformed
   certificates, existing profiles and profile symlinks without modifying their
   trust state. Each real-browser scenario also rejects an untrusted certificate

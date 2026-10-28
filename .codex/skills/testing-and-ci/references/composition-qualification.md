@@ -20,6 +20,17 @@ The protected route within each cookie scope runs before portal dispatch, so
 ordinary browser cookies must authorize a real upstream as well as bearer JWTs.
 No OP key is added to a portal verification set to make a JWT test pass.
 
+For a browser-only change, select the isolated browser composition subcase:
+
+```sh
+CADDY_SECURITY_COMPOSITION_CHILD=1 go test -mod=readonly -race -count=1 \
+  -run '^TestCaddyCompositionProcess$/^real_browser_composition$' -v .
+```
+
+This explicitly enables the helper in its own Go test process. Check that the
+named subcase actually runs; omitting the environment value only skips it.
+Use the parent `TestCaddyCompositionE2E` for complete composition qualification.
+
 ## Coverage map
 
 | Surface | Evidence |
@@ -58,6 +69,14 @@ cookies from lost responses, for the same log audit after Caddy stops. Its
 control endpoint never exposes those values. Ordinary correlation
 session IDs may be logged; they are distinct from credential-bearing OIDC
 session cookies, which remain included in redaction checks.
+
+The shared browser navigation helper waits for a replacement document on reload,
+then checks the expected URL, load completion and coordinator presence. The
+recovery flow reloads the same portal URL in both tabs; accepting the old loaded
+page can race bootstrap against the next held rotation. Navigation unit cases
+cover that boundary and continuation redirects. Rotation failure diagnostics
+report only success flags, request counts, HTTP status and pending/blocked flags,
+without credential or session values.
 
 `TestCaddyJWKSPersistenceE2E` separately checks persisted portal keys across
 process restarts and live retirement. Its post-reload discovery probes close
