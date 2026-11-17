@@ -50,23 +50,23 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: false
       - name: Cache Go modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ hashFiles('go.sum') }}
           restore-keys: |
-            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.11-
       - name: Cache Go builds
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build
-          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-quality-${{ hashFiles('go.sum') }}-${{ github.sha }}
           restore-keys: |
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-quality-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-quality-
       - name: Install pinned tools and module dependencies
         run: make dep
       - name: Run repository quality gates
@@ -99,23 +99,23 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: false
       - name: Cache Go modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ hashFiles('go.sum') }}
           restore-keys: |
-            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.11-
       - name: Cache prepared Go builds
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build
-          key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ hashFiles('go.sum') }}-${{ github.sha }}
           restore-keys: |
-            go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-root-
+            go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-root-
       - name: Download and verify module dependencies
         run: |
           go mod download
@@ -176,30 +176,30 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: false
       - name: Cache Go modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ hashFiles('go.sum') }}
           restore-keys: |
-            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.11-
       - name: Cache Go builds
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build
-          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
           restore-keys: |
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ matrix.shard }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ matrix.cache_group }}-
       - name: Restore shared prepared Go builds
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build
-          key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          key: go-prepared-v1-${{ runner.os }}-${{ runner.arch }}-1.26.11-${{ hashFiles('go.sum') }}-${{ github.sha }}
       - name: Set up Node.js for browser E2E
         if: ${{ matrix.browser }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -272,7 +272,7 @@ jobs:
       - name: Set up Go for coverage reporting
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: false
       - name: Verify complete execution and combine coverage
         id: merge

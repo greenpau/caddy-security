@@ -14,6 +14,7 @@ const socket = new WebSocket(endpoint);
 const pending = new Map(), contexts = new Set(), requests = new Map(), requestExtras = new Map(), responseExtras = new Map();
 const captures = new Set(), secrets = new Set(), cryptoSecrets = new Set();
 let sequence = 0, evidenceBytes = 0, wireBytes = 0, exceptionCount = 0, captureFailed = false;
+const recoveryKeys = new Map((input.recovery || []).map(value => [value.account, value.recoveryKey]));
 let stage = 'connect';
 const marker = 'Private browser document payload remains encrypted in transit';
 const filename = 'private-budget-browser-qualification.txt';
@@ -369,6 +370,7 @@ async function step(page, action, args = {}) {
 async function enroll(page, account) {
   const value = await step(page, 'enroll');
   secret(value.recoveryKey, 'base64url', true);
+  recoveryKeys.set(account, value.recoveryKey);
   record({ kind: 'recovery', account, userID: page.bootstrap.user_id, portalID: page.bootstrap.portal_id,
     keyID: value.registration.key_id, publicKey: value.registration.public_key, recoveryKey: value.recoveryKey });
   const stored = await step(page, 'register', { recoveryKey: value.recoveryKey });
@@ -377,9 +379,9 @@ async function enroll(page, account) {
 }
 
 async function create(pages) {
-  const alice = await login('alice'), bob = await login('bob'), admin = await login('admin');
-  pages.push(alice, bob, admin);
-  assert.ok(alice.bootstrap.portal_id === bob.bootstrap.portal_id && alice.bootstrap.portal_id === admin.bootstrap.portal_id,
+  const alice = await login('alice'), bob = await login('bob');
+  pages.push(alice, bob);
+  assert.ok(alice.bootstrap.portal_id === bob.bootstrap.portal_id,
     'accounts did not share the same Documents portal');
   const owner = await enroll(alice, 'alice'), recipient = await enroll(bob, 'bob');
   let sharedID;
@@ -402,7 +404,6 @@ async function create(pages) {
   const envelope = await step(alice, 'share', { id: sharedID, recipient: publicKey });
   const shared = await step(bob, 'decrypt', { id: sharedID, empty: false });
   secret(shared.key, 'base64url', true);
-  await step(admin, 'deny', { operation: 'fetch', params: { id: sharedID } });
   await step(bob, 'deny', { operation: 'delete', params: { id: sharedID } });
   await step(bob, 'deny', { operation: 'share', params: { id: sharedID, user: alice.bootstrap.user_id }, body: { envelope } });
   assert.ok(await step(bob, 'tampering', { id: sharedID, recoveryKey: recipient.recoveryKey,
@@ -411,6 +412,14 @@ async function create(pages) {
   await step(bob, 'deny', { operation: 'fetch', params: { id: sharedID } });
   await step(bob, 'deny', { operation: 'chunk', params: { id: sharedID, index: 0 } });
   await step(alice, 'decrypt', { id: sharedID, empty: false });
+  await closePage(bob);
+  const admin = await login('admin');
+  pages.push(admin);
+  assert.equal(admin.bootstrap.portal_id, alice.bootstrap.portal_id, 'admin portal identity changed');
+  await step(admin, 'deny', { operation: 'fetch', params: { id: sharedID } });
+  admin.closedCalls = await step(admin, 'calls');
+  if (config.shippedUI) await verifyAdminApplication(admin);
+  await closePage(admin);
 }
 
 async function recover(pages) {
@@ -432,13 +441,68 @@ async function recover(pages) {
   await step(alice, 'list');
 }
 
+// Completed devices need no live renderer. Keep at most two account contexts
+// alive during sharing tests, including when the fixture runs under the race detector.
+async function closePage(page) {
+  page.closedCalls ??= await step(page, 'calls');
+  await waitForRead(() => [...requests.values()].every(item => item.complete));
+  await Promise.all([...captures]);
+  await command('Target.disposeBrowserContext', { browserContextId: page.context });
+  contexts.delete(page.context);
+}
+
+async function verifyAdminApplication(admin) {
+  stage = 'shipped Security Manager account details';
+  await navigate(admin.tab, config.origin + config.mount + '/operator/users/local/alice?email=alice%40example.test');
+  await waitForRead(() => evaluate(admin.tab, () =>
+    document.querySelector('main')?.innerText.includes('alice@example.test') &&
+    [...document.querySelectorAll('textarea')].some(input => input.value.split('\n').includes('authp/user'))));
+}
+
+// These are the shipped React applications, not the portable crypto fixture.
+// Qualify the currently supported pages without claiming capability-aware UI
+// controls or credential counts, which require a separate authored UI update.
+async function verifyApplications(pages) {
+  const alice = pages[0];
+  stage = 'shipped Profile information';
+  await navigate(alice.tab, config.origin + config.mount + '/profile/info');
+  await waitForRead(() => evaluate(alice.tab, () =>
+    document.querySelector('main')?.innerText.includes('alice@example.test') &&
+    [...document.querySelectorAll('button')].some(button => /change password/i.test(button.textContent))));
+  stage = 'shipped File Vault unlock';
+  await navigate(alice.tab, config.origin + config.mount + '/documents/vault');
+  await waitForRead(() => evaluate(alice.tab, id =>
+    !!document.querySelector('input[type="password"]') && document.querySelector('main')?.innerText.includes(id), config.expectedUsers.alice));
+  await evaluate(alice.tab, recovery => {
+    const field = document.querySelector('input[type="password"]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, recovery);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }, recoveryKeys.get('alice'));
+  await evaluate(alice.tab, () => document.querySelector('input[type="password"]').form.requestSubmit());
+  await waitForRead(() => evaluate(alice.tab, () =>
+    [...document.querySelectorAll('h2')].some(heading => /vault unlocked/i.test(heading.textContent))));
+  stage = 'shipped File Vault decrypted library';
+  await evaluate(alice.tab, mount => {
+    const link = [...document.querySelectorAll('a')].find(link =>
+      link.pathname === mount + '/documents/' && /open library/i.test(link.textContent));
+    if (!link) throw new Error('library link unavailable');
+    link.click();
+  }, config.mount);
+  await waitForRead(() => evaluate(alice.tab, names =>
+    names.every(name => document.querySelector('main')?.innerText.includes(name)), [filename, emptyFilename]));
+}
+
 async function verifyWire(pages) {
   let expected = 0;
-  for (const page of pages) expected += await step(page, 'calls');
+  for (const page of pages) expected += page.closedCalls ?? await step(page, 'calls');
   await waitForRead(() => requests.size === expected && [...requests.values()].every(item => item.complete &&
     item.extra && (!item.hasResponseExtra || item.responseExtra)));
   await Promise.all([...captures]);
   assert.ok(!captureFailed && expected >= (config.phase === 'create' ? 40 : 12), 'Documents network observation was incomplete');
+  verifyCapturedWire();
+}
+
+function verifyCapturedWire() {
   for (const item of requests.values()) {
     assert.ok(!header(item.headers, 'authorization') && !header(item.extra, 'authorization'), 'browser injected an Authorization header');
     const headers = { ...item.headers, ...item.extra };
@@ -469,6 +533,13 @@ async function verifyWire(pages) {
     if (config.phase === 'create') await create(pages); else await recover(pages);
     stage = config.phase + ' wire privacy';
     await verifyWire(pages);
+    if (config.shippedUI) {
+      await verifyApplications(pages);
+      await waitForRead(() => [...requests.values()].every(item => item.complete));
+      await Promise.all([...captures]);
+      assert.ok(!captureFailed, 'shipped application network observation failed');
+      verifyCapturedWire();
+    }
     assert.ok(exceptionCount === 0, 'asynchronous browser exception');
   } finally {
     try {

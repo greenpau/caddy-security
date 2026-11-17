@@ -43,6 +43,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	accounts "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 	notifications "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
 	enrollment "github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite"
@@ -408,12 +409,16 @@ func (f *sqliteRegistrationFixture) account(t *testing.T, username string) map[s
 func (f *sqliteRegistrationFixture) verifyAccount(t *testing.T, username string) string {
 	t.Helper()
 	data := f.account(t, username)
-	if data == nil || data["username"] != username || data["email"] != username+"@example.test" || data["disabled"] != false {
+	if data == nil || data["username"] != username || data["disabled"] != false {
 		t.Fatal("confirmation did not create the expected enabled account")
 	}
-	roles, ok := data["roles"].([]string)
+	email, validEmail := data["email_address"].(*identity.EmailAddress)
+	if !validEmail || email == nil || email.Address != username+"@example.test" {
+		t.Fatal("confirmation did not preserve the verified email address")
+	}
+	roles, ok := data["roles"].([]*identity.Role)
 	id, validID := data["id"].(string)
-	if !ok || !slices.Equal(roles, []string{"authp/user"}) || !validID || id == "" {
+	if !ok || len(roles) != 1 || roles[0] == nil || roles[0].String() != "authp/user" || !validID || id == "" {
 		t.Fatal("enrollment changed its fixed role or identity contract")
 	}
 	return id
@@ -702,8 +707,8 @@ func testSQLiteRegistrationUncertainty(t *testing.T, binary, mode string) {
 			t.Fatal("reconciliation replaced the committed account identity")
 		}
 		if mode == "disabled" {
-			roles, ok := after["roles"].([]string)
-			if after["disabled"] != true || !ok || !slices.Equal(roles, []string{"managed/limited"}) {
+			roles, ok := after["roles"].([]*identity.Role)
+			if after["disabled"] != true || !ok || len(roles) != 1 || roles[0] == nil || roles[0].String() != "managed/limited" {
 				t.Fatal("reconciliation overwrote later account management")
 			}
 			f.basic(t, evidence.username, false)

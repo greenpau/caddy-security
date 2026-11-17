@@ -39,6 +39,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
+	accounts "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 )
 
 func TestCaddyDocumentsE2E(t *testing.T) {
@@ -54,7 +55,8 @@ func TestCaddyDocumentsE2E(t *testing.T) {
 }
 
 type caddyDocumentsOptions struct {
-	mount                 string
+	sqlite                bool
+	mount, realm          string
 	transform, refresh    bool
 	disabled, storageOnly bool
 	legacyMount           bool
@@ -64,16 +66,21 @@ type caddyDocumentsOptions struct {
 type caddyDocumentsFixture struct {
 	*localIdentityFixture
 	documentsDB, privateDir, publicDir string
-	fixtureURL, cryptoURL, cert        string
+	fixtureURL, cryptoURL, cert, realm string
 	logs                               []string
 	expectedUsers                      map[string]string
 	roots                              *x509.CertPool
 	contracts                          *openAPIContracts
 	running                            bool
+	sqlite                             bool
 }
 
 func newCaddyDocumentsFixture(t *testing.T, options caddyDocumentsOptions, cert, tlsKey string, roots *x509.CertPool) *caddyDocumentsFixture {
 	t.Helper()
+	realm := options.realm
+	if realm == "" {
+		realm = "local"
+	}
 	workspace := t.TempDir()
 	private, public := filepath.Join(workspace, "private"), filepath.Join(workspace, "public")
 	for _, path := range []string{private, public} {
@@ -82,7 +89,37 @@ func newCaddyDocumentsFixture(t *testing.T, options caddyDocumentsOptions, cert,
 		}
 	}
 	database := filepath.Join(private, "users.json")
-	seedLocalIdentity(t, database, false)
+	expectedUsers := make(map[string]string)
+	identityDeclaration := fmt.Sprintf("local identity store localdb {\nrealm %s\npath %q\n}", realm, database)
+	if options.sqlite {
+		database = filepath.Join(private, "accounts.db")
+		identityDeclaration = fmt.Sprintf("identity store sqlite localdb {\nrealm %s\npath %q\ntimeout 5s\n}", realm, database)
+		store, err := accounts.New(t.Context(), &accounts.Config{Name: "localdb", Realm: realm, Path: database, Timeout: "5s"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer store.Close()
+		for _, name := range []string{"alice", "bob", "admin"} {
+			password := lifecyclePassword
+			if name == "bob" {
+				password = localIdentityBobPassword
+			}
+			roles := []string{"authp/user", name}
+			if name == "admin" {
+				roles = append(roles, "authp/admin")
+			}
+			record, err := store.Create(t.Context(), &accounts.Account{Username: name, Email: name + "@example.test", Name: name, Roles: roles}, password)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expectedUsers[name] = record["id"].(string)
+		}
+	} else {
+		seedLocalIdentity(t, database, false)
+		for _, name := range []string{"alice", "bob", "admin"} {
+			expectedUsers[name] = localIdentityRecord(t, database, name).ID
+		}
+	}
 	base := "https://" + lifecycleAddress(t)
 	mount := strings.TrimSuffix(options.mount, "/")
 	declaredMount := mount
@@ -90,7 +127,7 @@ func newCaddyDocumentsFixture(t *testing.T, options caddyDocumentsOptions, cert,
 		declaredMount = "/"
 	}
 	settings := options.limits
-	settings.Database, settings.PublicOrigin, settings.BasePath, settings.Realms = filepath.Join(private, "documents.db"), base, declaredMount, []string{"local"}
+	settings.Database, settings.PublicOrigin, settings.BasePath, settings.Realms = filepath.Join(private, "documents.db"), base, declaredMount, []string{realm}
 	if err := settings.Validate(); err != nil {
 		t.Fatal("invalid Documents fixture limits")
 	}
@@ -103,7 +140,7 @@ func newCaddyDocumentsFixture(t *testing.T, options caddyDocumentsOptions, cert,
 	api += fmt.Sprintf(`documents api database %q
 documents api public origin %s
 documents api base path %s
-documents api realms local
+documents api realms %s
 documents api max file bytes %d
 documents api max user bytes %d
 documents api max total bytes %d
@@ -112,10 +149,14 @@ documents api max total files %d
 documents api max keys %d
 documents api max recipients %d
 documents api upload ttl seconds %d
-`, settings.Database, base, declaredMount, settings.MaxFileBytes, settings.MaxUserBytes, settings.MaxTotalBytes, settings.MaxUserFiles, settings.MaxTotalFiles, settings.MaxKeys, settings.MaxRecipients, settings.UploadTTLSeconds)
+`, settings.Database, base, declaredMount, realm, settings.MaxFileBytes, settings.MaxUserBytes, settings.MaxTotalBytes, settings.MaxUserFiles, settings.MaxTotalFiles, settings.MaxKeys, settings.MaxRecipients, settings.UploadTTLSeconds)
 	refresh, transform, handler := "", "", "authenticate with myportal at "+declaredMount
 	if options.refresh {
-		refresh = fmt.Sprintf("token refresh {\nrealms local\npublic origin %s\nbase path %s\nbody transport enabled\naccess lifetime 600\n}\n", base, declaredMount)
+		refresh = fmt.Sprintf("token refresh {\nrealms %s\npublic origin %s\nbase path %s\nbody transport enabled\naccess lifetime 600\n}\n", realm, base, declaredMount)
+	}
+	if options.sqlite && options.refresh {
+		identityDeclaration += fmt.Sprintf("\nstate {\ndirectory %q\n}\ntoken refresh store sqlite sessions {\npath %q\ntimeout 5s\n}\n", filepath.Join(private, "state"), filepath.Join(private, "refresh.db"))
+		refresh = strings.Replace(refresh, "token refresh {", "token refresh {\nstore sessions", 1)
 	}
 	if options.transform {
 		transform = "transform user {\nmatch sub alice\naction overwrite sub bob\naction overwrite email alias@example.test\n}\n"
@@ -136,10 +177,7 @@ documents api upload ttl seconds %d
   format json
  }
  security {
-  local identity store localdb {
-   realm local
-   path %q
-  }
+  %s
   authentication portal myportal {
    enable identity stores localdb
    enable admin api
@@ -184,7 +222,7 @@ documents api upload ttl seconds %d
   }
   respond unmatched 404
  }
-}`, filepath.Join(private, "caddy-storage"), logs[0], database, keys.signer("access"), api, refresh, transform, keys.verifier("access"), base, mount, base, cert, tlsKey, logs[1], public, mount, handler)
+}`, filepath.Join(private, "caddy-storage"), logs[0], identityDeclaration, keys.signer("access"), api, refresh, transform, keys.verifier("access"), base, mount, base, cert, tlsKey, logs[1], public, mount, handler)
 	contracts := newOpenAPIContracts(t)
 	module, err := os.OpenRoot(contracts.module.Dir)
 	if err != nil {
@@ -210,14 +248,13 @@ documents api upload ttl seconds %d
 	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	f := &caddyDocumentsFixture{
+		sqlite:               options.sqlite,
+		realm:                realm,
 		localIdentityFixture: &localIdentityFixture{oidcRPFixture: &oidcRPFixture{base: base, mount: mount, issuer: base + mount, client: client}, database: database, input: input, secrets: []string{lifecyclePassword, localIdentityBobPassword}},
-		documentsDB:          settings.Database, privateDir: private, publicDir: public, fixtureURL: base + "/_documents_test/", cryptoURL: base + "/_documents_test/crypto.mjs", cert: cert, roots: roots, logs: logs, expectedUsers: make(map[string]string), contracts: contracts,
+		documentsDB:          settings.Database, privateDir: private, publicDir: public, fixtureURL: base + "/_documents_test/", cryptoURL: base + "/_documents_test/crypto.mjs", cert: cert, roots: roots, logs: logs, expectedUsers: expectedUsers, contracts: contracts,
 	}
 	plain := *client
 	f.plain = &plain
-	for _, username := range []string{"alice", "bob", "admin"} {
-		f.expectedUsers[username] = localIdentityRecord(t, database, username).ID
-	}
 	t.Cleanup(func() {
 		f.stop(t)
 		transport.CloseIdleConnections()
@@ -323,7 +360,7 @@ func (f *caddyDocumentsFixture) loginSameBrowser(t *testing.T, username, passwor
 		path += "&fresh=1"
 		f.request(t, "GET", path, nil, nil).requireStatus(t, 200)
 	}
-	r := f.request(t, "POST", path, url.Values{"username": {username}, "realm": {"local"}}, http.Header{"Origin": {f.base}})
+	r := f.request(t, "POST", path, url.Values{"username": {username}, "realm": {f.realm}}, http.Header{"Origin": {f.base}})
 	r.requireStatus(t, 303)
 	location, err := url.Parse(r.header.Get("Location"))
 	if err != nil || location.Scheme != "https" || location.Host != strings.TrimPrefix(f.base, "https://") || !strings.HasPrefix(location.Path, f.mount+"/sandbox/") || location.RawQuery != "" {
@@ -498,7 +535,7 @@ func (f *caddyDocumentsFixture) bootstrap(t *testing.T, token, username string) 
 	t.Helper()
 	b := caddyDocumentsDecode[caddyDocumentsBootstrap](t, f.doc(t, token, "bootstrap", nil, nil, 200))
 	if b.Protocol != documents.Protocol || !documents.ValidID(b.PortalID) || b.UserID != f.expectedUsers[username] || b.ChunkSize != documents.ChunkSize {
-		t.Fatal("Documents bootstrap did not bind the canonical local identity")
+		t.Fatal("Documents bootstrap did not bind the canonical account identity")
 	}
 	return b
 }

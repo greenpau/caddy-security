@@ -29,7 +29,7 @@ BROWSER_SHARDS = ('root-browser', 'root-direct-oauth', 'root-refresh-browser',
                   'root-refresh-sqlite', 'root-cross-device', *RUNTIME_SHARDS)
 BROWSER_TESTS = {'TestCaddyDirectOAuthE2E', 'TestCaddyConnectedAccountsE2E',
                  'TestCaddyCompositionE2E',
-                 'TestCaddyDocumentsE2E', 'TestCaddySQLiteIdentityE2E',
+                 'TestCaddyDocumentsE2E', 'TestCaddySQLiteDocumentsE2E', 'TestCaddySQLiteIdentityE2E',
                  'TestCaddySQLiteRegistrationE2E', 'TestCaddySQLiteTicketE2E',
                  'TestCaddySQLiteRefreshUncertaintyE2E'}
 TESTED_FILES = {'coverage.html', 'coverage.out', 'index.html', 'junit.xml', 'run.json',
@@ -251,7 +251,8 @@ def run(shard):
                              'TEST_DIR=' + ' '.join(plan[shard]),
                              # External-binary journeys can have no parent hits.
                              # The complete merged suite enforces the 1% policy.
-                             'MINIMUM_COVERAGE=0', 'COVERAGE_DIR=' + str(output)], cwd=ROOT)
+                             'MINIMUM_COVERAGE=0', 'COVERAGE_DIR=' + str(output)], cwd=ROOT,
+                            env=dict(os.environ, PYTHON=os.environ.get('PYTHON', sys.executable)))
     selection['complete'] = result.returncode == 0
     selection_path.write_text(json.dumps(selection, indent=2) + '\n')
     return result.returncode if result.returncode >= 0 else 1
@@ -369,13 +370,27 @@ def report_events(base, root_package):
     yield dict(terminal, Action='pass', Elapsed=elapsed)
 
 
+def execution_timestamp(value):
+    """Read Go RFC3339Nano timestamps at datetime's microsecond resolution."""
+    match = re.fullmatch(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})',
+                         value) if isinstance(value, str) else None
+    if match is None:
+        raise ValueError('Invalid execution timestamp')
+    date, fraction, offset = match.groups()
+    # Python 3.9/3.10 require three or six fractional digits. Go can emit any
+    # precision through nanoseconds, so normalize before using the stdlib parser.
+    fraction = (fraction or '').ljust(6, '0')[:6]
+    offset = '+00:00' if offset == 'Z' else offset
+    return datetime.fromisoformat(f'{date}.{fraction}{offset}')
+
+
 def package_timings(base, root_package):
     """Measure the parallel process span separately from cumulative package work."""
     starts, finishes, packages = [], [], {}
     for shard in SHARDS:
         output = base / 'shards' / shard
         execution = json.loads((output / 'run.json').read_text())
-        start, finish = [datetime.fromisoformat(execution[name].replace('Z', '+00:00'))
+        start, finish = [execution_timestamp(execution[name])
                          for name in ('started_at', 'finished_at')]
         if start.tzinfo is None or finish.tzinfo is None or finish < start:
             raise ValueError(f'Invalid process timing for {shard}')

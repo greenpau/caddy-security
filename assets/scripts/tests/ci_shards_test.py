@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -74,7 +75,7 @@ class CIShardsUnitTests(unittest.TestCase):
         for name in long:
             group = next(values for values in balanced.values() if name in values)
             self.assertEqual([test for test in group if test.endswith('E2E')], [name])
-        browser_callers = self.ci.BROWSER_TESTS | {'TestCaddyCompositionE2E'}
+        browser_callers = self.ci.BROWSER_TESTS | {'TestCaddyCompositionE2E', 'TestCaddySQLiteDocumentsE2E'}
         browser_names = sorted(set(names) | browser_callers)
         browser_groups = self.ci.root_partition(browser_names)
         flags = {row['shard']: row['browser'] for row in self.ci.matrix(browser_names)['include']}
@@ -151,6 +152,35 @@ class CIShardsUnitTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.ci.package_timings(base, MODULE)
 
+    def test_package_timings_accept_go_timestamp_precision(self):
+        self.ci.SHARDS = ('first',)
+        with tempfile.TemporaryDirectory(dir=ROOT / 'tmp') as temporary:
+            base = Path(temporary)
+            output = base / 'shards/first'
+            output.mkdir(parents=True)
+            (output / 'test_output.jsonl').write_text(json.dumps(dict(
+                Action='pass', Package=MODULE, Elapsed=1)) + '\n')
+            execution = output / 'run.json'
+            # Go's RFC3339Nano omits trailing fractional zeroes. Python 3.9/3.10
+            # fromisoformat only accepts zero, three or six fractional digits.
+            for digits in range(10):
+                fraction = '.' + '123456789'[:digits] if digits else ''
+                with self.subTest(fractional_digits=digits):
+                    execution.write_text(json.dumps(dict(
+                        started_at=f'2026-10-25T01:00:00{fraction}+01:00',
+                        finished_at=f'2026-10-25T00:00:02{fraction}Z')))
+                    timing = self.ci.package_timings(base, MODULE)
+                    self.assertEqual(timing['wall_seconds'], 2)
+                    self.assertEqual(timing['package_seconds'], 1)
+            for invalid in (None, '', '2026-10-25T00:00:00',
+                            '2026-10-25T00:00:00.1234567890Z',
+                            '2026-10-25T00:00:00.Z', '2026-10-25T00:00:00+25:00'):
+                with self.subTest(invalid=invalid):
+                    execution.write_text(json.dumps(dict(
+                        started_at=invalid, finished_at='2026-10-25T00:00:02Z')))
+                    with self.assertRaises(ValueError):
+                        self.ci.package_timings(base, MODULE)
+
     def test_successful_shard_keeps_timings_without_publishing_job_summary(self):
         with tempfile.TemporaryDirectory(dir=ROOT / 'tmp') as temporary:
             base = Path(temporary)
@@ -185,7 +215,7 @@ class CIShardsTests(unittest.TestCase):
                     if not key.startswith(('GIT_', 'GITHUB_', 'TEST_', 'TESTED_', 'CHANGE_', 'CI_'))
                     and key not in ('MAKEFLAGS', 'MFLAGS', 'MAKELEVEL', 'COVERAGE_DIR', 'GOFLAGS',
                                     'GOWORK', 'MINIMUM_COVERAGE')}
-        self.env.update(PYTHONDONTWRITEBYTECODE='1', GOWORK='off',
+        self.env.update(PYTHONDONTWRITEBYTECODE='1', PYTHON=sys.executable, GOWORK='off',
                         COVERAGE_DIR='reports with spaces', TEST='^MustNotExcludeTests$',
                         TEST_DIR='./missing', GIT_COMMIT='fixture', GIT_BRANCH='main', PREPARE_RESULT='success',
                         GITHUB_STEP_SUMMARY=str(self.root / 'job-summary.md'),
@@ -226,9 +256,9 @@ class CIShardsTests(unittest.TestCase):
         return result
 
     def cli(self, *args, **kwargs):
-        return self.command('python3', 'assets/scripts/ci_tests.py', *args, **kwargs)
+        return self.command(sys.executable, 'assets/scripts/ci_tests.py', *args, **kwargs)
 
-    def test_matrix_cli_marks_composition_for_browser_setup(self):
+    def test_matrix_cli_marks_application_parents_for_browser_setup(self):
         names = [
             'TestFuture', 'TestBrowser', 'TestAuthenticationClient',
             'TestAuthenticationClientNative', 'TestCaddyAuthenticatorE2E',
@@ -238,16 +268,17 @@ class CIShardsTests(unittest.TestCase):
             'TestAccessSigner', 'TestCaddyAccessSignerPersistenceE2E',
             'TestRefresh', 'TestSQLiteRefresh', 'TestOIDCRefreshBrowser',
             'TestCrossDeviceBrowser', 'TestCaddyCrossDeviceExpirationE2E',
-            'TestCaddyCompositionE2E',
             *(f'TestAppFuture{number:02d}' for number in range(24)),
         ]
         inventory = self.root / 'tests.json'
-        inventory.write_text(json.dumps(sorted(names)))
-        matrix = json.loads(self.cli('matrix', '--inventory', str(inventory)).stdout)['include']
-        runtime = [row for row in matrix if row['shard'] in RUNTIME_SHARDS]
-        self.assertEqual(len(runtime), len(RUNTIME_SHARDS))
-        self.assertEqual(sum(row['browser'] for row in runtime), 1,
-                         'The composition parent must enable browser setup')
+        for caller in ('TestCaddyCompositionE2E', 'TestCaddySQLiteDocumentsE2E'):
+            with self.subTest(caller=caller):
+                inventory.write_text(json.dumps(sorted([*names, caller])))
+                matrix = json.loads(self.cli('matrix', '--inventory', str(inventory)).stdout)['include']
+                runtime = [row for row in matrix if row['shard'] in RUNTIME_SHARDS]
+                self.assertEqual(len(runtime), len(RUNTIME_SHARDS))
+                self.assertEqual(sum(row['browser'] for row in runtime), 1,
+                                 'The application parent must enable browser setup')
 
     def test_e2e_complete_disjoint_shards_reports_and_failed_rerun(self):
         expected = {
@@ -338,10 +369,19 @@ func FuzzSessionSeeds(f *testing.F) {
         for shard in SHARDS:
             if shard == 'root-core':
                 # Direct invocation from outside the checkout must place the plan
-                # beside the reports produced by the nested Make invocation.
-                self.command('python3', str(self.root / 'assets/scripts/ci_tests.py'),
+                # beside the reports and preserve the selected interpreter.
+                binaries = self.root / '.python-bin'
+                binaries.mkdir()
+                for name in ('python3', 'python3.14'):
+                    trap = binaries / name
+                    trap.write_text('#!/bin/sh\necho "unexpected Python rediscovery" >&2\nexit 89\n')
+                    trap.chmod(0o755)
+                direct_env = dict(self.env, TEST_PACKAGE_PARALLELISM='2',
+                                  PATH=str(binaries) + os.pathsep + self.env['PATH'])
+                direct_env.pop('PYTHON')
+                self.command(sys.executable, str(self.root / 'assets/scripts/ci_tests.py'),
                              'run', shard, cwd=self.root.parent,
-                             env=dict(self.env, TEST_PACKAGE_PARALLELISM='2'))
+                             env=direct_env)
             else:
                 self.command('make', 'ci-test-shard', 'CI_SHARD=' + shard,
                              'TEST_PACKAGE_PARALLELISM=2')

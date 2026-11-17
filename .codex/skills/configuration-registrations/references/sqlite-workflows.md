@@ -163,7 +163,13 @@ and native/Basic/Chrome password login with independently verified tokens. Its
 fixtures exercise root and nested mounts, hostile Host metadata, wrong/replayed
 codes, restart, unavailable queues, immutable return navigation and real SQLite
 commit uncertainty. Fresh-handle recovery must preserve identity and management
-state and reject resurrection after deletion. Backend expiry/capacity/schema
-tests remain upstream; do not claim them from adaptation or a browser success
-alone. Run these host tests against the selected dependency before considering
+state and reject resurrection after deletion.
+
+Management snapshots expose roles as `[]*identity.Role`, while JWT claims keep
+role-name strings. Assert the record's `String()` when verifying fixed enrollment
+roles and preservation of later management changes; keep the independent token
+assertion. Read `email_address` as `*identity.EmailAddress` and verify its
+`Address`. Run these consumers when updating the selected identity projection.
+Backend expiry/capacity/schema tests remain upstream; do not claim them from
+adaptation or a browser success alone. Run these host tests against the selected dependency before considering
 the integration qualified.

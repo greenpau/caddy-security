@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	identitysqlite "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
@@ -60,10 +61,10 @@ func TestIdentityFactoryIndependentHandles(t *testing.T) {
 	if first == second {
 		t.Fatal("factory reused an owned handle")
 	}
-	if _, ok := first.(ids.IdentityRequestStore); ok {
-		t.Fatal("password backend falsely advertised local profile support")
+	if _, ok := first.(ids.IdentityRequestStore); !ok {
+		t.Fatal("factory lost identity-bound profile operations")
 	}
-	authenticate := func(store ids.IdentityStore) {
+	authenticate := func(store ids.IdentityStore) *requests.Request {
 		t.Helper()
 		request := requests.NewRequest()
 		request.Upstream.Realm = cfg.Realm
@@ -71,12 +72,23 @@ func TestIdentityFactoryIndependentHandles(t *testing.T) {
 		if err := store.Request(operator.Authenticate, request); err != nil || request.User.Email != "alice@example.test" {
 			t.Fatal("account unavailable", err)
 		}
+		return request
 	}
-	authenticate(first)
+	firstProof := authenticate(first)
 	if err := first.(*identitysqlite.Store).Close(); err != nil {
 		t.Fatal(err)
 	}
-	authenticate(second)
+	secondProof := authenticate(second)
+	bound, ok := second.(ids.IdentityRequestStore)
+	if !ok {
+		t.Fatal("second factory handle lost bound operations")
+	}
+	if err := bound.RequestWithIdentity(operator.GetUser, firstProof); !errors.Is(err, identity.ErrIdentityRequestDenied) {
+		t.Fatal("independent handle accepted another runtime's proof", err)
+	}
+	if err := bound.RequestWithIdentity(operator.GetUser, secondProof); err != nil || secondProof.Response.Payload.(*identity.User).ID != secondProof.Authentication.UserID {
+		t.Fatal("closing one handle invalidated the other's profile identity", err)
+	}
 	canceled, cancel := context.WithCancel(t.Context())
 	cancel()
 	if value, err := module.NewIdentityStore(canceled); value != nil || !errors.Is(err, identitysqlite.ErrUnavailable) {

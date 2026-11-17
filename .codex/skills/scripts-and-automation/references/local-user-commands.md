@@ -175,6 +175,15 @@ including automation logs. `info user` can return sensitive credential hashes.
 JSON preserves server fields; table/CSV are available for listings. Prompts go
 to stderr.
 
+`info user` preserves the selected backend's projection. SQLite returns structured
+public identity fields (`email_address`, `name`, and role objects), store kind,
+capabilities, and password-only credential counts; it omits credential
+collections. Do not decode this response as the older flat account-creation
+result or as a full local database record. SQLite `list users` retains its flat
+display fields for table/CSV output. See the
+[SQLite identity contract](../../configuration-identity-stores/references/sqlite-integration.md)
+for supported operations and immutable identity binding.
+
 While an account is disabled, use listing to inspect its disabled state and
 enable it before requesting detailed info. Enabling an already enabled account
 fails. Password reset alone does not add an email alias or remove an automatic
@@ -279,6 +288,8 @@ password generation never prints the plaintext input.
   accounts created by verified provider login through a nested TLS portal. It covers
   the eight operations, current-record selector rejection, signed identity and
   role continuity, generated-password checkpoints, and deletion/reprovisioning.
+  Its nonlocal control verifies SQLite's structured public projection, capability
+  metadata, absent credential collections, and mandatory paired selectors.
   Each CLI invocation is a fresh process; this does not claim a server restart.
 - `TestSecurityTerminalE2E`: real Unix terminal input, secret echo suppression,
   Unicode, CRLF and bracketed paste, Ctrl-C/Ctrl-D keystrokes, and terminal

@@ -11,7 +11,7 @@ exact payloads; the feature is not a generic JSON proxy or a profile-key API.
 All paths below are relative to the configured portal mount. The API requires
 a valid portal-admitted access token **and the current cached browser session
 associated with that exact token**. Its login evidence must identify the current
-local account and credential epoch in an enabled realm, with user or admin
+transactionally verified account and credential epoch in an enabled realm, with user or admin
 portal capability. Transformed `sub` or email claims do not select the owner:
 storage uses the immutable account UUID. A JWT signature alone, native login or
 native refresh, an external-provider attachment or an OP session is insufficient.
@@ -124,3 +124,20 @@ audit, or an OS-process restart test. The generic OpenAPI matrix samples other
 portal routes; Documents has its own dedicated acceptance surface. Preserve
 independent signature, authority, privacy and byte-equality assertions alongside
 schema checks.
+
+SQLite identity support is qualified by `TestCaddySQLiteDocumentsE2E` against the
+published go-authcrunch dependency. It keeps the real `sqlite` method and requires
+fresh proof after backend reopen, while preserving account UUIDs and encrypted
+vaults. The account and Documents databases commit separately: a failed outer
+identity transaction must withhold HTTP success even if ciphertext committed.
+The upstream SQLite transaction retains its identity lock until the callback
+returns, including after account-budget expiry. An independently completed
+mutation followed by any outer identity failure returns 503 with
+`code: commit_uncertain`; preserve this signal and reconcile through reads after
+fresh identity verification. Ordinary `storage_unavailable` does not imply an
+uncertain COMMIT. Upstream database units and the real TLS
+`TestE2ESQLiteDocumentsExpiredCallbackLock` qualify this cancellation boundary;
+the Caddy suites qualify its host composition and browser behavior.
+Reconcile writes through reads; never retry allocation/reset blindly. See the
+[SQLite dependency boundary](../../configuration-identity-stores/references/sqlite-integration.md)
+before claiming a published Caddy binary includes this support.

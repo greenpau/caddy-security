@@ -159,6 +159,9 @@ supported and patched using official Go release/security sources. A local Go
 upgrade does not update CI selection. Keep an explicit toolchain's `GOROOT`,
 `PATH`, and `GOTOOLCHAIN` consistent; do not change the module minimum merely to
 work around a mismatched local Go environment.
+Align build, release, CodeQL and optional conformance workflow pins and their
+compiler-specific cache keys. A newer interactive-shell compiler does not
+qualify artifacts built by an older CI pin.
 
 For packaging changes, use the workflow's pinned GoReleaser version, run its
 `check`, then `build --snapshot --clean` with an isolated ignored distribution

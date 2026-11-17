@@ -16,6 +16,16 @@ browser packages or trust roots system-wide for a test run.
 
 ## Overview
 
+Make prefers `python3.14` when installed and otherwise uses `python3`. Explicit
+`PYTHON` environment or command-line overrides win and propagate to child
+workflows. Check `python3.14 --version` instead of assuming the unversioned
+`python3` command selects the same runtime. Use `python3.14` for direct scripts
+when available; Python children use `sys.executable`, and scripts invoking Make
+preserve an explicit `PYTHON` or default it to their own interpreter.
+`python_selection_test.py` exercises selection and export through real Make,
+unittest and nested Make. The CI-shard E2E fixture traps PATH rediscovery during
+direct invocation while exercising the real Go/tested/merge workflow.
+
 Use the Makefile as the primary automation surface for this Go module. This
 repository builds a Caddy command binary at `bin/authcrunch` from
 `cmd/authcrunch/main.go`; the binary registers the `security` app, the
@@ -142,6 +152,13 @@ formatting, license, dependency, and cleanup workflows remain out of scope.
 If documentation mentions `make ctest`, treat it as stale in this repository and
 choose filtered `make test`, filtered `make qtest`, or direct `go test` instead.
 
+For a test regular expression passed as a Make command-line variable, double
+literal dollar signs: `make test 'TEST=^TestOne$$|^TestTwo$$'`. Shell quoting
+alone does not stop Make from interpreting `$|` as an automatic variable and
+silently changing the selection. Prefix-only selectors avoid this expansion.
+Verify the report contains every intended test; a successful empty selection
+does not validate a change.
+
 ## Tooling and Dependencies
 
 Read the module's Go minimum and Caddy dependency from `go.mod`; inspect
@@ -206,6 +223,12 @@ versioned replacement examples in `CONTRIBUTING.md` and the xcaddy argument in
 updates all dependencies. `make sync` takes its version from the sibling's
 `VERSION`, which may differ from the requested release. Confirm the selected
 module's `Dir` and absence of an unintended `Replace` before validation.
+
+A newly published tag can be available before the module proxy's `@latest`
+response refreshes. Check the requested tag and its resolved module revision
+explicitly; do not fall back to a filesystem replacement or the previous release
+because `@latest` is stale. Record the module checksum and verify the built
+command's dependency identity before calling the upgrade release-ready.
 
 For official OIDC qualification of newer committed work, select its exact
 published commit with `go get github.com/greenpau/go-authcrunch@<commit>`.

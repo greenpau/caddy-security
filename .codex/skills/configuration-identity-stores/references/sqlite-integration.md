@@ -90,6 +90,14 @@ policy checks and signing callback in one transaction. Callbacks must not
 reenter storage; publish credentials only after success. Disablement, deletion
 and password replacement invalidate captured evidence. Current roles govern
 new credentials. Already signed access JWTs retain their bounded expiry.
+Account quarantine must also reject requests already waiting for identity
+transaction admission before their callbacks execute. In particular, a pending
+Documents operation must not commit its independent write after an earlier
+account COMMIT failure. The upstream helper and real TLS regression cover this
+boundary. Drain pending consumers before closing and reconciling through a fresh
+handle; reopening also requires fresh login evidence. An operation rejected
+before its callback returns `storage_unavailable`, while a completed independent
+mutation followed by outer failure retains `commit_uncertain`.
 
 The app shares each configured handle across selected portals in that app,
 closes candidate resources on failure, and drains consumers before closing
@@ -102,28 +110,86 @@ Persisted refresh families cannot reuse identity evidence from an old instance;
 users authenticate again after replacement. Account persistence alone does not
 provide shared portal sessions or multi-host availability.
 
-The backend remains kind `sqlite` and password-only. MFA, API-key login,
-recovery and profile credential mutations are unsupported. A stronger portal
-factor requirement must deny issuance. Recognized authenticated profile requests
-return 501: the profile API admits only local authentication, and the SQLite
-plugin also lacks `ids.IdentityRequestStore`. Portal OP
-realms and external-identity attachment targets retain their local-store
-restrictions. Registration workflows have their own adapter and prerequisites.
-Transactional identity verification supports the existing portal refresh engine;
-it does not select SQLite refresh-token storage.
+The backend remains kind `sqlite` with password authentication. In the upstream
+capability implementation qualified by the SQLite handoff tests, its concrete
+handle also preserves `ids.IdentityRequestStore` and `StoreCapabilityProvider`.
+The upstream discovery endpoint checks for the actual bound-operation interface
+before advertising Profile support; forwarding metadata alone is insufficient.
+Profile information, diagnostics, partial dashboard and password changes work;
+all sixteen Documents operations use the same immutable account proof. MFA,
+profile API/public keys, stored login rules, connected accounts, recovery and OP
+remain unsupported. Stronger factor requirements still deny issuance. Realm
+labels such as `local` do not change backend kind. Registration workflows retain
+their own adapter and prerequisites. Identity verification does not select
+SQLite refresh-token storage.
+
+These capabilities are available through the published go-authcrunch dependency
+selected in `go.mod`. Before release, verify `go list -m -json` resolves that
+version without a local replacement, rerun the Caddy journeys, and inspect
+`security version` plus `go version -m` on the built executable. A sibling
+checkout or an overriding Go workspace cannot establish published-module
+compatibility. Never fabricate a version or ship a filesystem replacement.
+The root and companions share one module pin.
+
+Administration uses safe structured roles/email/name plus an explicit SQLite
+record discriminator, capabilities and password count. Unsupported counts are
+absent, never fabricated zeroes or verifier arrays. Additive roles merge
+atomically and an identical retry does not revoke credentials. Stored challenge
+replacement returns 501. Empty account listings are arrays; the complete-list
+limit is 10,000 and unsupported queries fail. New HTTP support uses the existing
+account schema, preserving UUIDs, enrollment tombstones and vault ownership.
+The authored UI still needs capability/count/error integration; backend support
+does not establish full UI parity.
+The complete resulting roles array is bounded at 8 KiB of encoded JSON, including
+escaping. Creation, enrollment, replacement and additions must reject oversized
+records before persistence. Keep the upstream HTTP-200 mutation failure envelope
+and existing login evidence on rejection; do not retry it as a transport failure.
 
 ## Validation
 
 `plugins/identity-stores-sqlite/consumer_test.go` and `ownership_test.go` cover
 public parsing, descriptors, real account authentication and independent handles.
+The factory consumer also checks structured public administration data,
+password-only counts and capability metadata, with no credential collections.
 Root `TestSQLiteIdentity*` and `TestAppIdentity*` cover native binding,
 normalization, isolation and resource ownership; the adaptation fixture is
 `testcase_identity_sqlite`. `TestCaddySQLiteIdentityE2E` builds the production
 command without cgo and exercises verified TLS browser/native/Basic login,
 independent JWT checks, current roles, account mutations, storage failure,
-failed/successful reload, profile/OP rejection, stronger factor requirements and
-persistent restart. Its Chrome helper uses rendered forms and private TLS trust.
+failed/successful reload, profile/password success and revocation, unsupported
+credential/OP rejection, stronger factor requirements and
+persistent restart. Its Chrome helper uses rendered forms and private TLS trust. Successful-reload
+checks discard the old listener’s idle client connections before the next
+single-attempt authentication POST; they never replay a mutation on EOF.
 `TestSecuritySQLiteIdentity*` and `TestCaddySQLiteIdentityCommandsE2E` cover
 trusted provisioning, private inputs, terminal behavior and actual CLI processes.
 Keep mutation-before-signing and cleanup/drain regressions alongside the factory
 coverage. Standalone library fixtures complement these host tests.
+
+`TestCaddySQLiteDocumentsE2E` runs real SQLite account, refresh and document
+storage through the optional companion at root, ordinary and nested mounts,
+including a realm named `staff`. It covers all
+operations, transformed claims, admin isolation, sharing/revocation, stable IDs
+and fresh login after stop/start, plus the verified-TLS Web Crypto journey.
+Its mounted admin/profile checks also reject oversized escaped-role updates
+without making the account unreadable or revoking its current profile login.
+They also inject a malformed verifier into an isolated SQLite fixture and require
+the upstream HTTP 503 `storage_unavailable` response without password/version
+mutation, followed by restored real login. This must not become a 400 blaming the
+submitted old password or a successful mutation in the host adapter.
+Mounted tests also hold a real competing SQLite writer until the configured
+transaction budget expires. Preserve Profile HTTP 503 and the admin HTTP-200
+failure envelope, both with `storage_unavailable`; verify unchanged persistent
+credentials/generation and restored profile access and login after lock release.
+The `admin_lifecycle` journey creates an account through the mounted API and
+uses its generated password for real browser-protocol login. It verifies duplicate
+and wrong-selector failures, grant replacement and idempotent additions, health
+reload, disable/re-enable, reset and delete/recreate. Require stale bound proofs to
+fail, a health reload to preserve current proof, and stop/start to preserve the
+managed account and vault while requiring fresh login. Reusing a username must
+never inherit the deleted account's UUID or files. Inspect mutation envelopes and
+persistent outcomes in addition to HTTP status.
+
+Keep `TestCaddyDocumentsE2E` for the legacy local fixture. A candidate run uses
+`GOWORK=off make test TEST_DIR='. ./plugins/identity-stores-sqlite' TEST='^TestCaddySQLiteIdentity|^TestCaddySQLiteDocumentsE2E|^TestSQLiteIdentity'`.
+Record the source replacement and effective binary linkage alongside results.

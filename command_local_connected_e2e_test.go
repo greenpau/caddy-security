@@ -432,15 +432,32 @@ func TestCaddyConnectedAccountsAdministrationProcess(t *testing.T) {
 		sqliteFlags := []string{"--realm", sqliteConfig.Realm, "--username", "sqlitecontrol"}
 		pairedFlags := append(slices.Clone(sqliteFlags), "--email", "sqlite@example.test")
 		sqliteBefore := admin.call(t, "info user", true, pairedFlags...)
-		// SQLite's detached public accountMap uses name/role strings rather
-		// than the full local-record schema validated by admin.info above.
+		// SQLite exposes public identity fields and capability/count metadata,
+		// without the credential collections in the full local record.
 		var nonlocal struct {
-			ID, Username, Email, Name string
-			Roles                     []string
-			Disabled                  bool
+			identity.User
+			Kind             string                     `json:"kind"`
+			CredentialCounts map[string]int             `json:"credential_counts"`
+			Capabilities     identity.StoreCapabilities `json:"capabilities"`
 		}
-		if json.Unmarshal(sqliteBefore, &nonlocal) != nil || nonlocal.ID != sqliteID || nonlocal.Username != "sqlitecontrol" || nonlocal.Email != "sqlite@example.test" || nonlocal.Name != "SQLite Control" || nonlocal.Disabled || !slices.Equal(nonlocal.Roles, []string{"authp/user"}) {
+		if json.Unmarshal(sqliteBefore, &nonlocal) != nil || nonlocal.ID != sqliteID || nonlocal.Username != "sqlitecontrol" || nonlocal.Disabled || nonlocal.CredentialVersion != 1 || nonlocal.Kind != "sqlite" {
 			t.Fatal("paired nonlocal selector did not reach the configured store")
+		}
+		if nonlocal.EmailAddress == nil || nonlocal.EmailAddress.Address != "sqlite@example.test" || nonlocal.Name == nil || nonlocal.Name.GetFullName() != "SQLite Control" || len(nonlocal.Roles) != 1 || nonlocal.Roles[0] == nil || nonlocal.Roles[0].String() != "authp/user" {
+			t.Fatal("nonlocal administration lost structured public identity fields")
+		}
+		capabilities := nonlocal.Capabilities
+		if len(nonlocal.CredentialCounts) != 1 || nonlocal.CredentialCounts["password"] != 1 || !capabilities.ProfileRead || !capabilities.PasswordChange || !capabilities.Documents || capabilities.APIKeys || capabilities.PublicKeys || capabilities.MFA || capabilities.AuthenticationFlows || capabilities.Connections {
+			t.Fatal("nonlocal administration changed supported credentials or capabilities")
+		}
+		var publicFields map[string]json.RawMessage
+		if err := json.Unmarshal(sqliteBefore, &publicFields); err != nil {
+			t.Fatal("invalid nonlocal administration object")
+		}
+		for _, field := range []string{"passwords", "api_keys", "public_keys", "mfa_tokens"} {
+			if _, exists := publicFields[field]; exists {
+				t.Fatalf("nonlocal administration exposed credential collection %s", field)
+			}
 		}
 		admin.call(t, "info user", false, sqliteFlags...)
 		admin.call(t, "update user", false, append(slices.Clone(sqliteFlags), "--disable")...)

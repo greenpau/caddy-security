@@ -26,6 +26,8 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	identitysqlite "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 
@@ -162,6 +164,51 @@ func TestSQLiteIdentityConsumer(t *testing.T) {
 	}
 	if store.GetName() != "accounts" || store.GetRealm() != "staff" || store.GetKind() != "sqlite" || !store.Configured() {
 		t.Fatal("factory changed backend identity or readiness")
+	}
+	// Optional interfaces must survive the factory's ids.IdentityStore return.
+	bound, ok := backend.(ids.IdentityRequestStore)
+	if !ok {
+		t.Fatal("factory erased identity-bound profile operations")
+	}
+	provider, ok := backend.(identity.StoreCapabilityProvider)
+	if !ok || !provider.GetCapabilities().ProfileRead || !provider.GetCapabilities().Documents || provider.GetCapabilities().MFA {
+		t.Fatal("factory changed SQLite capability metadata")
+	}
+	if err := bound.RequestWithIdentity(operator.GetUser, request); err != nil {
+		t.Fatal("factory profile request failed", err)
+	}
+	current, ok := request.Response.Payload.(*identity.User)
+	if !ok || current.Username != "alice" || current.ID != request.Authentication.UserID || len(current.Passwords) != 0 {
+		t.Fatal("factory returned unsafe profile data")
+	}
+	public, err := backend.FetchUserData("alice", "alice@example.test")
+	if err != nil || public["id"] != current.ID || public["username"] != "alice" || public["kind"] != "sqlite" || public["credential_version"] != current.CredentialVersion {
+		t.Fatal("factory administration lost the authenticated account identity", err)
+	}
+	email, ok := public["email_address"].(*identity.EmailAddress)
+	if !ok || email == nil || email.Address != "alice@example.test" {
+		t.Fatal("factory administration lost structured email")
+	}
+	name, ok := public["name"].(*identity.Name)
+	if !ok || name == nil || name.GetFullName() != "Alice" {
+		t.Fatal("factory administration lost structured name")
+	}
+	roles, ok := public["roles"].([]*identity.Role)
+	if !ok || len(roles) != 1 || roles[0] == nil || roles[0].String() != "authp/user" {
+		t.Fatal("factory administration lost structured roles")
+	}
+	counts, ok := public["credential_counts"].(map[string]int)
+	if !ok || len(counts) != 1 || counts["password"] != 1 {
+		t.Fatal("factory administration invented unsupported credential counts")
+	}
+	capabilities, ok := public["capabilities"].(identity.StoreCapabilities)
+	if !ok || !capabilities.ProfileRead || !capabilities.PasswordChange || !capabilities.Documents || capabilities.APIKeys || capabilities.PublicKeys || capabilities.MFA || capabilities.AuthenticationFlows || capabilities.Connections {
+		t.Fatal("factory administration changed capability metadata")
+	}
+	for _, field := range []string{"passwords", "api_keys", "public_keys", "mfa_tokens"} {
+		if _, exists := public[field]; exists {
+			t.Fatalf("factory administration exposed credential collection %s", field)
+		}
 	}
 	metadata, _ := json.Marshal(store.GetConfig())
 	if strings.Contains(string(metadata), cfg.Path) || strings.Contains(string(metadata), lifecyclePassword) {

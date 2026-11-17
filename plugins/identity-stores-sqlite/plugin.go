@@ -107,7 +107,8 @@ func (m *SQLiteIdentityStore) NewIdentityStore(ctx context.Context) (ids.Identit
 // The header supplies name; the public parser accepts one realm, path and
 // optional timeout (default 1s, range 1ms through 30s). Fields are literal.
 // Select the name with `enable identity store <name>` inside a portal.
-// This password-only backend cannot satisfy MFA or local-only OP/profile uses.
+// This password-only backend supports identity-bound profile reads/password
+// changes and Documents. MFA, profile key collections and OP remain unsupported.
 func (m *SQLiteIdentityStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	if !d.Next() {
 		return d.Errf("expected identity store name")

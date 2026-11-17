@@ -5,13 +5,13 @@ go 1.26.0
 require (
 	github.com/caddyserver/caddy/v2 v2.11.7
 	github.com/caddyserver/certmagic v0.25.6
-	github.com/crewjam/saml v0.5.1
+	github.com/crewjam/saml v0.6.3
 	github.com/go-asn1-ber/asn1-ber v1.5.8
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/caddy-trace v1.1.13
-	github.com/greenpau/go-authcrunch v1.5.0
+	github.com/greenpau/go-authcrunch v1.6.0
 	github.com/greenpau/versioned v1.0.36
 	github.com/hashicorp/consul/api v1.29.4
 	github.com/pteich/caddy-tlsconsul v1.5.0
@@ -21,10 +21,10 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/zap v1.28.0
-	golang.org/x/crypto v0.57.0
-	golang.org/x/net v0.60.0
-	golang.org/x/term v0.46.0
-	golang.org/x/text v0.42.0
+	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.62.0
+	golang.org/x/term v0.47.0
+	golang.org/x/text v0.43.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.60.1
 )
@@ -83,7 +83,6 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sql-driver/mysql v1.10.1 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
@@ -109,11 +108,10 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
-	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
-	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
@@ -201,8 +199,8 @@ require (
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20260929172509-b39ff6d641ec // indirect
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/api v0.299.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260921155816-b14227669459 // indirect

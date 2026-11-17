@@ -93,7 +93,7 @@ func testLocalIdentityPublicKeys(t *testing.T, cert, key string, roots *x509.Cer
 	}
 	padding := strings.Repeat("x", (1<<20)-len(encoded))
 	boundary["padding"] = padding + "x"
-	f.profile(t, boundary, 400)
+	f.profile(t, boundary, 413)
 	if len(f.publicKeys(t, "gpg")) != 0 || len(f.publicKeys(t, "ssh")) != 0 {
 		t.Fatal("rejected public key altered inventory")
 	}

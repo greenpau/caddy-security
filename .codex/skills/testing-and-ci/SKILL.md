@@ -16,6 +16,12 @@ Preserve real browser interaction and TLS validation. Do not set
 `acceptInsecureCerts`, ignore-certificate flags, disable web security, rewrite
 Origin headers, or fabricate successful callbacks to make a conformance run pass.
 
+For a browser `fetch` failure, capture bounded, sanitized network diagnostics
+before classifying its cause. Follow the
+[browser network interruption workflow](../scripts-and-automation/references/test-resources.md#browser-network-interruptions)
+for Chrome `ERR_NETWORK_CHANGED`, local-only network isolation, and retaining
+the original failed run without retrying credential submissions.
+
 ## Overview
 
 Use this skill for caddy-security test selection, fixture maintenance, and CI

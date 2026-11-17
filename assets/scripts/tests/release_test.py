@@ -102,9 +102,9 @@ class ReleaseTests(unittest.TestCase):
         # fixtures so this tests orchestration without recursively running this suite.
         (self.root / 'Makefile').write_text(
             '.PHONY: version-check version-sync ci-check\n'
-            'version-check:\n\t@python3 assets/scripts/version.py check\n'
-            'version-sync:\n\t@python3 assets/scripts/version.py sync\n'
-            'ci-check: version-check\n\t@python3 gate.py\n')
+            'version-check:\n\t@$(PYTHON) assets/scripts/version.py check\n'
+            'version-sync:\n\t@$(PYTHON) assets/scripts/version.py sync\n'
+            'ci-check: version-check\n\t@$(PYTHON) gate.py\n')
         (self.root / 'gate.py').write_text(
             'import os, subprocess\nfrom pathlib import Path\n'
             'with Path(".fixture/gates").open("a") as log:\n'

@@ -126,3 +126,9 @@ single-use concurrency, graceful close/restart, failed candidates, isolation,
 capacity and cancellation. Public backend/root tests own detailed expiry,
 record-growth, context and transaction-error matrices. Neither lower-level tests
 nor a host callback alone establish full portal high availability.
+
+The TLS negative control requires a certificate-verification error from each
+untrusted `/ready` probe. A timeout, connection failure or unrelated TLS error
+remains a failure; retain its endpoint index and transport cause. These fixed
+probes contain no login credentials. Repeated focused passes do not erase a
+failed full run or explain an intermittent failure.

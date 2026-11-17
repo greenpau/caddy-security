@@ -31,7 +31,9 @@ username/email pair. Duplicate uploads fail with HTTP 400. Unauthenticated
 profile requests return 403 in the tested route configuration. Existing foreign
 key fetch/delete failures return 500, not a newly invented API status.
 
-Preserve the 1 MiB profile request limit and secret redaction. Malformed armor,
+Preserve the 1 MiB profile request limit and secret redaction. An oversized
+request returns HTTP 413 with JSON operation status 413; malformed key input
+within the limit returns HTTP 400. Malformed armor,
 private armor, private RSA PEM, unsupported binary input, and unsupported SSH
 types are rejected. Supported legacy payloads include PKCS#1 `RSA PUBLIC KEY`
 PEM, `ssh-rsa` authorized_keys, and a single armored PGP public entity with
@@ -56,7 +58,7 @@ uploads, inventories, duplicates, negative inputs, body limits, file reopening,
 Caddy stop/start, and another user's fetch/delete isolation with untransformed
 identities. It verifies historical PGP metadata and RSA/ssh-rsa behavior through
 actual TLS profile routes. Body-limit assertions use a valid upload with ignored
-JSON padding: exactly 1 MiB succeeds, one byte more fails without mutation.
+JSON padding: exactly 1 MiB succeeds, one byte more returns 413 without mutation.
 Malformed oversized key content alone cannot establish that limit. Inventory
 responses must contain an array, and foreign fetch failures must not return a
 key entry. Successful owner fetch/delete requests are positive controls for

@@ -42,7 +42,7 @@ not upstream revocation or token refresh. Native provider realm/mode fields
 support one-pass runtime resolution. See the
 [provider renewal contract](../../configuration-authentication/references/token-refresh.md#provider-snapshot-renewal)
 for cookie transport, current local proof and durable attachment requirements.
-The `documents` portal block and independent API switches expose encrypted
+Flat Documents portal directives and independent API switches expose encrypted
 storage through Caddy; see the
 [Documents API contract](../../authentication-portal-api/references/documents.md).
 
@@ -68,6 +68,9 @@ for declarations, restart guarantees and uncertainty recovery.
 SQLite password identities use derived `ExternalIdentityStores`
 descriptors and the typed `ServerOptions.IdentityStores` runtime map. The host
 constructs them before the root, owns cleanup and preserves backend epochs.
+The concrete backend also retains identity-bound Profile reads/password changes,
+Documents ownership and capability discovery; an adapter must preserve those
+optional interfaces when returning `ids.IdentityStore`.
 See [SQLite identities](../../configuration-identity-stores/references/sqlite-integration.md)
 for declarations, administration and remaining profile/OP/attachment limits.
 `ServerOptions.OAuthLoginStores` remains a separate pending-login dependency.

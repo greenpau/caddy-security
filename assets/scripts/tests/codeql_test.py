@@ -5,13 +5,13 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "run_codeql_scan.sh"
-FAKE_CODEQL = '''#!/usr/bin/env python3
-import json
+FAKE_CODEQL = f'#!{sys.executable}\n' + '''import json
 import os
 from pathlib import Path
 import sys
@@ -53,7 +53,7 @@ class CodeQLScanTests(unittest.TestCase):
         self.codeql.write_text(FAKE_CODEQL)
         self.codeql.chmod(0o755)
         self.calls = self.root / "calls"
-        self.env = {**os.environ, "CODEQL": str(self.codeql),
+        self.env = {**os.environ, "PYTHON": sys.executable, "CODEQL": str(self.codeql),
                     "CODEQL_TEST_CALLS": str(self.calls), "CODEQL_OUTPUT_DIR": "reports with spaces"}
         self.env.pop("CODEQL_TEST_FAIL", None)
         self.env.pop("CODEQL_LANGUAGE", None)

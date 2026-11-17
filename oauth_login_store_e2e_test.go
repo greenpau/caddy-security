@@ -995,7 +995,7 @@ func (f *caddySharedOAuthPair) qualifyTLS(t *testing.T) {
 	tr := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: x509.NewCertPool(), MinVersion: tls.VersionTLS12}}
 	defer tr.CloseIdleConnections()
 	client := &http.Client{Transport: tr, Timeout: 5 * time.Second}
-	for _, target := range []string{f.origin, f.peers[0].origin, f.peers[1].origin, f.upstream.server.URL} {
+	for endpoint, target := range []string{f.origin, f.peers[0].origin, f.peers[1].origin, f.upstream.server.URL} {
 		response, err := client.Get(target + "/ready")
 		if response != nil {
 			_ = response.Body.Close()
@@ -1004,7 +1004,9 @@ func (f *caddySharedOAuthPair) qualifyTLS(t *testing.T) {
 			t.Fatal("shared OAuth TLS negative control accepted an untrusted issuer")
 		}
 		if _, ok := errors.AsType[*tls.CertificateVerificationError](err); !ok {
-			t.Fatal("shared OAuth TLS negative control failed outside certificate verification")
+			// These fixed /ready probes contain no login credentials. Keep the
+			// endpoint and transport cause visible without weakening the control.
+			t.Fatalf("shared OAuth TLS negative control endpoint %d failed outside certificate verification: %T: %v", endpoint, err, err)
 		}
 	}
 }

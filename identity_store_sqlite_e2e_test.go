@@ -185,9 +185,11 @@ func TestCaddySQLiteIdentityE2E(t *testing.T) {
 	}
 	verify(browserToken)
 	resource(browserToken, 200)
-	// SQLite credentials never enter the local file store's profile API.
-	for _, kind := range []string{"fetch_user_info", "update_user_password"} {
-		body, _ := json.Marshal(map[string]string{"kind": kind, "password": "Must-not-replace-password!"})
+	// Profile is backed by SQLite's current immutable identity, with truthful
+	// rejection of credential collections that the store does not implement.
+	profile := func(payload map[string]string, status int) map[string]any {
+		t.Helper()
+		body, _ := json.Marshal(payload)
 		req, err := http.NewRequestWithContext(t.Context(), "POST", f.base+"/auth/api/profile", bytes.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
@@ -198,11 +200,35 @@ func TestCaddySQLiteIdentityE2E(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp.Body.Close()
-		if resp.StatusCode != http.StatusNotImplemented {
-			t.Fatalf("SQLite profile %s returned %d", kind, resp.StatusCode)
+		defer resp.Body.Close()
+		if resp.StatusCode != status {
+			t.Fatalf("SQLite profile %s HTTP %d, want %d", payload["kind"], resp.StatusCode, status)
 		}
+		var data map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			t.Fatal(err)
+		}
+		return data
 	}
+	info := profile(map[string]string{"kind": "fetch_user_info"}, 200)
+	if info["entry"].(map[string]any)["metadata"].(map[string]any)["username"] != "alice" {
+		t.Fatal("SQLite profile selected wrong account")
+	}
+	if profile(map[string]string{"kind": "fetch_user_api_keys"}, 501)["code"] != "unsupported_capability" {
+		t.Fatal("missing unsupported capability code")
+	}
+	profile(map[string]string{"kind": "update_user_password", "old_password": sqliteIdentityPassword, "new_password": "bcrypt:10:reserved-import"}, 400)
+	profile(map[string]string{"kind": "update_user_password", "old_password": sqliteIdentityPassword, "new_password": "Self-service-password-2026!"}, 200)
+	profile(map[string]string{"kind": "fetch_user_info"}, 401)
+	basic("staff", sqliteIdentityPassword, 401)
+	verify(basic("staff", "Self-service-password-2026!", 303))
+	// Restore through the independent management API for the remaining lifecycle
+	// scenarios; the old browser proof must stay revoked.
+	if err := management.SetPassword(t.Context(), "alice", "alice@example.test", sqliteIdentityPassword); err != nil {
+		t.Fatal(err)
+	}
+	profile(map[string]string{"kind": "fetch_user_info"}, 401)
+
 	verify(basic("staff", sqliteIdentityPassword, 303))
 	// Current account data governs new credentials and refresh. Already signed
 	// access JWTs retain their bounded lifetime after a password/account change.
@@ -253,6 +279,11 @@ func TestCaddySQLiteIdentityE2E(t *testing.T) {
 		assertAdminRedacted(t, output, []string{sqliteIdentityPassword, replacement, initial, login.RefreshToken})
 		if (err == nil) != success {
 			t.Fatalf("identity reload success=%v: %v", success, err)
+		}
+		if success {
+			// Reload drains the previous listener's keepalive connections. The
+			// next authentication POST must use a new connection; never retry it.
+			f.client.CloseIdleConnections()
 		}
 		return output
 	}

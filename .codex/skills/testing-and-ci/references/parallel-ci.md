@@ -83,7 +83,8 @@ checkout still disables persisted credentials and Go setup leaves caching to
 the explicit cache steps.
 
 Preparation derives each matrix row's browser prerequisite from its selected
-test names, including `TestCaddyCompositionE2E` and other parents that call
+test names, including `TestCaddyCompositionE2E`, `TestCaddySQLiteDocumentsE2E`,
+and other parents that call
 browser helpers without `Browser` in their names. Keep `BROWSER_TESTS` aligned
 with those callers. The composition browser case must receive the same pinned
 Node and browser prerequisites as the dedicated refresh-browser suite. Only
@@ -140,6 +141,12 @@ module's cumulative package time and every Go package directory's time, includin
 the root package across all root shards. Keep this sum distinct from the parallel
 test process wall span (earliest recorded shard start through latest finish).
 The same timing table appears in the report index, `timing.json` and `timing.md`.
+Go execution timestamps use RFC3339Nano with zero through nine fractional digits
+and an explicit zone. Normalize fractions to Python datetime's microsecond
+resolution before parsing, preserving the timezone across supported Python
+versions. Local Make workflows prefer installed Python 3.14 and preserve the
+selected interpreter through child scripts and nested Make. Reject missing zones and malformed
+timestamps; raw shard timestamps and manifests remain unchanged.
 
 Coalesce the root package's lifecycle into one result while retaining every test
 and subtest outcome, including skips. Package elapsed time is cumulative shard
@@ -173,11 +180,14 @@ failure gates, failed reruns, corrupted/missing evidence, failed rendering and
 bundle isolation. It also verifies quiet successful shards, preserved failure
 summaries, and merged module/directory timings with parallel wall time reported
 separately from cumulative package work.
+Timing units cover every Go fractional precision and equivalent UTC/offset
+timestamps. The real shard/merge E2E must also consume the pinned Go tool's
+timestamps; synthetic whole-second fixtures alone miss this compatibility boundary.
 The quality job discovers it through `make test-automation`. When local tests
 are authorized, use a focused automation selection while iterating:
 
 ```sh
-python3 -m unittest discover -s assets/scripts/tests -p 'ci_shards_test.py' -v
+python3.14 -m unittest discover -s assets/scripts/tests -p 'ci_shards_test.py' -v
 ```
 
 `assets/scripts/tests/test_timeout_test.py` verifies deadline arguments through

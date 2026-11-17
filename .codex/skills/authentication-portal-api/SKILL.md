@@ -23,7 +23,7 @@ For password/MFA mutations and refresh/OIDC invalidation, read
 [local identity compatibility](../configuration-identity-stores/references/local-identity.md).
 For authored schemas, mounted endpoint contracts and wire-format exceptions,
 read [OpenAPI contracts](references/openapi-contracts.md).
-For encrypted file operations, current local browser-session authority, sharing
+For encrypted file operations, current identity-bound browser-session authority, sharing
 and client key recovery, read [Documents API](references/documents.md).
 For explicit external-account connection, fresh browser proofs and one-use
 confirmation, read [connected accounts](references/connected-accounts.md).
@@ -260,3 +260,22 @@ for endpoint shapes, exact status/method behavior, key formats, and Caddy tests.
   limits using the transport contract above.
 - Admin endpoint returns unauthorized: verify `enable admin api`, a valid
   portal-admitted access token, and `authp/admin` or equivalent portal admin role.
+
+## SQLite capability integration
+
+With the published go-authcrunch dependency, `GET <mount>/api/capabilities` describes
+only the logged-in store and independently reports feature enablement, support,
+permission and reason. It requires a cached exact-token login and fresh immutable
+identity evidence; it is not a permission grant. Preserve 401 stale evidence,
+501 unsupported capability and 503 storage/commit-uncertainty responses. Clients
+must still inspect HTTP-200 administrative mutation `status` before success.
+
+SQLite offers information, diagnostics, partial dashboard, plaintext password
+changes, safe account administration and Documents; key/MFA/flow/connection
+collections remain unsupported. A realm named `local` still has kind `sqlite`.
+Use the [SQLite integration reference](../configuration-identity-stores/references/sqlite-integration.md)
+for published dependency verification, interface preservation,
+persistence and validation. No new Caddyfile switch is introduced: Profile is
+enabled by the portal constructor, Admin/Documents/export retain independent
+opt-ins. A separate reviewed UI bundle is needed for capability-aware controls,
+unknown counts, stable error reasons and standard JWKS media-type handling.

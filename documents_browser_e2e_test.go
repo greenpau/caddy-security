@@ -203,7 +203,7 @@ func runCaddyDocumentsBrowser(t *testing.T, f *caddyDocumentsFixture) {
 		}
 		config := map[string]any{
 			"origin": f.base, "mount": f.mount, "fixtureURL": f.fixtureURL, "cryptoURL": f.cryptoURL,
-			"phase": phase, "evidenceFile": filepath.Join(profile, phase+"-evidence.jsonl"),
+			"shippedUI": f.sqlite, "phase": phase, "evidenceFile": filepath.Join(profile, phase+"-evidence.jsonl"),
 			"expectedUsers": f.expectedUsers, "untrustedURL": untrusted.URL,
 		}
 		payload := map[string]any{"credentials": map[string]string{

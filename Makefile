@@ -11,7 +11,8 @@ BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BUILD_DIR:=$(shell pwd)
 CADDY_VERSION="v2.11.7"
 
-PYTHON ?= python3
+PYTHON ?= $(shell command -v python3.14 >/dev/null 2>&1 && echo python3.14 || echo python3)
+export PYTHON
 TEST ?= .
 TEST_DIR ?= ./...
 # Go applies this limit to the whole package, including its serial Caddy E2E journeys.
@@ -66,7 +67,7 @@ devbuild:
 		--with github.com/greenpau/caddy-security@$(LATEST_GIT_COMMIT)=$(BUILD_DIR) \
 		--with github.com/greenpau/caddy-security-secrets-static-secrets-manager@latest \
 		--with github.com/greenpau/caddy-trace@latest \
-		--with github.com/greenpau/go-authcrunch@v1.5.0=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
+		--with github.com/greenpau/go-authcrunch@v1.6.0=/Users/greenpau/dev/src/github.com/greenpau/go-authcrunch
 	@./bin/authcrunch version
 	@echo "$@: complete"
 

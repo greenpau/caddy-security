@@ -144,7 +144,7 @@ For investigation, start with a selected package/test under `make test`. For a
 narrow command outside the report lifecycle, retain the same guard:
 
 ```sh
-COVERAGE_DIR=.coverage/debug python3 assets/scripts/test_guard.py run go test -race -count=1 . -run '^TestAuthzResponseContract$'
+COVERAGE_DIR=.coverage/debug python3.14 assets/scripts/test_guard.py run go test -race -count=1 . -run '^TestAuthzResponseContract$'
 ```
 
 Check active processes and the recorded peak before changing any budget. A
@@ -180,3 +180,38 @@ This includes browser refresh, persistent runtime capacity/restarts, CLI builds
 and composed authentication/authorization. Synthetic resource fixtures alone do
 not establish that these workflows fit the default budgets. Official OP
 conformance remains opt-in and separate.
+
+## Browser network interruptions
+
+A browser `TypeError: Failed to fetch` does not identify the transport cause.
+Use bounded CDP `Network.loadingFailed` diagnostics alongside request/response
+events. Retain the scenario stage, fixed endpoint classification, HTTP status,
+network error code and cancellation flag. Exclude URLs with queries, headers,
+cookies, request bodies and credential responses. Keep diagnostic overlays and
+their hashes with the original failure evidence.
+
+Chrome can reset active connections when its network-change notifier reports
+an address or routing change; see the
+[Chromium connection reset implementation](https://chromium.googlesource.com/chromium/src/+/5713c0915ae0910437e2071c7862eb2009246615%5E%21/).
+When the captured error is `net::ERR_NETWORK_CHANGED`, retain it as a transport
+interruption and preserve the failed parent result. Do not retry a password,
+refresh or other potentially committed request to turn it into a passing test.
+
+For a localhost-only suite, a disposable Linux network namespace can isolate
+host network notifications. Cache dependencies first. Verify that the
+network namespace differs from the caller's before enabling its loopback
+interface, and run the test and Chrome as the original nonroot UID/GID and
+supplementary groups, with no effective capabilities. Preserve the original
+user namespace and filesystem ownership: nested user namespaces can show
+root-owned ancestors as unmapped owners even after restoring the numeric user
+ID, correctly triggering private-storage rejection. When privileged network
+setup is available, create only the network namespace and drop privileges
+before executing tests. Check that `/` still has owner UID 0 and that the
+test process remains nonroot. Never weaken storage ownership checks to make
+the isolation setup pass. Keep the
+browser sandbox, TLS verification, negative controls and resource guard intact.
+Record the namespace mode, command and original exit status. This does not
+qualify external-network behavior. If namespace setup is unavailable, retain
+the limitation and original failure rather than weakening browser security or
+changing the host network. Focused repetitions and a later full gate remain
+separate evidence; they do not erase the original failure.
